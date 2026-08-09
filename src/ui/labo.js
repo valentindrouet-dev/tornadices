@@ -235,12 +235,14 @@ function tableauCombosEditables(rafraichir) {
     h('td', { style: { fontWeight: '700' } }, nom),
     ...symboles.map((s) => h('td.num', h('input', {
       type: 'number', min: 0, max: 12, value: requis[s] || 0,
-      style: { width: '58px', padding: '4px 6px' },
+      style: { width: '100%', minWidth: '0', padding: '4px 4px', textAlign: 'right' },
       onchange: (e) => { ecrire(s, Math.max(0, Number(e.target.value))); rafraichir(); },
     }))),
   );
 
-  return h('table.tbl',
+  return h('table.tbl.tbl--compacte', { style: { tableLayout: 'fixed' } },
+    h('colgroup', h('col', { style: { width: '38%' } }),
+      ...symboles.map(() => h('col'))),
     h('thead', h('tr',
       h('th', 'Combinaison'),
       ...symboles.map((s) => h('th.num', pastilleSymbole(s, 18))),
@@ -412,7 +414,7 @@ function tableauFrequences(objet, total, unite) {
       h('td.num', nombre(n / total, 2)),
       h('td', { style: { width: '35%' } },
         h('div.barre-fond', h('div', {
-          style: { width: `${(n / max) * 100}%`, background: 'var(--orange)' },
+          style: { width: `${(n / max) * 100}%`, background: 'var(--accent)' },
         }))),
     ))),
   );

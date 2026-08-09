@@ -14,6 +14,18 @@ const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
 ];
 
+// Les couleurs du titre sont celles des équipes : bleu et jaune en alternance,
+// et les deux lettres du centre en vert, comme le joueur solo au milieu de la table.
+function titreColore(mot) {
+  const lettres = mot.split('');
+  const gauche = Math.floor((lettres.length - 2) / 2);
+  return lettres.map((c, i) => {
+    const vert = i === gauche || i === gauche + 1;
+    const classe = vert ? 'l-vert' : (i % 2 === 0 ? 'l-bleu' : 'l-jaune');
+    return h('span', { class: classe }, c);
+  });
+}
+
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
   const sieges = placement(nb);
@@ -65,7 +77,7 @@ export function vueAccueil() {
     const nbHumains = joueurs.filter((j) => j.type === 'humain').length;
 
     remplacer(racine,
-      h('h1.titre-jeu', ...'TORNADICES'.split('').map((c) => h('span', c))),
+      h('h1.titre-jeu', ...titreColore('TORNADICES')),
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '4px' } },
         'Jeu de dés, de rapidité et de stop ou encore — 3 à 9 joueurs'),
       h('p.petit', { style: { textAlign: 'center', color: 'var(--gris-clair)', marginBottom: '22px' } },

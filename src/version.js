@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.1';
+export const VERSION = '1.2';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.2',
+    date: '09/08/2026',
+    notes: [
+      'Le titre reprend les couleurs des équipes : lettres bleues et jaunes en alternance, et les deux lettres du centre en vert, comme le joueur solo au milieu de la table.',
+      'Toute l’interface passe au bleu ciel — fond dégradé bleuté, boutons et pastilles bleus, gris froids — pour se distinguer nettement de Camino.',
+      'Le logo et la favicone deviennent une tornade bleue à pointe jaune et verte.',
+      'Les couleurs d’équipe restent celles du jeu ; le bleu des Bleus a été légèrement éclairci pour ne pas se confondre avec le bleu d’interface.',
+    ],
+  },
   {
     version: '1.1',
     date: '09/08/2026',

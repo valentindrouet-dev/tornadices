@@ -38,9 +38,9 @@ export const SVG_TORNADE_ENDORMIE = svg(`
 export const SVG_LOGO = `
   <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <rect x="1" y="1" width="46" height="46" rx="12" fill="#fff"/>
-    <path fill="#2e9be6" d="M8 11h32a2.6 2.6 0 010 5.2H8A2.6 2.6 0 018 11z"/>
-    <path fill="#e8b21f" d="M11 19h26a2.6 2.6 0 010 5.2H11A2.6 2.6 0 0111 19z"/>
-    <path fill="#d4453f" d="M14 27h20a2.6 2.6 0 010 5.2H14A2.6 2.6 0 0114 27z"/>
+    <path fill="#2b93de" d="M8 11h32a2.6 2.6 0 010 5.2H8A2.6 2.6 0 018 11z"/>
+    <path fill="#6cc0f5" d="M11 19h26a2.6 2.6 0 010 5.2H11A2.6 2.6 0 0111 19z"/>
+    <path fill="#e0a70f" d="M14 27h20a2.6 2.6 0 010 5.2H14A2.6 2.6 0 0114 27z"/>
     <path fill="#46b25e" d="M19 35h10a2.4 2.4 0 010 4.8H19A2.4 2.4 0 0119 35z"/>
   </svg>`;
 
