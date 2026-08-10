@@ -9,7 +9,7 @@ import {
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE,
 } from '../core/config.js';
 import {
-  loiDuDe, loiBinomiale, courseCombinaison, esperanceAvantCollision,
+  loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
 } from '../core/proba.js';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
@@ -182,7 +182,7 @@ function panneauConfig(rafraichir) {
       }, p.nom)),
     ),
     h('div.mini.muted', { style: { marginTop: '8px' } },
-      'Les faces réelles ne figurent pas dans le PnP V4.5 : cette répartition est une hypothèse.'),
+      'Répartition de base : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair.'),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Combinaisons requises'),
     tableauCombosEditables(rafraichir),
@@ -421,8 +421,8 @@ function tableauFrequences(objet, total, unite) {
 }
 
 const LIBELLES = {
-  reveil: 'Réveil (cloches)', vache: 'Vache', endormir: 'Endormir un voisin',
-  collision: 'Collision forcée (2 étoiles)', fatigue: 'Fatigue', intensive: 'Intensive',
+  reveil: 'Réveil (3 tornades)', vache: 'Vache', endormir: 'Endormir un voisin',
+  collision: 'Attrape (3 éclairs)', blocage: 'Bloqué (2 X)', fatigue: 'Fatigue', intensive: 'Intensive',
   sansVent: 'Sans vent', chance: 'Chance', troupeau: 'Troupeau',
   difference: 'Différence', vaillants: 'Vaillants',
 };
@@ -498,12 +498,18 @@ function campagneCSV(r) {
 function ongletProbas(rafraichir) {
   const cfg = etat.cfg;
   const loi = loiDuDe(cfg.faces);
-  const seuil = cfg.combos.find((c) => c.id === 'collision')?.requis?.etoile ?? 2;
+  const bloquant = cfg.symboleBloquant || 'x';
+  const seuil = cfg.combos.find((c) => c.id === 'blocage')?.requis?.[bloquant] ?? 2;
+  // Les combinaisons obligatoires mettent aussi fin à la possession du lot.
+  const arretsForces = cfg.combos
+    .filter((c) => c.obligatoire && c.id !== 'blocage')
+    .map((c) => ({ id: c.id, requis: c.requis }));
+  const optsBase = { bloquant, seuilBloquant: seuil, arretsForces };
   const symbolesPresents = ORDRE_SYMBOLES.filter((s) => loi[s]);
 
   const lignes = [
-    ...cfg.combos.filter((c) => c.id !== 'collision').map((c) => ({
-      nom: c.nom, requis: c.requis, source: 'tornade',
+    ...cfg.combos.filter((c) => c.id !== 'blocage').map((c) => ({
+      nom: c.nom, requis: c.requis, source: 'tornade', estArretForce: !!c.obligatoire,
     })),
     ...CARTES_JOURNEE.filter((c) => c.combo).map((c) => ({
       nom: c.court,
@@ -511,14 +517,20 @@ function ongletProbas(rafraichir) {
       source: 'journee',
     })),
   ].map((l) => {
-    const c = courseCombinaison(cfg.faces, cfg.desParLot, l.requis, seuil, l.source === 'journee');
-    return { ...l, ...c };
+    const opts = {
+      ...optsBase,
+      prioritaire: l.source === 'journee',
+      estArretForce: !!l.estArretForce,
+    };
+    const exact = courseCombinaison(cfg.faces, cfg.desParLot, l.requis, opts);
+    const garde = courseAvecGarde(cfg.faces, cfg.desParLot, l.requis, opts, 20000);
+    return { ...l, ...exact, garde };
   });
 
-  const eCollision = esperanceAvantCollision(cfg.faces, cfg.desParLot, seuil);
-  // Collision servie d'emblée : au moins `seuil` étoiles sur un lancer neuf.
-  const binEtoile = loiBinomiale(cfg.faces, cfg.desParLot, 'etoile');
-  const pCollision1 = binEtoile.slice(seuil).reduce((a, b) => a + b, 0);
+  const ePerte = esperanceAvantPerte(cfg.faces, cfg.desParLot, optsBase);
+  // Lot perdu d'emblée : assez de symboles bloquants dès le premier jet.
+  const binBloquant = loiBinomiale(cfg.faces, cfg.desParLot, bloquant);
+  const pPerte1 = binBloquant.slice(seuil).reduce((a, b) => a + b, 0);
 
   return h('div',
     h('div.carte',
@@ -526,7 +538,11 @@ function ongletProbas(rafraichir) {
         h('div', { style: { flex: '1' } },
           h('div.titre-section', { style: { margin: 0 } }, 'Dé courant'),
           h('div.petit.muted', `${cfg.faces.length} faces · ${cfg.desParLot} dés par lot · `
-            + `collision forcée à ${seuil} étoile${seuil > 1 ? 's' : ''}`)),
+            + `lot perdu à ${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant}`
+            + (arretsForces.length
+              ? ` · ${arretsForces.map((a) => Object.entries(a.requis)
+                  .map(([sy, n]) => `${n} ${(SYMBOLES[sy] || {}).nom || sy}`).join(' + ')).join(', ')} force le passage`
+              : ''))),
         h('button.btn.btn--petit', { onclick: () => { etat.onglet = 'simulation'; rafraichir(); } },
           'Modifier les dés'),
       ),
@@ -550,11 +566,11 @@ function ongletProbas(rafraichir) {
     ),
 
     h('div.grille.grille--3', { style: { marginTop: '16px' } },
-      stat(nombre(eCollision, 2), 'lancers avant collision',
-        'espérance, en relançant sans jamais s’arrêter'),
-      stat(pourcent(pCollision1, 1), 'collision dès le 1er lancer',
-        `${seuil} étoile${seuil > 1 ? 's' : ''} d’un coup`),
-      stat(nombre(eCollision * (cfg.tempsLancer / 1000), 1) + ' s', 'temps moyen avec un lot',
+      stat(nombre(ePerte, 2), 'lancers avant de perdre le lot',
+        'en relançant tout, sans jamais s’arrêter'),
+      stat(pourcent(pPerte1, 1), 'lot perdu dès le 1er lancer',
+        `${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant} d’un coup`),
+      stat(nombre(ePerte * (cfg.tempsLancer / 1000), 1) + ' s', 'temps moyen avec un lot',
         `à ${cfg.tempsLancer} ms par lancer`),
     ),
 
@@ -563,32 +579,35 @@ function ongletProbas(rafraichir) {
       h('table.tbl',
         h('thead', h('tr',
           h('th', 'Combinaison'), h('th', 'Exigence'),
-          h('th.num', 'Au 1er lancer'), h('th.num', 'Avant la collision'),
-          h('th.num', 'Lancers si réussie'), h('th.num', 'Temps si réussie'))),
+          h('th.num', 'Au 1er lancer'), h('th.num', 'En relançant tout'),
+          h('th.num', 'En gardant les dés'), h('th.num', 'Lancers si réussie'),
+          h('th.num', 'Temps si réussie'))),
         h('tbody', ...lignes.map((l) => h('tr',
           h('td', l.nom, l.source === 'journee'
             ? h('span.badge', { style: { marginLeft: '6px' } }, 'carte') : null),
           h('td', h('div.rangee.rangee--serree', suiteSymboles(l.requis, 17))),
           h('td.num', pourcent(l.premierLancer, 2)),
-          h('td.num', h('strong', pourcent(l.reussite, 1))),
-          h('td.num', nombre(l.lancersSiReussite, 2)),
-          h('td.num', `${nombre(l.lancersSiReussite * cfg.tempsLancer / 1000, 1)} s`),
+          h('td.num', pourcent(l.reussite, 1)),
+          h('td.num', h('strong', pourcent(l.garde.reussite, 1))),
+          h('td.num', nombre(l.garde.lancersSiReussite, 2)),
+          h('td.num', `${nombre(l.garde.lancersSiReussite * cfg.tempsLancer / 1000, 1)} s`),
         ))),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
-        '« Avant la collision » est la probabilité de servir la combinaison avant que deux étoiles '
-        + 'ne forcent le passage du lot — les étoiles se verrouillant, chaque relance rapproche du '
-        + 'départ forcé. C’est le chiffre qui décide du rythme du jeu : au-dessous de 20 %, un joueur '
-        + 'rend son lot presque toujours les mains vides.'),
+        'Ces deux colonnes donnent la probabilité de servir la combinaison avant de perdre le lot — '
+        + `${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant} qui se figent, ou une combinaison `
+        + 'obligatoire qui force le passage. « En relançant tout » est le calcul exact ; '
+        + '« en gardant les dés » estime par tirages la vraie façon de jouer, en conservant les dés '
+        + 'utiles d’un jet à l’autre. L’écart entre les deux mesure ce que rapporte la relance choisie.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
-        'Les combinaisons de cartes Journée l’emportent sur la collision au même lancer : '
-        + 'c’est ce qui rend « Journée de la chance » (quatre étoiles) atteignable.'),
+        'Les combinaisons de cartes Journée l’emportent sur les combinaisons obligatoires au même '
+        + 'lancer : c’est ce qui rend « Journée de la chance » (quatre éclairs) atteignable.'),
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },
       h('div.titre-section', 'Réussite au fil des lancers'),
-      h('p.petit.muted', 'Probabilité cumulée de servir la combinaison après n lancers, '
-        + 'en tenant compte du risque de collision.'),
+      h('p.petit.muted', 'Probabilité cumulée de servir la combinaison après n lancers en relançant '
+        + 'tout, en tenant compte du risque de perdre le lot.'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Combinaison'),
           ...[1, 2, 3, 4, 5, 6, 8, 10].map((n) => h('th.num', `${n}`)))),

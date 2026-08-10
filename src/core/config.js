@@ -2,26 +2,40 @@
 // tableau de mise en place et profils de joueurs. Le moteur ne connaît rien d'autre.
 
 export const SYMBOLES = {
-  cloche: { id: 'cloche', nom: 'Cloche', couleur: '#e0932a', desc: 'Réveille votre Tornade' },
-  vache: { id: 'vache', nom: 'Vache', couleur: '#3f8f52', desc: 'Retourne un jeton de votre équipe' },
-  zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#5b73c4', desc: 'Endort un de vos voisins' },
-  etoile: { id: 'etoile', nom: 'Étoile', couleur: '#d4453f', desc: 'Collision — jamais relançable' },
-  vide: { id: 'vide', nom: 'Vide', couleur: '#c8bfb2', desc: 'Face neutre' },
+  tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
+  vache: { id: 'vache', nom: 'Vache', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
+  zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
+  eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
+  x: { id: 'x', nom: 'X', couleur: '#e2000f', desc: 'Dé bloqué — il ne se relance jamais' },
+  vide: { id: 'vide', nom: 'Vide', couleur: '#e6edf4', desc: 'Face neutre' },
 };
 
-export const ORDRE_SYMBOLES = ['cloche', 'vache', 'zzz', 'etoile', 'vide'];
+export const ORDRE_SYMBOLES = ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'];
+
+// Symbole qui fige le dé : une fois sorti, il ne peut plus être relancé.
+export const SYMBOLE_BLOQUANT = 'x';
+
+// Couleur d'alerte affichée autour de la zone d'un joueur quand la combinaison
+// apparaît sur ses dés.
+export const ALERTES = {
+  blocage: 'rouge',
+  collision: 'jaune',
+  reveil: 'bleu',
+  vache: 'vert',
+  endormir: 'violet',
+};
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Les faces des dés ne figurent pas dans le PnP V4.5 transmis : cette répartition
-// est une hypothèse de travail, modifiable face par face dans le Laboratoire.
-export const FACES_PAR_DEFAUT = ['cloche', 'cloche', 'vache', 'vache', 'zzz', 'etoile'];
+// Répartition de base : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair.
+// Modifiable face par face dans les options de partie et dans le Laboratoire.
+export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'];
 
 export const PRESETS_FACES = [
-  { nom: 'Équilibré (défaut)', faces: ['cloche', 'cloche', 'vache', 'vache', 'zzz', 'etoile'] },
-  { nom: 'Symétrique', faces: ['cloche', 'vache', 'zzz', 'etoile', 'cloche', 'vache'] },
-  { nom: 'Orageux (2 étoiles)', faces: ['cloche', 'cloche', 'vache', 'vache', 'etoile', 'etoile'] },
-  { nom: 'Sommeil (2 ZzZ)', faces: ['cloche', 'cloche', 'vache', 'zzz', 'zzz', 'etoile'] },
-  { nom: 'Avec faces vides', faces: ['cloche', 'vache', 'zzz', 'etoile', 'vide', 'vide'] },
+  { nom: 'Officiel', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },
+  { nom: 'Symétrique', faces: ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'] },
+  { nom: 'Deux vaches', faces: ['tornade', 'vache', 'vache', 'zzz', 'x', 'eclair'] },
+  { nom: 'Orageux (2 X)', faces: ['tornade', 'tornade', 'x', 'x', 'vache', 'eclair'] },
+  { nom: 'Foudre (2 éclairs)', faces: ['tornade', 'tornade', 'x', 'eclair', 'eclair', 'vache'] },
 ];
 
 // ── Combinaisons de la carte Tornade ──────────────────────────────────────────
@@ -31,7 +45,7 @@ export const COMBOS_TORNADE = [
     id: 'reveil',
     nom: 'Réveil',
     libelle: 'Réveillez votre Tornade',
-    requis: { cloche: 3 },
+    requis: { tornade: 3 },
     face: 'endormie',
     obligatoire: false,
   },
@@ -53,9 +67,17 @@ export const COMBOS_TORNADE = [
   },
   {
     id: 'collision',
-    nom: 'Collision',
-    libelle: 'Passez votre lot et touchez le joueur suivant',
-    requis: { etoile: 2 },
+    nom: 'Attrape',
+    libelle: 'Passez votre lot et tentez d’attraper le joueur suivant',
+    requis: { eclair: 3 },
+    face: 'toutes',
+    obligatoire: true,
+  },
+  {
+    id: 'blocage',
+    nom: 'Bloqué',
+    libelle: 'Deux dés figés : le lot part sans rien tenter',
+    requis: { x: 2 },
     face: 'toutes',
     obligatoire: true,
   },
@@ -88,7 +110,7 @@ export const CARTES_JOURNEE = [
     court: 'Intensive',
     nom: 'Journée intensive',
     texte: 'Retournez un de vos jetons',
-    combo: { id: 'intensive', requis: { vache: 2, cloche: 2 }, effet: 'jeton1' },
+    combo: { id: 'intensive', requis: { vache: 2, tornade: 2 }, effet: 'jeton1' },
     effetPassif: null,
   },
   {
@@ -112,7 +134,7 @@ export const CARTES_JOURNEE = [
     court: 'Chance',
     nom: 'Journée de la chance',
     texte: 'Remportez la manche immédiatement',
-    combo: { id: 'chance', requis: { etoile: 4 }, effet: 'gagnerManche' },
+    combo: { id: 'chance', requis: { eclair: 4 }, effet: 'gagnerManche' },
     effetPassif: null,
   },
   {
@@ -130,7 +152,7 @@ export const CARTES_JOURNEE = [
     texte: 'Jouez l’effet d’une des combinaisons visibles de votre carte',
     combo: {
       id: 'difference',
-      requis: { etoile: 1, vache: 1, cloche: 1, zzz: 1 },
+      requis: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
       effet: 'auChoix',
     },
     effetPassif: null,
@@ -140,7 +162,7 @@ export const CARTES_JOURNEE = [
     court: 'Vaillants',
     nom: 'Journée des vaillants',
     texte: 'Toute votre équipe se réveille (à 3 joueurs, passez cette carte)',
-    combo: { id: 'vaillants', requis: { cloche: 4 }, effet: 'reveilEquipe' },
+    combo: { id: 'vaillants', requis: { tornade: 4 }, effet: 'reveilEquipe' },
     effetPassif: null,
     minJoueurs: 4,
   },
@@ -232,6 +254,7 @@ export function configParDefaut(nbJoueurs = 6) {
     nbJoueurs,
     desParLot: 4,
     faces: FACES_PAR_DEFAUT.slice(),
+    symboleBloquant: SYMBOLE_BLOQUANT,
     combos: COMBOS_TORNADE.map((c) => ({ ...c, requis: { ...c.requis } })),
     cartes: CARTES_JOURNEE.map((c) => c.id),
     lots: mep.lots,
@@ -244,7 +267,7 @@ export function configParDefaut(nbJoueurs = 6) {
     ecartTempsLancer: 220,     // écart-type
     tempsPasse: 350,           // ms pour tendre le lot au voisin
     adresseBase: 0.55,         // chance de toucher, avant écart d'adresse
-    tauxErreur: 0.03,          // chance de relancer une étoile par mégarde
+    tauxErreur: 0.03,          // chance de relancer un X par mégarde
     penaliteErreurAdverse: 0.35, // part des erreurs assez graves pour offrir un jeton aux adverses
     dureeMaxManche: 900_000,   // garde-fou : 15 min de temps de jeu simulé
     manchesMax: 40,

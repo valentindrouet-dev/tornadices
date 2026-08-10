@@ -53,7 +53,8 @@ et non un modèle parallèle qui aurait dérivé.
 
 Tout passe par l’objet de configuration, entièrement exposé dans le Laboratoire :
 
-- nombre de dés par lot, nombre de faces, **symbole de chaque face** ;
+- nombre de dés par lot, nombre de faces, **symbole de chaque face** — depuis les
+  options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
 - temps moyen d’un lancer et son écart-type, adresse de base, taux d’erreur ;
@@ -61,24 +62,41 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 
 Chaque campagne est reproductible : même graine, mêmes chiffres.
 
+## Le dé
+
+Cinq symboles, six faces : **2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
+
+| Symbole | Combinaison | Effet | Alerte |
+|---|---|---|---|
+| Tornade | 3 | Réveille votre Tornade | bleu |
+| Vache | 3 | Retourne un jeton de votre équipe | vert |
+| ZzZ | 3 | Endort un voisin | violet |
+| Éclair | 3 | Passe le lot et tente d’attraper le suivant | jaune clignotant orange |
+| X | 2 | Le lot part sans rien tenter | rouge |
+
+On relance qui l’on veut, autant de fois qu’on veut — **sauf les X**, qui restent
+figés sur leur face et clignotent en rouge. Au deuxième X il ne reste plus assez
+de dés libres pour former quoi que ce soit : le lot part.
+
 ## Hypothèses de travail
 
 Ces points ne figurent pas dans les documents V4.5 fournis et ont été comblés par
 des valeurs par défaut explicites, toutes modifiables :
 
-1. **Les faces des dés.** Le PnP ne contient pas le patron des dés. Défaut retenu :
-   6 faces — 2 cloches, 2 vaches, 1 ZzZ, 1 étoile. Cinq modèles alternatifs sont
-   proposés en un clic dans le Laboratoire.
+1. **Ce que fait le deuxième X.** Les règles disent qu’un X ne se relance jamais,
+   sans préciser la sanction. Le moteur fait partir le lot, sans tentative
+   d’attrape : à deux X il ne reste que deux dés libres, aucune combinaison de
+   trois n’est plus possible. Le seuil est réglable.
 2. **La ligne à 9 joueurs** du tableau de mise en place (le tableau officiel
    s’arrête à 8) : 5 lots, 5 jetons par équipe, 2 pour le Vert, 3 cartes.
 3. **Les jetons repartent face cachée à chaque manche**, chaque manche étant une
    course indépendante.
 4. **Un lot passé est relancé entièrement** par celui qui le reçoit : le verrou des
-   étoiles ne vaut que pour la possession en cours, sans quoi un lot arrivant avec
-   deux étoiles serait injouable.
-5. **La collision est jouée avant tout**, sauf si la combinaison de la carte Journée
-   du moment est servie au même lancer — sans cette priorité, « Journée de la
-   chance » (quatre étoiles) serait inatteignable.
+   X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
+   serait injouable.
+5. **L’attrape est jouée avant le blocage**, et une combinaison de carte Journée
+   passe avant les deux — sans cette priorité, « Journée de la chance »
+   (quatre éclairs) serait inatteignable.
 6. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
    maladresse ») sont modélisés par un surcoût de temps et un taux d’erreur.
 

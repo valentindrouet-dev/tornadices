@@ -2,9 +2,10 @@
 //
 // Deux niveaux de lecture :
 //  1. la loi d'un lancer isolé (multinomiale) ;
-//  2. la course entre une combinaison recherchée et la collision forcée par les
-//     étoiles, qui se verrouillent et ne se relancent jamais — chaîne de Markov
-//     absorbante à deux issues : « réussi » ou « collision ».
+//  2. la course entre la combinaison recherchée et les deux façons de perdre le
+//     lot : deux X — qui se figent et ne se relancent jamais — ou trois éclairs,
+//     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
+//     nombre de X déjà figés.
 
 const facto = [1];
 function fact(n) {
@@ -24,12 +25,12 @@ export function loiDuDe(faces) {
 /** Énumère toutes les répartitions possibles de `m` dés sur `symboles`. */
 function* repartitions(symboles, m) {
   const t = symboles.length;
+  if (t === 0) return;
   const c = new Array(t).fill(0);
   function* rec(i, reste) {
     if (i === t - 1) { c[i] = reste; yield c.slice(); return; }
     for (let v = 0; v <= reste; v++) { c[i] = v; yield* rec(i + 1, reste - v); }
   }
-  if (t === 0) return;
   yield* rec(0, m);
 }
 
@@ -38,6 +39,9 @@ function probaRepartition(c, probs, m) {
   for (let i = 0; i < c.length; i++) { p /= fact(c[i]); p *= Math.pow(probs[i], c[i]); }
   return p;
 }
+
+const servie = (compte, requis) =>
+  Object.entries(requis).every(([s, n]) => (compte[s] || 0) >= n);
 
 /** P(la combinaison `requis` est servie sur un lancer neuf de `nbDes` dés). */
 export function probaLancerUnique(faces, nbDes, requis) {
@@ -48,9 +52,7 @@ export function probaLancerUnique(faces, nbDes, requis) {
   for (const c of repartitions(symboles, nbDes)) {
     const compte = {};
     symboles.forEach((s, i) => { compte[s] = c[i]; });
-    if (Object.entries(requis).every(([s, n]) => (compte[s] || 0) >= n)) {
-      total += probaRepartition(c, probs, nbDes);
-    }
+    if (servie(compte, requis)) total += probaRepartition(c, probs, nbDes);
   }
   return total;
 }
@@ -67,54 +69,55 @@ export function loiBinomiale(faces, nbDes, symbole) {
 }
 
 /**
- * Course « combinaison contre collision ».
+ * Course « combinaison contre perte du lot », en relançant tous les dés libres.
  *
- * @param {string[]} faces        faces du dé
- * @param {number}   nbDes        dés par lot
- * @param {object}   requis       combinaison recherchée, ex. { vache: 3 }
- * @param {number}   seuilEtoile  nombre d'étoiles qui force la collision
- * @param {boolean}  prioritaire  vrai pour les combos de carte Journée, qui
- *                                l'emportent sur la collision au même lancer
- * @returns {{reussite:number, collision:number, lancersMoyens:number,
- *            lancersSiReussite:number, premierLancer:number, parLancer:number[]}}
+ * @param {string[]} faces
+ * @param {number}   nbDes
+ * @param {object}   requis        combinaison recherchée, ex. { vache: 3 }
+ * @param {object}   opts
+ * @param {string}   opts.bloquant       symbole qui fige le dé (défaut « x »)
+ * @param {number}   opts.seuilBloquant  nombre de symboles figés qui rendent le lot
+ * @param {object[]} opts.arretsForces   autres combinaisons qui rendent le lot d'office
+ * @param {boolean}  opts.prioritaire    combinaison de carte Journée : passe avant tout
+ * @param {boolean}  opts.estArretForce  la combinaison recherchée est elle-même obligatoire
  */
-export function courseCombinaison(faces, nbDes, requis, seuilEtoile = 2, prioritaire = false) {
+export function courseCombinaison(faces, nbDes, requis, opts = {}) {
+  const {
+    bloquant = 'x', seuilBloquant = 2, arretsForces = [],
+    prioritaire = false, estArretForce = false,
+  } = opts;
+
   const loi = loiDuDe(faces);
   const symboles = Object.keys(loi);
   const probs = symboles.map((s) => loi[s]);
-  const iEtoile = symboles.indexOf('etoile');
-  const nbEtats = Math.max(1, seuilEtoile); // étoiles déjà verrouillées : 0 .. seuil-1
+  const iBloquant = symboles.indexOf(bloquant);
+  const nbEtats = Math.max(1, seuilBloquant);
 
-  // transition[s] = { reussite, collision, versEtat: Float64Array }
   const T = [];
   for (let s = 0; s < nbEtats; s++) {
     const m = Math.max(0, nbDes - s);
-    const tr = { reussite: 0, collision: 0, vers: new Float64Array(nbEtats) };
-    if (m === 0) {
-      // Plus un seul dé libre : la chasse s'arrête, le lot part sans la combinaison.
-      tr.collision = 1;
-      T.push(tr);
-      continue;
-    }
+    const tr = { reussite: 0, perdu: 0, vers: new Float64Array(nbEtats) };
+    if (m === 0) { tr.perdu = 1; T.push(tr); continue; }
     for (const c of repartitions(symboles, m)) {
       const p = probaRepartition(c, probs, m);
       if (p === 0) continue;
       const compte = {};
       symboles.forEach((sy, i) => { compte[sy] = c[i]; });
-      compte.etoile = (compte.etoile || 0) + s; // les étoiles verrouillées comptent
-      const k = iEtoile >= 0 ? c[iEtoile] : 0;
-      const collision = s + k >= seuilEtoile;
-      const servie = Object.entries(requis).every(([sy, n]) => (compte[sy] || 0) >= n);
-      if (servie && (prioritaire || !collision)) tr.reussite += p;
-      else if (collision) tr.collision += p;
+      compte[bloquant] = (compte[bloquant] || 0) + s; // les dés figés comptent toujours
+      const k = iBloquant >= 0 ? c[iBloquant] : 0;
+      const bloque = s + k >= seuilBloquant;
+      const cible = servie(compte, requis);
+
+      if (cible && (prioritaire || estArretForce)) tr.reussite += p;
+      else if (bloque) tr.perdu += p;
+      else if (arretsForces.some((a) => servie(compte, a.requis))) tr.perdu += p;
+      else if (cible) tr.reussite += p;
       else tr.vers[s + k] += p;
     }
     T.push(tr);
   }
 
-  // Résolution directe : R[s] = P(réussir depuis s), E[s] = espérance de lancers.
-  // Le système est triangulaire (les étoiles ne se déverrouillent jamais), donc
-  // on remonte des états les plus chargés vers l'état neuf.
+  // Système triangulaire : les X ne se déverrouillent jamais.
   const R = new Float64Array(nbEtats);
   const E = new Float64Array(nbEtats);
   for (let s = nbEtats - 1; s >= 0; s--) {
@@ -131,38 +134,31 @@ export function courseCombinaison(faces, nbDes, requis, seuilEtoile = 2, priorit
     E[s] = (1 + eSuite) / denom;
   }
 
-  // E[lancers | réussite] : obtenue par itération sur la distribution, plus
-  // lisible que la forme close et le nombre d'états est minuscule.
-  const lancersSiReussite = esperanceConditionnelle(T, nbEtats);
-
   const parLancer = [];
-  {
-    let etat = new Float64Array(nbEtats);
-    etat[0] = 1;
-    for (let n = 0; n < 40; n++) {
-      const suiv = new Float64Array(nbEtats);
-      let reussiCeTour = 0;
-      for (let s = 0; s < nbEtats; s++) {
-        if (etat[s] === 0) continue;
-        reussiCeTour += etat[s] * T[s].reussite;
-        for (let u = s; u < nbEtats; u++) suiv[u] += etat[s] * T[s].vers[u];
-      }
-      parLancer.push(reussiCeTour);
-      etat = suiv;
+  let etat = new Float64Array(nbEtats);
+  etat[0] = 1;
+  for (let n = 0; n < 40; n++) {
+    const suiv = new Float64Array(nbEtats);
+    let reussiCeTour = 0;
+    for (let s = 0; s < nbEtats; s++) {
+      if (etat[s] === 0) continue;
+      reussiCeTour += etat[s] * T[s].reussite;
+      for (let u = s; u < nbEtats; u++) suiv[u] += etat[s] * T[s].vers[u];
     }
+    parLancer.push(reussiCeTour);
+    etat = suiv;
   }
 
   return {
     reussite: R[0],
-    collision: 1 - R[0],
+    perdu: 1 - R[0],
     lancersMoyens: E[0],
-    lancersSiReussite,
+    lancersSiReussite: esperanceConditionnelle(T, nbEtats),
     premierLancer: T[0].reussite,
     parLancer,
   };
 }
 
-// E[nombre de lancers | réussite], par itération sur la distribution.
 function esperanceConditionnelle(T, nbEtats, maxLancers = 400) {
   let etat = new Float64Array(nbEtats);
   etat[0] = 1;
@@ -186,29 +182,59 @@ function esperanceConditionnelle(T, nbEtats, maxLancers = 400) {
 }
 
 /**
- * Tableau de synthèse : une ligne par combinaison, prête pour l'affichage.
+ * Même course, mais en gardant les dés utiles au lieu de tout relancer — c'est
+ * ainsi qu'on joue réellement. Il n'y a pas de forme close simple : on l'estime
+ * par tirages, avec un générateur passé en paramètre pour rester reproductible.
  */
-export function tableauCombinaisons(cfg, combos, seuilEtoile) {
-  const seuil = seuilEtoile ?? (combos.find((c) => c.id === 'collision')?.requis?.etoile ?? 2);
-  return combos.map((c) => {
-    const prioritaire = c.source === 'journee';
-    const course = courseCombinaison(cfg.faces, cfg.desParLot, c.requis, seuil, prioritaire);
-    return {
-      id: c.id,
-      nom: c.nom || c.id,
-      requis: c.requis,
-      source: c.source || 'tornade',
-      premierLancer: course.premierLancer,
-      reussite: course.reussite,
-      lancersMoyens: course.lancersMoyens,
-      lancersSiReussite: course.lancersSiReussite,
-      secondesSiReussite: course.lancersSiReussite * (cfg.tempsLancer || 800) / 1000,
-    };
-  });
+export function courseAvecGarde(faces, nbDes, requis, opts = {}, tirages = 60000, alea = Math.random) {
+  const {
+    bloquant = 'x', seuilBloquant = 2, arretsForces = [],
+    prioritaire = false, estArretForce = false,
+  } = opts;
+  let succes = 0, lancersTot = 0, lancersSucces = 0;
+
+  for (let g = 0; g < tirages; g++) {
+    const des = new Array(nbDes).fill(null);
+    const fige = new Array(nbDes).fill(false);
+    let n = 0, gagne = false;
+    for (;;) {
+      n++;
+      // On garde les dés qui servent la combinaison, dans la limite du requis.
+      const garde = {};
+      for (let i = 0; i < nbDes; i++) {
+        if (fige[i]) { garde[des[i]] = (garde[des[i]] || 0) + 1; continue; }
+        const s = des[i];
+        if (s && requis[s] && (garde[s] || 0) < requis[s]) garde[s] = (garde[s] || 0) + 1;
+        else if (des[i] !== null) des[i] = null; // sera relancé
+      }
+      for (let i = 0; i < nbDes; i++) {
+        if (fige[i] || des[i] !== null) continue;
+        des[i] = faces[(alea() * faces.length) | 0];
+        if (des[i] === bloquant) fige[i] = true;
+      }
+      const compte = {};
+      for (const s of des) compte[s] = (compte[s] || 0) + 1;
+      const bloque = (compte[bloquant] || 0) >= seuilBloquant;
+      const cible = servie(compte, requis);
+
+      if (cible && (prioritaire || estArretForce)) { gagne = true; break; }
+      if (bloque) break;
+      if (arretsForces.some((a) => servie(compte, a.requis))) break;
+      if (cible) { gagne = true; break; }
+      if (n > 300) break;
+    }
+    lancersTot += n;
+    if (gagne) { succes++; lancersSucces += n; }
+  }
+
+  return {
+    reussite: succes / tirages,
+    lancersMoyens: lancersTot / tirages,
+    lancersSiReussite: succes ? lancersSucces / succes : Infinity,
+  };
 }
 
-/** Nombre moyen de lancers avant que les étoiles ne forcent le passage du lot. */
-export function esperanceAvantCollision(faces, nbDes, seuilEtoile = 2) {
-  const r = courseCombinaison(faces, nbDes, { __impossible: 99 }, seuilEtoile, false);
-  return r.lancersMoyens;
+/** Nombre moyen de lancers avant de perdre le lot, sans rien chercher. */
+export function esperanceAvantPerte(faces, nbDes, opts = {}) {
+  return courseCombinaison(faces, nbDes, { __introuvable: 99 }, opts).lancersMoyens;
 }

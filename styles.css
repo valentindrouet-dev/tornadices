@@ -251,14 +251,23 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   border-radius: 11px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .06), inset 0 -2px 0 rgba(0, 0, 0, .035);
   display: grid; place-items: center;
-  padding: 7px;
+  padding: 4px;
   flex: none;
-  transition: transform .1s;
+  transition: transform .1s, box-shadow .13s, border-color .13s;
 }
 .de svg { width: 100%; height: 100%; }
-.de--grand { width: 62px; height: 62px; border-radius: 14px; padding: 9px; }
-.de--petit { width: 26px; height: 26px; border-radius: 7px; padding: 4px; }
-.de--verrou { border-color: #e9a19d; box-shadow: 0 0 0 2px rgba(212, 69, 63, .16); }
+.de--grand { width: 76px; height: 76px; border-radius: 17px; padding: 5px; }
+.de--petit { width: 36px; height: 36px; border-radius: 10px; padding: 3px; }
+/* Un X est figé : il clignote en rouge et ne se relance jamais. */
+.de--verrou { border-color: #e2000f; animation: clignoteX .85s ease-in-out infinite; }
+@keyframes clignoteX {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(226, 0, 15, .30); }
+  50% { box-shadow: 0 0 0 7px rgba(226, 0, 15, .04); }
+}
+/* Dé sélectionné pour la relance. */
+.de--relance { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30, 131, 204, .26); }
+.de--cliquable { cursor: pointer; }
+.de--cliquable:hover { transform: translateY(-2px); }
 .de--vierge { background: repeating-linear-gradient(45deg, #f6fafe, #f6fafe 5px, #e9f3fb 5px, #e9f3fb 10px); }
 .de--anim { animation: roule .32s ease; }
 @keyframes roule {
@@ -293,7 +302,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .siege {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 172px;
+  width: 196px;
   background: #fff;
   border: 1.5px solid var(--bord);
   border-radius: 14px;
@@ -314,7 +323,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .siege .etat { font-size: 11px; font-weight: 700; color: var(--gris); display: flex; align-items: center; gap: 4px; }
 .siege .etat .tornade { width: 15px; height: 15px; }
 .siege .etat .tornade svg { width: 100%; height: 100%; }
-.siege .des-mini { display: flex; gap: 3px; margin-top: 6px; min-height: 26px; align-items: center; }
+.siege .des-mini { display: flex; gap: 4px; margin-top: 7px; min-height: 36px; align-items: center; }
 .siege .badge-lots {
   background: var(--accent-clair); color: #10557f; border-radius: 999px;
   padding: 1px 7px; font-size: 11px; font-weight: 800;
@@ -343,6 +352,44 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 }
 .carte-journee .nom-carte { font-weight: 800; font-size: 14.5px; }
 .carte-journee .texte-carte { font-size: 12.5px; color: var(--encre-doux); }
+
+/* ── Alertes de combinaison ───────────────────────────────────────────────── */
+/* La zone de jeu du joueur s'entoure d'un halo dès que la combinaison sort. */
+[data-alerte] { border-color: var(--c-alerte); animation: halo 1s ease-in-out infinite; }
+[data-alerte="rouge"]  { --c-alerte: #e2000f; --c-halo: rgba(226, 0, 15, .40); }
+[data-alerte="bleu"]   { --c-alerte: #2b93de; --c-halo: rgba(43, 147, 222, .40); }
+[data-alerte="vert"]   { --c-alerte: #52a72e; --c-halo: rgba(82, 167, 46, .40); }
+[data-alerte="violet"] { --c-alerte: #a05ce0; --c-halo: rgba(160, 92, 224, .40); }
+@keyframes halo {
+  0%, 100% { box-shadow: 0 0 0 0 var(--c-halo), var(--ombre); }
+  50% { box-shadow: 0 0 0 9px transparent, var(--ombre); }
+}
+/* L'attrape clignote jaune puis orange : c'est le signal le plus vif de la table. */
+[data-alerte="jaune"] { animation: haloAttrape .5s steps(1, end) infinite; }
+@keyframes haloAttrape {
+  0%, 49% { border-color: #f9b115; box-shadow: 0 0 0 6px rgba(249, 177, 21, .45), var(--ombre); }
+  50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
+}
+
+/* ── Lot de dés en vol d'un joueur à l'autre ──────────────────────────────── */
+.lot-vol {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  display: flex;
+  gap: 3px;
+  padding: 5px 7px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  border-radius: 13px;
+  box-shadow: var(--ombre-forte);
+  pointer-events: none;
+  transition: left .42s cubic-bezier(.45, .05, .3, 1),
+              top .42s cubic-bezier(.45, .05, .3, 1),
+              opacity .18s linear;
+}
+.lot-vol--attrape { border-color: #f9b115; }
+.lot-vol--touche { border-color: var(--rouge); }
 
 /* Panneau du joueur humain */
 .panneau-humain {
@@ -391,6 +438,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .journal .ligne--jeton { color: #2b6f3f; font-weight: 700; }
 .journal .ligne--manche { color: var(--accent-fonce); font-weight: 800; }
 .journal .ligne--incident { color: #9a6b12; }
+.journal .ligne--blocage { color: #b02a22; font-weight: 700; }
 .journal .ligne--fin { color: var(--violet); font-weight: 800; }
 
 /* ── Tableaux et statistiques ─────────────────────────────────────────────── */

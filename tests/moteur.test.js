@@ -3,7 +3,9 @@
 import { Moteur } from '../src/core/engine.js';
 import { configParDefaut } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
-import { courseCombinaison, probaLancerUnique, loiDuDe } from '../src/core/proba.js';
+import {
+  courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
+} from '../src/core/proba.js';
 
 let echecs = 0;
 function verifier(nom, condition, detail = '') {
@@ -48,26 +50,32 @@ console.log('\nReproductibilité');
 // ── 3. Probabilités exactes contre Monte-Carlo ───────────────────────────────
 console.log('\nProbabilités exactes');
 {
-  const faces = ['cloche', 'cloche', 'vache', 'vache', 'zzz', 'etoile'];
-  const D = 4, SEUIL = 2, N = 200000;
+  const faces = ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'];
+  const D = 4, N = 200000;
+  const OPTS = { bloquant: 'x', seuilBloquant: 2, arretsForces: [{ requis: { eclair: 3 } }] };
 
-  const mc = (requis, prioritaire) => {
+  // Référence indépendante : on rejoue la course à la main.
+  const mc = (requis, opts) => {
+    const { prioritaire = false, estArretForce = false } = opts;
     let succes = 0, lancers = 0;
     for (let g = 0; g < N; g++) {
       let s = 0, n = 0;
       for (;;) {
         n++;
-        const c = { etoile: s };
+        const c = { x: s };
         for (let i = 0; i < D - s; i++) {
           const f = faces[(Math.random() * faces.length) | 0];
           c[f] = (c[f] || 0) + 1;
         }
-        const k = (c.etoile || 0) - s;
-        const collision = s + k >= SEUIL;
-        const servie = Object.entries(requis).every(([sy, q]) => (c[sy] || 0) >= q);
-        if (servie && (prioritaire || !collision)) { succes++; break; }
-        if (collision || n > 400) break;
+        const k = (c.x || 0) - s;
+        const bloque = s + k >= 2;
+        const cible = Object.entries(requis).every(([sy, q]) => (c[sy] || 0) >= q);
+        if (cible && (prioritaire || estArretForce)) { succes++; break; }
+        if (bloque) break;
+        if ((c.eclair || 0) >= 3) break;
+        if (cible) { succes++; break; }
         s += k;
+        if (n > 300) break;
       }
       lancers += n;
     }
@@ -75,27 +83,37 @@ console.log('\nProbabilités exactes');
   };
 
   const loi = loiDuDe(faces);
-  verifier('loi du dé : cloche à 1/3', Math.abs(loi.cloche - 1 / 3) < 1e-9);
-  verifier('3 vaches au premier lancer = 1/9',
-    Math.abs(probaLancerUnique(faces, D, { vache: 3 }) - 1 / 9) < 1e-9);
+  verifier('loi du dé : tornade à 1/3', Math.abs(loi.tornade - 1 / 3) < 1e-9);
+  verifier('loi du dé : X à 1/6', Math.abs(loi.x - 1 / 6) < 1e-9);
+  verifier('3 tornades au premier lancer = 1/9',
+    Math.abs(probaLancerUnique(faces, D, { tornade: 3 }) - 1 / 9) < 1e-9);
 
-  for (const [nom, requis, prio] of [
-    ['3 vaches', { vache: 3 }, false],
-    ['3 ZzZ', { zzz: 3 }, false],
-    ['4 étoiles (carte)', { etoile: 4 }, true],
-    ['1 de chaque (carte)', { etoile: 1, vache: 1, cloche: 1, zzz: 1 }, true],
+  for (const [nom, requis, opts] of [
+    ['3 tornades', { tornade: 3 }, {}],
+    ['3 vaches', { vache: 3 }, {}],
+    ['3 éclairs (obligatoire)', { eclair: 3 }, { estArretForce: true }],
+    ['1 de chaque (carte)', { tornade: 1, vache: 1, zzz: 1, eclair: 1 }, { prioritaire: true }],
   ]) {
-    const e = courseCombinaison(faces, D, requis, SEUIL, prio);
-    const m = mc(requis, prio);
+    const e = courseCombinaison(faces, D, requis, { ...OPTS, ...opts });
+    const m = mc(requis, opts);
     const dR = Math.abs(e.reussite - m.reussite);
     const dL = Math.abs(e.lancersMoyens - m.lancersMoyens);
     verifier(
       `${nom} — réussite ${(e.reussite * 100).toFixed(2)} % (MC ${(m.reussite * 100).toFixed(2)} %), `
       + `${e.lancersMoyens.toFixed(2)} lancers (MC ${m.lancersMoyens.toFixed(2)})`,
-      dR < 0.01 && dL < 0.05,
+      dR < 0.01 && dL < 0.06,
       `écarts ${dR.toFixed(4)} / ${dL.toFixed(4)}`,
     );
   }
+
+  // Garder ses dés utiles doit faire nettement mieux que tout relancer.
+  const tout = courseCombinaison(faces, D, { vache: 3 }, OPTS);
+  const garde = courseAvecGarde(faces, D, { vache: 3 }, OPTS, 40000);
+  verifier(
+    `garder les dés utiles paie : ${(garde.reussite * 100).toFixed(1)} % contre `
+    + `${(tout.reussite * 100).toFixed(1)} % en relançant tout`,
+    garde.reussite > tout.reussite * 2,
+  );
 }
 
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────

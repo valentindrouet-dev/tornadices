@@ -79,8 +79,10 @@ export class Moteur {
     this.duel = null;
     this.compteurLot = 0;
     this.evenementsTraites = 0;
-    this.onJournal = null;   // crochet UI
+    this.onJournal = null;    // crochet UI
     this.onEtatChange = null;
+    this.onMouvement = null;  // (idDepart, idArrivee, motif) — pour animer le lot
+    this.onCombinaison = null; // (idJoueur, idCombo) — signalé dès que les dés la montrent
 
     this._initJoueurs(specJoueurs);
     this._initEquipes();
@@ -282,20 +284,28 @@ export class Moteur {
   }
 
   // ── Dés ─────────────────────────────────────────────────────────────────────
-  _lancerDes(lot, unSeul = false) {
+  /**
+   * Relance les dés désignés. `indices` vide ou absent = tous les dés libres.
+   * Les dés portant le symbole bloquant restent sur leur face, toujours.
+   */
+  _lancerDes(lot, indices = null, unSeul = false) {
     const faces = this.cfg.faces;
-    const libres = lot.des.filter((d) => !d.verrou);
-    const cible = unSeul && lot.lance
-      ? (libres.length ? [this._pireDe(lot)] : [])
-      : libres;
+    const bloquant = this.cfg.symboleBloquant || 'x';
+    let cible = lot.des
+      .map((d, i) => ({ d, i }))
+      .filter(({ d, i }) => !d.verrou && (!indices || !indices.length || indices.includes(i)))
+      .map(({ d }) => d);
+    // « Journée de la tranquillité » : un seul dé à la fois.
+    if (unSeul && lot.lance && cible.length > 1) cible = [this._pireDe(lot, cible)];
     for (const d of cible) d.sym = faces[this.rng.int(faces.length)];
     lot.lance = true;
-    for (const d of lot.des) if (d.sym === 'etoile') d.verrou = true;
+    for (const d of lot.des) if (d.sym === bloquant) d.verrou = true;
+    return cible.length;
   }
 
   // Dé le moins utile : celui dont le symbole est le plus isolé sur le lot.
-  _pireDe(lot) {
-    const libres = lot.des.filter((d) => !d.verrou);
+  _pireDe(lot, parmi = null) {
+    const libres = (parmi || lot.des.filter((d) => !d.verrou));
     const compte = this._compter(lot);
     let pire = libres[0], score = Infinity;
     for (const d of libres) {
@@ -303,6 +313,31 @@ export class Moteur {
       if (s < score) { score = s; pire = d; }
     }
     return pire;
+  }
+
+  /**
+   * Dés qu'une IA choisit de relancer : elle garde ceux qui servent son objectif
+   * du moment et rejette les autres. Les dés bloqués ne sont jamais du lot.
+   */
+  _choixDesIA(j, lot) {
+    const bloquant = this.cfg.symboleBloquant || 'x';
+    const libres = lot.des.map((d, i) => ({ d, i })).filter(({ d }) => !d.verrou);
+    if (!lot.lance || j.profil.id === 'hasard') return libres.map(({ i }) => i);
+
+    // Poids de chaque symbole selon l'état de la Tornade du joueur.
+    const poids = j.eveille
+      ? { vache: 1, eclair: 0.62, zzz: 0.5, tornade: 0.12 }
+      : { tornade: 1, eclair: 0.62, zzz: 0.5, vache: 0.15 };
+    const compte = this._compter(lot);
+    let objectif = null, meilleur = -1;
+    for (const [sym, p] of Object.entries(poids)) {
+      if (sym === bloquant) continue;
+      const note = p * ((compte[sym] || 0) + 0.05);
+      if (note > meilleur) { meilleur = note; objectif = sym; }
+    }
+    // On relance tout ce qui ne va pas dans le sens de l'objectif.
+    const aRelancer = libres.filter(({ d }) => d.sym !== objectif).map(({ i }) => i);
+    return aRelancer.length ? aRelancer : libres.map(({ i }) => i);
   }
 
   _compter(lot) {
@@ -366,31 +401,47 @@ export class Moteur {
     this._effectuerLancer(j);
   }
 
-  _effectuerLancer(j) {
+  _effectuerLancer(j, indices = null) {
     const lot = j.lots[0];
     const premier = !lot.lance;
     // Garde-fou : plus aucun dé libre et aucune combinaison obligatoire — on rend le lot.
     if (!premier && lot.des.every((d) => d.verrou)) { this._passerLot(j); return; }
     const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
 
-    // Incident fâcheux : relancer une étoile par mégarde coûte le lot.
+    // Incident fâcheux : relancer un X par mégarde coûte le lot.
     if (!premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
       j.stats.erreurs++;
-      this._log(`${j.nom} relance une étoile par mégarde — il passe son lot.`, 'incident', j.id);
+      this._log(`${j.nom} relance un X par mégarde — il passe son lot.`, 'incident', j.id);
       if (this.rng() < (this.cfg.penaliteErreurAdverse ?? 0)) this._jetonAuxAdverses(j);
       this._passerLot(j);
       return;
     }
 
-    this._lancerDes(lot, !!this.passif.unParUn);
+    const choixDes = indices || (j.type === 'humain' ? null : this._choixDesIA(j, lot));
+    this._lancerDes(lot, choixDes, !!this.passif.unParUn);
     j.lancersLot++;
     j.stats.lancers++;
 
+    // On signale toute combinaison visible sur les dés, même celle que le joueur
+    // ne peut pas jouer : c'est ce qui allume les alertes de la table. Les
+    // combinaisons obligatoires se résolvent aussitôt, sans cela on ne les
+    // verrait jamais passer.
+    if (this.onCombinaison) {
+      const compte = this._compter(lot);
+      for (const combo of this.cfg.combos) {
+        if (Object.entries(combo.requis).every(([sy, n]) => (compte[sy] || 0) >= n)) {
+          this.onCombinaison(j.id, combo.id);
+        }
+      }
+    }
+
     const dispo = this.combosDisponibles(j);
-    // Une combinaison de carte Journée l'emporte sur la collision obligatoire :
-    // c'est le seul moyen de voir 4 étoiles avant d'être forcé de passer à 2.
+    // Une combinaison de carte Journée l'emporte sur une combinaison obligatoire :
+    // c'est le seul moyen de voir quatre éclairs avant d'être forcé de passer à trois.
     const carteCombo = dispo.find((d) => d.source === 'journee');
-    const obligatoire = dispo.find((d) => d.obligatoire);
+    // Entre « Attrape » et « Bloqué », on préfère celle qui laisse agir le joueur.
+    const obligatoires = dispo.filter((d) => d.obligatoire);
+    const obligatoire = obligatoires.find((d) => d.id !== 'blocage') || obligatoires[0];
     if (carteCombo && obligatoire) {
       this._appliquerChoix(j, { type: 'combo', comboId: carteCombo.id });
       return;
@@ -452,6 +503,7 @@ export class Moteur {
       }
       case 'difference': return 85;
       case 'collision': return 50;
+      case 'blocage': return 5;
       default: return 10;
     }
   }
@@ -470,7 +522,7 @@ export class Moteur {
   // ── Application d'un choix (IA ou humain) ───────────────────────────────────
   _appliquerChoix(j, choix) {
     if (!choix || !j.lots.length) return;
-    if (choix.type === 'lancer') { this._effectuerLancer(j); return; }
+    if (choix.type === 'lancer') { this._effectuerLancer(j, choix.indices || null); return; }
     if (choix.type === 'passer') { this._passerLot(j); return; }
     if (choix.type === 'combo') {
       const dispo = this.combosDisponibles(j).find((d) => d.id === choix.comboId);
@@ -478,6 +530,11 @@ export class Moteur {
       j.stats.combos[dispo.id] = (j.stats.combos[dispo.id] || 0) + 1;
       // Règle : on passe d'abord son lot, puis on joue l'effet.
       if (dispo.id === 'collision') { this._collision(j); return; }
+      if (dispo.id === 'blocage') {
+        this._log(`${j.nom} est bloqué sur deux X — il rend son lot.`, 'blocage', j.id);
+        this._passerLot(j, true);
+        return;
+      }
       this._passerLot(j, true);
       this._effetCombo(j, dispo, choix);
     }
@@ -527,7 +584,7 @@ export class Moteur {
         break;
       }
       case 'gagnerManche':
-        this._log(`${j.nom} sort quatre étoiles — la manche est remportée sur-le-champ !`, 'combo', j.id);
+        this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée sur-le-champ !`, 'combo', j.id);
         this._finManche(j.equipe);
         return;
       case 'reveilEquipe': {
@@ -606,6 +663,7 @@ export class Moteur {
     const q = this._suivant(j);
     if (!q.lots.length) q._lotDepuis = this.now;
     q.lots.push(lot);
+    if (this.onMouvement) this.onMouvement(j.id, q.id, 'passe', lot);
     if (!silencieux) this._log(`${j.nom} passe son lot à ${q.nom}.`, 'passe', j.id);
     this._planifier(q.id);
     if (j.lots.length) this._planifier(j.id);
@@ -620,6 +678,7 @@ export class Moteur {
     lot.lance = false;
     if (!q.lots.length) q._lotDepuis = this.now;
     q.lots.push(lot);
+    if (this.onMouvement) this.onMouvement(j.id, q.id, 'attrape', lot);
     j.lancersLot = 0;
     j.attente = null;
 
@@ -689,6 +748,7 @@ export class Moteur {
         const suiv = this._suivant(q);
         if (!suiv.lots.length) suiv._lotDepuis = this.now;
         suiv.lots.push(enJeu);
+        if (this.onMouvement) this.onMouvement(q.id, suiv.id, 'touche', enJeu);
         q.lancersLot = 0;
         q.attente = null;
         this._planifier(suiv.id);

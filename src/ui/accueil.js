@@ -6,8 +6,9 @@ import { aller } from './app.js';
 import { lancerPartie, partieEnCours } from './table.js';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  CARTES_JOURNEE,
+  CARTES_JOURNEE, ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, FACES_PAR_DEFAUT,
 } from '../core/config.js';
+import { pastilleSymbole } from './icons.js';
 import { randomSeed } from '../core/rng.js';
 
 const NOMS = [
@@ -49,6 +50,7 @@ export function vueAccueil() {
   let graine = store.get('graine', randomSeed());
   let cartes = store.get('cartes', CARTES_JOURNEE.map((c) => c.id));
   let melanger = store.get('melangerCartes', true);
+  let faces = store.get('faces', null) || FACES_PAR_DEFAUT.slice();
 
   const racine = h('div.page');
 
@@ -59,6 +61,7 @@ export function vueAccueil() {
     store.set('graine', graine);
     store.set('cartes', cartes);
     store.set('melangerCartes', melanger);
+    store.set('faces', faces);
   }
 
   function demarrer() {
@@ -66,6 +69,7 @@ export function vueAccueil() {
     const cfg = configParDefaut(nb);
     cfg.cartes = cartes;
     cfg.melangerCartes = melanger;
+    cfg.faces = faces.slice();
     lancerPartie(cfg, joueurs, graineManuelle ? graine : randomSeed());
     aller('/table');
   }
@@ -181,7 +185,39 @@ export function vueAccueil() {
         chip('Mélanger les cartes', melanger, () => { melanger = !melanger; dessiner(); }),
       ),
 
-      h('div.titre-section', { style: { marginTop: '6px' } }, 'Cartes Journée en jeu'),
+      h('div.titre-section', { style: { marginTop: '16px' } }, 'Faces des dés'),
+      h('div.faces-edit',
+        ...faces.map((f, i) => h('div.face-case',
+          pastilleSymbole(f, 34),
+          h('select', {
+            onchange: (e) => { faces[i] = e.target.value; dessiner(); },
+          }, ...ORDRE_SYMBOLES.map((sy) => h('option', {
+            value: sy, selected: sy === f,
+          }, SYMBOLES[sy].nom))),
+        )),
+      ),
+      h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
+        h('span.mini.muted', 'Modèles :'),
+        ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
+          onclick: () => { faces = p.faces.slice(); dessiner(); },
+        }, p.nom)),
+        h('button.btn.btn--petit', {
+          onclick: () => {
+            faces = [...faces, 'vide'].slice(0, 12);
+            dessiner();
+          },
+        }, '+ face'),
+        faces.length > 2
+          ? h('button.btn.btn--petit', {
+              onclick: () => { faces = faces.slice(0, -1); dessiner(); },
+            }, '− face')
+          : null,
+      ),
+      h('p.mini.muted', { style: { marginTop: '8px' } },
+        'Un dé porte 2 tornades, 1 X, 1 ZzZ, 1 vache et 1 éclair. '
+        + 'Le X fige le dé : il ne se relance jamais.'),
+
+      h('div.titre-section', { style: { marginTop: '16px' } }, 'Cartes Journée en jeu'),
       h('div.rangee.rangee--serree',
         ...CARTES_JOURNEE.map((c) => chip(
           c.court,

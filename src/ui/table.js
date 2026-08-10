@@ -9,7 +9,7 @@ import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
 } from './icons.js';
 import { Moteur } from '../core/engine.js';
-import { COULEURS_EQUIPE } from '../core/config.js';
+import { COULEURS_EQUIPE, ALERTES } from '../core/config.js';
 import { ajouterHistorique } from './store.js';
 import { aller } from './app.js';
 
@@ -36,6 +36,22 @@ const TOUCHES = [
   { lancer: 'KeyA', passer: 'KeyE', libLancer: 'A', libPasser: 'E' },
   { lancer: 'KeyK', passer: 'KeyM', libLancer: 'K', libPasser: 'M' },
 ];
+
+/**
+ * Couleur d'alerte à afficher autour de la zone d'un joueur, déduite des seuls
+ * dés visibles : rouge à deux X, jaune à trois éclairs, puis bleu, vert, violet.
+ */
+function alerteDesDes(lot, combos) {
+  if (!lot || !lot.lance) return null;
+  const c = {};
+  for (const d of lot.des) if (d.sym) c[d.sym] = (c[d.sym] || 0) + 1;
+  for (const id of ['blocage', 'collision', 'reveil', 'vache', 'endormir']) {
+    const combo = combos.find((x) => x.id === id);
+    if (!combo) continue;
+    if (Object.entries(combo.requis).every(([sy, n]) => (c[sy] || 0) >= n)) return ALERTES[id];
+  }
+  return null;
+}
 
 /** Ne reconstruit `hote` que si la signature a changé. */
 function siChange(hote, signature, construire) {
@@ -96,11 +112,40 @@ export function vueTable() {
   zoneTable.appendChild(elCentre);
 
   const n = moteur.joueurs.length;
-  elSieges.forEach((el, i) => {
+  const positions = elSieges.map((el, i) => {
     const a = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
-    el.style.left = `${50 + 40 * Math.cos(a)}%`;
-    el.style.top = `${50 + 38 * Math.sin(a)}%`;
+    const p = { x: 50 + 40 * Math.cos(a), y: 50 + 38 * Math.sin(a) };
+    el.style.left = `${p.x}%`;
+    el.style.top = `${p.y}%`;
+    return p;
   });
+
+  // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
+  const enVol = [];
+  function animerPassage(de, vers, motif, lot) {
+    if (window.innerWidth <= 860) return;   // en disposition verticale, sans objet
+    const a = positions[de], b = positions[vers];
+    if (!a || !b) return;
+    const duree = Math.max(110, Math.min(500, 420 / vitesse));
+    const el = h('div', { class: `lot-vol lot-vol--${motif}` },
+      ...lot.des.slice(0, 4).map((d) => faceDe(d.sym, { taille: 'petit' })));
+    el.style.transitionDuration = `${duree}ms, ${duree}ms, 160ms`;
+    el.style.left = `${a.x}%`;
+    el.style.top = `${a.y}%`;
+    zoneTable.appendChild(el);
+    enVol.push(el);
+    while (enVol.length > 6) enVol.shift().remove();
+    requestAnimationFrame(() => {
+      el.style.left = `${b.x}%`;
+      el.style.top = `${b.y}%`;
+    });
+    setTimeout(() => { el.style.opacity = '0'; }, duree);
+    setTimeout(() => {
+      el.remove();
+      const k = enVol.indexOf(el);
+      if (k >= 0) enVol.splice(k, 1);
+    }, duree + 200);
+  }
 
   const zonePanneaux = h('div', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
   const zoneJournal = h('div.journal');
@@ -135,6 +180,26 @@ export function vueTable() {
   moteur.onJournal = (e) => {
     if (e.type === 'touche' && e.pid != null) touchesRecentes.set(e.pid, moteur.now);
   };
+  moteur.onMouvement = (de, vers, motif, lot) => animerPassage(de, vers, motif, lot);
+
+  // Les combinaisons obligatoires sont jouées dans la foulée du lancer : sans
+  // rémanence, leur alerte clignoterait le temps d'une image. On la retient.
+  const PRIORITE_ALERTE = ['rouge', 'jaune', 'bleu', 'vert', 'violet'];
+  const alertesRetenues = new Map();
+  moteur.onCombinaison = (pid, comboId) => {
+    const couleur = ALERTES[comboId];
+    if (!couleur) return;
+    const duree = Math.max(320, 950 / vitesse);
+    const cur = alertesRetenues.get(pid);
+    const remplace = !cur || moteur.now >= cur.fin
+      || PRIORITE_ALERTE.indexOf(couleur) < PRIORITE_ALERTE.indexOf(cur.couleur);
+    if (remplace) alertesRetenues.set(pid, { couleur, fin: moteur.now + duree });
+  };
+  function alerteDe(j) {
+    const retenue = alertesRetenues.get(j.id);
+    if (retenue && moteur.now < retenue.fin) return retenue.couleur;
+    return alerteDesDes(j.lots[0], moteur.cfg.combos);
+  }
 
   // ── Boucle ────────────────────────────────────────────────────────────────
   let actif = true;
@@ -171,7 +236,13 @@ export function vueTable() {
     for (const j of humains) {
       if (!j.attente) continue;
       const t = toucheDe.get(j.id);
-      if (ev.code === t.lancer) { moteur.actionHumaine(j.id, { type: 'lancer' }); ev.preventDefault(); return; }
+      if (ev.code === t.lancer) {
+        const lot = j.lots[0];
+        const indices = lot.lance ? indicesRelance(j, lot) : null;
+        if (!indices || indices.length) moteur.actionHumaine(j.id, { type: 'lancer', indices });
+        ev.preventDefault();
+        return;
+      }
       if (ev.code === t.passer && j.attente.peutPasser) {
         moteur.actionHumaine(j.id, { type: 'passer' }); ev.preventDefault(); return;
       }
@@ -221,6 +292,9 @@ export function vueTable() {
       const secoue = recent != null && moteur.now - recent < 600;
       el.classList.toggle('siege--porteur', j.lots.length > 0);
       el.classList.toggle('siege--touche', secoue);
+
+      const alerte = alerteDe(j);
+      if (alerte) el.dataset.alerte = alerte; else delete el.dataset.alerte;
 
       const des = lot && lot.lance ? lot.des.map((d) => `${d.sym}${d.verrou ? '*' : ''}`).join(',') : '';
       const sig = `${j.lots.length}|${j.eveille}|${des}`;
@@ -297,12 +371,45 @@ export function vueTable() {
     zoneJournal.scrollTop = zoneJournal.scrollHeight;
   }
 
+  // Dés que chaque humain a décidé de garder. Remis à zéro à chaque nouveau jet :
+  // on redécide « je garde quoi » après avoir vu le résultat.
+  const gardes = new Map();   // idJoueur -> Set d'indices gardés
+  const empreinteDes = new Map();
+
+  function empreinte(lot) {
+    return lot.lance ? lot.des.map((d) => `${d.sym}${d.verrou ? '*' : ''}`).join(',') : 'neuf';
+  }
+
+  function gardePour(j, lot) {
+    const emp = empreinte(lot);
+    if (empreinteDes.get(j.id) !== emp) {
+      empreinteDes.set(j.id, emp);
+      gardes.set(j.id, new Set());
+    }
+    return gardes.get(j.id) || new Set();
+  }
+
+  /** Indices réellement relancés : tout ce qui n'est ni figé ni gardé. */
+  function indicesRelance(j, lot) {
+    const garde = gardePour(j, lot);
+    return lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !garde.has(i));
+  }
+
+  function basculerGarde(j, i) {
+    const lot = j.lots[0];
+    if (!lot || !lot.lance || lot.des[i].verrou) return;
+    const garde = gardePour(j, lot);
+    if (garde.has(i)) garde.delete(i); else garde.add(i);
+    gardes.set(j.id, garde);
+  }
+
   function peindrePanneaux() {
     const actifs = humains.filter((j) => j.attente && j.lots.length);
     const sig = actifs.map((j) => {
       const lot = j.lots[0];
-      const des = lot.lance ? lot.des.map((d) => `${d.sym}${d.verrou ? '*' : ''}`).join(',') : 'neuf';
-      return `${j.id}:${j.lots.length}:${j.eveille}:${des}:${j.attente.combos.map((c) => c.id).join('+')}`;
+      const garde = [...gardePour(j, lot)].sort().join('-');
+      return `${j.id}:${j.lots.length}:${j.eveille}:${empreinte(lot)}:${garde}`
+        + `:${alerteDe(j) || ''}:${j.attente.combos.map((c) => c.id).join('+')}`;
     }).join('||');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
@@ -311,7 +418,10 @@ export function vueTable() {
     const t = toucheDe.get(j.id);
     const lot = j.lots[0];
     const eq = COULEURS_EQUIPE[j.equipe];
-    return h('div.panneau-humain',
+    const garde = gardePour(j, lot);
+    const aRelancer = indicesRelance(j, lot);
+    const alerte = alerteDe(j);
+    return h('div.panneau-humain', { data: alerte ? { alerte } : {} },
       h('div.rangee', { style: { marginBottom: '10px' } },
         h('span', {
           style: { width: '12px', height: '12px', borderRadius: '50%', background: eq.hex },
@@ -325,18 +435,36 @@ export function vueTable() {
       h('div.rangee',
         h('div.rangee.rangee--serree',
           ...(lot.lance
-            ? lot.des.map((d) => faceDe(d.sym, { verrou: d.verrou, taille: 'grand' }))
+            ? lot.des.map((d, i) => {
+                const de = faceDe(d.sym, {
+                  verrou: d.verrou, taille: 'grand',
+                });
+                if (!d.verrou) {
+                  de.classList.add('de--cliquable');
+                  if (!garde.has(i)) de.classList.add('de--relance');
+                  de.title = garde.has(i) ? 'Gardé — cliquez pour le relancer' : 'Sera relancé — cliquez pour le garder';
+                  de.onclick = () => basculerGarde(j, i);
+                }
+                return de;
+              })
             : lot.des.map(() => faceDe(null, { taille: 'grand' }))),
         ),
         h('div', { style: { flex: '1' } }),
         h('button.btn.btn--primaire', {
-          onclick: () => moteur.actionHumaine(j.id, { type: 'lancer' }),
-        }, lot.lance ? `Relancer (${t.libLancer})` : `Lancer (${t.libLancer})`),
+          disabled: lot.lance && !aRelancer.length,
+          onclick: () => moteur.actionHumaine(j.id, { type: 'lancer', indices: aRelancer }),
+        }, lot.lance
+          ? `Relancer ${aRelancer.length} dé${aRelancer.length > 1 ? 's' : ''} (${t.libLancer})`
+          : `Lancer (${t.libLancer})`),
         h('button.btn', {
           disabled: !j.attente.peutPasser,
           onclick: () => moteur.actionHumaine(j.id, { type: 'passer' }),
         }, `Passer (${t.libPasser})`),
       ),
+      lot.lance
+        ? h('div.mini.muted', { style: { marginTop: '8px' } },
+            'Cliquez un dé pour le garder. Les X sont figés : ils ne se relancent jamais.')
+        : null,
       j.attente.combos.length
         ? h('div.rangee', { style: { marginTop: '10px' } },
             ...j.attente.combos.map((c, i) => h('button', {

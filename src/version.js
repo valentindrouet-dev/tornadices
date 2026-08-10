@@ -1,9 +1,25 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.2';
+export const VERSION = '1.3';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.3',
+    date: '09/08/2026',
+    notes: [
+      'Les cinq faces du dé sont dessinées d’après le matériel : tornade, vache, ZzZ, éclair et X, pastille de couleur et pictogramme noir.',
+      'Répartition de base d’un dé : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair — modifiable face par face dans les options de partie comme au Laboratoire.',
+      'On choisit désormais quels dés relancer : cliquez un dé pour le garder, les autres repartent. Autant de fois qu’on veut.',
+      'Un X fige son dé et clignote en rouge : il ne se relance jamais. Au deuxième X, le lot part sans rien tenter.',
+      'L’attrape passe à trois éclairs — passer son lot et tenter de toucher le joueur suivant.',
+      'La zone de chaque joueur s’entoure d’un halo dès que la combinaison sort : rouge à deux X, jaune clignotant orange à trois éclairs, bleu à trois tornades, vert à trois vaches, violet à trois ZzZ.',
+      'Les lots traversent la table en vol d’un joueur à l’autre : on voit enfin les dés changer de main.',
+      'Les symboles sont nettement plus gros sur la table et dans le panneau de jeu.',
+      'Le Laboratoire compare deux stratégies : relancer tout (calcul exact) ou garder les dés utiles (estimation par tirages) — l’écart mesure ce que rapporte la relance choisie.',
+      'Les IA gardent elles aussi leurs dés utiles au lieu de tout relancer.',
+    ],
+  },
   {
     version: '1.2',
     date: '09/08/2026',
