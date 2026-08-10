@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.8';
+import { makeRng } from './rng.js?v=1.9';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN,
   placement, infosMiseEnPlace,
-} from './config.js?v=1.8';
+} from './config.js?v=1.9';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -128,6 +128,7 @@ export class Moteur {
         lots: [],
         lancersLot: 0,
         attente: null,       // état d'attente pour un joueur humain
+        departEnAttente: null, // lot déjà engagé vers le voisin
         planifie: false,
         fige: false,         // une étape est en cours, le joueur ne peut rien faire
         stats: statsVides(),
@@ -183,6 +184,7 @@ export class Moteur {
       j.attente = null;
       j.planifie = false;
       j.fige = false;
+      j.departEnAttente = null;
     }
     for (const e of Object.values(this.equipes)) e.retournes = 0;
 
@@ -223,10 +225,23 @@ export class Moteur {
         .map((j) => j.id);
     }
     if (!candidats.length) candidats = this.joueurs.map((j) => j.id);
-    // On répartit les lots le plus loin possible les uns des autres.
+
+    // Un joueur ne commence jamais avec deux lots : on prend des porteurs
+    // distincts, répartis le plus loin possible les uns des autres.
     const out = [];
-    const pas = candidats.length / nbLots;
-    for (let k = 0; k < nbLots; k++) out.push(candidats[Math.floor(k * pas) % candidats.length]);
+    const m = candidats.length;
+    const pris = Math.min(nbLots, m);
+    for (let k = 0; k < pris; k++) {
+      const id = candidats[Math.round((k * m) / pris) % m];
+      if (!out.includes(id)) out.push(id);
+    }
+    // S'il reste des lots à placer, on complète avec les autres joueurs.
+    if (out.length < Math.min(nbLots, this.joueurs.length)) {
+      for (const j of this.joueurs) {
+        if (out.length >= Math.min(nbLots, this.joueurs.length)) break;
+        if (!out.includes(j.id)) out.push(j.id);
+      }
+    }
     return out;
   }
 
@@ -553,6 +568,7 @@ export class Moteur {
     if (!lot || j.fige) return;
     j.fige = true;
     j.attente = null;
+    j.departEnAttente = { lot, motif, dispo, choix };
     const constat = motif === 'interruption' ? 0 : (this.cfg.dureeConstat ?? 900);
     this.file.pousser(this.now + constat, {
       type: 'depart', pid: j.id, lot, motif, dispo, choix,
@@ -562,12 +578,26 @@ export class Moteur {
 
   /** Le lot quitte la main du joueur et traverse la table. */
   _depart(j, lot, motif, dispo, choix) {
-    j.lots.splice(j.lots.indexOf(lot), 1);
+    j.departEnAttente = null;
     j.fige = false;
+    const q = this._envoyerLot(j, lot, motif, dispo);
+    if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
+
+    if (motif === 'attrape') this._tenterAttrape(j, q);
+    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
+
+    if (!this.termine && j.lots.length) this._planifier(j.id);
+    if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /** Retire le lot de la main du joueur et l'envoie traverser vers son voisin. */
+  _envoyerLot(j, lot, motif, dispo = null) {
+    const k = j.lots.indexOf(lot);
+    if (k >= 0) j.lots.splice(k, 1);
     j.lancersLot = 0;
     j.attente = null;
+    j.stats.passes++;
     if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
-    if (motif !== 'combo') j.stats.passes++;
 
     // Le lot repart vierge : le voisin le recevra faces « ? », à lancer.
     const desFinaux = lot.des.map((d) => d.sym);
@@ -591,18 +621,14 @@ export class Moteur {
       issue: this._issueDuTour(motif, dispo),
       reussi: motif === 'combo' && dispo && dispo.id !== 'blocage',
     });
-
-    if (motif === 'attrape') this._tenterAttrape(j, q);
-    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
-
-    if (!this.termine && j.lots.length) this._planifier(j.id);
-    if (this.onEtatChange) this.onEtatChange();
+    return q;
   }
 
   /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
   _issueDuTour(motif, dispo) {
     if (motif === 'interruption') return 'Touché !';
     if (motif === 'passe') return 'Passé';
+    if (motif === 'pousse') return 'Poussé';
     if (motif === 'megarde') return 'Mégarde';
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
@@ -619,20 +645,28 @@ export class Moteur {
     const k = this.transits.findIndex((t) => t.id === transitId);
     if (k < 0) return;
     const t = this.transits.splice(k, 1)[0];
+    // La manche s'est terminée pendant le vol : le lot n'a plus de raison d'être.
+    if (this.termine || this.transition) return;
     const q = this.joueurs[t.vers];
 
-    if (q.lots.length) {
-      // Un lot arrive alors qu'on en tient déjà un : celui-ci est poussé de côté
-      // et le nouveau passe devant. Ce qui tournait encore retombe.
-      for (const d of q.lots[0].des) { d.roule = false; d.finRoule = 0; }
-      q.lots[0].lance = this._lotPose(q.lots[0]);
-      q.lancersLot = 0;
-      this._log(`${q.nom} reçoit un second lot — le premier est poussé de côté.`, 'pousse', q.id);
-      this._annoncer(`${q.nom} est débordé — deux lots en main !`, 'rouge');
-    } else {
-      q._lotDepuis = this.now;
+    // Un joueur ne tient jamais deux lots : quand deux se rencontrent, celui
+    // qu'il avait en main est poussé aussitôt vers le voisin suivant.
+    if (q.departEnAttente) {
+      // Son lot était déjà sur le départ : on le fait partir tout de suite.
+      const d = q.departEnAttente;
+      this._depart(q, d.lot, d.motif, d.dispo, d.choix);
+      if (this.termine || this.transition) return;
     }
-    q.lots.unshift(t.lot);
+    if (q.lots.length) {
+      const pousse = q.lots[0];
+      for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
+      const suivant = this._envoyerLot(q, pousse, 'pousse');
+      this._annoncer(`${q.nom} est poussé — son lot file vers ${suivant.nom}`, 'rouge');
+    }
+
+    if (!q.lots.length) q._lotDepuis = this.now;
+    q.lots.push(t.lot);
+    q.fige = false;
     q.planifie = false;
     this._planifier(q.id);
     if (this.onEtatChange) this.onEtatChange();
@@ -697,7 +731,7 @@ export class Moteur {
       this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
       this._annoncer(`${j.nom} attrape ${q.nom} !`, 'jaune');
       // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
-      if (q.lots.length) this._demanderDepart(q, 'interruption');
+      if (q.lots.length && !q.fige) this._demanderDepart(q, 'interruption');
       this._retournerJeton(j, 1, 'collision');
     } else {
       this._log(`Raté — ${q.nom} s’en sort.`, 'collision', q.id);
@@ -878,7 +912,8 @@ export class Moteur {
     this.duel = null;
     this.transits = [];
     for (const j of this.joueurs) {
-      j.lots = []; j.fige = false; j.planifie = false; j.attente = null; j.lancersLot = 0;
+      j.lots = []; j.fige = false; j.planifie = false; j.attente = null;
+      j.lancersLot = 0; j.departEnAttente = null;
     }
 
     // Les dés reviennent au centre, puis repartent vers les perdants : ce

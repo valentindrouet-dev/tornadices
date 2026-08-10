@@ -299,7 +299,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 }
 .tapis {
   position: absolute;
-  inset: 7% 12%;
+  inset: 7% 12%;   /* remplacé à l'exécution par l'ellipse réelle des sièges */
   border-radius: 50%;
   background: radial-gradient(circle at 50% 38%, #fbfdff, #e7f3fc);
   border: 2px dashed rgba(148, 190, 226, .60);
@@ -392,6 +392,11 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   0%, 49% { border-color: #f9b115; box-shadow: 0 0 0 6px rgba(249, 177, 21, .45), var(--ombre); }
   50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
 }
+
+/* En pause, rien ne bouge : les dés cessent de tourner, les halos de battre. */
+.en-pause *,
+.en-pause *::before,
+.en-pause *::after { animation-play-state: paused !important; }
 
 /* ── Bandeau « version en cache » ─────────────────────────────────────────── */
 .banniere-version {

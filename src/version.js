@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.8';
+export const VERSION = '1.9';
 export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.9',
+    date: '10/08/2026',
+    notes: [
+      'Un joueur ne tient plus jamais deux lots : quand deux se rencontrent, celui qu’il avait en main est aussitôt poussé vers son voisin, et il enchaîne sur le nouveau. Le journal affiche « Poussé ».',
+      'Deux causes du double lot corrigées : un même joueur pouvait recevoir plusieurs lots en début de manche, et un lot en vol pouvait atterrir après la fin de la manche.',
+      'Les scores, la carte et la pioche ne recouvrent plus ni un joueur ni la surface de jeu : les sièges et le tapis sont calculés dans l’espace qui reste une fois ces trois panneaux réservés, à chaque changement de taille de fenêtre.',
+      'En pause, plus rien ne bouge — les dés cessent de tourner et les halos de battre.',
+    ],
+  },
   {
     version: '1.8',
     date: '09/08/2026',

@@ -33,6 +33,25 @@ for (const n of [3, 4, 5, 6, 7, 8, 9]) {
   );
 }
 
+// ── 1 bis. Un joueur ne tient jamais deux lots ───────────────────────────────
+console.log('\nUn seul lot par joueur');
+for (const n of [3, 6, 9]) {
+  const cfg = configParDefaut(n);
+  const spec = Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'temeraire' }));
+  let fautes = 0, controles = 0, poussees = 0;
+  for (let g = 0; g < 25; g++) {
+    const m = new Moteur(cfg, spec, `pousse-${n}-${g}`);
+    m.onEtatChange = () => {
+      controles++;
+      if (m.joueurs.some((j) => j.lots.length > 1)) fautes++;
+    };
+    const r = m.jouerJusquAuBout();
+    poussees += r.joueurs.reduce((t, j) => t + (j.stats.combos.__pousse || 0), 0);
+  }
+  verifier(`${n} joueurs — ${controles} contrôles, aucun joueur à deux lots`, fautes === 0,
+    `${fautes} occurrence(s)`);
+}
+
 // ── 2. Déterminisme : même graine, même résultat ─────────────────────────────
 console.log('\nReproductibilité');
 {

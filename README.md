@@ -103,6 +103,10 @@ Chaque dé roule pour son propre compte : on peut en relancer un pendant qu’un
 autre tourne encore. Un lot qui arrive en main porte la face « ? » tant qu’il
 n’a pas été lancé.
 
+**On ne tient jamais deux lots** : quand deux se rencontrent, celui qu’on avait
+en main est poussé vers le voisin suivant — la poussée peut se propager — et on
+enchaîne sur le nouveau.
+
 **Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
 
 ## Le rythme d’un lot

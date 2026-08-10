@@ -1,8 +1,8 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.8';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.8';
-import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.8';
+import { h } from './dom.js?v=1.9';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.9';
+import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.9';
 
 export function vueRegles() {
   return h('div.page',
@@ -16,9 +16,9 @@ export function vueRegles() {
         + 'elles font le tempo du jeu et comptent dans la durée d’une partie.'),
       h('p.petit.muted', 'Chaque dé roule pour son propre compte : on peut en relancer un pendant '
         + 'qu’un autre tourne encore, un clic par dé, la barre espace pour tous.'),
-      h('p.petit', 'Un lot qui arrive chez un joueur qui en tient déjà un passe devant : '
-        + 'le lot en cours est poussé de côté, ses dés retombent, et il faudra le reprendre '
-        + 'après avoir joué le nouveau.'),
+      h('p.petit', 'On ne tient jamais deux lots. Quand deux se rencontrent, celui qu’on avait '
+        + 'en main est poussé aussitôt vers le voisin suivant — quitte à le pousser à son tour — '
+        + 'et on enchaîne sur le nouveau, faces « ? », à lancer.'),
       h('p.petit.muted', 'Entre deux manches, les dés reviennent au centre de la table puis '
         + 'repartent vers l’équipe qui vient de perdre, pendant que la carte Journée suivante '
         + 'recouvre la précédente.'),

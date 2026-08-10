@@ -4,14 +4,14 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.8';
+import { h, remplacer, duree, vider } from './dom.js?v=1.9';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.8';
-import { Moteur } from '../core/engine.js?v=1.8';
-import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=1.8';
-import { ajouterHistorique } from './store.js?v=1.8';
-import { aller } from './app.js?v=1.8';
+} from './icons.js?v=1.9';
+import { Moteur } from '../core/engine.js?v=1.9';
+import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=1.9';
+import { ajouterHistorique } from './store.js?v=1.9';
+import { aller } from './app.js?v=1.9';
 
 let moteur = null;
 let vitesse = 1;
@@ -113,13 +113,53 @@ export function vueTable() {
   });
   const n = moteur.joueurs.length;
   const CENTRE = { x: 50, y: 50 };
-  const positions = elSieges.map((el, i) => {
-    const a = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
-    const p = { x: 50 + 33 * Math.cos(a), y: 50 + 31 * Math.sin(a) };
-    el.style.left = `${p.x}%`;
-    el.style.top = `${p.y}%`;
-    return p;
-  });
+  const positions = elSieges.map(() => ({ x: 50, y: 50 }));
+  const elTapis = zoneTable.querySelector('.tapis');
+
+  // Les sièges tiennent dans le rectangle qui reste une fois les trois coins
+  // réservés : la carte et les scores à gauche, la pioche à droite. Ainsi aucun
+  // panneau ne recouvre un joueur ni la surface de jeu, quelle que soit la
+  // taille de la fenêtre ou le nombre de joueurs.
+  function placerSieges() {
+    const zw = zoneTable.clientWidth;
+    const zh = zoneTable.clientHeight;
+    if (!zw || !zh || window.innerWidth <= 860) return;
+
+    const marge = 20;
+    const bandeGauche = Math.max(elCarte.offsetWidth, elScores.offsetWidth) + marge;
+    const bandeDroite = elPioche.offsetWidth + marge;
+    const larg = elSieges[0]?.offsetWidth || 196;
+    const haut = elSieges[0]?.offsetHeight || 130;
+
+    const libre = Math.max(240, zw - bandeGauche - bandeDroite);
+    const cx = bandeGauche + libre / 2;
+    const cy = zh / 2;
+    const rx = Math.max(60, libre / 2 - larg / 2);
+    const ry = Math.max(60, zh / 2 - haut / 2 - 6);
+
+    CENTRE.x = (cx / zw) * 100;
+    CENTRE.y = (cy / zh) * 100;
+
+    elSieges.forEach((el, i) => {
+      const a = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
+      positions[i].x = ((cx + rx * Math.cos(a)) / zw) * 100;
+      positions[i].y = ((cy + ry * Math.sin(a)) / zh) * 100;
+      el.style.left = `${positions[i].x}%`;
+      el.style.top = `${positions[i].y}%`;
+    });
+
+    if (elTapis) {
+      elTapis.style.left = `${((cx - rx) / zw) * 100}%`;
+      elTapis.style.top = `${((cy - ry) / zh) * 100}%`;
+      elTapis.style.width = `${((2 * rx) / zw) * 100}%`;
+      elTapis.style.height = `${((2 * ry) / zh) * 100}%`;
+    }
+  }
+
+  placerSieges();
+  const suiviTaille = new ResizeObserver(() => placerSieges());
+  suiviTaille.observe(zoneTable);
+  window.addEventListener('resize', placerSieges);
 
   // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
   const enVol = [];
@@ -206,6 +246,8 @@ export function vueTable() {
     if (enTransition) return;   // la transition de manche occupe déjà le centre
     if (annonceCourante) annonceCourante.remove();
     const el = h('div', { class: `annonce annonce--${couleur}` }, texte);
+    el.style.left = `${CENTRE.x}%`;
+    el.style.top = `${CENTRE.y}%`;
     annonceCourante = el;
     zoneTable.appendChild(el);
     zoneTable.classList.add('table-zone--annonce');
@@ -250,6 +292,8 @@ export function vueTable() {
         ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
         : h('div.transition-carte', 'Dernière carte jouée'),
     );
+    panneauTransition.style.left = `${CENTRE.x}%`;
+    panneauTransition.style.top = `${CENTRE.y}%`;
     zoneTable.appendChild(panneauTransition);
     zoneTable.classList.add('table-zone--transition');
 
@@ -333,6 +377,8 @@ export function vueTable() {
     if (!document.body.contains(racine)) {
       actif = false;
       window.removeEventListener('keydown', auClavier);
+      window.removeEventListener('resize', placerSieges);
+      suiviTaille.disconnect();
       surveillant.disconnect();
     }
   });
@@ -340,6 +386,7 @@ export function vueTable() {
 
   // ── Peinture ──────────────────────────────────────────────────────────────
   function peindre() {
+    racine.classList.toggle('en-pause', enPause);
     peindreBadges();
     peindreSieges();
     peindreCentre();
@@ -434,7 +481,7 @@ export function vueTable() {
 
     const jetons = Object.values(moteur.equipes)
       .map((e) => `${e.id}:${e.retournes}/${e.jetons}:${e.cartes.length}`).join('|');
-    siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
+    if (siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
       const c = COULEURS_EQUIPE[e.id];
       return h('div.score-equipe', { class: `equipe-${e.id}` },
         h('span.score-nom', { style: { color: c.hex } }, c.nom),
@@ -447,7 +494,7 @@ export function vueTable() {
           })),
         ),
       );
-    }));
+    }))) placerSieges();
   }
 
   function peindreJournal() {
