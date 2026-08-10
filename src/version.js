@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.4';
+export const VERSION = '1.5';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.5',
+    date: '09/08/2026',
+    notes: [
+      'Chaque dé roule pour son propre compte : on peut en relancer un pendant qu’un autre tourne encore, et cliquer frénétiquement de l’un à l’autre.',
+      'Un dé qui roule n’affiche plus de faces qui défilent — illisible — mais un dé blanc-gris qui tourne sur lui-même.',
+      'Un lot qui arrive en main porte la face « ? » : aucun symbole tant qu’il n’a pas été lancé.',
+      'Un bandeau annonce au centre de la table les moments qui comptent : un joueur se réveille, en endort un autre, retourne une vache, ou en attrape un.',
+      'Le journal de droite montre la combinaison finale de chaque tour : les quatre dés du joueur et son issue — Réveil !, Vache !, Attrape !, Bloqué ou Échec.',
+      'On voit ainsi pourquoi un lot part : ce n’est pas seulement à deux X, mais dès qu’une combinaison sort, puisqu’elle est jouée d’office.',
+    ],
+  },
   {
     version: '1.4',
     date: '09/08/2026',

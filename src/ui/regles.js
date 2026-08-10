@@ -10,9 +10,12 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'Le rythme d’un lot'),
-      h('p.petit', 'Les dés roulent une seconde, on lit le résultat, on a le temps de le voir, '
-        + 'puis le lot met une seconde à rejoindre le voisin. Ces trois durées se règlent dans '
-        + 'le menu Variables — elles font le tempo du jeu et comptent dans la durée d’une partie.'),
+      h('p.petit', 'Un lot qui arrive porte la face « ? » : rien n’est encore lancé. Les dés '
+        + 'roulent une seconde, on lit le résultat, on a le temps de le voir, puis le lot met une '
+        + 'seconde à rejoindre le voisin. Ces trois durées se règlent dans le menu Variables — '
+        + 'elles font le tempo du jeu et comptent dans la durée d’une partie.'),
+      h('p.petit.muted', 'Chaque dé roule pour son propre compte : on peut en relancer un pendant '
+        + 'qu’un autre tourne encore, un clic par dé, la barre espace pour tous.'),
     ),
 
     h('div.carte',
@@ -75,6 +78,10 @@ export function vueRegles() {
           ['violet', 'Trois ZzZ — endormi']].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),
       ),
+      h('p.petit', { style: { marginTop: '14px' } },
+        'Les moments qui comptent s’annoncent en toutes lettres au centre de la table : '
+        + 'un réveil, un endormissement, une vache retournée, une attrape réussie. '
+        + 'Et le journal garde la combinaison finale de chaque tour, avec son issue.'),
     ),
 
     h('div.carte',

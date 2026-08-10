@@ -58,6 +58,20 @@ export const COULEUR_FACE = {
   vide: '#e6edf4',
 };
 
+// Face « ? » : le lot vient d'arriver, aucun dé n'a encore été lancé.
+export const SVG_INCONNU = svg(`
+  <circle cx="50" cy="50" r="43" fill="#c9cbcd"/>
+  <path fill="${NOIR}" d="M50 20c-10.5 0-18.8 6.6-21.3 15.4-.9 3.2 1.2 6.3 4.5 6.9 3 .5 5.8-1.3 6.8-4.2C41.4 34 45.3 31.4 50 31.4c5.9 0 10.3 3.9 10.3 9 0 4-1.9 6.4-6.6 9.7-5.3 3.7-8 7.4-8 13.6v1.6c0 3.3 2.7 6 6 6s6-2.7 6-6v-.8c0-3.6 1.5-5.6 6.1-8.8 5.9-4.1 9.4-9 9.4-15.9C73.2 28.7 63.4 20 50 20z"/>
+  <circle cx="50" cy="79" r="7.4" fill="${NOIR}"/>`);
+
+// Dé en rotation : aucune face lisible, juste le volume qui tourne.
+export const SVG_ROULANT = svg(`
+  <circle cx="50" cy="50" r="43" fill="#e7ebef"/>
+  <circle cx="50" cy="50" r="43" fill="url(#lueur)" opacity=".9"/>
+  <defs><radialGradient id="lueur" cx="38%" cy="32%" r="72%">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c2ccd6"/>
+  </radialGradient></defs>`);
+
 export const SVG_SYMBOLE = Object.fromEntries(
   Object.entries(GLYPHES).map(([id, g]) => [id, face(COULEUR_FACE[id], g)]),
 );
@@ -107,10 +121,18 @@ export function faceDe(symbole, options = {}) {
     + ` de--${taille}`
     + (verrou && !roule ? ' de--verrou' : '')
     + (roule ? ' de--roule' : '')
-    + (symbole ? '' : ' de--vierge');
-  div.dataset.sym = symbole || '';
-  if (symbole) div.innerHTML = SVG_SYMBOLE[symbole] || '';
-  if (verrou && !roule) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
+    + (!symbole && !roule ? ' de--inconnu' : '');
+  div.dataset.sym = roule ? '' : (symbole || '');
+  if (roule) {
+    div.innerHTML = SVG_ROULANT;
+    div.title = 'Le dé roule…';
+  } else if (symbole) {
+    div.innerHTML = SVG_SYMBOLE[symbole] || '';
+    if (verrou) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
+  } else {
+    div.innerHTML = SVG_INCONNU;
+    div.title = 'Ce dé n’a pas encore été lancé';
+  }
   return div;
 }
 

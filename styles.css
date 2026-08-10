@@ -258,6 +258,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .de svg { width: 100%; height: 100%; }
 .de--grand { width: 76px; height: 76px; border-radius: 17px; padding: 5px; }
 .de--petit { width: 36px; height: 36px; border-radius: 10px; padding: 3px; }
+.de--mini { width: 22px; height: 22px; border-radius: 6px; padding: 1px; border-width: 1px; }
 /* Un X est figé : il clignote en rouge et ne se relance jamais. */
 .de--verrou { border-color: #e2000f; animation: clignoteX .85s ease-in-out infinite; }
 @keyframes clignoteX {
@@ -266,21 +267,21 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 }
 /* Un dé qui roule : la face défile et le dé bascule. */
 .de--roule {
-  animation: roulement .18s linear infinite;
+  animation: roulement .34s linear infinite;
   border-color: var(--accent-bord);
   box-shadow: 0 4px 10px rgba(20, 60, 110, .18);
 }
 @keyframes roulement {
-  0%   { transform: rotate(-9deg) scale(1.04); }
-  25%  { transform: rotate(6deg) scale(.96); }
-  50%  { transform: rotate(-4deg) scale(1.05); }
-  75%  { transform: rotate(8deg) scale(.97); }
-  100% { transform: rotate(-9deg) scale(1.04); }
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(96deg) scale(.9); }
+  50%  { transform: rotate(184deg) scale(1.06); }
+  75%  { transform: rotate(272deg) scale(.92); }
+  100% { transform: rotate(360deg) scale(1); }
 }
 .de--cliquable { cursor: pointer; }
 .de--cliquable:hover { transform: translateY(-3px) scale(1.04); border-color: var(--accent); }
 .etat-depart { color: var(--accent-fonce); font-weight: 700; }
-.de--vierge { background: repeating-linear-gradient(45deg, #f6fafe, #f6fafe 5px, #e9f3fb 5px, #e9f3fb 10px); }
+.de--inconnu { border-style: dashed; border-color: var(--gris-clair); }
 .de--anim { animation: roule .32s ease; }
 @keyframes roule {
   0% { transform: rotate(-16deg) scale(.82); }
@@ -304,6 +305,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   border: 2px dashed rgba(148, 190, 226, .60);
 }
 .centre-table {
+  transition: opacity .2s linear;
   position: absolute;
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
@@ -383,6 +385,38 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
 }
 
+/* ── Bandeau d'annonce, au centre de la table ─────────────────────────────── */
+.annonce {
+  position: absolute;
+  left: 50%;
+  top: 33%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2.5px solid var(--c-annonce, var(--accent));
+  color: var(--c-annonce, var(--accent-fonce));
+  font-weight: 850;
+  font-size: 19px;
+  white-space: nowrap;
+  box-shadow: var(--ombre-forte);
+  pointer-events: none;
+  animation: annonceEntree .18s ease-out;
+  transition: opacity .3s linear, transform .3s ease-in;
+}
+.annonce--bleu   { --c-annonce: #1f7fc4; }
+.annonce--vert   { --c-annonce: #3d8f28; }
+.annonce--violet { --c-annonce: #8c46d4; }
+.annonce--jaune  { --c-annonce: #d98a06; }
+.annonce--rouge  { --c-annonce: #cf1420; }
+.annonce--sortie { opacity: 0; transform: translate(-50%, -190%); }
+/* L'annonce se pose au-dessus de la carte Journée, qui s'efface un peu. */
+.table-zone--annonce .centre-table { opacity: .55; }
+@keyframes annonceEntree {
+  from { opacity: 0; transform: translate(-50%, -10%) scale(.9); }
+}
+
 /* ── Lot de dés en vol d'un joueur à l'autre ──────────────────────────────── */
 .lot-vol {
   position: absolute;
@@ -442,7 +476,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .jauge-duel div { height: 100%; background: var(--rouge); transition: width .06s linear; }
 
 /* Journal */
-.journal { max-height: 340px; overflow-y: auto; display: grid; gap: 2px; }
+.journal { max-height: 420px; overflow-y: auto; display: grid; gap: 2px; }
 .journal .ligne { font-size: 12.5px; padding: 3px 0; border-bottom: 1px dashed #e7eff7; }
 .journal .ligne:last-child { border-bottom: 0; }
 .journal .t { color: var(--gris-clair); font-variant-numeric: tabular-nums; margin-right: 6px; font-size: 11.5px; }
@@ -451,6 +485,12 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .journal .ligne--manche { color: var(--accent-fonce); font-weight: 800; }
 .journal .ligne--incident { color: #9a6b12; }
 .journal .ligne--blocage { color: #b02a22; font-weight: 700; }
+.journal .ligne--tour { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.journal .ligne--tour .nom-joueur { font-weight: 750; }
+.journal .des-tour { display: inline-flex; gap: 3px; }
+.journal .issue { font-weight: 800; margin-left: auto; }
+.journal .issue--reussi { color: #2b7141; }
+.journal .issue--echec { color: var(--gris); }
 .journal .ligne--fin { color: var(--violet); font-weight: 800; }
 
 /* ── Tableaux et statistiques ─────────────────────────────────────────────── */

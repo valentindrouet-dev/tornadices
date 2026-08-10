@@ -90,6 +90,7 @@ export class Moteur {
     this.onEtatChange = null;
     this.onMouvement = null;   // (idDepart, idArrivee, motif, lot, duree)
     this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
+    this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
 
     this._initJoueurs(specJoueurs);
     this._initEquipes();
@@ -226,9 +227,13 @@ export class Moteur {
   _nouveauLot() {
     return {
       id: ++this.compteurLot,
-      des: Array.from({ length: this.cfg.desParLot }, () => ({ sym: null, verrou: false, roule: false })),
-      lance: false,
-      roulantJusqua: 0,
+      des: Array.from({ length: this.cfg.desParLot }, () => ({
+        sym: null,        // null = face « ? », le dé n'a pas encore été lancé
+        verrou: false,    // un X ne se relance jamais
+        roule: false,     // ce dé est en train de tourner
+        finRoule: 0,
+      })),
+      lance: false,       // tous les dés ont une face et aucun ne tourne
     };
   }
 
@@ -274,7 +279,7 @@ export class Moteur {
       case 'finLancer': {
         const j = this.joueurs[ev.pid];
         if (!j.lots.length || j.lots[0].id !== ev.lotId) return;
-        this._finLancer(j);
+        this._finLancer(j, ev.des);
         return;
       }
       case 'depart': {
@@ -320,20 +325,24 @@ export class Moteur {
   }
 
   // ── Dés ─────────────────────────────────────────────────────────────────────
-  /** Tire les faces des dés désignés. Les dés bloqués gardent la leur, toujours. */
-  _tirerFaces(lot, indices) {
+  /** Vrai quand tous les dés sont posés : aucune face vide, aucun dé en l'air. */
+  _lotPose(lot) { return lot.des.every((d) => d.sym && !d.roule); }
+
+  _desEnLAir(lot) { return lot.des.some((d) => d.roule); }
+
+  /** Pose les dés d'un jet. Les dés bloqués gardent leur face, toujours. */
+  _poserDes(lot, indices) {
     const faces = this.cfg.faces;
     const bloquant = this.cfg.symboleBloquant || 'x';
-    for (let i = 0; i < lot.des.length; i++) {
+    for (const i of indices) {
       const d = lot.des[i];
-      if (!d.roule) continue;
+      if (!d || !d.roule) continue;
       d.sym = faces[this.rng.int(faces.length)];
       d.roule = false;
+      d.finRoule = 0;
       if (d.sym === bloquant) d.verrou = true;
     }
-    lot.lance = true;
-    lot.roulantJusqua = 0;
-    void indices;
+    lot.lance = this._lotPose(lot);
   }
 
   _compter(lot) {
@@ -365,7 +374,7 @@ export class Moteur {
   // ── Combinaisons ────────────────────────────────────────────────────────────
   combosDisponibles(j) {
     const lot = j.lots[0];
-    if (!lot || !lot.lance || lot.roulantJusqua) return [];
+    if (!lot || !this._lotPose(lot)) return [];
     const c = this._compter(lot);
     const out = [];
     const servie = (requis) => Object.entries(requis).every(([s, n]) => (c[s] || 0) >= n);
@@ -434,7 +443,8 @@ export class Moteur {
   _decisionIA(j) {
     const lot = j.lots[0];
     const p = j.profil;
-    if (lot.lance) {
+    if (this._desEnLAir(lot)) return;      // des dés tournent encore
+    if (this._lotPose(lot)) {
       // Stop ou encore : le danger vient du joueur précédent s'il tient un lot.
       const menace = this._precedent(j).lots.length > 0 ? p.peur : 0;
       const seuil = Math.max(1, this.rng.normal(p.lancersAvantPasse, p.ecartLancers, 1));
@@ -445,15 +455,23 @@ export class Moteur {
     this._demarrerLancer(j, this._choixDesIA(j, lot));
   }
 
-  /** Met les dés désignés en rotation ; le résultat tombera plus tard. */
+  /**
+   * Met en rotation les dés désignés. Chaque dé roule pour son propre compte :
+   * on peut en relancer un pendant qu'un autre tourne encore.
+   */
   _demarrerLancer(j, indices) {
     const lot = j.lots[0];
-    if (!lot || j.fige || lot.roulantJusqua) return false;
-    const premier = !lot.lance;
-    const libres = lot.des
+    if (!lot || j.fige) return false;
+    const premier = lot.des.some((d) => d.sym === null);
+    const cible = lot.des
       .map((d, i) => i)
-      .filter((i) => !lot.des[i].verrou && (premier || !indices || !indices.length || indices.includes(i)));
-    if (!libres.length) { this._demanderDepart(j, 'passe'); return false; }
+      .filter((i) => {
+        const d = lot.des[i];
+        if (d.verrou || d.roule) return false;
+        if (premier && d.sym === null) return true;   // un lot neuf part en entier
+        return !indices || !indices.length || indices.includes(i);
+      });
+    if (!cible.length) return false;
 
     const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
     if (!premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
@@ -465,24 +483,32 @@ export class Moteur {
     }
 
     // « Journée de la tranquillité » : un seul dé à la fois.
-    let cible = libres;
-    if (this.passif.unParUn && lot.lance && cible.length > 1) cible = [cible[0]];
-    for (const i of cible) lot.des[i].roule = true;
-
+    const lances = (this.passif.unParUn && !premier && cible.length > 1) ? [cible[0]] : cible;
     const duree = this._dureeLancer();
-    lot.roulantJusqua = this.now + duree;
+    for (const i of lances) {
+      lot.des[i].roule = true;
+      lot.des[i].finRoule = this.now + duree;
+    }
+    lot.lance = false;
     j.attente = null;
     j.lancersLot++;
     j.stats.lancers++;
-    this.file.pousser(lot.roulantJusqua, { type: 'finLancer', pid: j.id, lotId: lot.id });
+    this.file.pousser(this.now + duree, {
+      type: 'finLancer', pid: j.id, lotId: lot.id, des: lances,
+    });
     if (this.onEtatChange) this.onEtatChange();
     return true;
   }
 
-  /** Les dés se posent : on lit le résultat. */
-  _finLancer(j) {
+  /** Un jet se pose. Tant qu'un dé tourne encore, rien n'est décidé. */
+  _finLancer(j, indices) {
     const lot = j.lots[0];
-    this._tirerFaces(lot);
+    this._poserDes(lot, indices);
+    if (!this._lotPose(lot)) {
+      // D'autres dés sont encore en l'air : on attend qu'ils retombent.
+      if (j.type === 'humain') this._attenteHumaine(j);
+      return;
+    }
 
     // On signale toute combinaison visible, même injouable : c'est ce qui allume
     // les alertes autour de la table.
@@ -529,9 +555,10 @@ export class Moteur {
     if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
     if (motif !== 'combo') j.stats.passes++;
 
-    for (const d of lot.des) { d.verrou = false; d.roule = false; }
+    // Le lot repart vierge : le voisin le recevra faces « ? », à lancer.
+    const desFinaux = lot.des.map((d) => d.sym);
+    for (const d of lot.des) { d.verrou = false; d.roule = false; d.sym = null; d.finRoule = 0; }
     lot.lance = false;
-    lot.roulantJusqua = 0;
 
     const q = this._suivant(j);
     const duree = Math.max(0, this.cfg.dureePassage ?? 1000);
@@ -541,14 +568,35 @@ export class Moteur {
     };
     this.transits.push(transit);
     this.file.pousser(transit.arrivee, { type: 'arrivee', transitId: transit.id });
-    if (this.onMouvement) this.onMouvement(j.id, q.id, motif, lot, duree);
+    if (this.onMouvement) {
+      this.onMouvement(j.id, q.id, motif, { des: desFinaux.map((sym) => ({ sym })) }, duree);
+    }
 
-    if (motif === 'passe') this._log(`${j.nom} passe son lot à ${q.nom}.`, 'passe', j.id);
-    else if (motif === 'attrape') this._tenterAttrape(j, q);
+    this._log(j.nom, 'tour', j.id, {
+      des: desFinaux,
+      issue: this._issueDuTour(motif, dispo),
+      reussi: motif === 'combo' && dispo && dispo.id !== 'blocage',
+    });
+
+    if (motif === 'attrape') this._tenterAttrape(j, q);
     else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
 
     if (!this.termine && j.lots.length) this._planifier(j.id);
     if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
+  _issueDuTour(motif, dispo) {
+    if (motif === 'interruption') return 'Touché !';
+    if (motif === 'passe') return 'Échec';
+    if (motif === 'attrape') return 'Attrape !';
+    if (motif === 'combo' && dispo) {
+      if (dispo.id === 'blocage') return 'Bloqué';
+      if (dispo.source === 'journee') return `${this.carte.court} !`;
+      const def = this.cfg.combos.find((c) => c.id === dispo.id);
+      return `${def ? def.nom : dispo.id} !`;
+    }
+    return '—';
   }
 
   /** Le lot atteint son destinataire. */
@@ -620,6 +668,7 @@ export class Moteur {
       j.stats.collisionsReussies++;
       q.stats.foisTouche++;
       this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
+      this._annoncer(`${j.nom} attrape ${q.nom} !`, 'jaune');
       // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
       if (q.lots.length) this._demanderDepart(q, 'interruption');
       this._retournerJeton(j, 1, 'collision');
@@ -635,10 +684,9 @@ export class Moteur {
     switch (effet) {
       case 'reveil':
         j.eveille = true; j.stats.reveils++;
-        this._log(`${j.nom} réveille sa Tornade.`, 'combo', j.id);
+        this._annoncer(`${j.nom} se réveille`, 'bleu');
         break;
       case 'blocage':
-        this._log(`${j.nom} est bloqué sur deux X — il rend son lot.`, 'blocage', j.id);
         break;
       case 'vache':
         this._retournerJeton(j, 1, 'vache');
@@ -656,7 +704,7 @@ export class Moteur {
         if (cible && cible.eveille) {
           cible.eveille = false;
           cible.stats.foisEndormi++;
-          this._log(`${j.nom} endort ${cible.nom}.`, 'combo', j.id);
+          this._annoncer(`${j.nom} endort ${cible.nom}`, 'violet');
         }
         break;
       }
@@ -665,7 +713,7 @@ export class Moteur {
         for (const v of this._voisinsDirects(j)) {
           if (v.eveille) { v.eveille = false; v.stats.foisEndormi++; noms.push(v.nom); }
         }
-        this._log(`${j.nom} endort ses voisins${noms.length ? ' : ' + noms.join(' et ') : ''}.`, 'combo', j.id);
+        this._annoncer(`${j.nom} endort ses voisins${noms.length ? ' : ' + noms.join(' et ') : ''}`, 'violet');
         break;
       }
       case 'cacherJetonAdverse': {
@@ -732,6 +780,11 @@ export class Moteur {
       this._log(
         `${j.nom} retourne ${gagnes} jeton${gagnes > 1 ? 's' : ''} — ${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}.`,
         'jeton', j.id,
+      );
+      this._annoncer(
+        `${j.nom} retourne ${gagnes > 1 ? gagnes + ' vaches' : 'une vache'} — `
+        + `${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}`,
+        'vert',
       );
     }
     if (eq.retournes >= eq.jetons) this._finManche(j.equipe);
@@ -825,11 +878,11 @@ export class Moteur {
   // ── Interface joueur humain ─────────────────────────────────────────────────
   _attenteHumaine(j) {
     const lot = j.lots[0];
-    if (!lot || j.fige || lot.roulantJusqua) { j.attente = null; return; }
+    if (!lot || j.fige) { j.attente = null; return; }
     j.attente = {
-      peutLancer: true,
-      peutPasser: !!lot.lance,
-      indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou),
+      // On peut relancer tout dé libre, y compris pendant qu'un autre tourne.
+      indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule),
+      peutPasser: !this._desEnLAir(lot) && this._lotPose(lot),
     };
     if (this.onEtatChange) this.onEtatChange();
   }
@@ -838,22 +891,28 @@ export class Moteur {
   lancerHumain(pid, indices = null) {
     const j = this.joueurs[pid];
     if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
-    if (j.lots[0].roulantJusqua) return false;
-    return this._demarrerLancer(j, indices);
+    const lance = this._demarrerLancer(j, indices);
+    if (lance) this._attenteHumaine(j);
+    return lance;
   }
 
   /** Rend le lot au voisin. */
   passerHumain(pid) {
     const j = this.joueurs[pid];
     if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
-    if (j.lots[0].roulantJusqua || !j.lots[0].lance) return false;
+    const lot = j.lots[0];
+    if (this._desEnLAir(lot) || !this._lotPose(lot)) return false;
     this._demanderDepart(j, 'passe');
     return true;
   }
 
   // ── Journal & résultat ──────────────────────────────────────────────────────
-  _log(texte, type = 'info', pid = null) {
-    const e = { t: this.now, texte, type, pid, manche: this.manche };
+  _annoncer(texte, couleur = 'bleu') {
+    if (this.onAnnonce) this.onAnnonce(texte, couleur);
+  }
+
+  _log(texte, type = 'info', pid = null, extra = null) {
+    const e = { t: this.now, texte, type, pid, manche: this.manche, ...(extra || {}) };
     this.journal.push(e);
     if (this.journal.length > 400) this.journal.splice(0, this.journal.length - 400);
     if (this.onJournal) this.onJournal(e);

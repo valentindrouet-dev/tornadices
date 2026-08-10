@@ -53,15 +53,6 @@ function alerteDesDes(lot, combos) {
   return null;
 }
 
-// Pendant qu'un dé roule, on fait défiler les faces : c'est ce défilement qui
-// donne la sensation du dé qui tourne. Le pas est volontairement grossier —
-// 70 ms — sinon l'œil ne suit plus.
-const PAS_ROULEMENT = 70;
-function tickRoulement(now) { return Math.floor(now / PAS_ROULEMENT); }
-function faceRoulante(faces, now, i) {
-  return faces[(tickRoulement(now) + i * 3) % faces.length];
-}
-
 /** Ne reconstruit `hote` que si la signature a changé. */
 function siChange(hote, signature, construire) {
   if (hote.dataset.sig === signature) return false;
@@ -198,6 +189,25 @@ export function vueTable() {
   };
   moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
 
+  // Les moments qui comptent s'affichent en toutes lettres au centre de la table.
+  let annonceCourante = null;
+  moteur.onAnnonce = (texte, couleur) => {
+    if (annonceCourante) annonceCourante.remove();
+    const el = h('div', { class: `annonce annonce--${couleur}` }, texte);
+    annonceCourante = el;
+    zoneTable.appendChild(el);
+    zoneTable.classList.add('table-zone--annonce');
+    const vie = Math.max(500, 1700 / vitesse);
+    setTimeout(() => el.classList.add('annonce--sortie'), vie);
+    setTimeout(() => {
+      el.remove();
+      if (annonceCourante === el) {
+        annonceCourante = null;
+        zoneTable.classList.remove('table-zone--annonce');
+      }
+    }, vie + 320);
+  };
+
   // Les combinaisons obligatoires sont jouées dans la foulée du lancer : sans
   // rémanence, leur alerte clignoterait le temps d'une image. On la retient.
   const PRIORITE_ALERTE = ['rouge', 'jaune', 'bleu', 'vert', 'violet'];
@@ -300,12 +310,10 @@ export function vueTable() {
       const alerte = alerteDe(j);
       if (alerte) el.dataset.alerte = alerte; else delete el.dataset.alerte;
 
-      const roule = lot && lot.roulantJusqua > 0;
-      const des = lot && (lot.lance || roule)
+      const des = lot
         ? lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',')
         : '';
-      const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}`
-        + (roule ? `|${tickRoulement(moteur.now)}` : '');
+      const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}`;
       siChange(el, sig, () => {
         const eq = COULEURS_EQUIPE[j.equipe];
         return [
@@ -325,12 +333,11 @@ export function vueTable() {
             j.type === 'humain' ? h('span.badge', { style: { marginLeft: 'auto' } }, 'vous') : null,
           ),
           h('div.des-mini',
-            lot && (lot.lance || roule)
-              ? lot.des.map((d, i) => faceDe(
-                  d.roule ? faceRoulante(moteur.cfg.faces, moteur.now, i) : d.sym,
-                  { verrou: d.verrou, taille: 'petit', roule: d.roule },
-                ))
-              : h('span.mini.muted', j.lots.length ? 'lot en main' : '—'),
+            lot
+              ? lot.des.map((d) => faceDe(d.sym, {
+                  verrou: d.verrou, taille: 'petit', roule: d.roule,
+                }))
+              : h('span.mini.muted', '—'),
           ),
         ];
       });
@@ -376,8 +383,17 @@ export function vueTable() {
     dernierJournal = moteur.journal.length;
     vider(zoneJournal);
     for (const e of moteur.journal.slice(-60)) {
-      zoneJournal.appendChild(h('div', { class: `ligne ligne--${e.type}` },
-        h('span.t', duree(e.t)), e.texte));
+      if (e.type === 'tour') {
+        zoneJournal.appendChild(h('div.ligne.ligne--tour',
+          h('span.t', duree(e.t)),
+          h('span.nom-joueur', e.texte),
+          h('span.des-tour', ...(e.des || []).map((sym) => faceDe(sym, { taille: 'mini' }))),
+          h('span', { class: `issue issue--${e.reussi ? 'reussi' : 'echec'}` }, e.issue),
+        ));
+      } else {
+        zoneJournal.appendChild(h('div', { class: `ligne ligne--${e.type}` },
+          h('span.t', duree(e.t)), e.texte));
+      }
     }
     zoneJournal.scrollTop = zoneJournal.scrollHeight;
   }
@@ -386,10 +402,9 @@ export function vueTable() {
     const actifs = humains.filter((j) => j.lots.length);
     const sig = actifs.map((j) => {
       const lot = j.lots[0];
-      const roule = lot.roulantJusqua > 0;
       const des = lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',');
       return `${j.id}:${j.lots.length}:${j.eveille}:${j.fige}:${lot.lance}:${des}`
-        + `:${alerteDe(j) || ''}` + (roule ? `:${tickRoulement(moteur.now)}` : '');
+        + `:${alerteDe(j) || ''}`;
     }).join('||');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
@@ -398,10 +413,11 @@ export function vueTable() {
     const t = toucheDe.get(j.id);
     const lot = j.lots[0];
     const eq = COULEURS_EQUIPE[j.equipe];
-    const roule = lot.roulantJusqua > 0;
     const alerte = alerteDe(j);
-    const libres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou);
-    const peutAgir = !roule && !j.fige && !moteur.duel;
+    const roule = lot.des.some((d) => d.roule);
+    const libres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule);
+    const pose = lot.des.every((d) => d.sym && !d.roule);
+    const peutAgir = !j.fige && !moteur.duel;
 
     return h('div.panneau-humain', { data: alerte ? { alerte } : {} },
       h('div.rangee', { style: { marginBottom: '10px' } },
@@ -418,11 +434,8 @@ export function vueTable() {
       h('div.rangee',
         h('div.rangee.rangee--serree',
           ...lot.des.map((d, i) => {
-            const de = faceDe(
-              d.roule ? faceRoulante(moteur.cfg.faces, moteur.now, i) : d.sym,
-              { verrou: d.verrou, taille: 'grand', roule: d.roule },
-            );
-            if (peutAgir && !d.verrou) {
+            const de = faceDe(d.sym, { verrou: d.verrou, taille: 'grand', roule: d.roule });
+            if (peutAgir && !d.verrou && !d.roule) {
               de.classList.add('de--cliquable');
               de.title = 'Relancer ce dé';
               de.onclick = () => moteur.lancerHumain(j.id, [i]);
@@ -436,15 +449,16 @@ export function vueTable() {
           onclick: () => moteur.lancerHumain(j.id, null),
         }, lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`),
         h('button.btn', {
-          disabled: !peutAgir || !lot.lance,
+          disabled: !peutAgir || !pose,
           onclick: () => moteur.passerHumain(j.id),
         }, `Passer (${t.libPasser})`),
       ),
       h('div.mini', { style: { marginTop: '8px' }, class: j.fige ? 'etat-depart' : 'muted' },
         j.fige ? 'Le lot part vers votre voisin…'
-          : roule ? 'Les dés roulent…'
-            : lot.lance
-              ? 'Cliquez un dé pour le relancer. Les X sont figés. Toute combinaison servie part toute seule.'
+          : roule && !libres.length ? 'Les dés roulent…'
+            : pose || libres.length < lot.des.length
+              ? 'Cliquez un dé pour le relancer, même pendant qu’un autre tourne. '
+                + 'Les X sont figés, et toute combinaison servie part toute seule.'
               : 'Lancez le lot pour commencer.'),
     );
   }

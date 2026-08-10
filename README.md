@@ -81,6 +81,10 @@ relance, la barre espace les relance tous — **sauf les X**, qui restent figés
 leur face et clignotent en rouge. Au deuxième X il ne reste plus assez de dés
 libres pour former quoi que ce soit : le lot part.
 
+Chaque dé roule pour son propre compte : on peut en relancer un pendant qu’un
+autre tourne encore. Un lot qui arrive en main porte la face « ? » tant qu’il
+n’a pas été lancé.
+
 **Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
 
 ## Le rythme d’un lot
@@ -90,7 +94,7 @@ d’une partie, à la table comme au Laboratoire :
 
 | Étape | Défaut | Ce qu’on voit |
 |---|---|---|
-| `dureeLancer` | 1000 ms | les dés roulent, les faces défilent |
+| `dureeLancer` | 1000 ms | les dés tournent, blancs, face illisible |
 | `dureeConstat` | 900 ms | le résultat reste affiché avant que le lot ne parte |
 | `dureePassage` | 1000 ms | le lot traverse la table jusqu’au voisin |
 
