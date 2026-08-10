@@ -262,14 +262,21 @@ export function configParDefaut(nbJoueurs = 6) {
     jetonsVert: mep.jetonsVert,
     cartesPourGagner: mep.cartes,
     melangerCartes: true,
-    // Modèle temps réel
-    tempsLancer: 800,          // ms moyens pour relancer un lot
-    ecartTempsLancer: 220,     // écart-type
-    tempsPasse: 350,           // ms pour tendre le lot au voisin
+
+    // ── Rythme physique de la table ──────────────────────────────────────────
+    // Ces quatre durées font le tempo du jeu : elles comptent dans le temps de
+    // partie, à la table comme au Laboratoire.
+    dureeLancer: 1000,         // les dés roulent
+    dureeConstat: 900,         // on regarde le résultat avant que le lot ne parte
+    dureePassage: 1000,        // le lot traverse jusqu'au voisin
+    tempsReflexion: 300,       // temps de décision d'une IA entre deux gestes
+    ecartReflexion: 120,       // écart-type de cette décision
+    fenetreReflexe: 900,       // fenêtre pour toucher ou retirer sa main
+
     adresseBase: 0.55,         // chance de toucher, avant écart d'adresse
     tauxErreur: 0.03,          // chance de relancer un X par mégarde
     penaliteErreurAdverse: 0.35, // part des erreurs assez graves pour offrir un jeton aux adverses
-    dureeMaxManche: 900_000,   // garde-fou : 15 min de temps de jeu simulé
+    dureeMaxManche: 1_800_000, // garde-fou : 30 min de temps de jeu simulé
     manchesMax: 40,
   };
 }

@@ -1,12 +1,12 @@
-// Écran d'accueil : composition de la table et lancement d'une partie.
+// Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
 import { h, remplacer } from './dom.js';
 import { store } from './store.js';
 import { aller } from './app.js';
 import { lancerPartie, partieEnCours } from './table.js';
+import { construireConfig, variables } from './variables.js';
 import {
-  configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  CARTES_JOURNEE, ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, FACES_PAR_DEFAUT,
+  infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE, SYMBOLES,
 } from '../core/config.js';
 import { pastilleSymbole } from './icons.js';
 import { randomSeed } from '../core/rng.js';
@@ -46,36 +46,25 @@ export function reglagesJoueurs(nb) {
 export function vueAccueil() {
   let nb = store.get('nbJoueurs', 6);
   let joueurs = reglagesJoueurs(nb);
-  let graineManuelle = store.get('graineManuelle', false);
-  let graine = store.get('graine', randomSeed());
-  let cartes = store.get('cartes', CARTES_JOURNEE.map((c) => c.id));
-  let melanger = store.get('melangerCartes', true);
-  let faces = store.get('faces', null) || FACES_PAR_DEFAUT.slice();
 
   const racine = h('div.page');
 
   function sauver() {
     store.set('nbJoueurs', nb);
     store.set('joueurs', joueurs);
-    store.set('graineManuelle', graineManuelle);
-    store.set('graine', graine);
-    store.set('cartes', cartes);
-    store.set('melangerCartes', melanger);
-    store.set('faces', faces);
   }
 
   function demarrer() {
     sauver();
-    const cfg = configParDefaut(nb);
-    cfg.cartes = cartes;
-    cfg.melangerCartes = melanger;
-    cfg.faces = faces.slice();
-    lancerPartie(cfg, joueurs, graineManuelle ? graine : randomSeed());
+    const v = variables();
+    lancerPartie(
+      construireConfig(nb), joueurs,
+      v.graineManuelle ? (v.graine || randomSeed()) : randomSeed(),
+    );
     aller('/table');
   }
 
   function dessiner() {
-    const mep = infosMiseEnPlace(nb);
     const sieges = placement(nb);
     joueurs.forEach((j, i) => { j.equipe = sieges[i]; });
     const nbHumains = joueurs.filter((j) => j.type === 'humain').length;
@@ -93,17 +82,14 @@ export function vueAccueil() {
               '▸ Reprendre la partie en cours'))
         : null,
 
-      h('div.grille.grille--2',
-        carteJoueurs(),
-        carteOptions(),
-      ),
+      h('div.grille.grille--2', carteJoueurs(), carteApercu()),
 
-      h('div', { style: { textAlign: 'center', marginTop: '26px' }, class: 'rangee', },
-        h('div', { style: { flex: '1' } }),
+      h('div.rangee', { style: { justifyContent: 'center', marginTop: '26px' } },
         h('button.btn.btn--primaire.btn--grand', { onclick: demarrer }, 'Commencer la partie'),
+        h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/variables'); } },
+          'Variables'),
         h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/labo'); } },
           'Laboratoire d’équilibrage'),
-        h('div', { style: { flex: '1' } }),
       ),
 
       nbHumains > 1
@@ -126,20 +112,18 @@ export function vueAccueil() {
         }, String(n)))),
         h('span.petit.muted', `${nb} joueurs`),
       ),
-
       h('div', { style: { display: 'grid', gap: '8px' } },
-        ...joueurs.map((j, i) => ligneJoueur(j, i)),
+        ...joueurs.map((j) => ligneJoueur(j)),
       ),
-
       h('div.encart', { style: { marginTop: '16px' } },
-        `Mise en place à ${nb} : ${mep.lots} lots de ${configParDefaut(nb).desParLot} dés · `
+        `Mise en place à ${nb} : ${mep.lots} lots · `
         + `${mep.jetons} jetons par équipe${nb % 2 ? ` (Vert : ${mep.jetonsVert})` : ''} · `
         + `${mep.cartes} cartes Journée pour gagner.`
         + (mep.extrapole ? ' — valeurs extrapolées, le tableau officiel s’arrête à 8 joueurs.' : '')),
     );
   }
 
-  function ligneJoueur(j, i) {
+  function ligneJoueur(j) {
     const eq = COULEURS_EQUIPE[j.equipe];
     return h('div.rangee.rangee--serree', { style: { flexWrap: 'nowrap' } },
       h('span', {
@@ -170,75 +154,41 @@ export function vueAccueil() {
     );
   }
 
-  function carteOptions() {
+  /** Aperçu en lecture seule de ce qui est réglé dans Variables. */
+  function carteApercu() {
+    const cfg = construireConfig(nb);
+    const compte = {};
+    for (const f of cfg.faces) compte[f] = (compte[f] || 0) + 1;
+
     return h('div.carte',
-      h('div.titre-section', 'Options de partie'),
-
       h('div.rangee', { style: { marginBottom: '14px' } },
-        chip('Graine manuelle', graineManuelle, () => { graineManuelle = !graineManuelle; dessiner(); }),
-        graineManuelle
-          ? h('input', {
-              type: 'text', value: graine, style: { width: '150px' },
-              oninput: (e) => { graine = e.target.value; },
-            })
-          : h('span.petit.muted', 'Chaque partie tire une graine au hasard.'),
-        chip('Mélanger les cartes', melanger, () => { melanger = !melanger; dessiner(); }),
+        h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Variables de la partie'),
+        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/variables'); } }, 'Modifier'),
       ),
-
-      h('div.titre-section', { style: { marginTop: '16px' } }, 'Faces des dés'),
-      h('div.faces-edit',
-        ...faces.map((f, i) => h('div.face-case',
-          pastilleSymbole(f, 34),
-          h('select', {
-            onchange: (e) => { faces[i] = e.target.value; dessiner(); },
-          }, ...ORDRE_SYMBOLES.map((sy) => h('option', {
-            value: sy, selected: sy === f,
-          }, SYMBOLES[sy].nom))),
-        )),
+      h('div.rangee.rangee--serree', { style: { marginBottom: '12px' } },
+        ...cfg.faces.map((f) => pastilleSymbole(f, 34)),
       ),
-      h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
-        h('span.mini.muted', 'Modèles :'),
-        ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
-          onclick: () => { faces = p.faces.slice(); dessiner(); },
-        }, p.nom)),
-        h('button.btn.btn--petit', {
-          onclick: () => {
-            faces = [...faces, 'vide'].slice(0, 12);
-            dessiner();
-          },
-        }, '+ face'),
-        faces.length > 2
-          ? h('button.btn.btn--petit', {
-              onclick: () => { faces = faces.slice(0, -1); dessiner(); },
-            }, '− face')
-          : null,
+      h('div.petit.muted', { style: { marginBottom: '14px' } },
+        Object.entries(compte)
+          .map(([sym, n]) => `${n} ${SYMBOLES[sym]?.nom || sym}`)
+          .join(' · ')
+        + ` — ${cfg.desParLot} dés par lot`),
+      h('table.tbl',
+        h('tbody',
+          ligneApercu('Lancer / constat / passage',
+            `${cfg.dureeLancer} · ${cfg.dureeConstat} · ${cfg.dureePassage} ms`),
+          ligneApercu('Lots en jeu', cfg.lots),
+          ligneApercu('Jetons par équipe',
+            `${cfg.jetons}${nb % 2 ? ` (Vert ${cfg.jetonsVert})` : ''}`),
+          ligneApercu('Cartes pour gagner', cfg.cartesPourGagner),
+          ligneApercu('Cartes Journée en jeu', `${cfg.cartes.length} sur 12`),
+        ),
       ),
-      h('p.mini.muted', { style: { marginTop: '8px' } },
-        'Un dé porte 2 tornades, 1 X, 1 ZzZ, 1 vache et 1 éclair. '
-        + 'Le X fige le dé : il ne se relance jamais.'),
-
-      h('div.titre-section', { style: { marginTop: '16px' } }, 'Cartes Journée en jeu'),
-      h('div.rangee.rangee--serree',
-        ...CARTES_JOURNEE.map((c) => chip(
-          c.court,
-          cartes.includes(c.id),
-          () => {
-            cartes = cartes.includes(c.id) ? cartes.filter((x) => x !== c.id) : [...cartes, c.id];
-            dessiner();
-          },
-          c.texte,
-        )),
-      ),
-      h('p.mini.muted', { style: { marginTop: '10px' } },
-        'La pile démarre toujours par « Jour de chauffe » si elle est cochée ; le reste est mélangé. '
-        + 'Une partie s’arrête quand une équipe a remporté le nombre de cartes requis.'),
     );
   }
 
-  function chip(libelle, actif, onclick, titre) {
-    return h('button', {
-      class: `chip${actif ? ' on' : ''}`, onclick, title: titre || '',
-    }, h('span.case', '✓'), libelle);
+  function ligneApercu(libelle, valeur) {
+    return h('tr', h('td.petit', libelle), h('td.num.petit', { style: { fontWeight: '700' } }, valeur));
   }
 
   dessiner();

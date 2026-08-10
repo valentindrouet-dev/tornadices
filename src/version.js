@@ -1,9 +1,22 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.3';
+export const VERSION = '1.4';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.4',
+    date: '09/08/2026',
+    notes: [
+      'Toute combinaison servie est désormais jouée d’office : on ne relance plus par-dessus, le lot part et l’effet s’applique.',
+      'Un clic sur un dé le relance aussitôt ; la barre espace relance tous les dés libres d’un coup.',
+      'Les dés roulent une seconde à l’écran, faces qui défilent : le résultat n’apparaît qu’une fois posés.',
+      'Un temps de constat laisse voir le résultat avant que le lot ne quitte la main — sans lui, on ne comprenait pas ce qui venait de se passer.',
+      'Le passage au voisin dure une seconde et se voit traverser la table, à la durée exacte réglée.',
+      'Nouveau menu Variables, à côté de « Commencer la partie » : faces des dés, combinaisons requises, rythme de la table, mise en place, adresse, cartes Journée et graine — tout y est réuni.',
+      'Ces trois durées comptent dans le temps de jeu : les parties passent de 2-3 min à 5-7 min, au plus près des 10 min annoncées sur la boîte.',
+    ],
+  },
   {
     version: '1.3',
     date: '09/08/2026',

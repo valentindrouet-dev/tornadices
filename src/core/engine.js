@@ -1,13 +1,18 @@
 // Moteur TornaDices — simulation à événements datés.
 //
-// Le temps est virtuel (millisecondes). Chaque action de joueur est un événement
+// Le temps est virtuel (millisecondes). Chaque étape d'un joueur est un événement
 // planifié dans une file de priorité. La table de jeu fait avancer l'horloge au
 // rythme réel ; le Laboratoire la fait avancer d'un trait. Mêmes règles, donc les
 // statistiques décrivent bien la partie que l'on joue.
+//
+// Un tour de lot suit toujours le même cycle physique :
+//   réflexion → les dés roulent (dureeLancer) → on regarde le résultat
+//   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
+// Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
 import { makeRng } from './rng.js';
 import {
-  CARTES_JOURNEE, COMBOS_TORNADE, PROFILS_IA, PROFIL_HUMAIN,
+  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN,
   placement, infosMiseEnPlace,
 } from './config.js';
 
@@ -77,12 +82,14 @@ export class Moteur {
     this.manche = 0;
     this.sens = 1; // +1 = horaire
     this.duel = null;
+    this.transits = [];        // lots en train de traverser la table
     this.compteurLot = 0;
+    this.compteurTransit = 0;
     this.evenementsTraites = 0;
-    this.onJournal = null;    // crochet UI
+    this.onJournal = null;     // crochet UI
     this.onEtatChange = null;
-    this.onMouvement = null;  // (idDepart, idArrivee, motif) — pour animer le lot
-    this.onCombinaison = null; // (idJoueur, idCombo) — signalé dès que les dés la montrent
+    this.onMouvement = null;   // (idDepart, idArrivee, motif, lot, duree)
+    this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
 
     this._initJoueurs(specJoueurs);
     this._initEquipes();
@@ -110,15 +117,15 @@ export class Moteur {
         type: s.type === 'humain' ? 'humain' : 'ia',
         profil: { ...base },
         // Chaque joueur a sa propre vitesse et son adresse, tirées autour du profil.
-        vitesse: Math.max(120, this.rng.normal(base.reflexe, base.ecartReflexe, 150)),
+        vitesse: Math.max(60, this.rng.normal(base.reflexe, base.ecartReflexe, 80)),
         adresse: Math.min(0.95, Math.max(0.05, base.adresse + this.rng.normal(0, 0.06))),
         esquive: Math.min(0.95, Math.max(0.05, base.esquive + this.rng.normal(0, 0.06))),
         eveille: false,
         lots: [],
         lancersLot: 0,
-        patienceLot: 0,
         attente: null,       // état d'attente pour un joueur humain
         planifie: false,
+        fige: false,         // une étape est en cours, le joueur ne peut rien faire
         stats: statsVides(),
         _lotDepuis: 0,
       });
@@ -146,7 +153,7 @@ export class Moteur {
     const ids = this.cfg.cartes && this.cfg.cartes.length
       ? this.cfg.cartes.slice()
       : CARTES_JOURNEE.map((c) => c.id);
-    let cartes = ids
+    const cartes = ids
       .map((id) => CARTES_PAR_ID[id])
       .filter(Boolean)
       .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs);
@@ -171,6 +178,7 @@ export class Moteur {
       j.lancersLot = 0;
       j.attente = null;
       j.planifie = false;
+      j.fige = false;
     }
     for (const e of Object.values(this.equipes)) e.retournes = 0;
 
@@ -218,8 +226,9 @@ export class Moteur {
   _nouveauLot() {
     return {
       id: ++this.compteurLot,
-      des: Array.from({ length: this.cfg.desParLot }, () => ({ sym: null, verrou: false })),
+      des: Array.from({ length: this.cfg.desParLot }, () => ({ sym: null, verrou: false, roule: false })),
       lance: false,
+      roulantJusqua: 0,
     };
   }
 
@@ -238,7 +247,7 @@ export class Moteur {
   }
 
   /** Déroule la partie jusqu'à son terme (Laboratoire). */
-  jouerJusquAuBout(maxEvenements = 400000) {
+  jouerJusquAuBout(maxEvenements = 600000) {
     let n = 0;
     while (!this.termine && this.file.taille && n < maxEvenements) {
       const ev = this.file.retirer();
@@ -253,78 +262,92 @@ export class Moteur {
   _traiter(ev) {
     this.evenementsTraites++;
     if (this.termine) return;
-    if (ev.type === 'action') {
-      const j = this.joueurs[ev.pid];
-      j.planifie = false;
-      if (!j.lots.length) return;
-      if (j.type === 'humain') { this._attenteHumaine(j); return; }
-      this._tourIA(j);
-    } else if (ev.type === 'duel') {
-      this._resoudreDuel(true);
-    } else if (ev.type === 'gardeManche') {
-      if (ev.manche === this.manche && !this.termine) {
-        this._log('Manche interrompue : durée maximale atteinte.', 'systeme');
-        this._finManche(null);
+    switch (ev.type) {
+      case 'action': {
+        const j = this.joueurs[ev.pid];
+        j.planifie = false;
+        if (!j.lots.length || j.fige) return;
+        if (j.type === 'humain') { this._attenteHumaine(j); return; }
+        this._decisionIA(j);
+        return;
       }
+      case 'finLancer': {
+        const j = this.joueurs[ev.pid];
+        if (!j.lots.length || j.lots[0].id !== ev.lotId) return;
+        this._finLancer(j);
+        return;
+      }
+      case 'depart': {
+        const j = this.joueurs[ev.pid];
+        if (!j.lots.length || j.lots[0].id !== ev.lotId) { j.fige = false; return; }
+        this._depart(j, ev.motif, ev.dispo, ev.choix);
+        return;
+      }
+      case 'arrivee':
+        this._arrivee(ev.transitId);
+        return;
+      case 'duel':
+        this._resoudreDuel();
+        return;
+      case 'gardeManche':
+        if (ev.manche === this.manche) {
+          this._log('Manche interrompue : durée maximale atteinte.', 'systeme');
+          this._finManche(null);
+        }
+        return;
+      default:
     }
   }
 
+  /** Rend la main au joueur : l'IA réfléchit, l'humain attend son geste. */
   _planifier(pid) {
     const j = this.joueurs[pid];
-    if (j.planifie || this.termine || !j.lots.length) return;
+    if (j.planifie || j.fige || this.termine || !j.lots.length) return;
     if (j.type === 'humain') { this._attenteHumaine(j); return; }
     j.planifie = true;
-    this.file.pousser(this.now + this._delaiAction(j), { type: 'action', pid });
+    this.file.pousser(this.now + this._tempsReflexion(j), { type: 'action', pid });
   }
 
-  _delaiAction(j) {
+  _tempsReflexion(j) {
     const lent = this.passif.lenteur || 1;
-    const base = this.cfg.tempsLancer * (j.vitesse / (j.profil.reflexe || 800));
-    return Math.max(80, this.rng.normal(base * lent, this.cfg.ecartTempsLancer, 80));
+    const base = (this.cfg.tempsReflexion ?? 300) * (j.vitesse / (j.profil.reflexe || 800));
+    return Math.max(40, this.rng.normal(base * lent, this.cfg.ecartReflexion ?? 120, 40));
+  }
+
+  _dureeLancer() {
+    const lent = this.passif.lenteur || 1;
+    return Math.max(60, (this.cfg.dureeLancer ?? 1000) * lent);
   }
 
   // ── Dés ─────────────────────────────────────────────────────────────────────
-  /**
-   * Relance les dés désignés. `indices` vide ou absent = tous les dés libres.
-   * Les dés portant le symbole bloquant restent sur leur face, toujours.
-   */
-  _lancerDes(lot, indices = null, unSeul = false) {
+  /** Tire les faces des dés désignés. Les dés bloqués gardent la leur, toujours. */
+  _tirerFaces(lot, indices) {
     const faces = this.cfg.faces;
     const bloquant = this.cfg.symboleBloquant || 'x';
-    let cible = lot.des
-      .map((d, i) => ({ d, i }))
-      .filter(({ d, i }) => !d.verrou && (!indices || !indices.length || indices.includes(i)))
-      .map(({ d }) => d);
-    // « Journée de la tranquillité » : un seul dé à la fois.
-    if (unSeul && lot.lance && cible.length > 1) cible = [this._pireDe(lot, cible)];
-    for (const d of cible) d.sym = faces[this.rng.int(faces.length)];
-    lot.lance = true;
-    for (const d of lot.des) if (d.sym === bloquant) d.verrou = true;
-    return cible.length;
-  }
-
-  // Dé le moins utile : celui dont le symbole est le plus isolé sur le lot.
-  _pireDe(lot, parmi = null) {
-    const libres = (parmi || lot.des.filter((d) => !d.verrou));
-    const compte = this._compter(lot);
-    let pire = libres[0], score = Infinity;
-    for (const d of libres) {
-      const s = d.sym ? compte[d.sym] || 0 : -1;
-      if (s < score) { score = s; pire = d; }
+    for (let i = 0; i < lot.des.length; i++) {
+      const d = lot.des[i];
+      if (!d.roule) continue;
+      d.sym = faces[this.rng.int(faces.length)];
+      d.roule = false;
+      if (d.sym === bloquant) d.verrou = true;
     }
-    return pire;
+    lot.lance = true;
+    lot.roulantJusqua = 0;
+    void indices;
   }
 
-  /**
-   * Dés qu'une IA choisit de relancer : elle garde ceux qui servent son objectif
-   * du moment et rejette les autres. Les dés bloqués ne sont jamais du lot.
-   */
+  _compter(lot) {
+    const c = {};
+    for (const d of lot.des) if (d.sym && !d.roule) c[d.sym] = (c[d.sym] || 0) + 1;
+    return c;
+  }
+
+  /** Indices des dés qu'une IA choisit de relancer : elle garde ceux qui servent. */
   _choixDesIA(j, lot) {
     const bloquant = this.cfg.symboleBloquant || 'x';
     const libres = lot.des.map((d, i) => ({ d, i })).filter(({ d }) => !d.verrou);
     if (!lot.lance || j.profil.id === 'hasard') return libres.map(({ i }) => i);
 
-    // Poids de chaque symbole selon l'état de la Tornade du joueur.
     const poids = j.eveille
       ? { vache: 1, eclair: 0.62, zzz: 0.5, tornade: 0.12 }
       : { tornade: 1, eclair: 0.62, zzz: 0.5, vache: 0.15 };
@@ -335,49 +358,61 @@ export class Moteur {
       const note = p * ((compte[sym] || 0) + 0.05);
       if (note > meilleur) { meilleur = note; objectif = sym; }
     }
-    // On relance tout ce qui ne va pas dans le sens de l'objectif.
     const aRelancer = libres.filter(({ d }) => d.sym !== objectif).map(({ i }) => i);
     return aRelancer.length ? aRelancer : libres.map(({ i }) => i);
   }
 
-  _compter(lot) {
-    const c = {};
-    for (const d of lot.des) if (d.sym) c[d.sym] = (c[d.sym] || 0) + 1;
-    return c;
-  }
-
-  // ── Combinaisons disponibles ────────────────────────────────────────────────
+  // ── Combinaisons ────────────────────────────────────────────────────────────
   combosDisponibles(j) {
     const lot = j.lots[0];
-    if (!lot || !lot.lance) return [];
+    if (!lot || !lot.lance || lot.roulantJusqua) return [];
     const c = this._compter(lot);
     const out = [];
-    const satisfait = (requis) => Object.entries(requis).every(([s, n]) => (c[s] || 0) >= n);
+    const servie = (requis) => Object.entries(requis).every(([s, n]) => (c[s] || 0) >= n);
 
     for (const combo of this.cfg.combos) {
-      if (!satisfait(combo.requis)) continue;
+      if (!servie(combo.requis)) continue;
       if (combo.face === 'endormie' && j.eveille) continue;
       if (combo.face === 'active' && !j.eveille) continue;
       if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
       out.push({ id: combo.id, source: 'tornade', combo, obligatoire: !!combo.obligatoire });
     }
     if (this.carte && this.carte.combo) {
-      // Le Laboratoire peut redéfinir l'exigence d'une carte sans toucher au reste.
       const requis = (this.cfg.combosCartes && this.cfg.combosCartes[this.carte.combo.id])
         || this.carte.combo.requis;
-      if (satisfait(requis)) {
+      if (servie(requis)) {
         out.push({
           id: this.carte.combo.id, source: 'journee',
-          combo: { ...this.carte.combo, requis }, obligatoire: false,
+          combo: { ...this.carte.combo, requis }, obligatoire: true,
         });
       }
     }
     return out;
   }
 
-  _voisinsEveilles(j) {
-    return this._voisinsDirects(j).filter((v) => v.eveille);
+  /**
+   * Toute combinaison servie est jouée : on ne relance jamais par-dessus.
+   * Reste à savoir laquelle, quand plusieurs sortent au même jet.
+   */
+  _comboAJouer(dispo) {
+    if (!dispo.length) return null;
+    const carte = dispo.find((d) => d.source === 'journee');
+    if (carte) return carte;                                   // la carte du jour prime
+    const attrape = dispo.find((d) => d.obligatoire && d.id !== 'blocage');
+    if (attrape) return attrape;                               // puis l'attrape
+    const autres = dispo.filter((d) => d.id !== 'blocage');
+    if (autres.length) {
+      autres.sort((a, b) => this._noterCombo(b) - this._noterCombo(a));
+      return autres[0];
+    }
+    return dispo.find((d) => d.id === 'blocage') || null;       // bloqué en dernier
   }
+
+  _noterCombo(d) {
+    return { vache: 100, reveil: 90, endormir: 70 }[d.id] ?? 10;
+  }
+
+  _voisinsEveilles(j) { return this._voisinsDirects(j).filter((v) => v.eveille); }
 
   _voisinsDirects(j) {
     const n = this.joueurs.length;
@@ -394,38 +429,63 @@ export class Moteur {
     return this.joueurs[(j.siege - this.sens + n) % n];
   }
 
-  // ── Tour d'une IA ───────────────────────────────────────────────────────────
-  // Un événement = un lancer. La décision qui suit est instantanée : c'est le
-  // jet de dés qui coûte du temps, pas le fait de regarder le résultat.
-  _tourIA(j) {
-    this._effectuerLancer(j);
+  // ── Cycle d'un lancer ───────────────────────────────────────────────────────
+  /** L'IA décide : relancer une partie des dés, ou rendre le lot. */
+  _decisionIA(j) {
+    const lot = j.lots[0];
+    const p = j.profil;
+    if (lot.lance) {
+      // Stop ou encore : le danger vient du joueur précédent s'il tient un lot.
+      const menace = this._precedent(j).lots.length > 0 ? p.peur : 0;
+      const seuil = Math.max(1, this.rng.normal(p.lancersAvantPasse, p.ecartLancers, 1));
+      const tension = (j.lancersLot / seuil) * (1 + menace * 0.35);
+      if (tension >= 1) { this._demanderDepart(j, 'passe'); return; }
+      if (lot.des.every((d) => d.verrou)) { this._demanderDepart(j, 'passe'); return; }
+    }
+    this._demarrerLancer(j, this._choixDesIA(j, lot));
   }
 
-  _effectuerLancer(j, indices = null) {
+  /** Met les dés désignés en rotation ; le résultat tombera plus tard. */
+  _demarrerLancer(j, indices) {
     const lot = j.lots[0];
+    if (!lot || j.fige || lot.roulantJusqua) return false;
     const premier = !lot.lance;
-    // Garde-fou : plus aucun dé libre et aucune combinaison obligatoire — on rend le lot.
-    if (!premier && lot.des.every((d) => d.verrou)) { this._passerLot(j); return; }
-    const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
+    const libres = lot.des
+      .map((d, i) => i)
+      .filter((i) => !lot.des[i].verrou && (premier || !indices || !indices.length || indices.includes(i)));
+    if (!libres.length) { this._demanderDepart(j, 'passe'); return false; }
 
-    // Incident fâcheux : relancer un X par mégarde coûte le lot.
+    const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
     if (!premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
       j.stats.erreurs++;
       this._log(`${j.nom} relance un X par mégarde — il passe son lot.`, 'incident', j.id);
       if (this.rng() < (this.cfg.penaliteErreurAdverse ?? 0)) this._jetonAuxAdverses(j);
-      this._passerLot(j);
-      return;
+      this._demanderDepart(j, 'passe');
+      return false;
     }
 
-    const choixDes = indices || (j.type === 'humain' ? null : this._choixDesIA(j, lot));
-    this._lancerDes(lot, choixDes, !!this.passif.unParUn);
+    // « Journée de la tranquillité » : un seul dé à la fois.
+    let cible = libres;
+    if (this.passif.unParUn && lot.lance && cible.length > 1) cible = [cible[0]];
+    for (const i of cible) lot.des[i].roule = true;
+
+    const duree = this._dureeLancer();
+    lot.roulantJusqua = this.now + duree;
+    j.attente = null;
     j.lancersLot++;
     j.stats.lancers++;
+    this.file.pousser(lot.roulantJusqua, { type: 'finLancer', pid: j.id, lotId: lot.id });
+    if (this.onEtatChange) this.onEtatChange();
+    return true;
+  }
 
-    // On signale toute combinaison visible sur les dés, même celle que le joueur
-    // ne peut pas jouer : c'est ce qui allume les alertes de la table. Les
-    // combinaisons obligatoires se résolvent aussitôt, sans cela on ne les
-    // verrait jamais passer.
+  /** Les dés se posent : on lit le résultat. */
+  _finLancer(j) {
+    const lot = j.lots[0];
+    this._tirerFaces(lot);
+
+    // On signale toute combinaison visible, même injouable : c'est ce qui allume
+    // les alertes autour de la table.
     if (this.onCombinaison) {
       const compte = this._compter(lot);
       for (const combo of this.cfg.combos) {
@@ -435,117 +495,150 @@ export class Moteur {
       }
     }
 
-    const dispo = this.combosDisponibles(j);
-    // Une combinaison de carte Journée l'emporte sur une combinaison obligatoire :
-    // c'est le seul moyen de voir quatre éclairs avant d'être forcé de passer à trois.
-    const carteCombo = dispo.find((d) => d.source === 'journee');
-    // Entre « Attrape » et « Bloqué », on préfère celle qui laisse agir le joueur.
-    const obligatoires = dispo.filter((d) => d.obligatoire);
-    const obligatoire = obligatoires.find((d) => d.id !== 'blocage') || obligatoires[0];
-    if (carteCombo && obligatoire) {
-      this._appliquerChoix(j, { type: 'combo', comboId: carteCombo.id });
+    const choisi = this._comboAJouer(this.combosDisponibles(j));
+    if (choisi) {
+      j.stats.combos[choisi.id] = (j.stats.combos[choisi.id] || 0) + 1;
+      this._demanderDepart(j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi);
       return;
     }
-    if (obligatoire) {
-      this._appliquerChoix(j, { type: 'combo', comboId: obligatoire.id });
+    this._planifier(j.id);
+  }
+
+  /**
+   * Le lot va partir. On laisse d'abord le temps de voir le résultat : sans cette
+   * pause, les dés changent de main avant qu'on ait compris ce qui s'est passé.
+   */
+  _demanderDepart(j, motif, dispo = null, choix = null) {
+    const lot = j.lots[0];
+    if (!lot || j.fige) return;
+    j.fige = true;
+    j.attente = null;
+    const constat = motif === 'interruption' ? 0 : (this.cfg.dureeConstat ?? 900);
+    this.file.pousser(this.now + constat, {
+      type: 'depart', pid: j.id, lotId: lot.id, motif, dispo, choix,
+    });
+    if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /** Le lot quitte la main du joueur et traverse la table. */
+  _depart(j, motif, dispo, choix) {
+    const lot = j.lots.shift();
+    j.fige = false;
+    j.lancersLot = 0;
+    j.attente = null;
+    if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
+    if (motif !== 'combo') j.stats.passes++;
+
+    for (const d of lot.des) { d.verrou = false; d.roule = false; }
+    lot.lance = false;
+    lot.roulantJusqua = 0;
+
+    const q = this._suivant(j);
+    const duree = Math.max(0, this.cfg.dureePassage ?? 1000);
+    const transit = {
+      id: ++this.compteurTransit, lot, de: j.id, vers: q.id, motif,
+      depart: this.now, arrivee: this.now + duree,
+    };
+    this.transits.push(transit);
+    this.file.pousser(transit.arrivee, { type: 'arrivee', transitId: transit.id });
+    if (this.onMouvement) this.onMouvement(j.id, q.id, motif, lot, duree);
+
+    if (motif === 'passe') this._log(`${j.nom} passe son lot à ${q.nom}.`, 'passe', j.id);
+    else if (motif === 'attrape') this._tenterAttrape(j, q);
+    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
+
+    if (!this.termine && j.lots.length) this._planifier(j.id);
+    if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /** Le lot atteint son destinataire. */
+  _arrivee(transitId) {
+    const k = this.transits.findIndex((t) => t.id === transitId);
+    if (k < 0) return;
+    const t = this.transits.splice(k, 1)[0];
+    const q = this.joueurs[t.vers];
+    if (!q.lots.length) q._lotDepuis = this.now;
+    q.lots.push(t.lot);
+    this._planifier(q.id);
+    if (this.onEtatChange) this.onEtatChange();
+  }
+
+  // ── Attrape ─────────────────────────────────────────────────────────────────
+  _tenterAttrape(j, q) {
+    if (!q.lots.length) {
+      this._log(`${j.nom} lance son lot vers ${q.nom} — les mains sont vides, pas de contact.`,
+        'collision', j.id);
       return;
     }
+    j.stats.collisionsTentees++;
+    this._log(`${j.nom} tente d’attraper ${q.nom} !`, 'collision', j.id);
 
-    if (j.type === 'humain') { this._attenteHumaine(j); return; }
-
-    const choix = this._politiqueIA(j);
-    // Relancer coûte un nouvel événement ; jouer ou passer est immédiat.
-    if (choix.type === 'lancer') this._planifier(j.id);
-    else this._appliquerChoix(j, choix);
+    if (j.type === 'humain' || q.type === 'humain') {
+      const fenetre = this.cfg.fenetreReflexe ?? 900;
+      this.duel = {
+        toucheurId: j.id, cibleId: q.id, ouvertA: this.now, fenetre,
+        actionToucheur: null, actionCible: null,
+      };
+      this.file.pousser(this.now + fenetre, { type: 'duel' });
+      return;
+    }
+    this._resoudreAttrape(j, q, null, null);
   }
 
-  _politiqueIA(j) {
-    const dispo = this.combosDisponibles(j);
-    const p = j.profil;
-
-    if (p.id === 'hasard') {
-      const options = [...dispo.map((d) => ({ type: 'combo', comboId: d.id })),
-        { type: 'lancer' }, { type: 'passer' }];
-      return this.rng.pick(options);
-    }
-
-    let meilleur = null, meilleureNote = 0;
-    for (const d of dispo) {
-      const note = this._noterCombo(j, d);
-      if (note > meilleureNote) { meilleureNote = note; meilleur = d; }
-    }
-    if (meilleur) return { type: 'combo', comboId: meilleur.id };
-
-    // Stop ou encore : le danger vient du joueur précédent s'il tient un lot.
-    const prec = this._precedent(j);
-    const menace = prec.lots.length > 0 ? p.peur : 0;
-    const seuil = Math.max(1, this.rng.normal(p.lancersAvantPasse, p.ecartLancers, 1));
-    const tension = j.lancersLot / seuil + menace * 0.35 * (j.lancersLot / Math.max(1, seuil));
-    if (tension >= 1) return { type: 'passer' };
-    return { type: 'lancer' };
+  _resoudreDuel() {
+    if (!this.duel) return;
+    const { toucheurId, cibleId, actionToucheur, actionCible } = this.duel;
+    this.duel = null;
+    this._resoudreAttrape(
+      this.joueurs[toucheurId], this.joueurs[cibleId], actionToucheur, actionCible,
+    );
   }
 
-  _noterCombo(j, d) {
-    const eq = this.equipes[j.equipe];
-    const restants = Math.max(0, eq.jetons - eq.retournes);
-    switch (d.id) {
-      case 'chance': return 1000;
-      case 'troupeau': return 200 + (restants <= 2 ? 100 : 0);
-      case 'vache': return 120 + (restants <= 1 ? 200 : 0);
-      case 'intensive': return 115 + (restants <= 1 ? 200 : 0);
-      case 'reveil': return 90;
-      case 'vaillants': return 60 + this._coequipiers(j).filter((c) => !c.eveille).length * 25;
-      case 'sansVent': return this._meilleureCible(j) ? 80 : 0;
-      case 'fatigue': return this._voisinsEveilles(j).length * 45;
-      case 'endormir': {
-        const cibles = this._voisinsEveilles(j).filter((v) => v.equipe !== j.equipe);
-        return cibles.length ? 70 : 20;
-      }
-      case 'difference': return 85;
-      case 'collision': return 50;
-      case 'blocage': return 5;
-      default: return 10;
+  /** Réflexe d'un joueur humain pendant la fenêtre d'attrape. */
+  reflexeHumain(pid, action) {
+    if (!this.duel) return false;
+    const d = this.duel;
+    const dt = this.now - d.ouvertA;
+    if (pid === d.toucheurId && action === 'toucher' && d.actionToucheur == null) {
+      d.actionToucheur = dt; return true;
     }
+    if (pid === d.cibleId && action === 'esquiver' && d.actionCible == null) {
+      d.actionCible = dt; return true;
+    }
+    return false;
   }
 
-  _coequipiers(j) { return this.joueurs.filter((x) => x.equipe === j.equipe && x.id !== j.id); }
+  _resoudreAttrape(j, q, dtToucheur, dtCible) {
+    const fenetre = this.cfg.fenetreReflexe ?? 900;
+    let p = j.adresse * (1 - 0.5 * q.esquive) * ((this.cfg.adresseBase ?? 0.55) / 0.55);
+    if (dtToucheur != null) p += Math.max(0, 0.45 * (1 - dtToucheur / fenetre));
+    else if (j.type === 'humain') p -= 0.35;
+    if (dtCible != null) p -= Math.max(0, 0.4 * (1 - dtCible / fenetre));
+    p = Math.min(0.97, Math.max(0.02, p));
 
-  _meilleureCible(j) {
-    let best = null;
-    for (const e of Object.values(this.equipes)) {
-      if (e.id === j.equipe) continue;
-      if (e.retournes > 0 && (!best || e.retournes > best.retournes)) best = e;
+    if (this.rng() < p) {
+      j.stats.collisionsReussies++;
+      q.stats.foisTouche++;
+      this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
+      // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
+      if (q.lots.length) this._demanderDepart(q, 'interruption');
+      this._retournerJeton(j, 1, 'collision');
+    } else {
+      this._log(`Raté — ${q.nom} s’en sort.`, 'collision', q.id);
     }
-    return best;
+    if (!this.termine) this._planifier(q.id);
   }
 
-  // ── Application d'un choix (IA ou humain) ───────────────────────────────────
-  _appliquerChoix(j, choix) {
-    if (!choix || !j.lots.length) return;
-    if (choix.type === 'lancer') { this._effectuerLancer(j, choix.indices || null); return; }
-    if (choix.type === 'passer') { this._passerLot(j); return; }
-    if (choix.type === 'combo') {
-      const dispo = this.combosDisponibles(j).find((d) => d.id === choix.comboId);
-      if (!dispo) { this._planifier(j.id); return; }
-      j.stats.combos[dispo.id] = (j.stats.combos[dispo.id] || 0) + 1;
-      // Règle : on passe d'abord son lot, puis on joue l'effet.
-      if (dispo.id === 'collision') { this._collision(j); return; }
-      if (dispo.id === 'blocage') {
-        this._log(`${j.nom} est bloqué sur deux X — il rend son lot.`, 'blocage', j.id);
-        this._passerLot(j, true);
-        return;
-      }
-      this._passerLot(j, true);
-      this._effetCombo(j, dispo, choix);
-    }
-  }
-
+  // ── Effets des combinaisons ─────────────────────────────────────────────────
   _effetCombo(j, dispo, choix = {}) {
     const effet = dispo.source === 'journee' ? dispo.combo.effet : dispo.id;
     switch (effet) {
       case 'reveil':
         j.eveille = true; j.stats.reveils++;
         this._log(`${j.nom} réveille sa Tornade.`, 'combo', j.id);
+        break;
+      case 'blocage':
+        this._log(`${j.nom} est bloqué sur deux X — il rend son lot.`, 'blocage', j.id);
         break;
       case 'vache':
         this._retournerJeton(j, 1, 'vache');
@@ -595,20 +688,13 @@ export class Moteur {
       }
       case 'auChoix': {
         // « Journée de la différence » : on rejoue l'effet le plus utile du moment.
-        const options = [];
-        if (!j.eveille) options.push('reveil');
-        else options.push('vache');
-        if (this._voisinsEveilles(j).filter((v) => v.equipe !== j.equipe).length) options.push('endormir');
-        const pref = choix.effetChoisi && options.includes(choix.effetChoisi)
-          ? choix.effetChoisi
-          : (j.eveille ? 'vache' : 'reveil');
+        const pref = choix.effetChoisi || (j.eveille ? 'vache' : 'reveil');
         this._effetCombo(j, { id: pref, source: 'tornade', combo: { id: pref } }, choix);
         break;
       }
       default:
         break;
     }
-    if (!this.termine) this._planifier(j.id);
   }
 
   _choisirEndormi(j) {
@@ -616,9 +702,19 @@ export class Moteur {
     const adverses = eveilles.filter((v) => v.equipe !== j.equipe);
     const pool = adverses.length ? adverses : eveilles;
     if (!pool.length) return null;
-    // On vise l'équipe la plus avancée.
     pool.sort((a, b) => (this.equipes[b.equipe]?.retournes || 0) - (this.equipes[a.equipe]?.retournes || 0));
     return pool[0];
+  }
+
+  _coequipiers(j) { return this.joueurs.filter((x) => x.equipe === j.equipe && x.id !== j.id); }
+
+  _meilleureCible(j) {
+    let best = null;
+    for (const e of Object.values(this.equipes)) {
+      if (e.id === j.equipe) continue;
+      if (e.retournes > 0 && (!best || e.retournes > best.retournes)) best = e;
+    }
+    return best;
   }
 
   _nomEquipe(id) {
@@ -650,119 +746,6 @@ export class Moteur {
     this._log(`Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
 
-  // ── Passage du lot et collisions ────────────────────────────────────────────
-  _passerLot(j, silencieux = false) {
-    if (!j.lots.length) return;
-    const lot = j.lots.shift();
-    if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
-    j.stats.passes++;
-    j.lancersLot = 0;
-    j.attente = null;
-    for (const d of lot.des) { d.verrou = false; }
-    lot.lance = false;
-    const q = this._suivant(j);
-    if (!q.lots.length) q._lotDepuis = this.now;
-    q.lots.push(lot);
-    if (this.onMouvement) this.onMouvement(j.id, q.id, 'passe', lot);
-    if (!silencieux) this._log(`${j.nom} passe son lot à ${q.nom}.`, 'passe', j.id);
-    this._planifier(q.id);
-    if (j.lots.length) this._planifier(j.id);
-  }
-
-  _collision(j) {
-    const q = this._suivant(j);
-    j.stats.combos.collision = j.stats.combos.collision || 0;
-    const lot = j.lots.shift();
-    if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
-    for (const d of lot.des) d.verrou = false;
-    lot.lance = false;
-    if (!q.lots.length) q._lotDepuis = this.now;
-    q.lots.push(lot);
-    if (this.onMouvement) this.onMouvement(j.id, q.id, 'attrape', lot);
-    j.lancersLot = 0;
-    j.attente = null;
-
-    if (q.lots.length <= 1) {
-      // q ne tenait rien avant de recevoir : pas de collision possible.
-      this._log(`${j.nom} passe son lot à ${q.nom} — pas de contact.`, 'collision', j.id);
-      this._planifier(q.id);
-      if (j.lots.length) this._planifier(j.id);
-      return;
-    }
-
-    j.stats.collisionsTentees++;
-    this._log(`${j.nom} tente de toucher ${q.nom} !`, 'collision', j.id);
-
-    if (j.type === 'humain' || q.type === 'humain') {
-      this.duel = {
-        toucheurId: j.id, cibleId: q.id, ouvertA: this.now,
-        fenetre: 900, toucheurPret: j.type !== 'humain', ciblePrete: q.type !== 'humain',
-        actionToucheur: null, actionCible: null,
-      };
-      this.file.pousser(this.now + 900, { type: 'duel' });
-      return;
-    }
-    this._resoudreCollision(j, q, null, null);
-  }
-
-  _resoudreDuel(expire = false) {
-    if (!this.duel) return;
-    const { toucheurId, cibleId, actionToucheur, actionCible } = this.duel;
-    this.duel = null;
-    this._resoudreCollision(
-      this.joueurs[toucheurId], this.joueurs[cibleId], actionToucheur, actionCible,
-    );
-  }
-
-  /** Réflexe d'un joueur humain pendant la fenêtre de collision. */
-  reflexeHumain(pid, action) {
-    if (!this.duel) return false;
-    const d = this.duel;
-    const dt = this.now - d.ouvertA;
-    if (pid === d.toucheurId && action === 'toucher' && d.actionToucheur == null) {
-      d.actionToucheur = dt; return true;
-    }
-    if (pid === d.cibleId && action === 'esquiver' && d.actionCible == null) {
-      d.actionCible = dt; return true;
-    }
-    return false;
-  }
-
-  _resoudreCollision(j, q, dtToucheur, dtCible) {
-    let p = j.adresse * (1 - 0.5 * q.esquive) * (this.cfg.adresseBase / 0.55);
-    // Réflexes humains : plus le geste est rapide, plus il pèse.
-    if (dtToucheur != null) p += Math.max(0, 0.45 * (1 - dtToucheur / 900));
-    else if (j.type === 'humain') p -= 0.35;
-    if (dtCible != null) p -= Math.max(0, 0.4 * (1 - dtCible / 900));
-    p = Math.min(0.97, Math.max(0.02, p));
-
-    if (this.rng() < p) {
-      j.stats.collisionsReussies++;
-      q.stats.foisTouche++;
-      this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
-      // La cible passe immédiatement le lot qu'elle jouait.
-      if (q.lots.length > 1) {
-        const enJeu = q.lots.shift();
-        for (const d of enJeu.des) d.verrou = false;
-        enJeu.lance = false;
-        const suiv = this._suivant(q);
-        if (!suiv.lots.length) suiv._lotDepuis = this.now;
-        suiv.lots.push(enJeu);
-        if (this.onMouvement) this.onMouvement(q.id, suiv.id, 'touche', enJeu);
-        q.lancersLot = 0;
-        q.attente = null;
-        this._planifier(suiv.id);
-      }
-      this._retournerJeton(j, 1, 'collision');
-    } else {
-      this._log(`Raté — ${q.nom} s’en sort.`, 'collision', q.id);
-    }
-    if (!this.termine) {
-      this._planifier(q.id);
-      if (j.lots.length) this._planifier(j.id);
-    }
-  }
-
   // ── Fin de manche / de partie ───────────────────────────────────────────────
   _finManche(equipeId) {
     if (this.termine) return;
@@ -782,8 +765,8 @@ export class Moteur {
     });
     if (equipeId) {
       this._log(
-        `${this._nomEquipe(equipeId)} remporte la manche ${this.manche}` +
-        (compte ? ` et prend « ${carte.nom} ».` : ` (${carte ? carte.nom : 'carte'} défaussée).`),
+        `${this._nomEquipe(equipeId)} remporte la manche ${this.manche}`
+        + (compte ? ` et prend « ${carte.nom} ».` : ` (${carte ? carte.nom : 'carte'} défaussée).`),
         'manche',
       );
     }
@@ -800,7 +783,6 @@ export class Moteur {
     if (!this.pioche.length) { this._finPartie(this._meneur(), 'pioche'); return; }
     if (this.manche >= (this.cfg.manchesMax || 40)) { this._finPartie(this._meneur(), 'manchesMax'); return; }
 
-    // Répartition des lots pour la manche suivante.
     const triche = carte && carte.effetPassif && carte.effetPassif.gagnantPrendLesDes;
     if (equipeId) {
       this._prochainsPorteurs = triche
@@ -813,6 +795,7 @@ export class Moteur {
     // On vide la file : la manche précédente ne doit rien laisser traîner.
     this.file = new FileEvenements();
     this.duel = null;
+    this.transits = [];
     this._demarrerManche(false);
   }
 
@@ -829,6 +812,7 @@ export class Moteur {
     this.vainqueur = equipeId;
     this.raisonFin = raison;
     this.duree = this.now;
+    this.transits = [];
     this._log(
       equipeId
         ? `Fin de partie — ${this._nomEquipe(equipeId)} l’emportent avec ${this.equipes[equipeId].cartes.length} cartes Journée.`
@@ -841,22 +825,29 @@ export class Moteur {
   // ── Interface joueur humain ─────────────────────────────────────────────────
   _attenteHumaine(j) {
     const lot = j.lots[0];
+    if (!lot || j.fige || lot.roulantJusqua) { j.attente = null; return; }
     j.attente = {
       peutLancer: true,
       peutPasser: !!lot.lance,
-      combos: lot.lance ? this.combosDisponibles(j) : [],
+      indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou),
     };
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  /** Action déclenchée par un joueur humain depuis la table. */
-  actionHumaine(pid, choix) {
+  /** Relance les dés désignés (tous si `indices` est absent). */
+  lancerHumain(pid, indices = null) {
     const j = this.joueurs[pid];
-    if (this.termine || j.type !== 'humain' || !j.lots.length) return false;
-    if (this.duel) return false;
-    j.attente = null;
-    this._appliquerChoix(j, choix);
-    if (this.onEtatChange) this.onEtatChange();
+    if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
+    if (j.lots[0].roulantJusqua) return false;
+    return this._demarrerLancer(j, indices);
+  }
+
+  /** Rend le lot au voisin. */
+  passerHumain(pid) {
+    const j = this.joueurs[pid];
+    if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
+    if (j.lots[0].roulantJusqua || !j.lots[0].lance) return false;
+    this._demanderDepart(j, 'passe');
     return true;
   }
 

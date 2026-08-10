@@ -53,6 +53,15 @@ function alerteDesDes(lot, combos) {
   return null;
 }
 
+// Pendant qu'un dé roule, on fait défiler les faces : c'est ce défilement qui
+// donne la sensation du dé qui tourne. Le pas est volontairement grossier —
+// 70 ms — sinon l'œil ne suit plus.
+const PAS_ROULEMENT = 70;
+function tickRoulement(now) { return Math.floor(now / PAS_ROULEMENT); }
+function faceRoulante(faces, now, i) {
+  return faces[(tickRoulement(now) + i * 3) % faces.length];
+}
+
 /** Ne reconstruit `hote` que si la signature a changé. */
 function siChange(hote, signature, construire) {
   if (hote.dataset.sig === signature) return false;
@@ -122,11 +131,12 @@ export function vueTable() {
 
   // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
   const enVol = [];
-  function animerPassage(de, vers, motif, lot) {
+  function animerPassage(de, vers, motif, lot, dureeJeu) {
     if (window.innerWidth <= 860) return;   // en disposition verticale, sans objet
     const a = positions[de], b = positions[vers];
     if (!a || !b) return;
-    const duree = Math.max(110, Math.min(500, 420 / vitesse));
+    // Le vol dure exactement le temps de jeu du passage, à la vitesse d'affichage.
+    const duree = Math.max(80, (dureeJeu ?? 1000) / vitesse);
     const el = h('div', { class: `lot-vol lot-vol--${motif}` },
       ...lot.des.slice(0, 4).map((d) => faceDe(d.sym, { taille: 'petit' })));
     el.style.transitionDuration = `${duree}ms, ${duree}ms, 160ms`;
@@ -144,7 +154,7 @@ export function vueTable() {
       el.remove();
       const k = enVol.indexOf(el);
       if (k >= 0) enVol.splice(k, 1);
-    }, duree + 200);
+    }, duree + 180);
   }
 
   const zonePanneaux = h('div', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
@@ -160,12 +170,18 @@ export function vueTable() {
           h('div.mini', { style: { flex: '1' } }, c.nom,
             c.face !== 'toutes'
               ? h('span.muted', ` · carte ${c.face === 'active' ? 'éveillée' : 'endormie'}`)
-              : null,
-            c.obligatoire
-              ? h('span', { style: { color: 'var(--rouge)', fontWeight: '800' } }, ' · obligatoire')
               : null),
         )),
+        moteur.carte && moteur.carte.combo
+          ? h('div.rangee.rangee--serree',
+              h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
+                suiteSymboles(moteur.carte.combo.requis, 20)),
+              h('div.mini', { style: { flex: '1' } }, moteur.carte.court,
+                h('span.muted', ' · carte du jour')))
+          : null,
       ),
+      h('p.mini.muted', { style: { marginTop: '10px' } },
+        'Dès qu’une combinaison sort, elle est jouée : le lot part et l’effet s’applique.'),
     ),
     h('div.carte', h('div.titre-section', 'Journal'), zoneJournal),
   );
@@ -180,7 +196,7 @@ export function vueTable() {
   moteur.onJournal = (e) => {
     if (e.type === 'touche' && e.pid != null) touchesRecentes.set(e.pid, moteur.now);
   };
-  moteur.onMouvement = (de, vers, motif, lot) => animerPassage(de, vers, motif, lot);
+  moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
 
   // Les combinaisons obligatoires sont jouées dans la foulée du lancer : sans
   // rémanence, leur alerte clignoterait le temps d'une image. On la retient.
@@ -234,25 +250,13 @@ export function vueTable() {
     }
     if (ev.code === 'Escape') { enPause = !enPause; ev.preventDefault(); return; }
     for (const j of humains) {
-      if (!j.attente) continue;
+      if (!j.lots.length) continue;
       const t = toucheDe.get(j.id);
-      if (ev.code === t.lancer) {
-        const lot = j.lots[0];
-        const indices = lot.lance ? indicesRelance(j, lot) : null;
-        if (!indices || indices.length) moteur.actionHumaine(j.id, { type: 'lancer', indices });
-        ev.preventDefault();
-        return;
-      }
-      if (ev.code === t.passer && j.attente.peutPasser) {
-        moteur.actionHumaine(j.id, { type: 'passer' }); ev.preventDefault(); return;
-      }
-      const k = Number(ev.key);
-      if (k >= 1 && k <= 9 && j.attente.combos[k - 1]) {
-        moteur.actionHumaine(j.id, { type: 'combo', comboId: j.attente.combos[k - 1].id });
-        ev.preventDefault(); return;
-      }
+      if (ev.code === t.lancer) { moteur.lancerHumain(j.id, null); ev.preventDefault(); return; }
+      if (ev.code === t.passer) { moteur.passerHumain(j.id); ev.preventDefault(); return; }
     }
   }
+
   window.addEventListener('keydown', auClavier);
 
   const surveillant = new MutationObserver(() => {
@@ -296,8 +300,12 @@ export function vueTable() {
       const alerte = alerteDe(j);
       if (alerte) el.dataset.alerte = alerte; else delete el.dataset.alerte;
 
-      const des = lot && lot.lance ? lot.des.map((d) => `${d.sym}${d.verrou ? '*' : ''}`).join(',') : '';
-      const sig = `${j.lots.length}|${j.eveille}|${des}`;
+      const roule = lot && lot.roulantJusqua > 0;
+      const des = lot && (lot.lance || roule)
+        ? lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',')
+        : '';
+      const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}`
+        + (roule ? `|${tickRoulement(moteur.now)}` : '');
       siChange(el, sig, () => {
         const eq = COULEURS_EQUIPE[j.equipe];
         return [
@@ -317,8 +325,11 @@ export function vueTable() {
             j.type === 'humain' ? h('span.badge', { style: { marginLeft: 'auto' } }, 'vous') : null,
           ),
           h('div.des-mini',
-            lot && lot.lance
-              ? lot.des.map((d) => faceDe(d.sym, { verrou: d.verrou, taille: 'petit' }))
+            lot && (lot.lance || roule)
+              ? lot.des.map((d, i) => faceDe(
+                  d.roule ? faceRoulante(moteur.cfg.faces, moteur.now, i) : d.sym,
+                  { verrou: d.verrou, taille: 'petit', roule: d.roule },
+                ))
               : h('span.mini.muted', j.lots.length ? 'lot en main' : '—'),
           ),
         ];
@@ -371,45 +382,14 @@ export function vueTable() {
     zoneJournal.scrollTop = zoneJournal.scrollHeight;
   }
 
-  // Dés que chaque humain a décidé de garder. Remis à zéro à chaque nouveau jet :
-  // on redécide « je garde quoi » après avoir vu le résultat.
-  const gardes = new Map();   // idJoueur -> Set d'indices gardés
-  const empreinteDes = new Map();
-
-  function empreinte(lot) {
-    return lot.lance ? lot.des.map((d) => `${d.sym}${d.verrou ? '*' : ''}`).join(',') : 'neuf';
-  }
-
-  function gardePour(j, lot) {
-    const emp = empreinte(lot);
-    if (empreinteDes.get(j.id) !== emp) {
-      empreinteDes.set(j.id, emp);
-      gardes.set(j.id, new Set());
-    }
-    return gardes.get(j.id) || new Set();
-  }
-
-  /** Indices réellement relancés : tout ce qui n'est ni figé ni gardé. */
-  function indicesRelance(j, lot) {
-    const garde = gardePour(j, lot);
-    return lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !garde.has(i));
-  }
-
-  function basculerGarde(j, i) {
-    const lot = j.lots[0];
-    if (!lot || !lot.lance || lot.des[i].verrou) return;
-    const garde = gardePour(j, lot);
-    if (garde.has(i)) garde.delete(i); else garde.add(i);
-    gardes.set(j.id, garde);
-  }
-
   function peindrePanneaux() {
-    const actifs = humains.filter((j) => j.attente && j.lots.length);
+    const actifs = humains.filter((j) => j.lots.length);
     const sig = actifs.map((j) => {
       const lot = j.lots[0];
-      const garde = [...gardePour(j, lot)].sort().join('-');
-      return `${j.id}:${j.lots.length}:${j.eveille}:${empreinte(lot)}:${garde}`
-        + `:${alerteDe(j) || ''}:${j.attente.combos.map((c) => c.id).join('+')}`;
+      const roule = lot.roulantJusqua > 0;
+      const des = lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',');
+      return `${j.id}:${j.lots.length}:${j.eveille}:${j.fige}:${lot.lance}:${des}`
+        + `:${alerteDe(j) || ''}` + (roule ? `:${tickRoulement(moteur.now)}` : '');
     }).join('||');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
@@ -418,9 +398,11 @@ export function vueTable() {
     const t = toucheDe.get(j.id);
     const lot = j.lots[0];
     const eq = COULEURS_EQUIPE[j.equipe];
-    const garde = gardePour(j, lot);
-    const aRelancer = indicesRelance(j, lot);
+    const roule = lot.roulantJusqua > 0;
     const alerte = alerteDe(j);
+    const libres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou);
+    const peutAgir = !roule && !j.fige && !moteur.duel;
+
     return h('div.panneau-humain', { data: alerte ? { alerte } : {} },
       h('div.rangee', { style: { marginBottom: '10px' } },
         h('span', {
@@ -430,61 +412,41 @@ export function vueTable() {
         h('span.petit.muted', j.eveille ? 'Tornade éveillée' : 'Tornade endormie'),
         j.lots.length > 1 ? h('span.badge', `${j.lots.length} lots en main`) : null,
         h('div', { style: { flex: '1' } }),
-        h('span.mini.muted', `${t.libLancer} lancer · ${t.libPasser} passer · 1-9 combinaison`),
+        h('span.mini.muted',
+          `clic sur un dé : le relancer · ${t.libLancer} : tout relancer · ${t.libPasser} : passer`),
       ),
       h('div.rangee',
         h('div.rangee.rangee--serree',
-          ...(lot.lance
-            ? lot.des.map((d, i) => {
-                const de = faceDe(d.sym, {
-                  verrou: d.verrou, taille: 'grand',
-                });
-                if (!d.verrou) {
-                  de.classList.add('de--cliquable');
-                  if (!garde.has(i)) de.classList.add('de--relance');
-                  de.title = garde.has(i) ? 'Gardé — cliquez pour le relancer' : 'Sera relancé — cliquez pour le garder';
-                  de.onclick = () => basculerGarde(j, i);
-                }
-                return de;
-              })
-            : lot.des.map(() => faceDe(null, { taille: 'grand' }))),
+          ...lot.des.map((d, i) => {
+            const de = faceDe(
+              d.roule ? faceRoulante(moteur.cfg.faces, moteur.now, i) : d.sym,
+              { verrou: d.verrou, taille: 'grand', roule: d.roule },
+            );
+            if (peutAgir && !d.verrou) {
+              de.classList.add('de--cliquable');
+              de.title = 'Relancer ce dé';
+              de.onclick = () => moteur.lancerHumain(j.id, [i]);
+            }
+            return de;
+          }),
         ),
         h('div', { style: { flex: '1' } }),
         h('button.btn.btn--primaire', {
-          disabled: lot.lance && !aRelancer.length,
-          onclick: () => moteur.actionHumaine(j.id, { type: 'lancer', indices: aRelancer }),
-        }, lot.lance
-          ? `Relancer ${aRelancer.length} dé${aRelancer.length > 1 ? 's' : ''} (${t.libLancer})`
-          : `Lancer (${t.libLancer})`),
+          disabled: !peutAgir || !libres.length,
+          onclick: () => moteur.lancerHumain(j.id, null),
+        }, lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`),
         h('button.btn', {
-          disabled: !j.attente.peutPasser,
-          onclick: () => moteur.actionHumaine(j.id, { type: 'passer' }),
+          disabled: !peutAgir || !lot.lance,
+          onclick: () => moteur.passerHumain(j.id),
         }, `Passer (${t.libPasser})`),
       ),
-      lot.lance
-        ? h('div.mini.muted', { style: { marginTop: '8px' } },
-            'Cliquez un dé pour le garder. Les X sont figés : ils ne se relancent jamais.')
-        : null,
-      j.attente.combos.length
-        ? h('div.rangee', { style: { marginTop: '10px' } },
-            ...j.attente.combos.map((c, i) => h('button', {
-              class: `combo-btn${c.obligatoire ? ' combo-btn--obligatoire' : ''}`,
-              onclick: () => moteur.actionHumaine(j.id, { type: 'combo', comboId: c.id }),
-            },
-              h('span.mini.muted', String(i + 1)),
-              h('span', { style: { display: 'flex', gap: '2px' } }, suiteSymboles(c.combo.requis, 18)),
-              nomCombo(c),
-            )),
-          )
-        : h('div.mini.muted', { style: { marginTop: '8px' } },
-            'Aucune combinaison — relancez ou passez le lot.'),
+      h('div.mini', { style: { marginTop: '8px' }, class: j.fige ? 'etat-depart' : 'muted' },
+        j.fige ? 'Le lot part vers votre voisin…'
+          : roule ? 'Les dés roulent…'
+            : lot.lance
+              ? 'Cliquez un dé pour le relancer. Les X sont figés. Toute combinaison servie part toute seule.'
+              : 'Lancez le lot pour commencer.'),
     );
-  }
-
-  function nomCombo(c) {
-    if (c.source === 'journee') return moteur.carte.nom.replace(/^Journée /, '');
-    const def = moteur.cfg.combos.find((x) => x.id === c.id);
-    return def ? def.nom : c.id;
   }
 
   // ── Superpositions ────────────────────────────────────────────────────────

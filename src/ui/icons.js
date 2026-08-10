@@ -101,16 +101,16 @@ export const SVG_LOGO = `
 
 /** Un dé rendu comme une face de dé physique. */
 export function faceDe(symbole, options = {}) {
-  const { verrou = false, taille = 'moyen', choisi = false } = options;
+  const { verrou = false, taille = 'moyen', roule = false } = options;
   const div = document.createElement('div');
   div.className = 'de'
     + ` de--${taille}`
-    + (verrou ? ' de--verrou' : '')
-    + (choisi ? ' de--choisi' : '')
+    + (verrou && !roule ? ' de--verrou' : '')
+    + (roule ? ' de--roule' : '')
     + (symbole ? '' : ' de--vierge');
   div.dataset.sym = symbole || '';
   if (symbole) div.innerHTML = SVG_SYMBOLE[symbole] || '';
-  if (verrou) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
+  if (verrou && !roule) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
   return div;
 }
 

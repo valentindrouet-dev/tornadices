@@ -22,8 +22,9 @@ Le dépôt se publie tel quel sur GitHub Pages ou tout hébergement statique.
 
 | Page | Contenu |
 |---|---|
-| **Accueil** | Composition de la table : 3 à 9 joueurs, siège par siège Humain ou IA, cartes Journée en jeu, graine. |
-| **Table** | La partie en temps réel : table circulaire, lots de dés qui circulent, fenêtres de collision, journal. |
+| **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
+| **Variables** | Toutes les options d'une partie : faces des dés, combinaisons requises, rythme de la table, mise en place, adresse, cartes Journée, graine. |
+| **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
 | **Règles** | Les règles telles que le moteur les applique. |
@@ -57,7 +58,8 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
-- temps moyen d’un lancer et son écart-type, adresse de base, taux d’erreur ;
+- durée du lancer, du constat, du passage, réflexion des IA, fenêtre de réflexe ;
+- adresse de base, taux d’erreur, sanction des erreurs ;
 - profil et vitesse de chaque IA (Prudent, Équilibré, Téméraire, Hasard).
 
 Chaque campagne est reproductible : même graine, mêmes chiffres.
@@ -74,9 +76,25 @@ Cinq symboles, six faces : **2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 | Éclair | 3 | Passe le lot et tente d’attraper le suivant | jaune clignotant orange |
 | X | 2 | Le lot part sans rien tenter | rouge |
 
-On relance qui l’on veut, autant de fois qu’on veut — **sauf les X**, qui restent
-figés sur leur face et clignotent en rouge. Au deuxième X il ne reste plus assez
-de dés libres pour former quoi que ce soit : le lot part.
+On relance qui l’on veut, autant de fois qu’on veut — un clic sur un dé le
+relance, la barre espace les relance tous — **sauf les X**, qui restent figés sur
+leur face et clignotent en rouge. Au deuxième X il ne reste plus assez de dés
+libres pour former quoi que ce soit : le lot part.
+
+**Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
+
+## Le rythme d’un lot
+
+Trois durées, réglables dans Variables, font le tempo — et comptent dans la durée
+d’une partie, à la table comme au Laboratoire :
+
+| Étape | Défaut | Ce qu’on voit |
+|---|---|---|
+| `dureeLancer` | 1000 ms | les dés roulent, les faces défilent |
+| `dureeConstat` | 900 ms | le résultat reste affiché avant que le lot ne parte |
+| `dureePassage` | 1000 ms | le lot traverse la table jusqu’au voisin |
+
+Avec ces valeurs, une partie dure 5 à 7 minutes selon le nombre de joueurs.
 
 ## Hypothèses de travail
 
@@ -94,9 +112,10 @@ des valeurs par défaut explicites, toutes modifiables :
 4. **Un lot passé est relancé entièrement** par celui qui le reçoit : le verrou des
    X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
    serait injouable.
-5. **L’attrape est jouée avant le blocage**, et une combinaison de carte Journée
-   passe avant les deux — sans cette priorité, « Journée de la chance »
-   (quatre éclairs) serait inatteignable.
+5. **Quand plusieurs combinaisons sortent au même jet**, la carte Journée passe
+   avant tout, puis l’attrape, puis les combinaisons de gain, et « Bloqué » en
+   dernier — sans cette priorité, « Journée de la chance » (quatre éclairs)
+   serait inatteignable.
 6. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
    maladresse ») sont modélisés par un surcoût de temps et un taux d’erreur.
 

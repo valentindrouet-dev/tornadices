@@ -9,6 +9,13 @@ export function vueRegles() {
     h('div.rangee', { style: { margin: '6px 0 18px' } }, h('h1', 'Règles — TornaDices V4.5')),
 
     h('div.carte',
+      h('div.titre-section', 'Le rythme d’un lot'),
+      h('p.petit', 'Les dés roulent une seconde, on lit le résultat, on a le temps de le voir, '
+        + 'puis le lot met une seconde à rejoindre le voisin. Ces trois durées se règlent dans '
+        + 'le menu Variables — elles font le tempo du jeu et comptent dans la durée d’une partie.'),
+    ),
+
+    h('div.carte',
       h('div.titre-section', 'Le principe'),
       h('p', 'Deux équipes, les Bleus et les Jaunes — et un joueur Vert en solo si le nombre '
         + 'est impair. Plusieurs lots de dés circulent en même temps autour de la table. Celui '
@@ -29,7 +36,7 @@ export function vueRegles() {
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
-        'Un dé peut être relancé autant de fois qu’on veut, et on choisit lesquels relancer — '
+        'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
         + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
         + 'plus assez de dés libres pour former quoi que ce soit : le lot part aussitôt.'),
     ),
@@ -44,7 +51,7 @@ export function vueRegles() {
           h('td.petit',
             c.face === 'active' ? 'Tornade éveillée'
               : c.face === 'endormie' ? 'Tornade endormie'
-                : c.obligatoire ? 'Obligatoire, quel que soit l’état' : 'Toujours'),
+                : 'Quel que soit l’état'),
         ))),
       ),
       h('div.rangee', { style: { marginTop: '14px' } },
@@ -53,8 +60,9 @@ export function vueRegles() {
           + 'aux tornades avant de pouvoir retourner un jeton aux vaches.'),
         h('span', { html: SVG_TORNADE_EVEILLEE, style: { width: '30px', color: 'var(--bleu)' } }),
       ),
-      h('p.petit.muted', { style: { marginTop: '10px' } },
-        'Jouer une combinaison commence toujours par passer son lot, puis appliquer l’effet.'),
+      h('div.encart', { style: { marginTop: '14px' } },
+        'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
+        + 'vers le voisin, puis l’effet s’applique.'),
     ),
 
     h('div.carte',

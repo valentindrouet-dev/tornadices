@@ -6,6 +6,7 @@ import { VERSION } from '../version.js';
 import { vueAccueil } from './accueil.js';
 import { vueTable, partieEnCours } from './table.js';
 import { vueLabo } from './labo.js';
+import { vueVariables } from './variables.js';
 import { vueHistorique } from './historique.js';
 import { vueVersions } from './versions.js';
 import { vueRegles } from './regles.js';
@@ -14,6 +15,7 @@ const ROUTES = {
   '': vueAccueil,
   '/': vueAccueil,
   '/table': vueTable,
+  '/variables': vueVariables,
   '/labo': vueLabo,
   '/historique': vueHistorique,
   '/versions': vueVersions,
@@ -49,6 +51,7 @@ function barre() {
       ? h('button.lien-nav.actif', { onclick: () => aller('/table') }, '▸ Partie en cours')
       : null,
     chemin !== '/' ? lien('Accueil', '/') : null,
+    lien('Variables', '/variables'),
     lien('Laboratoire', '/labo'),
     lien('Historique', '/historique'),
     lien('Règles', '/regles'),

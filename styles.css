@@ -264,10 +264,22 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   0%, 100% { box-shadow: 0 0 0 3px rgba(226, 0, 15, .30); }
   50% { box-shadow: 0 0 0 7px rgba(226, 0, 15, .04); }
 }
-/* Dé sélectionné pour la relance. */
-.de--relance { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30, 131, 204, .26); }
+/* Un dé qui roule : la face défile et le dé bascule. */
+.de--roule {
+  animation: roulement .18s linear infinite;
+  border-color: var(--accent-bord);
+  box-shadow: 0 4px 10px rgba(20, 60, 110, .18);
+}
+@keyframes roulement {
+  0%   { transform: rotate(-9deg) scale(1.04); }
+  25%  { transform: rotate(6deg) scale(.96); }
+  50%  { transform: rotate(-4deg) scale(1.05); }
+  75%  { transform: rotate(8deg) scale(.97); }
+  100% { transform: rotate(-9deg) scale(1.04); }
+}
 .de--cliquable { cursor: pointer; }
-.de--cliquable:hover { transform: translateY(-2px); }
+.de--cliquable:hover { transform: translateY(-3px) scale(1.04); border-color: var(--accent); }
+.etat-depart { color: var(--accent-fonce); font-weight: 700; }
 .de--vierge { background: repeating-linear-gradient(45deg, #f6fafe, #f6fafe 5px, #e9f3fb 5px, #e9f3fb 10px); }
 .de--anim { animation: roule .32s ease; }
 @keyframes roule {
