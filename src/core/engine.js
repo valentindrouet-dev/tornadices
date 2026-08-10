@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=2.0';
+import { makeRng } from './rng.js?v=1.11';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES,
-  placement, infosMiseEnPlace,
-} from './config.js?v=2.0';
+  placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
+} from './config.js?v=1.11';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -306,8 +306,17 @@ export class Moteur {
       }
       case 'depart': {
         const j = this.joueurs[ev.pid];
-        if (!j.lots.includes(ev.lot)) { j.fige = false; return; }
-        this._depart(j, ev.lot, ev.motif, ev.dispo, ev.choix);
+        if (!j.lots.includes(ev.lot)) {
+          // Le lot est déjà parti — poussé, ou envoyé d'avance à l'arrivée d'un
+          // autre. On ne dégèle que si rien d'autre n'attend de partir.
+          if (j.departEnAttente && j.departEnAttente.lot === ev.lot) j.departEnAttente = null;
+          if (!j.departEnAttente) j.fige = false;
+          return;
+        }
+        // Le joueur a pu changer de combinaison pendant le temps de constat :
+        // c'est l'attente en cours qui fait foi, pas ce qui était planifié.
+        const d = (j.departEnAttente && j.departEnAttente.lot === ev.lot) ? j.departEnAttente : ev;
+        this._depart(j, ev.lot, d.motif, d.dispo, d.choix);
         return;
       }
       case 'nouvelleManche':
@@ -377,6 +386,17 @@ export class Moteur {
     return c;
   }
 
+  /** Combien de jokers du lot peuvent prendre la place de `sym`. */
+  _jokersPour(compte, sym) {
+    let n = 0;
+    for (const [s, k] of Object.entries(compte)) {
+      if (s === sym || !k) continue;
+      const peut = remplacements(s);
+      if (peut && peut.includes(sym)) n += k;
+    }
+    return n;
+  }
+
   /** Indices des dés qu'une IA choisit de relancer : elle garde ceux qui servent. */
   _choixDesIA(j, lot) {
     const bloquant = this.cfg.symboleBloquant || 'x';
@@ -390,10 +410,14 @@ export class Moteur {
     let objectif = null, meilleur = -1;
     for (const [sym, p] of Object.entries(poids)) {
       if (sym === bloquant) continue;
-      const note = p * ((compte[sym] || 0) + 0.05);
+      // Un joker compte pour le symbole visé : il le remplacera.
+      const note = p * ((compte[sym] || 0) + this._jokersPour(compte, sym) + 0.05);
       if (note > meilleur) { meilleur = note; objectif = sym; }
     }
-    const aRelancer = libres.filter(({ d }) => d.sym !== objectif).map(({ i }) => i);
+    // On ne relance jamais un joker : il vaut déjà le symbole que l'on cherche.
+    const aRelancer = libres
+      .filter(({ d }) => d.sym !== objectif && !estJoker(d.sym))
+      .map(({ i }) => i);
     return aRelancer.length ? aRelancer : libres.map(({ i }) => i);
   }
 
@@ -403,7 +427,8 @@ export class Moteur {
     if (!lot || !this._lotPose(lot)) return [];
     const c = this._compter(lot);
     const out = [];
-    const servie = (requis) => Object.entries(requis).every(([s, n]) => (c[s] || 0) >= n);
+    // Les jokers prennent la place qui manque ; une exigence vide ne compte pas.
+    const servie = (requis) => !exigenceVide(requis) && comboServie(c, requis);
 
     for (const combo of this.cfg.combos) {
       if (!servie(combo.requis)) continue;
@@ -431,16 +456,47 @@ export class Moteur {
    */
   _comboAJouer(dispo) {
     if (!dispo.length) return null;
+    const estEchec = (d) => !!(d.combo && d.combo.echec);
+    // Trois jokers passent avant tout : sans cela, le joker n'aurait aucun revers
+    // puisqu'il servirait au même jet la combinaison de son choix.
+    const bust = dispo.find((d) => estEchec(d) && d.id !== 'blocage');
+    if (bust) return bust;
     const carte = dispo.find((d) => d.source === 'journee');
     if (carte) return carte;                                   // la carte du jour prime
-    const attrape = dispo.find((d) => d.obligatoire && d.id !== 'blocage');
+    const attrape = dispo.find((d) => d.obligatoire && !estEchec(d));
     if (attrape) return attrape;                               // puis l'attrape
-    const autres = dispo.filter((d) => d.id !== 'blocage');
+    const autres = dispo.filter((d) => !estEchec(d));
     if (autres.length) {
       autres.sort((a, b) => this._noterCombo(b) - this._noterCombo(a));
       return autres[0];
     }
     return dispo.find((d) => d.id === 'blocage') || null;       // bloqué en dernier
+  }
+
+  /**
+   * Entre quelles combinaisons un joueur humain peut trancher. Le joker en sert
+   * volontiers plusieurs au même jet : c'est à lui de dire laquelle il joue.
+   * Un échec ne se choisit pas, et « Bloqué » ne se choisit jamais contre mieux.
+   */
+  _optionsDeChoix(j, dispo) {
+    if (j.type !== 'humain' || dispo.length < 2) return null;
+    if (dispo.some((d) => d.combo && d.combo.echec)) return null;
+    const options = dispo.filter((d) => d.id !== 'blocage');
+    return options.length > 1 ? options : null;
+  }
+
+  /** Le joueur tranche pendant le temps de constat. Sans réponse, le défaut tient. */
+  choisirCombo(pid, comboId) {
+    const j = this.joueurs[pid];
+    const d = j && j.departEnAttente;
+    if (!d || !d.options) return false;
+    const opt = d.options.find((o) => o.id === comboId);
+    if (!opt) return false;
+    d.dispo = opt;
+    d.motif = opt.id === 'collision' ? 'attrape' : 'combo';
+    d.options = null;
+    if (this.onEtatChange) this.onEtatChange();
+    return true;
   }
 
   _noterCombo(d) {
@@ -544,16 +600,19 @@ export class Moteur {
     if (this.onCombinaison) {
       const compte = this._compter(lot);
       for (const combo of this.cfg.combos) {
-        if (Object.entries(combo.requis).every(([sy, n]) => (compte[sy] || 0) >= n)) {
+        if (!exigenceVide(combo.requis) && comboServie(compte, combo.requis)) {
           this.onCombinaison(j.id, combo.id);
         }
       }
     }
 
-    const choisi = this._comboAJouer(this.combosDisponibles(j));
+    const dispo = this.combosDisponibles(j);
+    const choisi = this._comboAJouer(dispo);
     if (choisi) {
-      j.stats.combos[choisi.id] = (j.stats.combos[choisi.id] || 0) + 1;
-      this._demanderDepart(j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi);
+      this._demanderDepart(
+        j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi, null,
+        this._optionsDeChoix(j, dispo),
+      );
       return;
     }
     this._planifier(j.id);
@@ -563,13 +622,18 @@ export class Moteur {
    * Le lot va partir. On laisse d'abord le temps de voir le résultat : sans cette
    * pause, les dés changent de main avant qu'on ait compris ce qui s'est passé.
    */
-  _demanderDepart(j, motif, dispo = null, choix = null) {
+  _demanderDepart(j, motif, dispo = null, choix = null, options = null) {
     const lot = j.lots[0];
     if (!lot || j.fige) return;
     j.fige = true;
     j.attente = null;
-    j.departEnAttente = { lot, motif, dispo, choix };
-    const constat = motif === 'interruption' ? 0 : (this.cfg.dureeConstat ?? 900);
+    j.departEnAttente = { lot, motif, dispo, choix, options, ouvertA: this.now };
+    // Le temps de constat suffit à lire le résultat ; trancher entre plusieurs
+    // combinaisons demande un peu plus — ce délai est du temps de jeu lui aussi.
+    const constat = motif === 'interruption' ? 0
+      : options ? (this.cfg.dureeChoix ?? this.cfg.dureeConstat ?? 900)
+        : (this.cfg.dureeConstat ?? 900);
+    j.departEnAttente.expire = this.now + constat;
     this.file.pousser(this.now + constat, {
       type: 'depart', pid: j.id, lot, motif, dispo, choix,
     });
@@ -580,6 +644,7 @@ export class Moteur {
   _depart(j, lot, motif, dispo, choix) {
     j.departEnAttente = null;
     j.fige = false;
+    if (dispo) j.stats.combos[dispo.id] = (j.stats.combos[dispo.id] || 0) + 1;
     const q = this._envoyerLot(j, lot, motif, dispo);
     if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
 
@@ -634,6 +699,7 @@ export class Moteur {
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
       if (dispo.id === 'blocage') return 'Bloqué';
+      if (dispo.id === 'echecJokers') return 'Trois jokers';
       if (dispo.source === 'journee') return `${this.carte.court} !`;
       const def = this.cfg.combos.find((c) => c.id === dispo.id);
       return `${def ? def.nom : dispo.id} !`;
@@ -759,6 +825,7 @@ export class Moteur {
         this._annoncer(`${j.nom} se réveille`, 'bleu');
         break;
       case 'blocage':
+      case 'echecJokers':
         break;
       case 'vache':
         this._retournerJeton(j, 1, 'vache');

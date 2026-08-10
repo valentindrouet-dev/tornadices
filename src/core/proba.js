@@ -7,6 +7,8 @@
 //     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
 //     nombre de X déjà figés.
 
+import { comboServie, remplacements } from './config.js?v=1.11';
+
 const facto = [1];
 function fact(n) {
   for (let i = facto.length; i <= n; i++) facto[i] = facto[i - 1] * i;
@@ -40,8 +42,8 @@ function probaRepartition(c, probs, m) {
   return p;
 }
 
-const servie = (compte, requis) =>
-  Object.entries(requis).every(([s, n]) => (compte[s] || 0) >= n);
+// Les jokers comblent ce qui manque : le même arbitrage qu'à la table.
+const servie = (compte, requis) => comboServie(compte, requis);
 
 /** P(la combinaison `requis` est servie sur un lancer neuf de `nbDes` dés). */
 export function probaLancerUnique(faces, nbDes, requis) {
@@ -199,14 +201,23 @@ export function courseAvecGarde(faces, nbDes, requis, opts = {}, tirages = 60000
     let n = 0, gagne = false;
     for (;;) {
       n++;
-      // On garde les dés qui servent la combinaison, dans la limite du requis.
-      const garde = {};
+      // On garde les dés qui servent la combinaison, dans la limite du requis :
+      // d'abord ceux qui portent le symbole voulu, puis les jokers, qui prennent
+      // la place de ce qui manque encore.
+      const besoin = { ...requis };
+      const garder = new Array(nbDes).fill(false);
       for (let i = 0; i < nbDes; i++) {
-        if (fige[i]) { garde[des[i]] = (garde[des[i]] || 0) + 1; continue; }
         const s = des[i];
-        if (s && requis[s] && (garde[s] || 0) < requis[s]) garde[s] = (garde[s] || 0) + 1;
-        else if (des[i] !== null) des[i] = null; // sera relancé
+        if (fige[i]) { garder[i] = true; if (besoin[s] > 0) besoin[s]--; continue; }
+        if (s && besoin[s] > 0) { besoin[s]--; garder[i] = true; }
       }
+      for (let i = 0; i < nbDes; i++) {
+        if (garder[i] || !des[i]) continue;
+        const peut = remplacements(des[i]);
+        const cible = peut && peut.find((sy) => besoin[sy] > 0);
+        if (cible) { besoin[cible]--; garder[i] = true; }
+      }
+      for (let i = 0; i < nbDes; i++) if (!garder[i]) des[i] = null;
       for (let i = 0; i < nbDes; i++) {
         if (fige[i] || des[i] !== null) continue;
         des[i] = faces[(alea() * faces.length) | 0];

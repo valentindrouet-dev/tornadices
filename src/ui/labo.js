@@ -1,16 +1,16 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.0';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=2.0';
-import { store } from './store.js?v=2.0';
-import { lancerCampagne } from '../core/sim.js?v=2.0';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.11';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.11';
+import { store } from './store.js?v=1.11';
+import { lancerCampagne } from '../core/sim.js?v=1.11';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE,
-} from '../core/config.js?v=2.0';
+  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents,
+} from '../core/config.js?v=1.11';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=2.0';
+} from '../core/proba.js?v=1.11';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -182,9 +182,27 @@ function panneauConfig(rafraichir) {
       }, p.nom)),
     ),
     h('div.mini.muted', { style: { marginTop: '8px' } },
-      'Répartition de base : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair.'),
+      'Répartition de base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
+      + 'Le joker remplace n’importe quel symbole sauf le X.'),
 
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Combinaisons requises'),
+    h('div.rangee', { style: { marginTop: '18px', marginBottom: '10px' } },
+      h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
+      h('button', {
+        class: `chip${cfg.combos.some((c) => c.id === 'echecJokers') ? ' on' : ''}`,
+        title: 'Trois jokers d’un coup font partir le lot, comme deux X',
+        onclick: () => {
+          const actif = cfg.combos.some((c) => c.id === 'echecJokers');
+          cfg.echecJokers = !actif;
+          // On repart de la liste de référence en gardant les seuils déjà réglés.
+          cfg.combos = configParDefaut(cfg.nbJoueurs, { echecJokers: !actif }).combos
+            .map((c) => {
+              const garde = cfg.combos.find((x) => x.id === c.id);
+              return { ...c, requis: { ...((garde && garde.requis) || c.requis) } };
+            });
+          rafraichir();
+        },
+      }, h('span.case', '✓'), 'Trois jokers = échec'),
+    ),
     tableauCombosEditables(rafraichir),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
@@ -233,7 +251,7 @@ function panneauConfig(rafraichir) {
 
 function tableauCombosEditables(rafraichir) {
   const cfg = etat.cfg;
-  const symboles = ORDRE_SYMBOLES.filter((s) => s !== 'vide');
+  const symboles = symbolesPertinents(cfg);
   const cartesAvecCombo = CARTES_JOURNEE.filter((c) => c.combo);
 
   const ligne = (nom, requis, ecrire) => h('tr',
@@ -427,7 +445,8 @@ function tableauFrequences(objet, total, unite) {
 
 const LIBELLES = {
   reveil: 'Réveil (3 tornades)', vache: 'Vache', endormir: 'Endormir un voisin',
-  collision: 'Attrape (3 éclairs)', blocage: 'Bloqué (2 X)', fatigue: 'Fatigue', intensive: 'Intensive',
+  collision: 'Attrape (3 éclairs)', blocage: 'Bloqué (2 X)',
+  echecJokers: 'Échec (3 jokers)', fatigue: 'Fatigue', intensive: 'Intensive',
   sansVent: 'Sans vent', chance: 'Chance', troupeau: 'Troupeau',
   difference: 'Différence', vaillants: 'Vaillants',
 };

@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=2.0';
-import { store } from './store.js?v=2.0';
-import { aller } from './app.js?v=2.0';
-import { lancerPartie, partieEnCours } from './table.js?v=2.0';
-import { construireConfig, variables } from './variables.js?v=2.0';
+import { h, remplacer } from './dom.js?v=1.11';
+import { store } from './store.js?v=1.11';
+import { aller } from './app.js?v=1.11';
+import { lancerPartie, partieEnCours } from './table.js?v=1.11';
+import { construireConfig, variables } from './variables.js?v=1.11';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=2.0';
-import { pastilleSymbole } from './icons.js?v=2.0';
-import { randomSeed } from '../core/rng.js?v=2.0';
+} from '../core/config.js?v=1.11';
+import { pastilleSymbole } from './icons.js?v=1.11';
+import { randomSeed } from '../core/rng.js?v=1.11';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -71,10 +71,10 @@ export function vueAccueil() {
 
     remplacer(racine,
       h('h1.titre-jeu', ...titreColore('TORNADICES')),
-      h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '4px' } },
-        'Jeu de dés, de rapidité et de stop ou encore — 3 à 9 joueurs'),
-      h('p.petit', { style: { textAlign: 'center', color: 'var(--gris-clair)', marginBottom: '22px' } },
-        'Table de jeu virtuelle et laboratoire d’équilibrage'),
+      h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '2px' } },
+        'Un jeu de Sylvain Bonnafous'),
+      h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '22px' } },
+        'Édité par Big Budi Games'),
 
       partieEnCours()
         ? h('div', { style: { textAlign: 'center', marginBottom: '24px' } },

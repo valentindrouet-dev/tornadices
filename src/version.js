@@ -1,11 +1,26 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '2.0';
+export const VERSION = '1.11';
 export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
   {
-    version: '2.0',
+    version: '1.11',
+    date: '10/08/2026',
+    notes: [
+      'Le joker entre dans le dé, à la place de la seconde tornade : il prend la face de n’importe quel symbole sauf le X, et valide donc n’importe quelle combinaison.',
+      'Quand le joker sert plusieurs combinaisons au même jet, c’est le joueur qui tranche : les combinaisons s’affichent dans son panneau et il choisit la sienne. Sans réponse, la meilleure part d’office. Le délai est réglable dans Variables.',
+      'Trois jokers d’un coup valent un échec, comme deux X : le lot part sans rien tenter, et cet échec l’emporte sur ce que les jokers auraient pu servir. Règle décochable dans les Variables comme au Laboratoire.',
+      'Nouvelle face joker double, orange et violette : un joker limité à l’éclair et au ZzZ. Absente des dés au départ, elle s’ajoute face par face dans les Variables.',
+      'Ce que le joker change, mesuré : trois vaches passent de 3,7 % à 16,2 % et les quatre symboles se retrouvent à égalité, tandis que le réveil descend de 22,6 % à 16,2 %. En partie, les attrapes doublent, les blocages reculent d’un tiers et la partie perd près de deux minutes.',
+      'Les dés ne heurtent plus de paroi invisible : la rangée du panneau vit désormais dans un plateau qui lui laisse la place de tourner et de glisser, au lieu d’être tranchée sur les bords.',
+      'Sous le titre : un jeu de Sylvain Bonnafous, édité par Big Budi Games.',
+      'Correction : modifier une combinaison dans les Variables empêchait la partie de démarrer.',
+      'Numérotation : on reste en 1.xx — la livraison précédente, publiée en 2.0, est renumérotée 1.10.',
+    ],
+  },
+  {
+    version: '1.10',
     date: '10/08/2026',
     notes: [
       'Chaque ligne du journal prend la teinte pastel de ce qu’elle a produit : bleu pour un réveil, vert pour une vache, violet pour un endormi, jaune pour une attrape, rouge pour un blocage, orangé pour une carte Journée. Gris clair quand le lot est simplement passé ou poussé.',

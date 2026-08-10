@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.9      # estampille tout le site
+node scripts/version.mjs 1.11     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.9`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.11`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -41,7 +41,7 @@ si l'écran est en retard.
 | Page | Contenu |
 |---|---|
 | **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
-| **Variables** | Toutes les options d'une partie : faces des dés, combinaisons requises, rythme de la table, mise en place, adresse, cartes Journée, graine. |
+| **Variables** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Journée, graine. |
 | **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
@@ -75,8 +75,10 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - nombre de dés par lot, nombre de faces, **symbole de chaque face** — depuis les
   options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
+- règle des trois jokers : active ou non, et à partir de combien de jokers ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
-- durée du lancer, du constat, du passage, réflexion des IA, fenêtre de réflexe ;
+- durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
+  IA, fenêtre de réflexe ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
 - profil et vitesse de chaque IA (Prudent, Équilibré, Téméraire, Hasard).
 
@@ -84,7 +86,7 @@ Chaque campagne est reproductible : même graine, mêmes chiffres.
 
 ## Le dé
 
-Cinq symboles, six faces : **2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
+Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 
 | Symbole | Combinaison | Effet | Alerte |
 |---|---|---|---|
@@ -92,6 +94,7 @@ Cinq symboles, six faces : **2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 | Vache | 3 | Retourne un jeton de votre équipe | vert |
 | ZzZ | 3 | Endort un voisin | violet |
 | Éclair | 3 | Passe le lot et tente d’attraper le suivant | jaune clignotant orange |
+| Joker | 3 | Le lot part sans rien tenter (règle décochable) | rouge |
 | X | 2 | Le lot part sans rien tenter | rouge |
 
 On relance qui l’on veut, autant de fois qu’on veut — un clic sur un dé le
@@ -108,16 +111,49 @@ en main est poussé vers le voisin suivant — la poussée peut se propager — 
 enchaîne sur le nouveau.
 
 **Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
+Quand il y en a plusieurs — c’est le joker qui les sert, le plus souvent — le
+joueur désigne la sienne pendant le temps de constat.
+
+### Le joker
+
+**Le joker** prend la face de n’importe quel symbole — tornade, vache, ZzZ ou
+éclair — jamais celle du X, et valide donc n’importe quelle combinaison. Quand il
+en sert plusieurs au même jet, **c’est le joueur qui tranche** : les combinaisons
+s’affichent dans son panneau, il choisit la sienne, et faute de réponse la
+meilleure part d’office au bout de `dureeChoix`.
+
+**Trois jokers d’un coup valent un échec**, comme deux X : le lot part sans rien
+tenter, et cet échec l’emporte sur les combinaisons que les jokers auraient pu
+servir — sans quoi le joker n’aurait aucun revers. Règle décochable dans les
+Variables comme au Laboratoire.
+
+Une seconde face joker, **le joker double** (orange et violet), ne remplace que
+l’éclair et le ZzZ et ne compte pas dans les trois jokers de l’échec. Elle n’est
+pas sur les dés au départ : on l’ajoute face par face dans les Variables.
+
+Ce que le joker change, calculé sur le dé courant (4 dés, relance de tout) :
+
+| | Sans joker (2 tornades) | Avec joker |
+|---|---|---|
+| 3 tornades | 22,6 % | 16,2 % |
+| 3 vaches / 3 ZzZ / 3 éclairs | 3,7 % | 16,2 % |
+| 3 jokers (échec) | — | 3,3 % |
+
+Les quatre symboles passent à égalité ; le réveil, seul à profiter de la seconde
+tornade, y perd. En partie à 6 joueurs, les attrapes doublent (21 → 43 par
+partie), les blocages reculent d’un tiers (91 → 57) et la partie perd près de
+deux minutes (7,5 → 5,6 min).
 
 ## Le rythme d’un lot
 
-Trois durées, réglables dans Variables, font le tempo — et comptent dans la durée
+Quatre durées, réglables dans Variables, font le tempo — et comptent dans la durée
 d’une partie, à la table comme au Laboratoire :
 
 | Étape | Défaut | Ce qu’on voit |
 |---|---|---|
 | `dureeLancer` | 1000 ms | les dés tournent, blancs, face illisible |
 | `dureeConstat` | 900 ms | le résultat reste affiché avant que le lot ne parte |
+| `dureeChoix` | 2400 ms | le joueur tranche entre les combinaisons servies |
 | `dureePassage` | 1000 ms | le lot traverse la table jusqu’au voisin |
 
 Avec ces valeurs, une partie dure 5 à 7 minutes selon le nombre de joueurs.
@@ -138,10 +174,18 @@ des valeurs par défaut explicites, toutes modifiables :
 4. **Un lot passé est relancé entièrement** par celui qui le reçoit : le verrou des
    X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
    serait injouable.
-5. **Quand plusieurs combinaisons sortent au même jet**, la carte Journée passe
-   avant tout, puis l’attrape, puis les combinaisons de gain, et « Bloqué » en
+5. **Quand plusieurs combinaisons sortent au même jet**, un joueur humain
+   choisit ; à défaut de réponse, et pour les IA, la carte Journée passe avant
+   tout, puis l’attrape, puis les combinaisons de gain, et « Bloqué » en
    dernier — sans cette priorité, « Journée de la chance » (quatre éclairs)
    serait inatteignable.
+6. **Trois jokers l’emportent sur tout le reste.** Les règles disent que trois
+   jokers valent un échec, sans trancher le cas où ces mêmes jokers servent une
+   combinaison. Le moteur fait passer l’échec devant : autrement la règle ne se
+   déclencherait presque jamais, et le joker n’aurait aucun revers. Le seuil est
+   réglable et la règle se décoche.
+7. **Le joker double ne compte pas dans les trois jokers** : c’est une autre
+   face, qui ne remplace que l’éclair et le ZzZ.
 6. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
    maladresse ») sont modélisés par un surcoût de temps et un taux d’erreur.
 

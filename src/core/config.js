@@ -6,11 +6,83 @@ export const SYMBOLES = {
   vache: { id: 'vache', nom: 'Vache', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
+  // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.
+  joker: {
+    id: 'joker', nom: 'Joker', couleur: '#f4a11c',
+    joker: ['tornade', 'vache', 'zzz', 'eclair'],
+    desc: 'Prend la face de n’importe quel symbole, sauf le X',
+  },
+  jokerDouble: {
+    id: 'jokerDouble', nom: 'Joker éclair/ZzZ', couleur: '#c28ef2',
+    joker: ['eclair', 'zzz'],
+    desc: 'Joker limité à l’éclair et au ZzZ',
+  },
   x: { id: 'x', nom: 'X', couleur: '#e2000f', desc: 'Dé bloqué — il ne se relance jamais' },
   vide: { id: 'vide', nom: 'Vide', couleur: '#e6edf4', desc: 'Face neutre' },
 };
 
-export const ORDRE_SYMBOLES = ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'];
+export const ORDRE_SYMBOLES = [
+  'tornade', 'vache', 'zzz', 'eclair', 'joker', 'jokerDouble', 'x', 'vide',
+];
+
+/** Un joker est une face qui peut en remplacer d'autres. */
+export function estJoker(symbole) {
+  return !!(SYMBOLES[symbole] && SYMBOLES[symbole].joker);
+}
+
+/** Ce qu'une face peut remplacer — rien pour une face ordinaire. */
+export function remplacements(symbole) {
+  return (SYMBOLES[symbole] && SYMBOLES[symbole].joker) || null;
+}
+
+/** Une exigence sans aucun dé requis ne vaut rien : elle serait toujours servie. */
+export function exigenceVide(requis) {
+  return !Object.values(requis || {}).some((n) => n > 0);
+}
+
+/**
+ * La combinaison `requis` est-elle servie par le compte de dés `compte` ?
+ *
+ * Les faces ordinaires se comptent une par une ; les jokers viennent combler ce
+ * qui manque, chacun selon ce qu'il peut prendre. Savoir si les jokers suffisent
+ * est un problème d'affectation : on le tranche exactement par la condition de
+ * Hall, l'exigence ne portant jamais que sur une poignée de symboles.
+ */
+export function comboServie(compte, requis) {
+  const reste = { ...compte };
+  const manques = [];
+
+  for (const [sym, n] of Object.entries(requis || {})) {
+    if (n <= 0) continue;
+    const pris = Math.min(reste[sym] || 0, n);
+    reste[sym] = (reste[sym] || 0) - pris;
+    if (pris === n) continue;
+    // Rien ne remplace un joker : une exigence en jokers se paie en jokers.
+    if (estJoker(sym)) return false;
+    manques.push({ sym, n: n - pris });
+  }
+  if (!manques.length) return true;
+
+  const jokers = [];
+  for (const [sym, n] of Object.entries(reste)) {
+    if (n > 0 && estJoker(sym)) jokers.push({ n, peut: SYMBOLES[sym].joker });
+  }
+  if (!jokers.length) return false;
+
+  // Condition de Hall : pour tout sous-ensemble de manques, assez de jokers
+  // capables de les couvrir. Le sous-ensemble complet couvre le total.
+  for (let masque = 1; masque < (1 << manques.length); masque++) {
+    let besoin = 0;
+    const vises = [];
+    for (let i = 0; i < manques.length; i++) {
+      if (masque & (1 << i)) { besoin += manques[i].n; vises.push(manques[i].sym); }
+    }
+    let offre = 0;
+    for (const j of jokers) if (j.peut.some((s) => vises.includes(s))) offre += j.n;
+    if (besoin > offre) return false;
+  }
+  return true;
+}
 
 // Symbole qui fige le dé : une fois sorti, il ne peut plus être relancé.
 export const SYMBOLE_BLOQUANT = 'x';
@@ -19,6 +91,7 @@ export const SYMBOLE_BLOQUANT = 'x';
 // apparaît sur ses dés.
 export const ALERTES = {
   blocage: 'rouge',
+  echecJokers: 'rouge',
   collision: 'jaune',
   reveil: 'bleu',
   vache: 'vert',
@@ -26,16 +99,18 @@ export const ALERTES = {
 };
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Répartition de base : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair.
+// Répartition de base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair —
+// le joker a pris la place de la seconde tornade.
 // Modifiable face par face dans les options de partie et dans le Laboratoire.
-export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'];
+export const FACES_PAR_DEFAUT = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
 
 export const PRESETS_FACES = [
-  { nom: 'Officiel', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },
+  { nom: 'Officiel', faces: ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'] },
+  { nom: 'Sans joker', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },
+  { nom: 'Joker double', faces: ['tornade', 'joker', 'x', 'jokerDouble', 'vache', 'eclair'] },
+  { nom: 'Deux jokers', faces: ['tornade', 'joker', 'joker', 'x', 'vache', 'eclair'] },
   { nom: 'Symétrique', faces: ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'] },
-  { nom: 'Deux vaches', faces: ['tornade', 'vache', 'vache', 'zzz', 'x', 'eclair'] },
-  { nom: 'Orageux (2 X)', faces: ['tornade', 'tornade', 'x', 'x', 'vache', 'eclair'] },
-  { nom: 'Foudre (2 éclairs)', faces: ['tornade', 'tornade', 'x', 'eclair', 'eclair', 'vache'] },
+  { nom: 'Orageux (2 X)', faces: ['tornade', 'joker', 'x', 'x', 'vache', 'eclair'] },
 ];
 
 // ── Combinaisons de la carte Tornade ──────────────────────────────────────────
@@ -80,6 +155,19 @@ export const COMBOS_TORNADE = [
     requis: { x: 2 },
     face: 'toutes',
     obligatoire: true,
+    echec: true,
+  },
+  {
+    // Trop de jokers d'un coup et le lot part comme à deux X. C'est le
+    // contrepoids du joker : sans lui, il n'aurait aucun revers.
+    id: 'echecJokers',
+    nom: 'Trois jokers',
+    libelle: 'Trop de jokers : le lot part sans rien tenter',
+    requis: { joker: 3 },
+    face: 'toutes',
+    obligatoire: true,
+    echec: true,
+    optionnelle: 'echecJokers',
   },
 ];
 
@@ -248,14 +336,20 @@ export const COULEURS_EQUIPE = {
 };
 
 // ── Configuration complète par défaut ─────────────────────────────────────────
-export function configParDefaut(nbJoueurs = 6) {
+export function configParDefaut(nbJoueurs = 6, opts = {}) {
   const mep = MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
+  // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
+  // disparaît purement et simplement du jeu.
+  const echecJokers = opts.echecJokers !== false;
   return {
     nbJoueurs,
     desParLot: 4,
     faces: FACES_PAR_DEFAUT.slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
-    combos: COMBOS_TORNADE.map((c) => ({ ...c, requis: { ...c.requis } })),
+    echecJokers,
+    combos: COMBOS_TORNADE
+      .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
+      .map((c) => ({ ...c, requis: { ...c.requis } })),
     cartes: CARTES_JOURNEE.map((c) => c.id),
     lots: mep.lots,
     jetons: mep.jetons,
@@ -268,6 +362,7 @@ export function configParDefaut(nbJoueurs = 6) {
     // partie, à la table comme au Laboratoire.
     dureeLancer: 1000,         // les dés roulent
     dureeConstat: 900,         // on regarde le résultat avant que le lot ne parte
+    dureeChoix: 2400,          // délai laissé au joueur quand plusieurs combinaisons sortent
     dureePassage: 1000,        // le lot traverse jusqu'au voisin
     dureeTransition: 3200,     // entre deux manches : les dés reviennent au centre
     tempsReflexion: 300,       // temps de décision d'une IA entre deux gestes
@@ -280,6 +375,24 @@ export function configParDefaut(nbJoueurs = 6) {
     dureeMaxManche: 1_800_000, // garde-fou : 30 min de temps de jeu simulé
     manchesMax: 40,
   };
+}
+
+/**
+ * Les symboles qui méritent une colonne dans un tableau de combinaisons : ceux
+ * qui sont sur les dés, et ceux qu'une combinaison réclame. Inutile d'afficher
+ * le joker double tant que personne ne l'a mis sur une face.
+ */
+export function symbolesPertinents(cfg) {
+  const vus = new Set((cfg.faces || []).filter((s) => s && s !== 'vide'));
+  const ajouter = (requis) => {
+    for (const [s, n] of Object.entries(requis || {})) if (n > 0) vus.add(s);
+  };
+  for (const c of cfg.combos || []) ajouter(c.requis);
+  for (const carte of CARTES_JOURNEE) {
+    if (!carte.combo) continue;
+    ajouter((cfg.combosCartes && cfg.combosCartes[carte.combo.id]) || carte.combo.requis);
+  }
+  return ORDRE_SYMBOLES.filter((s) => vus.has(s));
 }
 
 export function infosMiseEnPlace(nbJoueurs) {

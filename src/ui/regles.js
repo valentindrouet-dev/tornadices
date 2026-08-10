@@ -1,8 +1,8 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=2.0';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=2.0';
-import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=2.0';
+import { h } from './dom.js?v=1.11';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.11';
+import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.11';
 
 export function vueRegles() {
   return h('div.page',
@@ -37,17 +37,45 @@ export function vueRegles() {
     ),
 
     h('div.carte',
-      h('div.titre-section', 'Les cinq symboles'),
+      h('div.titre-section', 'Les symboles du dé'),
       h('div.grille.grille--3',
-        ...['tornade', 'vache', 'zzz', 'eclair', 'x'].map((s) => h('div.stat',
+        ...['tornade', 'vache', 'zzz', 'eclair', 'joker', 'x'].map((s) => h('div.stat',
           h('div.rangee.rangee--serree', pastilleSymbole(s, 30),
             h('strong', SYMBOLES[s].nom)),
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
+      h('p.petit', { style: { marginTop: '12px' } },
+        'Un dé porte six faces : une tornade, un joker, un X, un ZzZ, une vache et un éclair. '
+        + 'Le joker occupe la place de la seconde tornade.'),
       h('div.encart', { style: { marginTop: '14px' } },
         'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
         + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
         + 'plus assez de dés libres pour former quoi que ce soit : le lot part aussitôt.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'Le joker'),
+      h('div.rangee', { style: { marginBottom: '12px' } },
+        pastilleSymbole('joker', 46),
+        h('p.petit', { style: { flex: '1', margin: 0 } },
+          'Le joker prend la face de n’importe quel symbole — tornade, vache, ZzZ ou éclair — '
+          + 'jamais celle du X. Il valide donc n’importe quelle combinaison, et se garde d’un '
+          + 'lancer à l’autre comme n’importe quel dé utile.'),
+      ),
+      h('p.petit', 'Quand un joker sert plusieurs combinaisons au même jet, c’est le joueur qui '
+        + 'décide laquelle est jouée : la table lui laisse un instant pour trancher, puis joue '
+        + 'la meilleure d’office s’il ne dit rien.'),
+      h('div.encart.encart--info', { style: { marginTop: '12px' } },
+        'Trois jokers d’un coup : c’est un échec, comme deux X. Le lot part sans rien tenter, '
+        + 'et cet échec l’emporte sur tout ce que les jokers auraient pu servir — sans quoi le '
+        + 'joker n’aurait aucun revers. Règle décochable dans les Variables de partie.'),
+      h('div.rangee', { style: { marginTop: '14px' } },
+        pastilleSymbole('jokerDouble', 40),
+        h('p.petit', { style: { flex: '1', margin: 0 } },
+          h('strong', SYMBOLES.jokerDouble.nom), ' — un joker limité à l’éclair et au ZzZ. '
+          + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Variables '
+          + 'pour l’essayer. Il ne compte pas dans les trois jokers de l’échec.'),
+      ),
     ),
 
     h('div.carte',
@@ -79,7 +107,7 @@ export function vueRegles() {
       h('p.petit', 'Dès qu’une combinaison sort, la zone du joueur s’entoure d’un halo de couleur : '
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
-        ...[['rouge', 'Deux X — le lot part'], ['jaune', 'Trois éclairs — attrape'],
+        ...[['rouge', 'Deux X ou trois jokers — le lot part'], ['jaune', 'Trois éclairs — attrape'],
           ['bleu', 'Trois tornades — réveil'], ['vert', 'Trois vaches — jeton'],
           ['violet', 'Trois ZzZ — endormi']].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),

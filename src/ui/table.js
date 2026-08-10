@@ -4,14 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.0';
+import { h, remplacer, duree, vider } from './dom.js?v=1.11';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=2.0';
-import { Moteur } from '../core/engine.js?v=2.0';
-import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=2.0';
-import { ajouterHistorique } from './store.js?v=2.0';
-import { aller } from './app.js?v=2.0';
+} from './icons.js?v=1.11';
+import { Moteur } from '../core/engine.js?v=1.11';
+import {
+  COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
+} from '../core/config.js?v=1.11';
+import { ajouterHistorique } from './store.js?v=1.11';
+import { aller } from './app.js?v=1.11';
 
 let moteur = null;
 let vitesse = 1;
@@ -45,10 +47,10 @@ function alerteDesDes(lot, combos) {
   if (!lot || !lot.lance) return null;
   const c = {};
   for (const d of lot.des) if (d.sym) c[d.sym] = (c[d.sym] || 0) + 1;
-  for (const id of ['blocage', 'collision', 'reveil', 'vache', 'endormir']) {
+  for (const id of ['echecJokers', 'blocage', 'collision', 'reveil', 'vache', 'endormir']) {
     const combo = combos.find((x) => x.id === id);
-    if (!combo) continue;
-    if (Object.entries(combo.requis).every(([sy, n]) => (c[sy] || 0) >= n)) return ALERTES[id];
+    if (!combo || exigenceVide(combo.requis)) continue;
+    if (comboServie(c, combo.requis)) return ALERTES[id];
   }
   return null;
 }
@@ -556,8 +558,9 @@ export function vueTable() {
     const sig = actifs.map((j) => {
       const lot = j.lots[0];
       const des = lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',');
+      const options = j.departEnAttente && j.departEnAttente.options;
       return `${j.id}:${j.lots.length}:${j.eveille}:${j.fige}:${lot.lance}:${des}`
-        + `:${alerteDe(j) || ''}`;
+        + `:${alerteDe(j) || ''}:${options ? options.map((o) => o.id).join('+') : ''}`;
     }).join('||');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
@@ -575,6 +578,9 @@ export function vueTable() {
     const libres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule);
     const pose = lot.des.every((d) => d.sym && !d.roule);
     const peutAgir = !j.fige && !moteur.duel;
+    // Plusieurs combinaisons sortent au même jet — grâce au joker le plus souvent :
+    // c'est au joueur de dire laquelle il joue, pendant le temps de constat.
+    const options = (j.departEnAttente && j.departEnAttente.options) || null;
 
     return h('div.panneau-humain', { data: alerte ? { alerte } : {} },
       h('div.rangee', { style: { marginBottom: '10px' } },
@@ -600,13 +606,28 @@ export function vueTable() {
           onclick: () => moteur.passerHumain(j.id),
         }, `Passer (${t.libPasser})`),
       ),
+      options
+        ? h('div.choix-combo',
+            h('span.choix-titre', 'Plusieurs combinaisons sont servies — laquelle jouez-vous ?'),
+            ...options.map((o) => {
+              const def = moteur.cfg.combos.find((c) => c.id === o.id);
+              const nom = o.source === 'journee'
+                ? `${moteur.carte.court} (carte)`
+                : (def ? def.nom : o.id);
+              return h('button.combo-btn', {
+                onclick: () => moteur.choisirCombo(j.id, o.id),
+              }, h('span.rangee.rangee--serree', suiteSymboles(o.combo.requis, 17)), nom);
+            }))
+        : null,
+
       h('div.mini', { style: { marginTop: '8px' }, class: j.fige ? 'etat-depart' : 'muted' },
-        j.fige ? 'Le lot part vers votre voisin…'
-          : roule && !libres.length ? 'Les dés roulent…'
-            : pose || libres.length < lot.des.length
-              ? 'Cliquez un dé pour le relancer, même pendant qu’un autre tourne. '
-                + 'Les X sont figés, et toute combinaison servie part toute seule.'
-              : 'Lancez le lot pour commencer.'),
+        options ? 'Sans réponse de votre part, la meilleure combinaison est jouée d’office.'
+          : j.fige ? 'Le lot part vers votre voisin…'
+            : roule && !libres.length ? 'Les dés roulent…'
+              : pose || libres.length < lot.des.length
+                ? 'Cliquez un dé pour le relancer, même pendant qu’un autre tourne. '
+                  + 'Les X sont figés, et toute combinaison servie part toute seule.'
+                : 'Lancez le lot pour commencer.'),
     );
   }
 

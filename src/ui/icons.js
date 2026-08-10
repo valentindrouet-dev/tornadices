@@ -54,9 +54,34 @@ export const COULEUR_FACE = {
   vache: '#52a72e',
   zzz: '#c28ef2',
   eclair: '#f9b115',
+  joker: '#f4a11c',
+  jokerDouble: '#c28ef2',
   x: '#e2000f',
   vide: '#e6edf4',
 };
+
+// Le joker porte les couleurs des quatre symboles qu'il peut prendre — éclair,
+// tornade, vache et ZzZ — et l'étoile par-dessus. Jamais le X.
+const FACE_JOKER = svg(`
+  <path d="M50 50 L50 7 A43 43 0 0 0 7 50 Z" fill="${COULEUR_FACE.eclair}"/>
+  <path d="M50 50 L50 7 A43 43 0 0 1 93 50 Z" fill="${COULEUR_FACE.tornade}"/>
+  <path d="M50 50 L93 50 A43 43 0 0 1 50 93 Z" fill="${COULEUR_FACE.vache}"/>
+  <path d="M50 50 L50 93 A43 43 0 0 1 7 50 Z" fill="${COULEUR_FACE.zzz}"/>
+  <path d="M50 22 L57.2 41.1 L77.6 42 L57.2 54.8 L67 74.5 L50 63.2
+           L33 74.5 L38.4 54.8 L22.4 42 L42.8 41.1 Z"
+    fill="#fff" stroke="${NOIR}" stroke-width="6" stroke-linejoin="round"/>`);
+
+// Le joker double ne remplace que l'éclair et le ZzZ : ses deux moitiés le disent.
+const FACE_JOKER_DOUBLE = svg(`
+  <path d="M50 7 A43 43 0 0 0 50 93 Z" fill="${COULEUR_FACE.eclair}"/>
+  <path d="M50 7 A43 43 0 0 1 50 93 Z" fill="${COULEUR_FACE.zzz}"/>
+  <path d="M50 7 L50 93" stroke="${NOIR}" stroke-width="3.5" opacity=".55"/>
+  <path d="M34 18 L18 50 H28 L24 82 L44 46 H32 Z"
+    fill="${NOIR}" stroke="${NOIR}" stroke-width="5" stroke-linejoin="round"/>
+  <g fill="none" stroke="${NOIR}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M58 30h16L58 52h16"/>
+    <path d="M64 60h13L64 78h13"/>
+  </g>`);
 
 // Face « ? » : le lot vient d'arriver, aucun dé n'a encore été lancé.
 export const SVG_INCONNU = svg(`
@@ -72,14 +97,20 @@ export const SVG_ROULANT = svg(`
     <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c2ccd6"/>
   </radialGradient></defs>`);
 
-export const SVG_SYMBOLE = Object.fromEntries(
-  Object.entries(GLYPHES).map(([id, g]) => [id, face(COULEUR_FACE[id], g)]),
-);
+export const SVG_SYMBOLE = {
+  ...Object.fromEntries(Object.entries(GLYPHES).map(([id, g]) => [id, face(COULEUR_FACE[id], g)])),
+  // Les jokers ne sont pas « une pastille et un pictogramme » : la face entière
+  // porte le sens, elle est donc dessinée telle quelle.
+  joker: FACE_JOKER,
+  jokerDouble: FACE_JOKER_DOUBLE,
+};
 
 // Version sans pastille, pour les usages en aplat (pictogrammes de liste).
-export const SVG_GLYPHE = Object.fromEntries(
-  Object.entries(GLYPHES).map(([id, g]) => [id, svg(g)]),
-);
+export const SVG_GLYPHE = {
+  ...Object.fromEntries(Object.entries(GLYPHES).map(([id, g]) => [id, svg(g)])),
+  joker: FACE_JOKER,
+  jokerDouble: FACE_JOKER_DOUBLE,
+};
 
 export const SVG_TORNADE_EVEILLEE = svg(`
   <g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round">
@@ -129,6 +160,8 @@ export function faceDe(symbole, options = {}) {
   } else if (symbole) {
     div.innerHTML = SVG_SYMBOLE[symbole] || '';
     if (verrou) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
+    else if (symbole === 'joker') div.title = 'Joker — il prend la face de votre choix, sauf le X';
+    else if (symbole === 'jokerDouble') div.title = 'Joker limité à l’éclair et au ZzZ';
   } else {
     div.innerHTML = SVG_INCONNU;
     div.title = 'Ce dé n’a pas encore été lancé';

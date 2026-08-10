@@ -3,16 +3,17 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=2.0';
-import { pastilleSymbole } from './icons.js?v=2.0';
-import { store } from './store.js?v=2.0';
-import { aller } from './app.js?v=2.0';
-import { lancerPartie } from './table.js?v=2.0';
+import { h, remplacer } from './dom.js?v=1.11';
+import { pastilleSymbole } from './icons.js?v=1.11';
+import { store } from './store.js?v=1.11';
+import { aller } from './app.js?v=1.11';
+import { lancerPartie } from './table.js?v=1.11';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
-} from '../core/config.js?v=2.0';
-import { randomSeed } from '../core/rng.js?v=2.0';
-import { reglagesJoueurs } from './accueil.js?v=2.0';
+  symbolesPertinents,
+} from '../core/config.js?v=1.11';
+import { randomSeed } from '../core/rng.js?v=1.11';
+import { reglagesJoueurs } from './accueil.js?v=1.11';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -23,10 +24,13 @@ export function variables() {
 /** Configuration complète d'une partie : défauts du nombre de joueurs + réglages. */
 export function construireConfig(nbJoueurs) {
   const v = variables();
-  const cfg = configParDefaut(nbJoueurs);
+  const cfg = configParDefaut(nbJoueurs, { echecJokers: v.echecJokers !== false });
   for (const [cle, val] of Object.entries(v)) {
     if (val === undefined || val === null) continue;
     if (cle === 'suivreTableau') continue;
+    // `combos` est stocké par identifiant, pas sous la forme d'une liste : il se
+    // fusionne plus bas, sans quoi il écraserait les combinaisons du moteur.
+    if (cle === 'combos') continue;
     if (v.suivreTableau !== false && CHAMPS_MISE_EN_PLACE.includes(cle)) continue;
     cfg[cle] = Array.isArray(val) ? val.slice() : val;
   }
@@ -121,17 +125,35 @@ export function vueVariables() {
             onclick: () => { ecrire('faces', cfg.faces.slice(0, -1)); dessiner(); },
           }, '− une face'),
           h('span.mini.muted',
-            'Base : 2 tornades, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
+            'Base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
             + 'Le X fige son dé — il ne se relance jamais.'),
         ),
+        h('p.mini.muted', { style: { marginTop: '10px' } },
+          'Le joker prend la face de n’importe quel symbole sauf le X, et valide donc '
+          + 'n’importe quelle combinaison. Le joker double, absent des dés au départ, ne '
+          + 'remplace que l’éclair et le ZzZ : ajoutez-le ici pour l’essayer.'),
       ),
 
       // ── Combinaisons ──────────────────────────────────────────────────────
       h('div.carte',
-        h('div.titre-section', 'Combinaisons requises'),
+        h('div.rangee', { style: { marginBottom: '12px' } },
+          h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
+          h('button', {
+            class: `chip${cfg.echecJokers !== false ? ' on' : ''}`,
+            title: 'Trois jokers d’un coup font partir le lot, comme deux X',
+            onclick: () => { ecrire('echecJokers', cfg.echecJokers === false); dessiner(); },
+          }, h('span.case', '✓'), 'Trois jokers = échec'),
+        ),
         tableauCombos(cfg, dessiner),
         h('p.mini.muted', { style: { marginTop: '10px' } },
-          'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus.'),
+          'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus. '
+          + 'Quand le joker en sert plusieurs à la fois, le joueur choisit laquelle.'),
+        h('p.mini.muted',
+          cfg.echecJokers !== false
+            ? 'Trois jokers d’un coup valent un échec : le lot part sans rien tenter, et cet '
+              + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. '
+              + 'C’est le seul revers du joker — décochez la règle pour jouer sans.'
+            : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.'),
       ),
 
       // ── Rythme ────────────────────────────────────────────────────────────
@@ -148,6 +170,8 @@ export function vueVariables() {
         h('div.grille.grille--3', { style: { gap: '12px', marginTop: '12px' } },
           num('Transition de manche (ms)', cfg.dureeTransition, 'dureeTransition',
             { min: 0, max: 12000, step: 100, aide: 'les dés reviennent au centre et repartent' }),
+          num('Choix de combinaison (ms)', cfg.dureeChoix, 'dureeChoix',
+            { min: 0, max: 12000, step: 100, aide: 'quand plusieurs combinaisons sortent d’un coup' }),
         ),
         h('div.grille.grille--3', { style: { gap: '12px', marginTop: '12px' } },
           num('Réflexion d’une IA (ms)', cfg.tempsReflexion, 'tempsReflexion',
@@ -263,7 +287,7 @@ export function vueVariables() {
 }
 
 function tableauCombos(cfg, rafraichir) {
-  const symboles = ORDRE_SYMBOLES.filter((s) => s !== 'vide');
+  const symboles = symbolesPertinents(cfg);
   const v = variables();
 
   const ligne = (nom, requis, ecrireLigne) => h('tr',
