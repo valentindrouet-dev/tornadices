@@ -91,6 +91,9 @@ export class Moteur {
     this.onMouvement = null;   // (idDepart, idArrivee, motif, lot, duree)
     this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
     this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
+    this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
+    this.onDebutManche = null; // ({manche, carte, porteurs})
+    this.transition = null;    // entre deux manches : les dés reviennent au centre
 
     this._initJoueurs(specJoueurs);
     this._initEquipes();
@@ -194,6 +197,9 @@ export class Moteur {
       'manche',
     );
 
+    if (this.onDebutManche) {
+      this.onDebutManche({ manche: this.manche, carte: this.carte, porteurs, premiere });
+    }
     for (const pid of porteurs) this._planifier(pid);
 
     // Garde-fou : une manche qui s'éternise est arrêtée d'office.
@@ -278,16 +284,21 @@ export class Moteur {
       }
       case 'finLancer': {
         const j = this.joueurs[ev.pid];
-        if (!j.lots.length || j.lots[0].id !== ev.lotId) return;
+        // Si le lot a été poussé de côté entre-temps, ce jet ne compte plus.
+        if (j.lots[0] !== ev.lot) return;
         this._finLancer(j, ev.des);
         return;
       }
       case 'depart': {
         const j = this.joueurs[ev.pid];
-        if (!j.lots.length || j.lots[0].id !== ev.lotId) { j.fige = false; return; }
-        this._depart(j, ev.motif, ev.dispo, ev.choix);
+        if (!j.lots.includes(ev.lot)) { j.fige = false; return; }
+        this._depart(j, ev.lot, ev.motif, ev.dispo, ev.choix);
         return;
       }
+      case 'nouvelleManche':
+        this.transition = null;
+        this._demarrerManche(false);
+        return;
       case 'arrivee':
         this._arrivee(ev.transitId);
         return;
@@ -473,12 +484,15 @@ export class Moteur {
       });
     if (!cible.length) return false;
 
+    // Incident fâcheux : à une vraie table on relance parfois un X sans le vouloir.
+    // Impossible à l'écran — l'interface ne laisse pas cliquer un dé figé — donc
+    // la mégarde ne concerne que les IA.
     const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
-    if (!premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
+    if (j.type !== 'humain' && !premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
       j.stats.erreurs++;
       this._log(`${j.nom} relance un X par mégarde — il passe son lot.`, 'incident', j.id);
       if (this.rng() < (this.cfg.penaliteErreurAdverse ?? 0)) this._jetonAuxAdverses(j);
-      this._demanderDepart(j, 'passe');
+      this._demanderDepart(j, 'megarde');
       return false;
     }
 
@@ -494,7 +508,7 @@ export class Moteur {
     j.lancersLot++;
     j.stats.lancers++;
     this.file.pousser(this.now + duree, {
-      type: 'finLancer', pid: j.id, lotId: lot.id, des: lances,
+      type: 'finLancer', pid: j.id, lot, des: lances,
     });
     if (this.onEtatChange) this.onEtatChange();
     return true;
@@ -541,14 +555,14 @@ export class Moteur {
     j.attente = null;
     const constat = motif === 'interruption' ? 0 : (this.cfg.dureeConstat ?? 900);
     this.file.pousser(this.now + constat, {
-      type: 'depart', pid: j.id, lotId: lot.id, motif, dispo, choix,
+      type: 'depart', pid: j.id, lot, motif, dispo, choix,
     });
     if (this.onEtatChange) this.onEtatChange();
   }
 
   /** Le lot quitte la main du joueur et traverse la table. */
-  _depart(j, motif, dispo, choix) {
-    const lot = j.lots.shift();
+  _depart(j, lot, motif, dispo, choix) {
+    j.lots.splice(j.lots.indexOf(lot), 1);
     j.fige = false;
     j.lancersLot = 0;
     j.attente = null;
@@ -588,7 +602,8 @@ export class Moteur {
   /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
   _issueDuTour(motif, dispo) {
     if (motif === 'interruption') return 'Touché !';
-    if (motif === 'passe') return 'Échec';
+    if (motif === 'passe') return 'Passé';
+    if (motif === 'megarde') return 'Mégarde';
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
       if (dispo.id === 'blocage') return 'Bloqué';
@@ -605,8 +620,20 @@ export class Moteur {
     if (k < 0) return;
     const t = this.transits.splice(k, 1)[0];
     const q = this.joueurs[t.vers];
-    if (!q.lots.length) q._lotDepuis = this.now;
-    q.lots.push(t.lot);
+
+    if (q.lots.length) {
+      // Un lot arrive alors qu'on en tient déjà un : celui-ci est poussé de côté
+      // et le nouveau passe devant. Ce qui tournait encore retombe.
+      for (const d of q.lots[0].des) { d.roule = false; d.finRoule = 0; }
+      q.lots[0].lance = this._lotPose(q.lots[0]);
+      q.lancersLot = 0;
+      this._log(`${q.nom} reçoit un second lot — le premier est poussé de côté.`, 'pousse', q.id);
+      this._annoncer(`${q.nom} est débordé — deux lots en main !`, 'rouge');
+    } else {
+      q._lotDepuis = this.now;
+    }
+    q.lots.unshift(t.lot);
+    q.planifie = false;
     this._planifier(q.id);
     if (this.onEtatChange) this.onEtatChange();
   }
@@ -846,10 +873,33 @@ export class Moteur {
     }
 
     // On vide la file : la manche précédente ne doit rien laisser traîner.
+    const porteursAvant = this.joueurs.filter((j) => j.lots.length).map((j) => j.id);
     this.file = new FileEvenements();
     this.duel = null;
     this.transits = [];
-    this._demarrerManche(false);
+    for (const j of this.joueurs) {
+      j.lots = []; j.fige = false; j.planifie = false; j.attente = null; j.lancersLot = 0;
+    }
+
+    // Les dés reviennent au centre, puis repartent vers les perdants : ce
+    // temps mort est du temps de jeu, comme à une vraie table.
+    const dureeTransition = Math.max(0, this.cfg.dureeTransition ?? 3000);
+    this.transition = {
+      vainqueur: equipeId,
+      manche: this.manche,
+      prochaine: this.manche + 1,
+      debut: this.now,
+      fin: this.now + dureeTransition,
+      carteSuivante: this.pioche[0] || null,
+    };
+    if (this.onFinManche) {
+      this.onFinManche({
+        vainqueur: equipeId, porteursAvant, manche: this.manche,
+        duree: dureeTransition, carteSuivante: this.pioche[0] || null,
+      });
+    }
+    this.file.pousser(this.now + dureeTransition, { type: 'nouvelleManche' });
+    if (this.onEtatChange) this.onEtatChange();
   }
 
   _meneur() {

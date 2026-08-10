@@ -16,6 +16,12 @@ export function vueRegles() {
         + 'elles font le tempo du jeu et comptent dans la durée d’une partie.'),
       h('p.petit.muted', 'Chaque dé roule pour son propre compte : on peut en relancer un pendant '
         + 'qu’un autre tourne encore, un clic par dé, la barre espace pour tous.'),
+      h('p.petit', 'Un lot qui arrive chez un joueur qui en tient déjà un passe devant : '
+        + 'le lot en cours est poussé de côté, ses dés retombent, et il faudra le reprendre '
+        + 'après avoir joué le nouveau.'),
+      h('p.petit.muted', 'Entre deux manches, les dés reviennent au centre de la table puis '
+        + 'repartent vers l’équipe qui vient de perdre, pendant que la carte Journée suivante '
+        + 'recouvre la précédente.'),
     ),
 
     h('div.carte',

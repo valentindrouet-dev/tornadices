@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.5';
+export const VERSION = '1.6';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.6',
+    date: '09/08/2026',
+    notes: [
+      'Un lot qui arrive chez un joueur qui en tient déjà un passe devant : le lot en cours est poussé de côté et se reprend après.',
+      'La table est réorganisée : carte de la manche en haut à gauche, pioche des Journées restantes en haut à droite, points des équipes en bas à gauche et bien plus gros.',
+      'Vraie transition entre les manches : grand message central, les dés reviennent au centre puis repartent vers l’équipe qui a perdu, et la carte suivante glisse depuis la pioche par-dessus la précédente. Durée réglable dans Variables.',
+      'Le statut de la Tornade saute aux yeux : pastille ÉVEILLÉE aux couleurs de l’équipe ou ENDORMIE en gris, et le siège entier change de teinte.',
+      'Correction : un joueur humain ne relance plus un X « par mégarde ». Cet incident des règles suppose une vraie table — à l’écran l’interface interdit de toucher un dé figé. Il ne concerne plus que les IA.',
+      'Chaque issue de tour est nommée dans le journal : Passé, Mégarde, Bloqué, Réveil !, Vache !, Attrape ! — on lit exactement pourquoi le lot est parti.',
+    ],
+  },
   {
     version: '1.5',
     date: '09/08/2026',

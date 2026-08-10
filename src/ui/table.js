@@ -102,19 +102,20 @@ export function vueTable() {
   );
 
   // ── Table ─────────────────────────────────────────────────────────────────
-  const zoneTable = h('div.table-zone', h('div.tapis'));
+  const elCarte = h('div.coin.coin--carte');
+  const elPioche = h('div.coin.coin--pioche');
+  const elScores = h('div.coin.coin--scores');
+  const zoneTable = h('div.table-zone', h('div.tapis'), elCarte, elPioche, elScores);
   const elSieges = moteur.joueurs.map((j) => {
     const el = h('div.siege', { class: `equipe-${j.equipe}${j.type === 'humain' ? ' siege--humain' : ''}` });
     zoneTable.appendChild(el);
     return el;
   });
-  const elCentre = h('div.centre-table');
-  zoneTable.appendChild(elCentre);
-
   const n = moteur.joueurs.length;
+  const CENTRE = { x: 50, y: 50 };
   const positions = elSieges.map((el, i) => {
     const a = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
-    const p = { x: 50 + 40 * Math.cos(a), y: 50 + 38 * Math.sin(a) };
+    const p = { x: 50 + 33 * Math.cos(a), y: 50 + 31 * Math.sin(a) };
     el.style.left = `${p.x}%`;
     el.style.top = `${p.y}%`;
     return p;
@@ -123,13 +124,18 @@ export function vueTable() {
   // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
   const enVol = [];
   function animerPassage(de, vers, motif, lot, dureeJeu) {
+    const a = typeof de === 'number' ? positions[de] : de;
+    const b = typeof vers === 'number' ? positions[vers] : vers;
+    volLot(a, b, motif, lot ? lot.des : [], dureeJeu);
+  }
+
+  function volLot(a, b, motif, des, dureeJeu) {
     if (window.innerWidth <= 860) return;   // en disposition verticale, sans objet
-    const a = positions[de], b = positions[vers];
     if (!a || !b) return;
     // Le vol dure exactement le temps de jeu du passage, à la vitesse d'affichage.
     const duree = Math.max(80, (dureeJeu ?? 1000) / vitesse);
     const el = h('div', { class: `lot-vol lot-vol--${motif}` },
-      ...lot.des.slice(0, 4).map((d) => faceDe(d.sym, { taille: 'petit' })));
+      ...des.slice(0, 4).map((d) => faceDe(d.sym, { taille: 'petit' })));
     el.style.transitionDuration = `${duree}ms, ${duree}ms, 160ms`;
     el.style.left = `${a.x}%`;
     el.style.top = `${a.y}%`;
@@ -191,7 +197,13 @@ export function vueTable() {
 
   // Les moments qui comptent s'affichent en toutes lettres au centre de la table.
   let annonceCourante = null;
+  let enTransition = false;
+  function effacerAnnonce() {
+    if (annonceCourante) { annonceCourante.remove(); annonceCourante = null; }
+    zoneTable.classList.remove('table-zone--annonce');
+  }
   moteur.onAnnonce = (texte, couleur) => {
+    if (enTransition) return;   // la transition de manche occupe déjà le centre
     if (annonceCourante) annonceCourante.remove();
     const el = h('div', { class: `annonce annonce--${couleur}` }, texte);
     annonceCourante = el;
@@ -221,6 +233,54 @@ export function vueTable() {
       || PRIORITE_ALERTE.indexOf(couleur) < PRIORITE_ALERTE.indexOf(cur.couleur);
     if (remplace) alertesRetenues.set(pid, { couleur, fin: moteur.now + duree });
   };
+  // Fin de manche : les dés reviennent au centre, la carte suivante recouvre
+  // la précédente, puis les lots repartent vers l'équipe qui vient de perdre.
+  let panneauTransition = null;
+  moteur.onFinManche = (info) => {
+    const d = Math.max(300, info.duree / vitesse);
+    const eq = info.vainqueur ? COULEURS_EQUIPE[info.vainqueur] : null;
+    enTransition = true;
+    effacerAnnonce();
+    if (panneauTransition) panneauTransition.remove();
+    panneauTransition = h('div.transition',
+      h('div.transition-titre', { style: eq ? { color: eq.hex } : null },
+        eq ? `${eq.nom} remportent la manche ${info.manche}` : `Manche ${info.manche} terminée`),
+      h('div.transition-suite', 'Manche suivante !'),
+      info.carteSuivante
+        ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
+        : h('div.transition-carte', 'Dernière carte jouée'),
+    );
+    zoneTable.appendChild(panneauTransition);
+    zoneTable.classList.add('table-zone--transition');
+
+    // Les lots regagnent le centre de la table.
+    for (const pid of info.porteursAvant) {
+      volLot(positions[pid], CENTRE, 'retour', desVides(), d * 0.34);
+    }
+    // La carte suivante glisse depuis la pioche.
+    setTimeout(() => elCarte.classList.add('coin--echange'), d * 0.45);
+    setTimeout(() => {
+      panneauTransition.classList.add('transition--sortie');
+    }, d - 260);
+    setTimeout(() => {
+      if (panneauTransition) { panneauTransition.remove(); panneauTransition = null; }
+      zoneTable.classList.remove('table-zone--transition');
+      enTransition = false;
+    }, d);
+  };
+
+  moteur.onDebutManche = (info) => {
+    if (info.premiere) return;
+    elCarte.classList.remove('coin--echange');
+    // Les lots repartent du centre vers leurs nouveaux porteurs.
+    const d = Math.max(260, 700 / vitesse);
+    for (const pid of info.porteurs) volLot(CENTRE, positions[pid], 'retour', desVides(), d);
+  };
+
+  function desVides() {
+    return Array.from({ length: Math.min(4, moteur.cfg.desParLot) }, () => ({ sym: null }));
+  }
+
   function alerteDe(j) {
     const retenue = alertesRetenues.get(j.id);
     if (retenue && moteur.now < retenue.fin) return retenue.couleur;
@@ -306,6 +366,8 @@ export function vueTable() {
       const secoue = recent != null && moteur.now - recent < 600;
       el.classList.toggle('siege--porteur', j.lots.length > 0);
       el.classList.toggle('siege--touche', secoue);
+      el.classList.toggle('siege--endormi', !j.eveille);
+      el.classList.toggle('siege--eveille', j.eveille);
 
       const alerte = alerteDe(j);
       if (alerte) el.dataset.alerte = alerte; else delete el.dataset.alerte;
@@ -323,14 +385,14 @@ export function vueTable() {
               style: { flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
             }, j.nom),
             j.lots.length > 1 ? h('span.badge-lots', `×${j.lots.length}`) : null,
+            j.type === 'humain' ? h('span.badge', 'vous') : null,
           ),
-          h('div.etat',
+          h('div.etat-tornade', { class: j.eveille ? 'etat--eveille' : 'etat--endormi' },
             h('span.tornade', {
               html: j.eveille ? SVG_TORNADE_EVEILLEE : SVG_TORNADE_ENDORMIE,
-              style: { color: j.eveille ? eq.hex : 'var(--gris-clair)' },
+              style: j.eveille ? { color: eq.hex } : null,
             }),
-            j.eveille ? 'éveillée' : 'endormie',
-            j.type === 'humain' ? h('span.badge', { style: { marginLeft: 'auto' } }, 'vous') : null,
+            j.eveille ? 'Éveillée' : 'Endormie',
           ),
           h('div.des-mini',
             lot
@@ -345,37 +407,47 @@ export function vueTable() {
   }
 
   function peindreCentre() {
-    const jetons = Object.values(moteur.equipes)
-      .map((e) => `${e.id}:${e.retournes}/${e.jetons}:${e.cartes.length}`).join('|');
-    siChange(elCentre, `${moteur.carte?.id}|${jetons}`, () => [
+    siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}`, () => (
       moteur.carte
         ? h('div.carte-journee',
             h('div.mini.muted', `Manche ${moteur.manche}`),
             h('div.nom-carte', moteur.carte.nom),
             h('div.texte-carte', moteur.carte.texte),
             moteur.carte.combo
-              ? h('div.rangee.rangee--serree', {
-                  style: { justifyContent: 'center', marginTop: '6px' },
-                }, suiteSymboles(moteur.carte.combo.requis, 19))
+              ? h('div.rangee.rangee--serree', { style: { marginTop: '7px' } },
+                  suiteSymboles(moteur.carte.combo.requis, 21))
               : null,
           )
-        : null,
-      h('div', { style: { marginTop: '12px', display: 'grid', gap: '7px' } },
-        ...Object.values(moteur.equipes).map((e) => {
-          const c = COULEURS_EQUIPE[e.id];
-          return h('div', { class: `equipe-${e.id}` },
-            h('div.mini', { style: { fontWeight: '800', color: c.hex } },
-              `${c.nom} · ${e.cartes.length}/${moteur.cfg.cartesPourGagner} cartes`),
-            h('div.suivi-jetons',
-              ...Array.from({ length: e.jetons }, (_, k) => h('div', {
-                class: `jeton${k < e.retournes ? ' on' : ''}`,
-                html: k < e.retournes ? SVG_SYMBOLE.vache : '',
-              })),
-            ),
-          );
-        }),
+        : null
+    ));
+
+    const reste = Math.max(0, moteur.pioche.length - 1);
+    siChange(elPioche, `pioche-${reste}`, () => h('div.pioche',
+      h('div.pioche-pile',
+        ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
+          h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
+        reste ? h('div.pioche-nb', reste) : h('div.pioche-nb.pioche-nb--vide', '0'),
       ),
-    ]);
+      h('div.mini.muted', { style: { marginTop: '8px', textAlign: 'center' } },
+        reste > 1 ? `${reste} journées restantes` : reste === 1 ? '1 journée restante' : 'pile épuisée'),
+    ));
+
+    const jetons = Object.values(moteur.equipes)
+      .map((e) => `${e.id}:${e.retournes}/${e.jetons}:${e.cartes.length}`).join('|');
+    siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
+      const c = COULEURS_EQUIPE[e.id];
+      return h('div.score-equipe', { class: `equipe-${e.id}` },
+        h('span.score-nom', { style: { color: c.hex } }, c.nom),
+        h('span.score-cartes', { title: 'cartes Journée gagnées' },
+          `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
+        h('div.suivi-jetons',
+          ...Array.from({ length: e.jetons }, (_, k) => h('div', {
+            class: `jeton${k < e.retournes ? ' on' : ''}`,
+            html: k < e.retournes ? SVG_SYMBOLE.vache : '',
+          })),
+        ),
+      );
+    }));
   }
 
   function peindreJournal() {

@@ -304,14 +304,6 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   background: radial-gradient(circle at 50% 38%, #fbfdff, #e7f3fc);
   border: 2px dashed rgba(148, 190, 226, .60);
 }
-.centre-table {
-  transition: opacity .2s linear;
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(300px, 30%);
-  text-align: center;
-}
 
 .siege {
   position: absolute;
@@ -334,9 +326,25 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 }
 .siege .entete { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13.5px; }
 .siege .puce { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.siege .etat { font-size: 11px; font-weight: 700; color: var(--gris); display: flex; align-items: center; gap: 4px; }
-.siege .etat .tornade { width: 15px; height: 15px; }
-.siege .etat .tornade svg { width: 100%; height: 100%; }
+.etat-tornade {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 6px; padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase;
+  border: 1.5px solid transparent;
+}
+.etat-tornade .tornade { width: 22px; height: 22px; flex: none; }
+.etat-tornade .tornade svg { width: 100%; height: 100%; display: block; }
+.etat--eveille {
+  background: color-mix(in srgb, var(--couleur-eq, var(--accent)) 14%, #fff);
+  border-color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 45%, #fff);
+  color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 78%, #000);
+}
+.etat--endormi { background: #e8edf3; border-color: #d4dee8; color: #8794a3; }
+.etat--endormi .tornade { color: #9aa8b6; }
+.siege--endormi { background: linear-gradient(180deg, #f4f7fa, #eef3f8); }
+.siege--endormi .entete { color: #6d7d8d; }
+.siege--eveille { box-shadow: 0 0 0 2px color-mix(in srgb, var(--couleur-eq, var(--accent)) 26%, transparent), var(--ombre); }
 .siege .des-mini { display: flex; gap: 4px; margin-top: 7px; min-height: 36px; align-items: center; }
 .siege .badge-lots {
   background: var(--accent-clair); color: #10557f; border-radius: 999px;
@@ -385,11 +393,86 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
 }
 
+/* ── Coins de la table : carte du jour, pioche, scores ────────────────────── */
+.coin { position: absolute; z-index: 3; }
+.coin--carte { left: 0; top: 0; width: 232px; }
+.coin--pioche { right: 0; top: 0; width: 156px; }
+.coin--scores { left: 0; bottom: 0; width: 302px; display: grid; gap: 9px; }
+.coin--echange .carte-journee { animation: carteArrive .55s cubic-bezier(.3, .8, .35, 1); }
+@keyframes carteArrive {
+  0% { transform: translate(420px, -30px) rotate(9deg) scale(.82); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+.pioche-pile { position: relative; height: 74px; }
+.dos-carte {
+  position: absolute; inset: 0 26px 0 0;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, #3d9bdd, #3d9bdd 7px, #2f8ccd 7px, #2f8ccd 14px);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(20, 60, 110, .22);
+}
+.pioche-nb {
+  position: absolute; right: 0; bottom: -4px;
+  min-width: 34px; height: 34px; padding: 0 8px;
+  border-radius: 999px; background: #fff; border: 2px solid var(--accent);
+  color: var(--accent-fonce); font-weight: 850; font-size: 16px;
+  display: grid; place-items: center;
+}
+.pioche-nb--vide { border-color: var(--bord-fort); color: var(--gris); }
+
+.score-equipe {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255, 255, 255, .88);
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: var(--ombre);
+}
+.score-nom { font-weight: 850; font-size: 15.5px; }
+.score-cartes {
+  font-weight: 850; font-size: 14px;
+  background: var(--fond-doux); border: 1px solid var(--bord);
+  border-radius: 999px; padding: 1px 9px;
+}
+.suivi-jetons { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+.jeton { width: 26px; height: 26px; border-width: 2.5px; }
+.jeton.on svg { width: 16px; height: 16px; }
+
+/* ── Transition entre deux manches ────────────────────────────────────────── */
+.table-zone--transition .siege,
+.table-zone--transition .coin--scores { opacity: .35; transition: opacity .3s; }
+.transition {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 12;
+  text-align: center;
+  padding: 26px 44px;
+  border-radius: 22px;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: var(--ombre-forte);
+  animation: transitionEntree .26s cubic-bezier(.3, .9, .4, 1);
+  transition: opacity .25s, transform .25s;
+}
+.transition-titre { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+.transition-suite {
+  font-size: 34px; font-weight: 900; letter-spacing: .02em; margin: 6px 0 4px;
+  color: var(--accent);
+}
+.transition-carte { font-size: 13.5px; color: var(--gris); }
+.transition--sortie { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
+@keyframes transitionEntree {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.86); }
+}
+.lot-vol--retour { border-color: var(--gris-clair); }
+
 /* ── Bandeau d'annonce, au centre de la table ─────────────────────────────── */
 .annonce {
   position: absolute;
   left: 50%;
-  top: 33%;
+  top: 50%;
   transform: translate(-50%, -50%);
   z-index: 8;
   padding: 12px 26px;
@@ -411,8 +494,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .annonce--jaune  { --c-annonce: #d98a06; }
 .annonce--rouge  { --c-annonce: #cf1420; }
 .annonce--sortie { opacity: 0; transform: translate(-50%, -190%); }
-/* L'annonce se pose au-dessus de la carte Journée, qui s'efface un peu. */
-.table-zone--annonce .centre-table { opacity: .55; }
+
 @keyframes annonceEntree {
   from { opacity: 0; transform: translate(-50%, -10%) scale(.9); }
 }
@@ -594,17 +676,7 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
     width: auto;
   }
   .siege--touche { animation: clignote .5s; }
-  .centre-table {
-    position: static;
-    transform: none;
-    width: auto;
-    grid-column: 1 / -1;
-    order: -1;
-    text-align: left;
-  }
-  .centre-table .suivi-jetons { justify-content: flex-start; }
-}
-@keyframes clignote {
+  @keyframes clignote {
   0%, 100% { background: #fff; }
   50% { background: #fdecea; }
 }
