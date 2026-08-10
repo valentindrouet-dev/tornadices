@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.9';
+export const VERSION = '2.0';
 export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '2.0',
+    date: '10/08/2026',
+    notes: [
+      'Chaque ligne du journal prend la teinte pastel de ce qu’elle a produit : bleu pour un réveil, vert pour une vache, violet pour un endormi, jaune pour une attrape, rouge pour un blocage, orangé pour une carte Journée. Gris clair quand le lot est simplement passé ou poussé.',
+      'Plus d’annonce au centre quand un lot est seulement poussé : c’était trop fréquent pour rester lisible.',
+      'Le message de changement de manche passe au violet — en bleu, on croyait que les Bleus l’emportaient. Seul le nom de l’équipe gagnante garde sa couleur.',
+      'Le lot du joueur glisse hors du cadre et le suivant entre par l’autre côté, dans le sens de circulation de la manche.',
+    ],
+  },
   {
     version: '1.9',
     date: '10/08/2026',

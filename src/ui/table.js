@@ -4,14 +4,14 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.9';
+import { h, remplacer, duree, vider } from './dom.js?v=2.0';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.9';
-import { Moteur } from '../core/engine.js?v=1.9';
-import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=1.9';
-import { ajouterHistorique } from './store.js?v=1.9';
-import { aller } from './app.js?v=1.9';
+} from './icons.js?v=2.0';
+import { Moteur } from '../core/engine.js?v=2.0';
+import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=2.0';
+import { ajouterHistorique } from './store.js?v=2.0';
+import { aller } from './app.js?v=2.0';
 
 let moteur = null;
 let vitesse = 1;
@@ -285,8 +285,9 @@ export function vueTable() {
     effacerAnnonce();
     if (panneauTransition) panneauTransition.remove();
     panneauTransition = h('div.transition',
-      h('div.transition-titre', { style: eq ? { color: eq.hex } : null },
-        eq ? `${eq.nom} remportent la manche ${info.manche}` : `Manche ${info.manche} terminée`),
+      h('div.transition-titre',
+        eq ? h('span', { style: { color: eq.hex } }, eq.nom) : null,
+        eq ? ` remportent la manche ${info.manche}` : `Manche ${info.manche} terminée`),
       h('div.transition-suite', 'Manche suivante !'),
       info.carteSuivante
         ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
@@ -323,6 +324,37 @@ export function vueTable() {
 
   function desVides() {
     return Array.from({ length: Math.min(4, moteur.cfg.desParLot) }, () => ({ sym: null }));
+  }
+
+  /** Les dés du joueur, avec la glissade quand le lot vient d'être remplacé. */
+  function zoneDesPanneau(j, lot, peutAgir) {
+    const rangee = h('div.des-panneau',
+      ...lot.des.map((d, i) => {
+        const de = faceDe(d.sym, { verrou: d.verrou, taille: 'grand', roule: d.roule });
+        if (peutAgir && !d.verrou && !d.roule) {
+          de.classList.add('de--cliquable');
+          de.title = 'Relancer ce dé';
+          de.onclick = () => moteur.lancerHumain(j.id, [i]);
+        }
+        return de;
+      }),
+    );
+
+    const zone = h('div.zone-des', rangee);
+    const avant = dernierLot.get(j.id);
+    dernierLot.set(j.id, { id: lot.id, des: lot.des.map((d) => d.sym) });
+
+    if (avant && avant.id !== lot.id) {
+      // Le lot précédent sort du côté où il part, le nouveau entre de l'autre.
+      const vers = moteur.sens > 0 ? 'droite' : 'gauche';
+      zone.classList.add(`zone-des--${vers}`);
+      rangee.classList.add('des-panneau--entree');
+      const fantome = h('div.des-panneau.des-panneau--fantome',
+        ...avant.des.map((sym) => faceDe(sym, { taille: 'grand' })));
+      zone.appendChild(fantome);
+      setTimeout(() => fantome.remove(), 520);
+    }
+    return zone;
   }
 
   function alerteDe(j) {
@@ -503,11 +535,13 @@ export function vueTable() {
     vider(zoneJournal);
     for (const e of moteur.journal.slice(-60)) {
       if (e.type === 'tour') {
-        zoneJournal.appendChild(h('div.ligne.ligne--tour',
+        zoneJournal.appendChild(h('div.ligne.ligne--tour', {
+          data: { couleur: e.couleur || 'gris' },
+        },
           h('span.t', duree(e.t)),
           h('span.nom-joueur', e.texte),
           h('span.des-tour', ...(e.des || []).map((sym) => faceDe(sym, { taille: 'mini' }))),
-          h('span', { class: `issue issue--${e.reussi ? 'reussi' : 'echec'}` }, e.issue),
+          h('span.issue', e.issue),
         ));
       } else {
         zoneJournal.appendChild(h('div', { class: `ligne ligne--${e.type}` },
@@ -527,6 +561,10 @@ export function vueTable() {
     }).join('||');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
+
+  // Mémoire du lot affiché pour chaque humain : quand il change, on fait glisser
+  // l'ancien hors du cadre et entrer le nouveau, dans le sens de circulation.
+  const dernierLot = new Map();
 
   function panneau(j) {
     const t = toucheDe.get(j.id);
@@ -551,17 +589,7 @@ export function vueTable() {
           `clic sur un dé : le relancer · ${t.libLancer} : tout relancer · ${t.libPasser} : passer`),
       ),
       h('div.rangee',
-        h('div.rangee.rangee--serree',
-          ...lot.des.map((d, i) => {
-            const de = faceDe(d.sym, { verrou: d.verrou, taille: 'grand', roule: d.roule });
-            if (peutAgir && !d.verrou && !d.roule) {
-              de.classList.add('de--cliquable');
-              de.title = 'Relancer ce dé';
-              de.onclick = () => moteur.lancerHumain(j.id, [i]);
-            }
-            return de;
-          }),
-        ),
+        zoneDesPanneau(j, lot, peutAgir),
         h('div', { style: { flex: '1' } }),
         h('button.btn.btn--primaire', {
           disabled: !peutAgir || !libres.length,

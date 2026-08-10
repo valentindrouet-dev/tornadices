@@ -242,7 +242,7 @@ export const PROFIL_HUMAIN = {
 };
 
 export const COULEURS_EQUIPE = {
-  bleu: { id: 'bleu', nom: 'Bleus', hex: '#2e9be6', clair: '#e3f1fc' },
+  bleu: { id: 'bleu', nom: 'Bleus', hex: '#3aa9f2', clair: '#e3f1fc' },
   jaune: { id: 'jaune', nom: 'Jaunes', hex: '#e8b21f', clair: '#fdf3d8' },
   vert: { id: 'vert', nom: 'Vert', hex: '#46b25e', clair: '#e4f5e9' },
 };

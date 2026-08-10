@@ -393,6 +393,22 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
 }
 
+/* ── Glissade du lot dans le panneau du joueur ────────────────────────────── */
+.zone-des { position: relative; overflow: hidden; padding: 3px 0; }
+.des-panneau { display: flex; gap: 6px; }
+.des-panneau--fantome {
+  position: absolute; top: 3px; left: 0;
+  pointer-events: none;
+}
+.zone-des--droite .des-panneau--fantome { animation: sortDroite .42s cubic-bezier(.4, 0, .8, .5) forwards; }
+.zone-des--droite .des-panneau--entree { animation: entreGauche .42s cubic-bezier(.2, .6, .3, 1); }
+.zone-des--gauche .des-panneau--fantome { animation: sortGauche .42s cubic-bezier(.4, 0, .8, .5) forwards; }
+.zone-des--gauche .des-panneau--entree { animation: entreDroite .42s cubic-bezier(.2, .6, .3, 1); }
+@keyframes sortDroite { to { transform: translateX(115%); opacity: 0; } }
+@keyframes sortGauche { to { transform: translateX(-115%); opacity: 0; } }
+@keyframes entreGauche { from { transform: translateX(-115%); opacity: 0; } }
+@keyframes entreDroite { from { transform: translateX(115%); opacity: 0; } }
+
 /* En pause, rien ne bouge : les dés cessent de tourner, les halos de battre. */
 .en-pause *,
 .en-pause *::before,
@@ -473,7 +489,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   padding: 26px 44px;
   border-radius: 22px;
   background: #fff;
-  border: 3px solid var(--accent);
+  border: 3px solid var(--violet);
   box-shadow: var(--ombre-forte);
   animation: transitionEntree .26s cubic-bezier(.3, .9, .4, 1);
   transition: opacity .25s, transform .25s;
@@ -481,7 +497,7 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .transition-titre { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
 .transition-suite {
   font-size: 34px; font-weight: 900; letter-spacing: .02em; margin: 6px 0 4px;
-  color: var(--accent);
+  color: var(--violet);
 }
 .transition-carte { font-size: 13.5px; color: var(--gris); }
 .transition--sortie { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
@@ -589,12 +605,27 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .journal .ligne--manche { color: var(--accent-fonce); font-weight: 800; }
 .journal .ligne--incident { color: #9a6b12; }
 .journal .ligne--blocage { color: #b02a22; font-weight: 700; }
-.journal .ligne--tour { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.journal .ligne--tour {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 5px 8px;
+  margin: 2px 0;
+  border-radius: 9px;
+  border-bottom: 0;
+  background: var(--fond-tour, #f3f5f8);
+  border-left: 3px solid var(--bord-tour, #cfd7e0);
+}
+.journal .ligne--tour[data-couleur="bleu"]   { --fond-tour: #e4f2fd; --bord-tour: #7ec0ee; }
+.journal .ligne--tour[data-couleur="vert"]   { --fond-tour: #e6f5e2; --bord-tour: #86ca6b; }
+.journal .ligne--tour[data-couleur="violet"] { --fond-tour: #f2e9fd; --bord-tour: #bf95ee; }
+.journal .ligne--tour[data-couleur="jaune"]  { --fond-tour: #fdf3dc; --bord-tour: #f2c257; }
+.journal .ligne--tour[data-couleur="rouge"]  { --fond-tour: #fde8e8; --bord-tour: #ee8a86; }
+.journal .ligne--tour[data-couleur="carte"]  { --fond-tour: #fdeee2; --bord-tour: #f0a468; }
+.journal .ligne--tour[data-couleur="gris"]   { --fond-tour: #f1f4f7; --bord-tour: #cfd7e0; }
+.journal .ligne--tour .issue { color: var(--encre-doux); }
 .journal .ligne--tour .nom-joueur { font-weight: 750; }
 .journal .des-tour { display: inline-flex; gap: 3px; }
 .journal .issue { font-weight: 800; margin-left: auto; }
-.journal .issue--reussi { color: #2b7141; }
-.journal .issue--echec { color: var(--gris); }
+
 .journal .ligne--fin { color: var(--violet); font-weight: 800; }
 
 /* ── Tableaux et statistiques ─────────────────────────────────────────────── */

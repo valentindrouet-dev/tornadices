@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.9';
+import { makeRng } from './rng.js?v=2.0';
 import {
-  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN,
+  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES,
   placement, infosMiseEnPlace,
-} from './config.js?v=1.9';
+} from './config.js?v=2.0';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -619,6 +619,7 @@ export class Moteur {
     this._log(j.nom, 'tour', j.id, {
       des: desFinaux,
       issue: this._issueDuTour(motif, dispo),
+      couleur: this._couleurDuTour(motif, dispo),
       reussi: motif === 'combo' && dispo && dispo.id !== 'blocage',
     });
     return q;
@@ -638,6 +639,17 @@ export class Moteur {
       return `${def ? def.nom : dispo.id} !`;
     }
     return '—';
+  }
+
+  /** Couleur de la ligne de journal : celle de la combinaison réalisée. */
+  _couleurDuTour(motif, dispo) {
+    if (motif === 'interruption') return 'jaune';   // conséquence d'une attrape
+    if (motif === 'attrape') return 'jaune';
+    if (motif === 'combo' && dispo) {
+      if (dispo.source === 'journee') return 'carte';
+      return ALERTES[dispo.id] || 'gris';
+    }
+    return 'gris';                                   // passé, poussé, mégarde
   }
 
   /** Le lot atteint son destinataire. */
@@ -660,8 +672,7 @@ export class Moteur {
     if (q.lots.length) {
       const pousse = q.lots[0];
       for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
-      const suivant = this._envoyerLot(q, pousse, 'pousse');
-      this._annoncer(`${q.nom} est poussé — son lot file vers ${suivant.nom}`, 'rouge');
+      this._envoyerLot(q, pousse, 'pousse');
     }
 
     if (!q.lots.length) q._lotDepuis = this.now;
