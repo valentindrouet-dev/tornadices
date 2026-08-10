@@ -393,6 +393,23 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   50%, 100% { border-color: #ef7d0b; box-shadow: 0 0 0 10px rgba(239, 125, 11, .28), var(--ombre); }
 }
 
+/* ── Bandeau « version en cache » ─────────────────────────────────────────── */
+.banniere-version {
+  position: fixed;
+  left: 50%; bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  max-width: min(680px, calc(100vw - 28px));
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: var(--ombre-forte);
+  font-size: 13.5px;
+}
+.banniere-version span { color: var(--gris); }
+
 /* ── Coins de la table : carte du jour, pioche, scores ────────────────────── */
 .coin { position: absolute; z-index: 3; }
 .coin--carte { left: 0; top: 0; width: 232px; }

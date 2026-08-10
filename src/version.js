@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.6';
+export const VERSION = '1.7';
 export const BUILD_DATE = '2026-08-09';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.7',
+    date: '09/08/2026',
+    notes: [
+      'Détection des versions périmées : le navigateur garde les modules en cache et pouvait faire tourner un écran en retard sans qu’on le voie. Le site relit maintenant sa version sur le serveur et propose de recharger si l’écran n’est pas à jour.',
+    ],
+  },
   {
     version: '1.6',
     date: '09/08/2026',
