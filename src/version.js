@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.11';
+export const VERSION = '1.12';
 export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.12',
+    date: '10/08/2026',
+    notes: [
+      'On voit d’où vient un point : le jeton retourné quitte la zone du joueur, traverse la table et va se poser dans le compteur de son équipe — aux trois vaches comme sur une attrape réussie. Le compteur ne s’allume qu’à l’arrivée, et en pause le jeton reste en vol.',
+      'Nouvelle variable de partie, « Ce que rapporte l’attrape » : la règle de base (un jeton), ou la manche emportée quand le contact réussit, ou la manche emportée dès les trois éclairs. Réglable dans les Variables comme au Laboratoire.',
+      'Ce que valent les deux variantes, sur 300 parties à 6 joueurs : contact gagnant, la partie passe de 5,6 à 4,3 min et les jetons retournés de 27 à 18 ; trois éclairs gagnants, la partie tombe à 0,9 min et la course aux vaches disparaît — à réserver à une partie éclair.',
+    ],
+  },
   {
     version: '1.11',
     date: '10/08/2026',

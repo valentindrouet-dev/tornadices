@@ -1,16 +1,17 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.11';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.11';
-import { store } from './store.js?v=1.11';
-import { lancerCampagne } from '../core/sim.js?v=1.11';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.12';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.12';
+import { store } from './store.js?v=1.12';
+import { lancerCampagne } from '../core/sim.js?v=1.12';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents,
-} from '../core/config.js?v=1.11';
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE,
+} from '../core/config.js?v=1.12';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.11';
+} from '../core/proba.js?v=1.12';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -204,6 +205,17 @@ function panneauConfig(rafraichir) {
       }, h('span.case', '✓'), 'Trois jokers = échec'),
     ),
     tableauCombosEditables(rafraichir),
+
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
+    h('div.segment',
+      ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
+        class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => { cfg.attrapeGagneManche = id; rafraichir(); },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
     h('div.grille.grille--4', { style: { gap: '10px' } },

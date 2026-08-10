@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.11';
+import { makeRng } from './rng.js?v=1.12';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.11';
+} from './config.js?v=1.12';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -91,6 +91,7 @@ export class Moteur {
     this.onMouvement = null;   // (idDepart, idArrivee, motif, lot, duree)
     this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
     this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
+    this.onJeton = null;       // (idJoueur, equipe, nombre, source) — un jeton est retourné
     this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
     this.onDebutManche = null; // ({manche, carte, porteurs})
     this.transition = null;    // entre deux manches : les dés reviennent au centre
@@ -648,8 +649,20 @@ export class Moteur {
     const q = this._envoyerLot(j, lot, motif, dispo);
     if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
 
-    if (motif === 'attrape') this._tenterAttrape(j, q);
-    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
+    if (motif === 'attrape') {
+      // Variante : les trois éclairs emportent la manche sans même tenter le
+      // contact. La partie se joue alors sur la course à l'attrape.
+      if (this.cfg.attrapeGagneManche === 'combo') {
+        this._log(
+          `${j.nom} sort l’attrape — ${this._nomEquipe(j.equipe)} remportent la manche.`,
+          'combo', j.id,
+        );
+        this._annoncer(`${j.nom} attrape — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune');
+        this._finManche(j.equipe);
+      } else {
+        this._tenterAttrape(j, q);
+      }
+    } else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
 
     if (!this.termine && j.lots.length) this._planifier(j.id);
     if (this.onEtatChange) this.onEtatChange();
@@ -806,6 +819,17 @@ export class Moteur {
       j.stats.collisionsReussies++;
       q.stats.foisTouche++;
       this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
+      // Variante : un contact réussi emporte la manche au lieu d'un seul jeton.
+      if (this.cfg.attrapeGagneManche === 'touche') {
+        this._log(
+          `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
+        );
+        this._annoncer(
+          `${j.nom} attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune',
+        );
+        this._finManche(j.equipe);
+        return;
+      }
       this._annoncer(`${j.nom} attrape ${q.nom} !`, 'jaune');
       // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
       if (q.lots.length && !q.fige) this._demanderDepart(q, 'interruption');
@@ -916,6 +940,8 @@ export class Moteur {
     j.stats.jetonsRetournes += gagnes;
     if (gagnes > 0) {
       j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + gagnes;
+      // Le jeton part de la zone du joueur et rejoint le compteur de son équipe.
+      if (this.onJeton) this.onJeton(j.id, j.equipe, gagnes, source);
       this._log(
         `${j.nom} retourne ${gagnes} jeton${gagnes > 1 ? 's' : ''} — ${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}.`,
         'jeton', j.id,

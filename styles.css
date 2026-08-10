@@ -580,6 +580,33 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
 .lot-vol--attrape { border-color: #f9b115; }
 .lot-vol--touche { border-color: var(--rouge); }
 
+/* ── Un jeton retourné rejoint le compteur de son équipe ──────────────────── */
+.jeton-vol {
+  position: absolute;
+  z-index: 8;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--vert);
+  box-shadow: 0 6px 18px rgba(20, 60, 110, .28);
+  display: grid; place-items: center;
+  pointer-events: none;
+  animation: volJeton var(--duree, 850ms) cubic-bezier(.32, .04, .24, 1) both;
+}
+.jeton-vol svg { width: 21px; height: 21px; display: block; }
+@keyframes volJeton {
+  0%   { transform: translate(-50%, -50%) scale(.45); opacity: 0; }
+  14%  { transform: translate(-50%, -50%) scale(1.22); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.8); opacity: 1; }
+}
+/* Le jeton qui vient d'atterrir se signale, sinon on ne voit pas lequel s'allume. */
+.jeton--arrive { animation: jetonArrive .5s ease-out; }
+@keyframes jetonArrive {
+  0% { transform: scale(1.7); box-shadow: 0 0 0 10px color-mix(in srgb, var(--couleur-eq) 30%, transparent); }
+  60% { transform: scale(.94); }
+  100% { transform: none; }
+}
+
 /* Panneau du joueur humain */
 .panneau-humain {
   position: sticky;

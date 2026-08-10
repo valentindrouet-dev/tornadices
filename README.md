@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.11     # estampille tout le site
+node scripts/version.mjs 1.12     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.11`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.12`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -76,6 +76,8 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
+- ce que rapporte l'attrape : un jeton, la manche si le contact réussit, ou la
+  manche dès les trois éclairs ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe ;
@@ -143,6 +145,20 @@ Les quatre symboles passent à égalité ; le réveil, seul à profiter de la se
 tornade, y perd. En partie à 6 joueurs, les attrapes doublent (21 → 43 par
 partie), les blocages reculent d’un tiers (91 → 57) et la partie perd près de
 deux minutes (7,5 → 5,6 min).
+
+### Ce que rapporte l’attrape
+
+Trois éclairs font passer le lot et tenter le contact. Ce que vaut un contact
+réussi se règle dans les Variables :
+
+| Réglage | Effet | Partie à 6 | Jetons retournés |
+|---|---|---|---|
+| `non` (défaut) | le voisin est interrompu, un jeton retourné | 5,6 min | 27 |
+| `touche` | l’équipe qui touche remporte la manche | 4,3 min | 18 |
+| `combo` | les trois éclairs emportent la manche, sans contact | 0,9 min | 1 |
+
+Mesuré sur 300 parties simulées. En `combo` la fenêtre de réflexe disparaît et
+la course aux vaches avec elle : c’est une partie éclair, pas un équilibrage.
 
 ## Le rythme d’un lot
 

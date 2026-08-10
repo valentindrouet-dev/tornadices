@@ -1,8 +1,8 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.11';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.11';
-import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.11';
+import { h } from './dom.js?v=1.12';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.12';
+import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.12';
 
 export function vueRegles() {
   return h('div.page',
@@ -126,6 +126,10 @@ export function vueRegles() {
       h('p.mini.muted', 'À la table virtuelle, l’attrape ouvre une fenêtre de réflexe : '
         + 'le toucheur appuie pour toucher, la cible pour retirer sa main. Entre IA, elle se '
         + 'résout à l’adresse et à l’esquive de chacun.'),
+      h('div.encart.encart--info', { style: { marginTop: '12px' } },
+        'Variante réglable dans les Variables : l’attrape peut emporter la manche entière, '
+        + 'soit quand le contact réussit, soit dès les trois éclairs. La manche devient alors '
+        + 'une course à l’attrape plutôt qu’une course aux vaches.'),
     ),
 
     h('div.carte',

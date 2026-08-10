@@ -313,6 +313,54 @@ console.log('\nJokers');
   }
 }
 
+// ── 3 ter. L'attrape peut emporter la manche ─────────────────────────────────
+console.log('\nAttrape gagnante');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  // Le signal du jeton part bien du joueur qui vient de le retourner.
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'jeton-signal');
+    const recus = [];
+    m.onJeton = (pid, equipe, n, source) => recus.push({ pid, equipe, n, source });
+    m.jouerJusquAuBout();
+    const total = m.joueurs.reduce((a, j) => a + j.stats.jetonsRetournes, 0);
+    verifier(`${recus.length} jetons annoncés, autant que de jetons retournés`,
+      recus.reduce((a, r) => a + r.n, 0) === total && total > 0);
+    verifier('chaque annonce porte l’équipe du joueur qui l’a gagné',
+      recus.every((r) => m.joueurs[r.pid].equipe === r.equipe));
+  }
+
+  // Variante « le contact réussi emporte la manche ».
+  for (const mode of ['touche', 'combo']) {
+    const cfg = configParDefaut(6);
+    cfg.attrapeGagneManche = mode;
+    const m = new Moteur(cfg, spec, `attrape-${mode}`);
+    m.jouerJusquAuBout();
+    const parAttrape = m.journal.filter((e) => /remportent la manche/.test(e.texte)).length;
+    const manchesGagnees = m.statsManches.filter((s) => s.vainqueur).length;
+    verifier(`mode « ${mode} » — partie menée à terme en ${m.manche} manches, vainqueur ${m.vainqueur}`,
+      m.termine && !!m.vainqueur && manchesGagnees > 0, `raison ${m.raisonFin}`);
+    verifier(`mode « ${mode} » — des manches sont bien emportées à l’attrape (${parAttrape})`,
+      parAttrape > 0);
+    if (mode === 'combo') {
+      verifier('mode « combo » — plus aucune tentative de contact',
+        m.joueurs.every((j) => j.stats.collisionsTentees === 0));
+    } else {
+      verifier('mode « touche » — le contact est toujours tenté',
+        m.joueurs.some((j) => j.stats.collisionsTentees > 0));
+    }
+  }
+
+  // Règle de base inchangée : l'attrape ne rapporte qu'un jeton.
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'attrape-non');
+    m.jouerJusquAuBout();
+    verifier('sans la variante, aucune manche n’est emportée à l’attrape',
+      !m.journal.some((e) => /attrape/i.test(e.texte) && /remportent la manche/.test(e.texte)));
+  }
+}
+
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────
 console.log('\nCampagne du Laboratoire');
 {

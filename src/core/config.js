@@ -98,6 +98,22 @@ export const ALERTES = {
   endormir: 'violet',
 };
 
+// Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
+// en font l'enjeu de la manche.
+export const OPTIONS_ATTRAPE = [
+  ['non', 'Un jeton'],
+  ['touche', 'Manche gagnée si le contact réussit'],
+  ['combo', 'Manche gagnée dès les 3 éclairs'],
+];
+
+export const AIDE_ATTRAPE = {
+  non: 'Règle de base : un contact réussi interrompt le voisin et retourne un jeton de votre équipe.',
+  touche: 'Trois éclairs, vous passez le lot et tentez le contact — s’il réussit, votre équipe '
+    + 'remporte la manche sur-le-champ. Les jetons ne servent plus qu’à la course parallèle.',
+  combo: 'Trois éclairs suffisent : la manche est remportée sans même tenter le contact. '
+    + 'La manche devient une course à l’attrape, sans fenêtre de réflexe.',
+};
+
 // ── Dés ───────────────────────────────────────────────────────────────────────
 // Répartition de base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair —
 // le joker a pris la place de la seconde tornade.
@@ -347,6 +363,10 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     faces: FACES_PAR_DEFAUT.slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
     echecJokers,
+    // Variante d'attrape : 'non' (un jeton retourné, la règle de base),
+    // 'touche' (le contact réussi emporte la manche) ou 'combo' (les trois
+    // éclairs l'emportent sans même tenter le contact).
+    attrapeGagneManche: 'non',
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
       .map((c) => ({ ...c, requis: { ...c.requis } })),

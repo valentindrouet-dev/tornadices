@@ -3,17 +3,17 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.11';
-import { pastilleSymbole } from './icons.js?v=1.11';
-import { store } from './store.js?v=1.11';
-import { aller } from './app.js?v=1.11';
-import { lancerPartie } from './table.js?v=1.11';
+import { h, remplacer } from './dom.js?v=1.12';
+import { pastilleSymbole } from './icons.js?v=1.12';
+import { store } from './store.js?v=1.12';
+import { aller } from './app.js?v=1.12';
+import { lancerPartie } from './table.js?v=1.12';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
-  symbolesPertinents,
-} from '../core/config.js?v=1.11';
-import { randomSeed } from '../core/rng.js?v=1.11';
-import { reglagesJoueurs } from './accueil.js?v=1.11';
+  symbolesPertinents, OPTIONS_ATTRAPE, AIDE_ATTRAPE,
+} from '../core/config.js?v=1.12';
+import { randomSeed } from '../core/rng.js?v=1.12';
+import { reglagesJoueurs } from './accueil.js?v=1.12';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -154,6 +154,17 @@ export function vueVariables() {
               + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. '
               + 'C’est le seul revers du joker — décochez la règle pour jouer sans.'
             : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.'),
+
+        h('div.titre-section', { style: { marginTop: '20px' } }, 'Ce que rapporte l’attrape'),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
+              class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+              onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
+            }, lib)),
+          ),
+        ),
+        h('p.mini.muted', { style: { marginTop: '8px' } }, AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
       ),
 
       // ── Rythme ────────────────────────────────────────────────────────────

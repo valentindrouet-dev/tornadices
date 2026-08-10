@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.11';
+import { h, remplacer, duree, vider } from './dom.js?v=1.12';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.11';
-import { Moteur } from '../core/engine.js?v=1.11';
+} from './icons.js?v=1.12';
+import { Moteur } from '../core/engine.js?v=1.12';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.11';
-import { ajouterHistorique } from './store.js?v=1.11';
-import { aller } from './app.js?v=1.11';
+} from '../core/config.js?v=1.12';
+import { ajouterHistorique } from './store.js?v=1.12';
+import { aller } from './app.js?v=1.12';
 
 let moteur = null;
 let vitesse = 1;
@@ -196,6 +196,47 @@ export function vueTable() {
     }, duree + 180);
   }
 
+  // Un jeton retourné quitte la zone du joueur et rejoint le compteur de son
+  // équipe : c'est le seul moment où l'on voit d'où vient un point. Le compteur
+  // n'affiche le jeton qu'à l'arrivée, sinon le vol n'aurait plus rien à porter.
+  const jetonsEnVol = new Map();
+  const jetonsAffiches = (e) => Math.max(0, e.retournes - (jetonsEnVol.get(e.id) || 0));
+
+  function volJeton(pid, equipeId, nombre = 1) {
+    const siege = elSieges[pid];
+    if (!siege) return;
+    const zone = zoneTable.getBoundingClientRect();
+    const depart = siege.getBoundingClientRect();
+    const bloc = elScores.querySelector(`.score-equipe.equipe-${equipeId}`);
+    const libres = elScores.querySelectorAll(`.score-equipe.equipe-${equipeId} .jeton:not(.on)`);
+    const x0 = depart.left + depart.width / 2;
+    const y0 = depart.top + depart.height / 2;
+
+    for (let k = 0; k < nombre; k++) {
+      const cible = (libres[k] || bloc || elScores).getBoundingClientRect();
+      const el = h('div.jeton-vol', { html: SVG_SYMBOLE.vache });
+      el.style.left = `${x0 - zone.left}px`;
+      el.style.top = `${y0 - zone.top}px`;
+      el.style.setProperty('--dx', `${cible.left + cible.width / 2 - x0}px`);
+      el.style.setProperty('--dy', `${cible.top + cible.height / 2 - y0}px`);
+      el.style.setProperty('--duree', `${Math.max(220, 850 / vitesse)}ms`);
+      el.style.animationDelay = `${(k * 200) / vitesse}ms`;
+      jetonsEnVol.set(equipeId, (jetonsEnVol.get(equipeId) || 0) + 1);
+      zoneTable.appendChild(el);
+      // On écoute la fin réelle de l'animation, pas une minuterie : en pause le
+      // vol se fige, et le compteur doit se figer avec lui.
+      el.addEventListener('animationend', () => {
+        el.remove();
+        jetonsEnVol.set(equipeId, Math.max(0, (jetonsEnVol.get(equipeId) || 0) - 1));
+      }, { once: true });
+    }
+  }
+
+  function viderJetonsEnVol() {
+    jetonsEnVol.clear();
+    for (const el of zoneTable.querySelectorAll('.jeton-vol')) el.remove();
+  }
+
   const zonePanneaux = h('div', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
   const zoneJournal = h('div.journal');
 
@@ -236,6 +277,7 @@ export function vueTable() {
     if (e.type === 'touche' && e.pid != null) touchesRecentes.set(e.pid, moteur.now);
   };
   moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
+  moteur.onJeton = (pid, equipe, nombre) => volJeton(pid, equipe, nombre);
 
   // Les moments qui comptent s'affichent en toutes lettres au centre de la table.
   let annonceCourante = null;
@@ -317,6 +359,7 @@ export function vueTable() {
   };
 
   moteur.onDebutManche = (info) => {
+    viderJetonsEnVol();   // les jetons repartent à zéro : plus rien à faire voler
     if (info.premiere) return;
     elCarte.classList.remove('coin--echange');
     // Les lots repartent du centre vers leurs nouveaux porteurs.
@@ -514,17 +557,18 @@ export function vueTable() {
     ));
 
     const jetons = Object.values(moteur.equipes)
-      .map((e) => `${e.id}:${e.retournes}/${e.jetons}:${e.cartes.length}`).join('|');
+      .map((e) => `${e.id}:${jetonsAffiches(e)}/${e.jetons}:${e.cartes.length}`).join('|');
     if (siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
       const c = COULEURS_EQUIPE[e.id];
+      const acquis = jetonsAffiches(e);
       return h('div.score-equipe', { class: `equipe-${e.id}` },
         h('span.score-nom', { style: { color: c.hex } }, c.nom),
         h('span.score-cartes', { title: 'cartes Journée gagnées' },
           `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
         h('div.suivi-jetons',
           ...Array.from({ length: e.jetons }, (_, k) => h('div', {
-            class: `jeton${k < e.retournes ? ' on' : ''}`,
-            html: k < e.retournes ? SVG_SYMBOLE.vache : '',
+            class: `jeton${k < acquis ? ' on' : ''}${k === acquis - 1 ? ' jeton--arrive' : ''}`,
+            html: k < acquis ? SVG_SYMBOLE.vache : '',
           })),
         ),
       );
