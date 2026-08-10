@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.7';
-export const BUILD_DATE = '2026-08-09';
+export const VERSION = '1.8';
+export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.8',
+    date: '09/08/2026',
+    notes: [
+      'Correction de fond du cache navigateur : chaque module porte maintenant le numéro de version dans son adresse, donc une nouvelle livraison change toutes les URL et rien ne peut rester périmé.',
+      'Un script de version (scripts/version.mjs) réestampille tout le site en une commande, pour que le problème ne revienne pas.',
+      'Le site se déploie tout seul sur GitHub Pages à chaque poussée de la branche.',
+    ],
+  },
   {
     version: '1.7',
     date: '09/08/2026',

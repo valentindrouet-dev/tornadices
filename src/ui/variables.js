@@ -3,16 +3,16 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js';
-import { pastilleSymbole } from './icons.js';
-import { store } from './store.js';
-import { aller } from './app.js';
-import { lancerPartie } from './table.js';
+import { h, remplacer } from './dom.js?v=1.8';
+import { pastilleSymbole } from './icons.js?v=1.8';
+import { store } from './store.js?v=1.8';
+import { aller } from './app.js?v=1.8';
+import { lancerPartie } from './table.js?v=1.8';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
-} from '../core/config.js';
-import { randomSeed } from '../core/rng.js';
-import { reglagesJoueurs } from './accueil.js';
+} from '../core/config.js?v=1.8';
+import { randomSeed } from '../core/rng.js?v=1.8';
+import { reglagesJoueurs } from './accueil.js?v=1.8';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 

@@ -1,16 +1,16 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js';
-import { pastilleSymbole, suiteSymboles } from './icons.js';
-import { store } from './store.js';
-import { lancerCampagne } from '../core/sim.js';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.8';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.8';
+import { store } from './store.js?v=1.8';
+import { lancerCampagne } from '../core/sim.js?v=1.8';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE,
-} from '../core/config.js';
+} from '../core/config.js?v=1.8';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js';
+} from '../core/proba.js?v=1.8';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 

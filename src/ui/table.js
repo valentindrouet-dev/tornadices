@@ -4,14 +4,14 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js';
+import { h, remplacer, duree, vider } from './dom.js?v=1.8';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js';
-import { Moteur } from '../core/engine.js';
-import { COULEURS_EQUIPE, ALERTES } from '../core/config.js';
-import { ajouterHistorique } from './store.js';
-import { aller } from './app.js';
+} from './icons.js?v=1.8';
+import { Moteur } from '../core/engine.js?v=1.8';
+import { COULEURS_EQUIPE, ALERTES } from '../core/config.js?v=1.8';
+import { ajouterHistorique } from './store.js?v=1.8';
+import { aller } from './app.js?v=1.8';
 
 let moteur = null;
 let vitesse = 1;

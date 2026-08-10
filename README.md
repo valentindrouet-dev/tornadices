@@ -16,7 +16,25 @@ python3 -m http.server 5173     # puis http://localhost:5173
 npm start
 ```
 
-Le dépôt se publie tel quel sur GitHub Pages ou tout hébergement statique.
+Le dépôt se publie tel quel sur GitHub Pages ou tout hébergement statique. Un
+workflow (`.github/workflows/pages.yml`) déploie automatiquement à chaque
+poussée — à activer une fois dans *Settings → Pages → Source : GitHub Actions*.
+
+## Changer de version
+
+```bash
+node scripts/version.mjs 1.9      # estampille tout le site
+```
+
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.9`). Sans
+cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
+continuer de servir une version périmée — un écran restait bloqué sur une
+ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
+numéro embarqué et le point d'entrée du HTML. Il reste à rédiger les notes dans
+`src/version.js`.
+
+Au démarrage, le site relit sa version sur le serveur et propose de recharger
+si l'écran est en retard.
 
 ## Ce que contient le site
 
