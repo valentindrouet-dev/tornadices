@@ -560,6 +560,21 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   from { opacity: 0; transform: translate(-50%, -10%) scale(.9); }
 }
 
+/* Posée juste au-dessus de la zone du joueur : on lit son nom dessous, l'annonce
+   n'a donc plus à le répéter — et deux joueurs peuvent réussir en même temps. */
+.annonce--siege {
+  transform: translate(-50%, -100%);
+  padding: 7px 15px;
+  font-size: 15px;
+  border-width: 2px;
+  z-index: 6;
+  animation: annonceSiege .18s ease-out;
+}
+.annonce--siege.annonce--sortie { opacity: 0; transform: translate(-50%, -150%); }
+@keyframes annonceSiege {
+  from { opacity: 0; transform: translate(-50%, -55%) scale(.9); }
+}
+
 /* ── Lot de dés en vol d'un joueur à l'autre ──────────────────────────────── */
 .lot-vol {
   position: absolute;

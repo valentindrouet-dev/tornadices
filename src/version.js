@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.12';
+export const VERSION = '1.13';
 export const BUILD_DATE = '2026-08-10';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.13',
+    date: '10/08/2026',
+    notes: [
+      'Correction du jeton géant : la feuille de style n’était pas estampillée, elle. Le navigateur servait le JS de la nouvelle version avec le CSS de l’ancienne, où la règle du jeton en vol n’existait pas — sans taille ni position, la vache s’étalait sur toute la table. styles.css porte désormais son numéro de version comme les modules, et le jeton garde sa taille même sans feuille de style.',
+      'Les annonces de réussite s’affichent au-dessus de la zone du joueur concerné, plus au milieu de la table : on voit tout de suite qui réveille, qui retourne une vache, qui attrape. Le nom disparaît du texte puisqu’il se lit juste dessous, et deux joueurs peuvent réussir en même temps.',
+      'L’esquive se joue à la barre espace, comme le toucher : pendant une attrape on est toucheur ou cible, jamais les deux, une seule touche suffit.',
+    ],
+  },
   {
     version: '1.12',
     date: '10/08/2026',

@@ -1,8 +1,8 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.12';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.12';
-import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.12';
+import { h } from './dom.js?v=1.13';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.13';
+import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.13';
 
 export function vueRegles() {
   return h('div.page',

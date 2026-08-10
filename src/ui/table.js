@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.12';
+import { h, remplacer, duree, vider } from './dom.js?v=1.13';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.12';
-import { Moteur } from '../core/engine.js?v=1.12';
+} from './icons.js?v=1.13';
+import { Moteur } from '../core/engine.js?v=1.13';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.12';
-import { ajouterHistorique } from './store.js?v=1.12';
-import { aller } from './app.js?v=1.12';
+} from '../core/config.js?v=1.13';
+import { ajouterHistorique } from './store.js?v=1.13';
+import { aller } from './app.js?v=1.13';
 
 let moteur = null;
 let vitesse = 1;
@@ -215,6 +215,9 @@ export function vueTable() {
     for (let k = 0; k < nombre; k++) {
       const cible = (libres[k] || bloc || elScores).getBoundingClientRect();
       const el = h('div.jeton-vol', { html: SVG_SYMBOLE.vache });
+      // Taille et position posées en dur : un jeton sans feuille de style ne doit
+      // pas pouvoir s'étaler sur toute la table.
+      Object.assign(el.style, { position: 'absolute', width: '32px', height: '32px' });
       el.style.left = `${x0 - zone.left}px`;
       el.style.top = `${y0 - zone.top}px`;
       el.style.setProperty('--dx', `${cible.left + cible.width / 2 - x0}px`);
@@ -279,30 +282,44 @@ export function vueTable() {
   moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
   moteur.onJeton = (pid, equipe, nombre) => volJeton(pid, equipe, nombre);
 
-  // Les moments qui comptent s'affichent en toutes lettres au centre de la table.
-  let annonceCourante = null;
+  // Les moments qui comptent s'affichent au-dessus de la zone du joueur concerné :
+  // au centre, on ne savait pas de qui l'on parlait, et deux joueurs ne pouvaient
+  // pas réussir en même temps. Une annonce par joueur, la dernière chasse l'autre.
+  const annonces = new Map();
   let enTransition = false;
+
   function effacerAnnonce() {
-    if (annonceCourante) { annonceCourante.remove(); annonceCourante = null; }
-    zoneTable.classList.remove('table-zone--annonce');
+    for (const el of annonces.values()) el.remove();
+    annonces.clear();
   }
-  moteur.onAnnonce = (texte, couleur) => {
-    if (enTransition) return;   // la transition de manche occupe déjà le centre
-    if (annonceCourante) annonceCourante.remove();
-    const el = h('div', { class: `annonce annonce--${couleur}` }, texte);
-    el.style.left = `${CENTRE.x}%`;
-    el.style.top = `${CENTRE.y}%`;
-    annonceCourante = el;
+
+  moteur.onAnnonce = (texte, couleur, pid = null) => {
+    if (enTransition) return;   // la transition de manche occupe déjà la table
+    const cle = pid == null ? '__centre' : pid;
+    const ancienne = annonces.get(cle);
+    if (ancienne) ancienne.remove();
+
+    const surSiege = pid != null && elSieges[pid];
+    const el = h('div', {
+      class: `annonce annonce--${couleur}${surSiege ? ' annonce--siege' : ''}`,
+    }, texte);
+    if (surSiege) {
+      const z = zoneTable.getBoundingClientRect();
+      const r = elSieges[pid].getBoundingClientRect();
+      el.style.left = `${r.left + r.width / 2 - z.left}px`;
+      el.style.top = `${r.top - z.top - 8}px`;
+    } else {
+      el.style.left = `${CENTRE.x}%`;
+      el.style.top = `${CENTRE.y}%`;
+    }
+    annonces.set(cle, el);
     zoneTable.appendChild(el);
-    zoneTable.classList.add('table-zone--annonce');
+
     const vie = Math.max(500, 1700 / vitesse);
     setTimeout(() => el.classList.add('annonce--sortie'), vie);
     setTimeout(() => {
       el.remove();
-      if (annonceCourante === el) {
-        annonceCourante = null;
-        zoneTable.classList.remove('table-zone--annonce');
-      }
+      if (annonces.get(cle) === el) annonces.delete(cle);
     }, vie + 320);
   };
 
@@ -428,12 +445,14 @@ export function vueTable() {
     if (!actif || moteur !== maPartie || moteur.termine) return;
     if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
     if (moteur.duel) {
+      // Un réflexe, une touche : pendant l'attrape on est toucheur ou cible,
+      // jamais les deux — la même touche sert donc aux deux gestes.
       for (const j of humains) {
-        const t = toucheDe.get(j.id);
-        if (ev.code === t.lancer && moteur.duel.toucheurId === j.id) {
+        if (ev.code !== toucheDe.get(j.id).lancer) continue;
+        if (moteur.duel.toucheurId === j.id) {
           moteur.reflexeHumain(j.id, 'toucher'); ev.preventDefault(); return;
         }
-        if (ev.code === t.passer && moteur.duel.cibleId === j.id) {
+        if (moteur.duel.cibleId === j.id) {
           moteur.reflexeHumain(j.id, 'esquiver'); ev.preventDefault(); return;
         }
       }
@@ -711,7 +730,7 @@ export function vueTable() {
           ? h('button.btn.btn--grand', {
               disabled: d.actionCible != null,
               onclick: () => moteur.reflexeHumain(cible.id, 'esquiver'),
-            }, d.actionCible != null ? '✓ Main retirée' : `ESQUIVER ! (${toucheDe.get(cible.id).libPasser})`)
+            }, d.actionCible != null ? '✓ Main retirée' : `ESQUIVER ! (${toucheDe.get(cible.id).libLancer})`)
           : null,
       ),
       h('div.jauge-duel', h('div', { style: { width: '100%' } })),

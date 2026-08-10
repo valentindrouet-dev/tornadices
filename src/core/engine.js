@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.12';
+import { makeRng } from './rng.js?v=1.13';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.12';
+} from './config.js?v=1.13';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -657,7 +657,9 @@ export class Moteur {
           `${j.nom} sort l’attrape — ${this._nomEquipe(j.equipe)} remportent la manche.`,
           'combo', j.id,
         );
-        this._annoncer(`${j.nom} attrape — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune');
+        this._annoncer(
+          `Attrape — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
+        );
         this._finManche(j.equipe);
       } else {
         this._tenterAttrape(j, q);
@@ -825,12 +827,12 @@ export class Moteur {
           `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
         );
         this._annoncer(
-          `${j.nom} attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune',
+          `Attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
         );
         this._finManche(j.equipe);
         return;
       }
-      this._annoncer(`${j.nom} attrape ${q.nom} !`, 'jaune');
+      this._annoncer(`Attrape ${q.nom} !`, 'jaune', j.id);
       // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
       if (q.lots.length && !q.fige) this._demanderDepart(q, 'interruption');
       this._retournerJeton(j, 1, 'collision');
@@ -846,7 +848,7 @@ export class Moteur {
     switch (effet) {
       case 'reveil':
         j.eveille = true; j.stats.reveils++;
-        this._annoncer(`${j.nom} se réveille`, 'bleu');
+        this._annoncer('Réveil !', 'bleu', j.id);
         break;
       case 'blocage':
       case 'echecJokers':
@@ -867,7 +869,7 @@ export class Moteur {
         if (cible && cible.eveille) {
           cible.eveille = false;
           cible.stats.foisEndormi++;
-          this._annoncer(`${j.nom} endort ${cible.nom}`, 'violet');
+          this._annoncer(`Endort ${cible.nom}`, 'violet', j.id);
         }
         break;
       }
@@ -876,7 +878,9 @@ export class Moteur {
         for (const v of this._voisinsDirects(j)) {
           if (v.eveille) { v.eveille = false; v.stats.foisEndormi++; noms.push(v.nom); }
         }
-        this._annoncer(`${j.nom} endort ses voisins${noms.length ? ' : ' + noms.join(' et ') : ''}`, 'violet');
+        this._annoncer(
+          noms.length ? `Endort ${noms.join(' et ')}` : 'Endort ses voisins', 'violet', j.id,
+        );
         break;
       }
       case 'cacherJetonAdverse': {
@@ -947,9 +951,9 @@ export class Moteur {
         'jeton', j.id,
       );
       this._annoncer(
-        `${j.nom} retourne ${gagnes > 1 ? gagnes + ' vaches' : 'une vache'} — `
+        `${gagnes > 1 ? gagnes + ' vaches' : 'Vache'} ! `
         + `${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}`,
-        'vert',
+        'vert', j.id,
       );
     }
     if (eq.retournes >= eq.jetons) this._finManche(j.equipe);
@@ -1096,8 +1100,12 @@ export class Moteur {
   }
 
   // ── Journal & résultat ──────────────────────────────────────────────────────
-  _annoncer(texte, couleur = 'bleu') {
-    if (this.onAnnonce) this.onAnnonce(texte, couleur);
+  /**
+   * Un moment qui compte. `pid` désigne le joueur concerné : l'annonce s'affiche
+   * au-dessus de sa zone de jeu, d'où le texte sans son nom — on le lit dessous.
+   */
+  _annoncer(texte, couleur = 'bleu', pid = null) {
+    if (this.onAnnonce) this.onAnnonce(texte, couleur, pid);
   }
 
   _log(texte, type = 'info', pid = null, extra = null) {
