@@ -925,7 +925,14 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
     top: auto !important;
     width: auto;
     flex: 1 1 46%;
+    /* Sans cela, un siège dont le contenu dépasse 46 % refuse de partager sa
+       ligne : la rangée se casse et l'anneau avec elle. */
+    min-width: 0;
   }
+  .siege .des-mini { gap: 3px; }
+  .siege .de--petit { width: 30px; height: 30px; border-radius: 8px; padding: 2px; }
+  /* Nombre impair de joueurs : le siège du bas de l'anneau prend la largeur. */
+  .siege--large { flex: 1 1 100%; }
 
   /* L'annonce se pose SUR le haut de la zone du joueur : au-dessus, elle
      sortirait de la table et irait recouvrir la barre du haut. */

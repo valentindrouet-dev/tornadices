@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.18';
+export const VERSION = '1.19';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.19',
+    date: '11/08/2026',
+    notes: [
+      'Sur téléphone, les joueurs sont disposés en anneau et non plus dans l’ordre de lecture : on descend la colonne de droite, on remonte celle de gauche. À quatre, cela donne 1-2 sur la première rangée et 4-3 sur la seconde — chaque joueur touche ses deux voisins de table, et le dernier rejoint le premier.',
+      'À nombre impair, le siège qui ferme l’anneau prend toute la largeur en bas : c’est la place d’en face.',
+      'Correction au passage : un siège dont le contenu dépassait sa demi-largeur refusait de partager sa rangée, ce qui cassait la disposition à sept et neuf joueurs. Les sièges peuvent maintenant se resserrer, et les dés des vignettes sont un peu plus petits.',
+    ],
+  },
   {
     version: '1.18',
     date: '11/08/2026',

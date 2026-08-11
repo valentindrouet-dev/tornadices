@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.18';
+import { h, remplacer, duree, vider } from './dom.js?v=1.19';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.18';
-import { Moteur } from '../core/engine.js?v=1.18';
+} from './icons.js?v=1.19';
+import { Moteur } from '../core/engine.js?v=1.19';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.18';
-import { ajouterHistorique } from './store.js?v=1.18';
-import { aller } from './app.js?v=1.18';
+} from '../core/config.js?v=1.19';
+import { ajouterHistorique } from './store.js?v=1.19';
+import { aller } from './app.js?v=1.19';
 
 let moteur = null;
 let vitesse = 1;
@@ -164,6 +164,33 @@ export function vueTable() {
     }
   }
 
+  // En colonne, les sièges suivraient l'ordre de lecture — 1-2 puis 3-4 — et deux
+  // voisins de table se retrouveraient dos à dos. On les dispose donc en anneau :
+  // on descend la colonne de droite, on remonte celle de gauche, si bien que
+  // chaque joueur touche ses deux voisins et que le dernier rejoint le premier.
+  // Sur grand écran les sièges sont hors flux, l'ordre n'y change rien.
+  function ordonnerEnAnneau() {
+    const impair = n % 2 === 1;
+    const rangees = impair ? (n + 1) / 2 : n / 2;
+    const cellules = new Array(n);
+    cellules[0] = [0, 0];
+    const aDroite = impair ? rangees - 1 : rangees;
+    for (let k = 1; k <= aDroite && k < n; k++) cellules[k] = [k - 1, 1];
+    let k = aDroite + 1;
+    // Nombre impair : le siège du bas prend toute la largeur et ferme l'anneau.
+    if (impair && k < n) { cellules[k] = [rangees - 1, 'large']; k++; }
+    for (let r = impair ? rangees - 2 : rangees - 1; k < n; r--, k++) cellules[k] = [r, 0];
+
+    elSieges.forEach((el, i) => {
+      const c = cellules[i];
+      if (!c) return;
+      const large = c[1] === 'large';
+      el.classList.toggle('siege--large', large);
+      el.style.order = large ? c[0] * 2 : c[0] * 2 + c[1];
+    });
+  }
+
+  ordonnerEnAnneau();
   placerSieges();
   const suiviTaille = new ResizeObserver(() => placerSieges());
   suiviTaille.observe(zoneTable);
