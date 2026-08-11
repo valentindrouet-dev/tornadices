@@ -146,6 +146,8 @@ a { color: var(--accent-fonce); }
 .rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rangee--serree { gap: 6px; }
 .pousse { flex: 1 1 auto; }
+/* Colonne de droite de la table : combinaisons et journal. */
+.colonne-cote { display: grid; gap: 16px; align-content: start; }
 /* Un joueur sur une ligne : pastille, nom, rôle, équipe. */
 .ligne-joueur { flex-wrap: nowrap; }
 .ligne-joueur select { flex: 0 1 auto; min-width: 0; }
@@ -828,6 +830,21 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   .ligne-joueur { flex-wrap: wrap; }
   .ligne-joueur input { flex: 1 1 130px; }
   .ligne-joueur select { flex: 1 1 130px; }
+
+  /* ── Accueil : commencer la partie juste sous le choix des joueurs ───────── */
+  /* `display: contents` défait la grille sans toucher au bureau : les cartes
+     deviennent frères de la rangée de boutons, et l'ordre se règle au doigt. */
+  .page-accueil { display: flex; flex-direction: column; gap: 16px; }
+  .page-accueil .grille--2 { display: contents; }
+  .carte-joueurs { order: 1; }
+  .actions-accueil { order: 2; margin-top: 0 !important; flex-direction: column; align-items: stretch; }
+  .carte-apercu { order: 3; }
+  .carte + .carte { margin-top: 0; }
+
+  /* ── Table : la colonne de droite n'a pas sa place sur un téléphone ──────── */
+  /* Combinaisons et journal repoussaient la partie hors de l'écran ; le journal
+     reste consultable sur grand écran. */
+  .colonne-cote { display: none; }
 
   /* ── Entête de partie : deux lignes, pas cinq ────────────────────────────── */
   /* Les repères de manche défilent sur place plutôt que de s'empiler, et les

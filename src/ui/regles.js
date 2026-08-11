@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.15';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.15';
+import { h } from './dom.js?v=1.16';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.16';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.15';
+} from '../core/config.js?v=1.16';
 
 export function vueRegles() {
   return h('div.page',
@@ -100,6 +100,10 @@ export function vueRegles() {
         h('span', { html: SVG_TORNADE_EVEILLEE, style: { width: '30px', color: 'var(--bleu)' } }),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
+        'Il faut être réveillé pour agir : les vaches comme les ZzZ ne comptent que Tornade '
+        + 'éveillée, et les tornades ne comptent que si l’on dort encore. Seuls l’attrape et '
+        + 'les deux échecs valent dans les deux états.'),
+      h('div.encart', { style: { marginTop: '10px' } },
         'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
         + 'vers le voisin, puis l’effet s’applique.'),
     ),

@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.15';
-import { store } from './store.js?v=1.15';
-import { aller } from './app.js?v=1.15';
-import { lancerPartie, partieEnCours } from './table.js?v=1.15';
-import { construireConfig, variables } from './variables.js?v=1.15';
+import { h, remplacer } from './dom.js?v=1.16';
+import { store } from './store.js?v=1.16';
+import { aller } from './app.js?v=1.16';
+import { lancerPartie, partieEnCours } from './table.js?v=1.16';
+import { construireConfig, variables } from './variables.js?v=1.16';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.15';
-import { pastilleSymbole } from './icons.js?v=1.15';
-import { randomSeed } from '../core/rng.js?v=1.15';
+} from '../core/config.js?v=1.16';
+import { pastilleSymbole } from './icons.js?v=1.16';
+import { randomSeed } from '../core/rng.js?v=1.16';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -47,7 +47,7 @@ export function vueAccueil() {
   let nb = store.get('nbJoueurs', 6);
   let joueurs = reglagesJoueurs(nb);
 
-  const racine = h('div.page');
+  const racine = h('div.page.page-accueil');
 
   function sauver() {
     store.set('nbJoueurs', nb);
@@ -84,7 +84,7 @@ export function vueAccueil() {
 
       h('div.grille.grille--2', carteJoueurs(), carteApercu()),
 
-      h('div.rangee', { style: { justifyContent: 'center', marginTop: '26px' } },
+      h('div.rangee.actions-accueil', { style: { justifyContent: 'center', marginTop: '26px' } },
         h('button.btn.btn--primaire.btn--grand', { onclick: demarrer }, 'Commencer la partie'),
         h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/variables'); } },
           'Variables'),
@@ -103,7 +103,7 @@ export function vueAccueil() {
 
   function carteJoueurs() {
     const mep = infosMiseEnPlace(nb);
-    return h('div.carte',
+    return h('div.carte.carte-joueurs',
       h('div.titre-section', 'Joueurs'),
       h('div.rangee', { style: { marginBottom: '16px' } },
         h('div.segment', ...[3, 4, 5, 6, 7, 8, 9].map((n) => h('button', {
@@ -160,7 +160,7 @@ export function vueAccueil() {
     const compte = {};
     for (const f of cfg.faces) compte[f] = (compte[f] || 0) + 1;
 
-    return h('div.carte',
+    return h('div.carte.carte-apercu',
       h('div.rangee', { style: { marginBottom: '14px' } },
         h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Variables de la partie'),
         h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/variables'); } }, 'Modifier'),

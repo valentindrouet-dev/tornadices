@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.15';
+export const VERSION = '1.16';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.16',
+    date: '11/08/2026',
+    notes: [
+      'Règle : endormir un voisin demande d’être réveillé, comme retourner une vache. Les trois ZzZ rejoignent les trois vaches du côté « Tornade éveillée » ; les trois tornades restent réservées au dormeur ; l’attrape et les deux échecs valent dans les deux états.',
+      'Ce que cela change, mesuré : les parties raccourcissent nettement — une table de Pénibles passe de 12,3 à 7,5 min, une table de Très pénibles de 15,5 à 8,8 min. Le cercle vicieux où tout le monde se rendormait est rompu, et les vaches remontent partout.',
+      'Les caractères Pénible et Très pénible visent maintenant la tornade tant qu’ils dorment : sans réveil, ils ne pourraient plus endormir personne. Une fois debout, ils reprennent leur ZzZ.',
+      'Mobile : le bouton « Commencer la partie » passe juste sous le choix des joueurs, avant le rappel des variables.',
+      'Mobile : les combinaisons et le journal disparaissent de la table — ils repoussaient la partie hors de l’écran. Ils restent affichés sur grand écran.',
+    ],
+  },
   {
     version: '1.15',
     date: '11/08/2026',

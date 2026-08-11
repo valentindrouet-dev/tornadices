@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.15     # estampille tout le site
+node scripts/version.mjs 1.16     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.15`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.16`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -100,14 +100,18 @@ Chaque campagne est reproductible : même graine, mêmes chiffres.
 
 Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 
-| Symbole | Combinaison | Effet | Alerte |
-|---|---|---|---|
-| Tornade | 3 | Réveille votre Tornade | bleu |
-| Vache | 3 | Retourne un jeton de votre équipe | vert |
-| ZzZ | 3 | Endort un voisin | violet |
-| Éclair | 3 | Passe le lot et tente d’attraper le suivant | jaune clignotant orange |
-| Joker | 3 | Le lot part sans rien tenter (règle décochable) | rouge |
-| X | 2 | Le lot part sans rien tenter | rouge |
+| Symbole | Combinaison | Effet | Possible quand | Alerte |
+|---|---|---|---|---|
+| Tornade | 3 | Réveille votre Tornade | Tornade **endormie** | bleu |
+| Vache | 3 | Retourne un jeton de votre équipe | Tornade **éveillée** | vert |
+| ZzZ | 3 | Endort un voisin | Tornade **éveillée** | violet |
+| Éclair | 3 | Passe le lot et tente d’attraper le suivant | toujours | jaune clignotant orange |
+| Joker | 3 | Le lot part sans rien tenter (règle décochable) | toujours | rouge |
+| X | 2 | Le lot part sans rien tenter | toujours | rouge |
+
+Il faut donc être réveillé pour agir, aussi bien sur ses propres jetons que sur
+le sommeil des autres : seuls l’attrape et les deux échecs valent dans les deux
+états.
 
 On relance qui l’on veut, autant de fois qu’on veut — un clic sur un dé le
 relance, la barre espace les relance tous — **sauf les X**, qui restent figés sur
@@ -182,9 +186,9 @@ caractère, et repris quand la Tornade change d’état.
 |---|---|
 | **Logique** | tornades tant qu’il dort, vaches une fois réveillé. Rien d’autre. |
 | **Agressif** | éclairs trois lots sur quatre, sinon le coup logique |
-| **Très agressif** | éclairs, uniquement |
-| **Pénible** | ZzZ trois lots sur quatre, sinon le coup logique |
-| **Très pénible** | ZzZ, uniquement |
+| **Très agressif** | éclairs, uniquement — en dormant s’il le faut, l’attrape ne demande rien |
+| **Pénible** | la tornade pour se réveiller, puis ZzZ trois lots sur quatre |
+| **Très pénible** | la tornade pour se réveiller, puis ZzZ, uniquement |
 | **Équilibré** | emprunte à chaque lot le style du Logique, de l’Agressif ou du Pénible |
 | **Idiot** | vise au hasard, même l’inutile, et garde le mauvais dé une fois sur trois |
 
@@ -193,29 +197,29 @@ Ce que chacun produit, six exemplaires du même caractère autour de la table,
 
 | Caractère | Durée | Réveils | Vaches | ZzZ | Attrapes |
 |---|---|---|---|---|---|
-| Logique | 5,0 min | 35 | **24** | 14 | 26 |
-| Agressif | 7,5 min | 32 | 16 | 18 | 82 |
-| Très agressif | 8,6 min | 29 | 11 | 17 | **115** |
-| Pénible | 12,3 min | 65 | 15 | 58 | 68 |
-| Très pénible | 15,5 min | 70 | 10 | **68** | 92 |
-| Équilibré | 7,7 min | 42 | 19 | 28 | 55 |
-| Idiot | 9,7 min | 40 | 17 | 27 | 64 |
+| Logique | 4,6 min | 30 | **24** | 7 | 24 |
+| Agressif | 7,0 min | 27 | 17 | 8 | 76 |
+| Très agressif | 7,8 min | 24 | 12 | 7 | **105** |
+| Pénible | 7,5 min | 48 | 21 | 28 | 40 |
+| Très pénible | 8,8 min | 58 | 17 | **40** | 48 |
+| Équilibré | 5,9 min | 33 | 21 | 13 | 44 |
+| Idiot | 7,9 min | 28 | 18 | 11 | 51 |
 
 Les attrapes ne tombent jamais à zéro, même chez le Logique : trois éclairs
 forcent le passage, qu’on les ait cherchés ou non.
 
 Et leur force réelle, équipe contre équipe, 300 parties à 6 joueurs — Logique >
-Équilibré > Pénible > Agressif > Très pénible > Très agressif > Idiot :
+Pénible ≈ Équilibré > Très pénible > Agressif > Très agressif ≈ Idiot :
 
 | Bleus \ Jaunes | Logique | Agressif | Très agr. | Pénible | Très pén. | Équilibré | Idiot |
 |---|---|---|---|---|---|---|---|
-| **Logique** | 49 % | 95 % | 98 % | 83 % | 91 % | 75 % | 99 % |
-| **Agressif** | 6 % | 49 % | 74 % | 40 % | 67 % | 21 % | 79 % |
-| **Très agressif** | 4 % | 27 % | 53 % | 26 % | 49 % | 13 % | 56 % |
-| **Pénible** | 14 % | 68 % | 80 % | 52 % | 72 % | 46 % | 89 % |
-| **Très pénible** | 7 % | 38 % | 44 % | 30 % | 49 % | 21 % | 65 % |
-| **Équilibré** | 25 % | 75 % | 88 % | 58 % | 78 % | 45 % | 91 % |
-| **Idiot** | 3 % | 31 % | 45 % | 15 % | 34 % | 9 % | 50 % |
+| **Logique** | 54 % | 93 % | 99 % | 72 % | 82 % | 78 % | 98 % |
+| **Agressif** | 5 % | 49 % | 78 % | 17 % | 35 % | 18 % | 78 % |
+| **Très agressif** | 2 % | 26 % | 50 % | 9 % | 21 % | 9 % | 54 % |
+| **Pénible** | 28 % | 80 % | 91 % | 52 % | 64 % | 56 % | 93 % |
+| **Très pénible** | 18 % | 70 % | 80 % | 35 % | 51 % | 41 % | 90 % |
+| **Équilibré** | 28 % | 82 % | 92 % | 49 % | 58 % | 57 % | 94 % |
+| **Idiot** | 2 % | 26 % | 49 % | 5 % | 12 % | 8 % | 52 % |
 
 La diagonale à ~50 % vérifie que rien ne penche du côté des Bleus : deux équipes
 du même caractère font jeu égal.

@@ -153,7 +153,8 @@ export const COMBOS_TORNADE = [
     nom: 'Endormi',
     libelle: 'Endormez un de vos voisins',
     requis: { zzz: 3 },
-    face: 'toutes',
+    // Comme la vache : il faut être réveillé pour endormir quelqu'un d'autre.
+    face: 'active',
     obligatoire: false,
   },
   {
@@ -349,14 +350,16 @@ export const PROFILS_IA = {
   },
   penible: {
     id: 'penible', nom: 'Pénible',
-    vise: { endormi: { zzz: 3, tornade: 1 }, eveille: { zzz: 3, vache: 1 } },
+    // Endormir demande d'être réveillé : tant qu'il dort, il vise la tornade.
+    vise: { endormi: { tornade: 1 }, eveille: { zzz: 3, vache: 1 } },
     lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.45,
     reflexe: 760, ecartReflexe: 200, adresse: 0.5, esquive: 0.6, erreur: 0.03,
     desc: 'Endort ses voisins trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
   },
   tresPenible: {
     id: 'tresPenible', nom: 'Très pénible',
-    vise: { endormi: { zzz: 1 }, eveille: { zzz: 1 } },
+    // Il se réveille parce qu'il le faut, puis ne joue plus que le ZzZ.
+    vise: { endormi: { tornade: 1 }, eveille: { zzz: 1 } },
     lancersAvantPasse: 13, ecartLancers: 4, peur: 0.2,
     reflexe: 700, ecartReflexe: 180, adresse: 0.48, esquive: 0.6, erreur: 0.05,
     desc: 'Ne cherche que les ZzZ : il ne joue pas pour gagner, il joue pour gêner.',
