@@ -292,6 +292,26 @@ console.log('\nJokers');
       choisi && choisi.id !== 'echecJokers', choisi ? choisi.id : 'aucune');
   }
 
+  // La carte du jour ne se discute pas : elle est jouée sans proposer le choix.
+  {
+    const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
+    const cfg = configParDefaut(6);
+    // « Journée intensive » : 2 tornades + 2 vaches, servies par deux jokers.
+    cfg.cartes = ['intensive'];
+    cfg.melangerCartes = false;
+    const m = new Moteur(cfg, humains, 'carte-office');
+    const j = m.joueurs[0];
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    poser(j.lots[0], ['tornade', 'tornade', 'joker', 'joker']);
+    const dispo = m.combosDisponibles(j);
+    verifier(`la carte et le réveil sont servis au même jet (${dispo.map((d) => d.id).join(', ')})`,
+      dispo.length > 1 && dispo.some((d) => d.source === 'journee'));
+    m._finLancer(j, []);
+    verifier('la carte est jouée d’office, aucun choix n’est proposé',
+      j.departEnAttente && !j.departEnAttente.options
+      && j.departEnAttente.dispo.source === 'journee');
+  }
+
   // Le joueur humain tranche entre les combinaisons que le joker lui sert.
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
@@ -361,6 +381,56 @@ console.log('\nAttrape gagnante');
     m.jouerJusquAuBout();
     verifier('sans la variante, aucune manche n’est emportée à l’attrape',
       !m.journal.some((e) => /attrape/i.test(e.texte) && /remportent la manche/.test(e.texte)));
+  }
+}
+
+// ── 3 ter bis. Les moments à souligner sont signalés ─────────────────────────
+console.log('\nÉclats d\u2019écran');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const poser = (lot, syms) => {
+    lot.des.forEach((d, i) => {
+      d.sym = syms[i]; d.roule = false; d.finRoule = 0; d.verrou = syms[i] === 'x';
+    });
+    lot.lance = true;
+  };
+
+  // Réveil et échec : signalés pour celui qui les vit.
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'flash-1');
+    const vus = [];
+    m.onFlash = (type, pid) => vus.push(`${type}:${pid}`);
+    const j = m.joueurs.find((x) => x.lots.length);
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'vache']);
+    m._finLancer(j, []);
+    m.avancerJusqua(m.now + 2000);
+    verifier(`le réveil est signalé (${vus.join(', ') || 'rien'})`, vus.includes(`reveil:${j.id}`));
+  }
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'flash-2');
+    const vus = [];
+    m.onFlash = (type, pid) => vus.push(`${type}:${pid}`);
+    const j = m.joueurs.find((x) => x.lots.length);
+    poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
+    m._finLancer(j, []);
+    verifier(`l’échec est signalé (${vus.join(', ') || 'rien'})`, vus.includes(`echec:${j.id}`));
+  }
+  // Endormissement : signalé pour la victime, pas pour l'endormeur.
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'flash-3');
+    const vus = [];
+    m.onFlash = (type, pid) => vus.push(`${type}:${pid}`);
+    const j = m.joueurs.find((x) => x.lots.length);
+    j.eveille = true;
+    const voisins = m._voisinsDirects(j);
+    voisins.forEach((v) => { v.eveille = true; });
+    poser(j.lots[0], ['zzz', 'zzz', 'zzz', 'vache']);
+    m._finLancer(j, []);
+    m.avancerJusqua(m.now + 2000);
+    const dormeur = vus.find((x) => x.startsWith('endormi:'));
+    verifier(`l’endormissement est signalé pour la victime (${vus.join(', ') || 'rien'})`,
+      !!dormeur && dormeur !== `endormi:${j.id}`
+      && voisins.some((v) => dormeur === `endormi:${v.id}`));
   }
 }
 

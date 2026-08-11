@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.17';
+import { h, remplacer, duree, vider } from './dom.js?v=1.18';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.17';
-import { Moteur } from '../core/engine.js?v=1.17';
+} from './icons.js?v=1.18';
+import { Moteur } from '../core/engine.js?v=1.18';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.17';
-import { ajouterHistorique } from './store.js?v=1.17';
-import { aller } from './app.js?v=1.17';
+} from '../core/config.js?v=1.18';
+import { ajouterHistorique } from './store.js?v=1.18';
+import { aller } from './app.js?v=1.18';
 
 let moteur = null;
 let vitesse = 1;
@@ -54,6 +54,9 @@ function alerteDesDes(lot, combos) {
   }
   return null;
 }
+
+// Couleurs des éclats d'écran : la vache pour tous, l'échec et le sommeil pour soi.
+const COULEUR_ECLAT = { vache: '#52a72e', echec: '#e2000f', endormi: '#8794a3' };
 
 /** Sous cette largeur, la table passe en disposition verticale. */
 const surMobile = () => window.innerWidth <= 860;
@@ -167,29 +170,42 @@ export function vueTable() {
   window.addEventListener('resize', placerSieges);
 
   // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
+  // Les points sont pris sur les sièges eux-mêmes, en pixels : la disposition en
+  // colonne du téléphone n'a pas de coordonnées en pourcentage, et le vol doit
+  // s'y voir comme sur grand écran.
   const enVol = [];
-  function animerPassage(de, vers, motif, lot, dureeJeu) {
-    const a = typeof de === 'number' ? positions[de] : de;
-    const b = typeof vers === 'number' ? positions[vers] : vers;
-    volLot(a, b, motif, lot ? lot.des : [], dureeJeu);
+
+  function pointDe(cible) {
+    const z = zoneTable.getBoundingClientRect();
+    const el = cible === 'centre'
+      ? (!surMobile() && elTapis ? elTapis : zoneTable)
+      : elSieges[cible];
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - z.left, y: r.top + r.height / 2 - z.top };
   }
 
-  function volLot(a, b, motif, des, dureeJeu) {
-    if (surMobile()) return;   // en disposition verticale, sans objet
+  function animerPassage(de, vers, motif, lot, dureeJeu) {
+    volLot(de, vers, motif, lot ? lot.des : [], dureeJeu);
+  }
+
+  function volLot(de, vers, motif, des, dureeJeu) {
+    const a = pointDe(de);
+    const b = pointDe(vers);
     if (!a || !b) return;
     // Le vol dure exactement le temps de jeu du passage, à la vitesse d'affichage.
     const duree = Math.max(80, (dureeJeu ?? 1000) / vitesse);
     const el = h('div', { class: `lot-vol lot-vol--${motif}` },
       ...des.slice(0, 4).map((d) => faceDe(d.sym, { taille: 'petit' })));
     el.style.transitionDuration = `${duree}ms, ${duree}ms, 160ms`;
-    el.style.left = `${a.x}%`;
-    el.style.top = `${a.y}%`;
+    el.style.left = `${a.x}px`;
+    el.style.top = `${a.y}px`;
     zoneTable.appendChild(el);
     enVol.push(el);
     while (enVol.length > 6) enVol.shift().remove();
     requestAnimationFrame(() => {
-      el.style.left = `${b.x}%`;
-      el.style.top = `${b.y}%`;
+      el.style.left = `${b.x}px`;
+      el.style.top = `${b.y}px`;
     });
     setTimeout(() => { el.style.opacity = '0'; }, duree);
     setTimeout(() => {
@@ -283,7 +299,42 @@ export function vueTable() {
     if (e.type === 'touche' && e.pid != null) touchesRecentes.set(e.pid, moteur.now);
   };
   moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
-  moteur.onJeton = (pid, equipe, nombre) => volJeton(pid, equipe, nombre);
+  moteur.onJeton = (pid, equipe, nombre) => {
+    volJeton(pid, equipe, nombre);
+    eclat(COULEUR_ECLAT.vache);      // n'importe quel joueur : la vache se fête
+  };
+
+  // Les moments qui comptent se voient sans rien lire : la couleur envahit
+  // l'écran une demi-seconde. Seul le réveil secoue en plus — c'est le seul qui
+  // vous concerne au point de vous faire sursauter.
+  let eclatCourant = null;
+  function eclat(couleur, { secousse = false } = {}) {
+    if (eclatCourant) eclatCourant.remove();
+    const el = h('div.flash');
+    el.style.setProperty('--c-flash', couleur);
+    document.body.appendChild(el);
+    eclatCourant = el;
+    setTimeout(() => {
+      el.remove();
+      if (eclatCourant === el) eclatCourant = null;
+    }, 640);
+    // La secousse porte sur la table seule : le panneau du joueur y est fixé au
+    // bas de l'écran, et un ancêtre transformé le décrocherait.
+    if (secousse) {
+      zoneTable.classList.add('table-zone--secousse');
+      setTimeout(() => zoneTable.classList.remove('table-zone--secousse'), 440);
+    }
+  }
+
+  moteur.onFlash = (type, pid) => {
+    const j = moteur.joueurs[pid];
+    if (!j) return;
+    // Réveil, échec et endormissement ne concernent que celui qui les subit.
+    if (j.type !== 'humain') return;
+    if (type === 'reveil') eclat(COULEURS_EQUIPE[j.equipe].hex, { secousse: true });
+    else if (type === 'echec') eclat(COULEUR_ECLAT.echec);
+    else if (type === 'endormi') eclat(COULEUR_ECLAT.endormi);
+  };
 
   // Les moments qui comptent s'affichent au-dessus de la zone du joueur concerné :
   // au centre, on ne savait pas de qui l'on parlait, et deux joueurs ne pouvaient
@@ -364,7 +415,7 @@ export function vueTable() {
 
     // Les lots regagnent le centre de la table.
     for (const pid of info.porteursAvant) {
-      volLot(positions[pid], CENTRE, 'retour', desVides(), d * 0.34);
+      volLot(pid, 'centre', 'retour', desVides(), d * 0.34);
     }
     // La carte suivante glisse depuis la pioche.
     setTimeout(() => elCarte.classList.add('coin--echange'), d * 0.45);
@@ -384,7 +435,7 @@ export function vueTable() {
     elCarte.classList.remove('coin--echange');
     // Les lots repartent du centre vers leurs nouveaux porteurs.
     const d = Math.max(260, 700 / vitesse);
-    for (const pid of info.porteurs) volLot(CENTRE, positions[pid], 'retour', desVides(), d);
+    for (const pid of info.porteurs) volLot('centre', pid, 'retour', desVides(), d);
   };
 
   function desVides() {

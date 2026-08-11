@@ -167,7 +167,7 @@ export const COMBOS_TORNADE = [
   },
   {
     id: 'blocage',
-    nom: 'Bloqué',
+    nom: 'Échec',
     libelle: 'Deux dés figés : le lot part sans rien tenter',
     requis: { x: 2 },
     face: 'toutes',

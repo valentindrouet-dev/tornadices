@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.17';
+import { makeRng } from './rng.js?v=1.18';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.17';
+} from './config.js?v=1.18';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -92,6 +92,7 @@ export class Moteur {
     this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
     this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
     this.onJeton = null;       // (idJoueur, equipe, nombre, source) — un jeton est retourné
+    this.onFlash = null;       // (type, idJoueur) — reveil | echec | endormi, à souligner
     this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
     this.onDebutManche = null; // ({manche, carte, porteurs})
     this.transition = null;    // entre deux manches : les dés reviennent au centre
@@ -512,11 +513,14 @@ export class Moteur {
   /**
    * Entre quelles combinaisons un joueur humain peut trancher. Le joker en sert
    * volontiers plusieurs au même jet : c'est à lui de dire laquelle il joue.
-   * Un échec ne se choisit pas, et « Bloqué » ne se choisit jamais contre mieux.
+   * Un échec ne se choisit pas, et l'Échec ne se choisit jamais contre mieux.
    */
   _optionsDeChoix(j, dispo) {
     if (j.type !== 'humain' || dispo.length < 2) return null;
     if (dispo.some((d) => d.combo && d.combo.echec)) return null;
+    // La combinaison de la carte du jour est jouée d'office : elle vaut mieux que
+    // tout ce qu'on pourrait lui préférer, il n'y a pas à hésiter.
+    if (dispo.some((d) => d.source === 'journee')) return null;
     const options = dispo.filter((d) => d.id !== 'blocage');
     return options.length > 1 ? options : null;
   }
@@ -655,6 +659,7 @@ export class Moteur {
     const dispo = this.combosDisponibles(j);
     const choisi = this._comboAJouer(j, dispo);
     if (choisi) {
+      if (choisi.combo && choisi.combo.echec) this._flash('echec', j.id);
       this._demanderDepart(
         j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi, null,
         this._optionsDeChoix(j, dispo),
@@ -758,7 +763,7 @@ export class Moteur {
     if (motif === 'megarde') return 'Mégarde';
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
-      if (dispo.id === 'blocage') return 'Bloqué';
+      if (dispo.id === 'blocage') return 'Échec';
       if (dispo.id === 'echecJokers') return 'Trois jokers';
       if (dispo.source === 'journee') return `${this.carte.court} !`;
       const def = this.cfg.combos.find((c) => c.id === dispo.id);
@@ -893,6 +898,7 @@ export class Moteur {
     switch (effet) {
       case 'reveil':
         j.eveille = true; j.stats.reveils++;
+        this._flash('reveil', j.id);
         this._annoncer('Réveil !', 'bleu', j.id);
         break;
       case 'blocage':
@@ -914,6 +920,7 @@ export class Moteur {
         if (cible && cible.eveille) {
           cible.eveille = false;
           cible.stats.foisEndormi++;
+          this._flash('endormi', cible.id);
           this._annoncer(`Endort ${cible.nom}`, 'violet', j.id);
         }
         break;
@@ -921,7 +928,10 @@ export class Moteur {
       case 'endormirVoisins': {
         const noms = [];
         for (const v of this._voisinsDirects(j)) {
-          if (v.eveille) { v.eveille = false; v.stats.foisEndormi++; noms.push(v.nom); }
+          if (v.eveille) {
+            v.eveille = false; v.stats.foisEndormi++; noms.push(v.nom);
+            this._flash('endormi', v.id);
+          }
         }
         this._annoncer(
           noms.length ? `Endort ${noms.join(' et ')}` : 'Endort ses voisins', 'violet', j.id,
@@ -1151,6 +1161,11 @@ export class Moteur {
    */
   _annoncer(texte, couleur = 'bleu', pid = null) {
     if (this.onAnnonce) this.onAnnonce(texte, couleur, pid);
+  }
+
+  /** Un moment à souligner d'un éclat de couleur. L'affichage décide du reste. */
+  _flash(type, pid) {
+    if (this.onFlash) this.onFlash(type, pid);
   }
 
   _log(texte, type = 'info', pid = null, extra = null) {

@@ -1,17 +1,17 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.17';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.17';
-import { store } from './store.js?v=1.17';
-import { lancerCampagne } from '../core/sim.js?v=1.17';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.18';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.18';
+import { store } from './store.js?v=1.18';
+import { lancerCampagne } from '../core/sim.js?v=1.18';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-} from '../core/config.js?v=1.17';
+} from '../core/config.js?v=1.18';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.17';
+} from '../core/proba.js?v=1.18';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -458,7 +458,7 @@ function tableauFrequences(objet, total, unite) {
 
 const LIBELLES = {
   reveil: 'Réveil (3 tornades)', vache: 'Vache', endormir: 'Endormir un voisin',
-  collision: 'Attrape (3 éclairs)', blocage: 'Bloqué (2 X)',
+  collision: 'Attrape (3 éclairs)', blocage: 'Échec (2 X)',
   echecJokers: 'Échec (3 jokers)', fatigue: 'Fatigue', intensive: 'Intensive',
   sansVent: 'Sans vent', chance: 'Chance', troupeau: 'Troupeau',
   difference: 'Différence', vaillants: 'Vaillants',

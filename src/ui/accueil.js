@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.17';
-import { store } from './store.js?v=1.17';
-import { aller } from './app.js?v=1.17';
-import { lancerPartie, partieEnCours } from './table.js?v=1.17';
-import { construireConfig, variables } from './variables.js?v=1.17';
+import { h, remplacer } from './dom.js?v=1.18';
+import { store } from './store.js?v=1.18';
+import { aller } from './app.js?v=1.18';
+import { lancerPartie, partieEnCours } from './table.js?v=1.18';
+import { construireConfig, variables } from './variables.js?v=1.18';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.17';
-import { pastilleSymbole } from './icons.js?v=1.17';
-import { randomSeed } from '../core/rng.js?v=1.17';
+} from '../core/config.js?v=1.18';
+import { pastilleSymbole } from './icons.js?v=1.18';
+import { randomSeed } from '../core/rng.js?v=1.18';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',

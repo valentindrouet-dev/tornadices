@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.17';
+export const VERSION = '1.18';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.18',
+    date: '11/08/2026',
+    notes: [
+      'La vignette d’un joueur réveillé prend la couleur de son équipe — bleu, jaune ou vert pleins — pendant que celle d’un dormeur reste grise. D’un coup d’œil sur la table, on sait qui est debout sans lire une pastille.',
+      'Une combinaison de carte Journée est jouée d’office : plus de choix proposé quand elle sort en même temps qu’une autre. Quatre vaches valent mieux que trois, il n’y a pas à hésiter.',
+      'Le double X s’appelle désormais Échec, partout : dans le journal, dans la liste des combinaisons, au Laboratoire et dans les règles.',
+      'Les moments qui comptent éclatent à l’écran : la couleur de votre équipe et une secousse de la table quand vous vous réveillez, du vert dès qu’un joueur retourne une vache, du rouge sur votre échec, du gris quand on vous rendort. Le mouvement s’efface si le système demande à réduire les animations.',
+      'Sur téléphone, les lots traversent enfin la table d’une zone de jeu à l’autre, comme sur grand écran : le vol se calcule maintenant en pixels sur les sièges eux-mêmes, et non plus sur des coordonnées qui n’existaient qu’en disposition circulaire.',
+    ],
+  },
   {
     version: '1.17',
     date: '11/08/2026',

@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.17';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.17';
+import { h } from './dom.js?v=1.18';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.18';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.17';
+} from '../core/config.js?v=1.18';
 
 export function vueRegles() {
   return h('div.page',
@@ -113,7 +113,7 @@ export function vueRegles() {
       h('p.petit', 'Dès qu’une combinaison sort, la zone du joueur s’entoure d’un halo de couleur : '
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
-        ...[['rouge', 'Deux X ou trois jokers — le lot part'], ['jaune', 'Trois éclairs — attrape'],
+        ...[['rouge', 'Échec — deux X ou trois jokers, le lot part'], ['jaune', 'Trois éclairs — attrape'],
           ['bleu', 'Trois tornades — réveil'], ['vert', 'Trois vaches — jeton'],
           ['violet', 'Trois ZzZ — endormi']].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),

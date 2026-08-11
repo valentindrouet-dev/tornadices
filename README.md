@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.17     # estampille tout le site
+node scripts/version.mjs 1.18     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.17`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.18`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -43,7 +43,7 @@ si l'écran est en retard.
 |---|---|
 | **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
 | **Variables** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Journée, graine. |
-| **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. |
+| **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. Le siège d'un joueur réveillé prend la couleur de son équipe, celui d'un dormeur reste gris. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
 | **Règles** | Les règles telles que le moteur les applique. |
@@ -123,8 +123,8 @@ Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 | Vache | 3 | Retourne un jeton de votre équipe | Tornade **éveillée** | vert |
 | ZzZ | 3 | Endort un voisin | Tornade **éveillée** | violet |
 | Éclair | 3 | Passe le lot et tente d’attraper le suivant | toujours | jaune clignotant orange |
-| Joker | 3 | Le lot part sans rien tenter (règle décochable) | toujours | rouge |
-| X | 2 | Le lot part sans rien tenter | toujours | rouge |
+| Joker | 3 | Échec : le lot part sans rien tenter (règle décochable) | toujours | rouge |
+| X | 2 | Échec : le lot part sans rien tenter | toujours | rouge |
 
 Il faut donc être réveillé pour agir, aussi bien sur ses propres jetons que sur
 le sommeil des autres : seuls l’attrape et les deux échecs valent dans les deux
@@ -272,8 +272,9 @@ des valeurs par défaut explicites, toutes modifiables :
    X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
    serait injouable.
 5. **Quand plusieurs combinaisons sortent au même jet**, un joueur humain
-   choisit ; à défaut de réponse, et pour les IA, la carte Journée passe avant
-   tout, puis l’attrape, puis les combinaisons de gain, et « Bloqué » en
+   choisit — sauf si la carte Journée est de la partie, elle est alors jouée
+   d’office, sans hésitation possible ; à défaut de réponse, et pour les IA, la carte Journée passe avant
+   tout, puis l’attrape, puis les combinaisons de gain, et l’Échec en
    dernier — sans cette priorité, « Journée de la chance » (quatre éclairs)
    serait inatteignable.
 6. **Trois jokers l’emportent sur tout le reste.** Les règles disent que trois
