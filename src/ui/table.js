@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.19';
+import { h, remplacer, duree, vider } from './dom.js?v=1.20';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.19';
-import { Moteur } from '../core/engine.js?v=1.19';
+} from './icons.js?v=1.20';
+import { Moteur } from '../core/engine.js?v=1.20';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.19';
-import { ajouterHistorique } from './store.js?v=1.19';
-import { aller } from './app.js?v=1.19';
+} from '../core/config.js?v=1.20';
+import { ajouterHistorique } from './store.js?v=1.20';
+import { aller } from './app.js?v=1.20';
 
 let moteur = null;
 let vitesse = 1;
@@ -39,27 +39,22 @@ const TOUCHES = [
   { lancer: 'KeyK', passer: 'KeyM', libLancer: 'K', libPasser: 'M' },
 ];
 
-/**
- * Couleur d'alerte à afficher autour de la zone d'un joueur, déduite des seuls
- * dés visibles : rouge à deux X, jaune à trois éclairs, puis bleu, vert, violet.
- */
-function alerteDesDes(lot, combos) {
-  if (!lot || !lot.lance) return null;
-  const c = {};
-  for (const d of lot.des) if (d.sym) c[d.sym] = (c[d.sym] || 0) + 1;
-  for (const id of ['echecJokers', 'blocage', 'collision', 'reveil', 'vache', 'endormir']) {
-    const combo = combos.find((x) => x.id === id);
-    if (!combo || exigenceVide(combo.requis)) continue;
-    if (comboServie(c, combo.requis)) return ALERTES[id];
-  }
-  return null;
-}
-
 // Couleurs des éclats d'écran : la vache pour tous, l'échec et le sommeil pour soi.
 const COULEUR_ECLAT = { vache: '#52a72e', echec: '#e2000f', endormi: '#8794a3' };
 
 /** Sous cette largeur, la table passe en disposition verticale. */
 const surMobile = () => window.innerWidth <= 860;
+
+/**
+ * Couleur d'alerte à afficher autour de la zone d'un joueur. Elle suit ce que le
+ * moteur juge jouable : trois éclairs sans voisin à attraper n'annoncent rien.
+ */
+function alerteDesCombos(dispo) {
+  for (const id of ['echecJokers', 'blocage', 'collision', 'reveil', 'vache', 'endormir']) {
+    if (dispo.some((d) => d.id === id)) return ALERTES[id];
+  }
+  return null;
+}
 
 /** Ne reconstruit `hote` que si la signature a changé. */
 function siChange(hote, signature, construire) {
@@ -332,8 +327,8 @@ export function vueTable() {
   };
 
   // Les moments qui comptent se voient sans rien lire : la couleur envahit
-  // l'écran une demi-seconde. Seul le réveil secoue en plus — c'est le seul qui
-  // vous concerne au point de vous faire sursauter.
+  // l'écran une seconde et quart. Seul le rendormissement secoue la table — on
+  // vous a coupé les jambes, l'écran le dit.
   let eclatCourant = null;
   function eclat(couleur, { secousse = false } = {}) {
     if (eclatCourant) eclatCourant.remove();
@@ -344,7 +339,7 @@ export function vueTable() {
     setTimeout(() => {
       el.remove();
       if (eclatCourant === el) eclatCourant = null;
-    }, 640);
+    }, 1280);
     // La secousse porte sur la table seule : le panneau du joueur y est fixé au
     // bas de l'écran, et un ancêtre transformé le décrocherait.
     if (secousse) {
@@ -358,9 +353,9 @@ export function vueTable() {
     if (!j) return;
     // Réveil, échec et endormissement ne concernent que celui qui les subit.
     if (j.type !== 'humain') return;
-    if (type === 'reveil') eclat(COULEURS_EQUIPE[j.equipe].hex, { secousse: true });
+    if (type === 'reveil') eclat(COULEURS_EQUIPE[j.equipe].hex);
     else if (type === 'echec') eclat(COULEUR_ECLAT.echec);
-    else if (type === 'endormi') eclat(COULEUR_ECLAT.endormi);
+    else if (type === 'endormi') eclat(COULEUR_ECLAT.endormi, { secousse: true });
   };
 
   // Les moments qui comptent s'affichent au-dessus de la zone du joueur concerné :
@@ -503,7 +498,7 @@ export function vueTable() {
   function alerteDe(j) {
     const retenue = alertesRetenues.get(j.id);
     if (retenue && moteur.now < retenue.fin) return retenue.couleur;
-    return alerteDesDes(j.lots[0], moteur.cfg.combos);
+    return alerteDesCombos(moteur.combosDisponibles(j));
   }
 
   // ── Boucle ────────────────────────────────────────────────────────────────

@@ -384,6 +384,41 @@ console.log('\nAttrape gagnante');
   }
 }
 
+// ── 3 ter. L'attrape suppose quelqu'un à attraper ────────────────────────────
+console.log('\nAttrape à vide');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const poser = (lot, syms) => {
+    lot.des.forEach((d, i) => {
+      d.sym = syms[i]; d.roule = false; d.finRoule = 0; d.verrou = syms[i] === 'x';
+    });
+    lot.lance = true;
+  };
+
+  const m = new Moteur(configParDefaut(6), spec, 'attrape-vide');
+  const j = m.joueurs.find((x) => x.lots.length);
+  const suivant = m._suivant(j);
+  const lot = j.lots[0];
+
+  // Voisin les mains vides : les trois éclairs ne valent rien.
+  suivant.lots = [];
+  poser(lot, ['eclair', 'eclair', 'eclair', 'tornade']);
+  verifier('voisin sans lot : l’attrape n’est pas servie',
+    !m.combosDisponibles(j).some((d) => d.id === 'collision'));
+  m._finLancer(j, []);
+  verifier('… le lot reste en main, on peut relancer',
+    j.lots[0] === lot && !j.fige && !j.departEnAttente);
+
+  // Voisin qui tient un lot : l'attrape redevient possible.
+  suivant.lots = [m._nouveauLot()];
+  poser(lot, ['eclair', 'eclair', 'eclair', 'tornade']);
+  verifier('voisin avec un lot : l’attrape est servie',
+    m.combosDisponibles(j).some((d) => d.id === 'collision'));
+  m._finLancer(j, []);
+  verifier('… et le lot part pour la tenter',
+    !!j.departEnAttente && j.departEnAttente.motif === 'attrape');
+}
+
 // ── 3 ter bis. Les moments à souligner sont signalés ─────────────────────────
 console.log('\nÉclats d\u2019écran');
 {

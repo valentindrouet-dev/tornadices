@@ -621,11 +621,12 @@ label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; colo
   z-index: 50;
   pointer-events: none;
   background: radial-gradient(125% 95% at 50% 50%, transparent 34%, var(--c-flash, #fff) 100%);
-  animation: eclat .64s ease-out forwards;
+  animation: eclat 1.28s ease-out forwards;
 }
 @keyframes eclat {
   0% { opacity: 0; }
-  16% { opacity: .62; }
+  8% { opacity: .62; }
+  45% { opacity: .5; }
   100% { opacity: 0; }
 }
 

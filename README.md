@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.19     # estampille tout le site
+node scripts/version.mjs 1.20     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.19`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.20`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -124,7 +124,7 @@ Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
 | Tornade | 3 | Réveille votre Tornade | Tornade **endormie** | bleu |
 | Vache | 3 | Retourne un jeton de votre équipe | Tornade **éveillée** | vert |
 | ZzZ | 3 | Endort un voisin | Tornade **éveillée** | violet |
-| Éclair | 3 | Passe le lot et tente d’attraper le suivant | toujours | jaune clignotant orange |
+| Éclair | 3 | Passe le lot et tente d’attraper le suivant | le suivant tient un lot | jaune clignotant orange |
 | Joker | 3 | Échec : le lot part sans rien tenter (règle décochable) | toujours | rouge |
 | X | 2 | Échec : le lot part sans rien tenter | toujours | rouge |
 
@@ -180,6 +180,12 @@ partie), les blocages reculent d’un tiers (91 → 57) et la partie perd près 
 deux minutes (7,5 → 5,6 min).
 
 ### Ce que rapporte l’attrape
+
+**On n’attrape que ce qui existe** : si le joueur suivant a les mains vides, les
+trois éclairs ne valent rien — il ne se passe rien, on garde son lot et on peut
+continuer à relancer. C’est ce qui rend l’attrape rare : à six joueurs pour trois
+lots, le voisin n’a un lot qu’une fois sur quatre environ, et les attrapes
+tentées tombent de 76 à 19 par partie pour une table d’Agressifs.
 
 Trois éclairs font passer le lot et tenter le contact. Ce que vaut un contact
 réussi se règle dans les Variables :

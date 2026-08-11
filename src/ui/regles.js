@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.19';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.19';
+import { h } from './dom.js?v=1.20';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.20';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.19';
+} from '../core/config.js?v=1.20';
 
 export function vueRegles() {
   return h('div.page',
@@ -127,8 +127,12 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'L’attrape'),
       h('p.petit', 'Trois éclairs : passez le lot au joueur suivant et tentez de toucher ses dés '
-        + 'ou la main qui les tient. S’il tient lui aussi un lot et que vous le touchez, son tour '
-        + 'est interrompu, il passe immédiatement son lot, et vous retournez un de vos jetons.'),
+        + 'ou la main qui les tient. Si vous le touchez, son tour est interrompu, il passe '
+        + 'immédiatement son lot, et vous retournez un de vos jetons.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, les trois '
+        + 'éclairs ne valent rien. Il ne se passe rien, vous gardez votre lot et vous pouvez '
+        + 'continuer à relancer.'),
       h('p.mini.muted', 'À la table virtuelle, l’attrape ouvre une fenêtre de réflexe : '
         + 'le toucheur appuie pour toucher, la cible pour retirer sa main. Entre IA, elle se '
         + 'résout à l’adresse et à l’esquive de chacun.'),

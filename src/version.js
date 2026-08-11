@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.19';
+export const VERSION = '1.20';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.20',
+    date: '11/08/2026',
+    notes: [
+      'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, les trois éclairs ne valent plus rien. Il ne se passe rien, le lot reste en main et l’on continue à relancer — au lieu de le perdre pour une attrape dans le vide.',
+      'Ce que cela change, 200 parties à 6 joueurs : les attrapes tentées passent de 76 à 19 pour une table d’Agressifs, de 105 à 26 pour des Très agressifs, de 24 à 6 pour des Logiques. Le voisin n’a un lot qu’une fois sur quatre environ, à trois lots pour six joueurs — l’attrape devient une occasion à saisir plutôt qu’un automatisme.',
+      'Le halo autour d’un joueur suit désormais ce qui va réellement se produire : plus de clignotement jaune quand les trois éclairs ne peuvent rien attraper.',
+      'La secousse de l’écran est réservée au rendormissement — c’est le coup qui vous coupe les jambes. Le réveil, la vache et l’échec gardent leur éclat de couleur, sans tremblement.',
+      'Les éclats de couleur durent deux fois plus longtemps : une seconde et quart au lieu d’une demi-seconde.',
+    ],
+  },
   {
     version: '1.19',
     date: '11/08/2026',

@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.19';
+import { makeRng } from './rng.js?v=1.20';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.19';
+} from './config.js?v=1.20';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -472,6 +472,9 @@ export class Moteur {
       if (combo.face === 'endormie' && j.eveille) continue;
       if (combo.face === 'active' && !j.eveille) continue;
       if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
+      // On n'attrape que ce qui existe : si le voisin a les mains vides, les
+      // trois éclairs ne valent rien et le lot reste en main.
+      if (combo.id === 'collision' && !this._suivant(j).lots.length) continue;
       out.push({ id: combo.id, source: 'tornade', combo, obligatoire: !!combo.obligatoire });
     }
     if (this.carte && this.carte.combo) {
@@ -647,16 +650,11 @@ export class Moteur {
 
     // On signale toute combinaison visible, même injouable : c'est ce qui allume
     // les alertes autour de la table.
-    if (this.onCombinaison) {
-      const compte = this._compter(lot);
-      for (const combo of this.cfg.combos) {
-        if (!exigenceVide(combo.requis) && comboServie(compte, combo.requis)) {
-          this.onCombinaison(j.id, combo.id);
-        }
-      }
-    }
-
+    // Le halo autour du joueur annonce ce qui va se produire — donc seulement
+    // les combinaisons réellement jouables, pas celles que les dés montrent sans
+    // qu'elles puissent servir.
     const dispo = this.combosDisponibles(j);
+    if (this.onCombinaison) for (const d of dispo) this.onCombinaison(j.id, d.id);
     const choisi = this._comboAJouer(j, dispo);
     if (choisi) {
       if (choisi.combo && choisi.combo.echec) this._flash('echec', j.id);
