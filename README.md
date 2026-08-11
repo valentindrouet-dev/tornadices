@@ -23,14 +23,15 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.16     # estampille tout le site
+node scripts/version.mjs 1.17     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.16`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.17`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
-numéro embarqué et le point d'entrée du HTML. Il reste à rédiger les notes dans
+numéro embarqué, et dans le HTML le point d'entrée, la feuille de style, les
+icônes et le manifeste. Il reste à rédiger les notes dans
 `src/version.js`.
 
 Au démarrage, le site relit sa version sur le serveur et propose de recharger
@@ -57,6 +58,22 @@ recouvrement), la barre du haut se replie derrière un menu à trois traits, le
 panneau du joueur s'ancre en bas de l'écran et ses dés prennent toute la
 largeur. Au-dessus de cette largeur, ni le bouton de menu ni ces règles
 n'existent : modifier le mobile ne touche pas au bureau.
+
+## Sur l'écran d'accueil d'un téléphone
+
+`assets/icone.svg` est la source de l'icône ; les PNG à côté en sont le rendu.
+Safari ne sait pas encore prendre un SVG comme `apple-touch-icon` : sans le PNG
+de 180 px, iOS colle une capture de la page à la place du logo. L'image est à
+fond perdu et sans coins arrondis — iOS et Android découpent eux-mêmes la
+silhouette, une icône déjà arrondie s'y retrouverait rognée deux fois.
+
+`manifest.webmanifest` donne le nom court, les couleurs et les mêmes icônes à
+Android. Le raccourci s'ouvre en plein écran (`display: standalone`, et
+`apple-mobile-web-app-capable` pour iOS) : pour revenir à une fenêtre de
+navigateur ordinaire, retirer ces deux déclarations.
+
+Pour refaire les PNG après une retouche du SVG, les rendre à 180, 192 et 512 px
+(n'importe quel outil convient ; ils ont été produits au navigateur).
 
 ## Architecture
 

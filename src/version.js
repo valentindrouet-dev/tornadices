@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.16';
+export const VERSION = '1.17';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.17',
+    date: '11/08/2026',
+    notes: [
+      'Ajouté à l’écran d’accueil d’un iPhone, le site pose enfin son logo : la tornade sur fond bleu, en icône pleine. Sans image dédiée, Safari collait une capture de la page à la place — il lui faut un PNG, il ne sait pas encore lire un SVG pour cet usage.',
+      'L’icône de l’onglet devient la même tornade que la marque du site, au lieu des quatre barres d’origine.',
+      'Un manifeste accompagne le tout : nom court, couleurs, et les mêmes icônes pour Android. Le raccourci s’ouvre en plein écran, sans barre d’adresse.',
+      'Le script de version estampille aussi les icônes et le manifeste, comme les modules et la feuille de style.',
+    ],
+  },
   {
     version: '1.16',
     date: '11/08/2026',

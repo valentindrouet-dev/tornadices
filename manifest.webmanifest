@@ -1,0 +1,18 @@
+{
+  "name": "TornaDices",
+  "short_name": "TornaDices",
+  "description": "Table de jeu virtuelle et laboratoire d’équilibrage pour TornaDices.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6fbff",
+  "theme_color": "#1e83cc",
+  "icons": [
+    { "src": "./assets/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./assets/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "./assets/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "./assets/icone.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
