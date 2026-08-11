@@ -1,7 +1,7 @@
 // Vérifications du moteur et des probabilités : `node tests/moteur.test.js`.
 
 import { Moteur } from '../src/core/engine.js';
-import { configParDefaut, comboServie } from '../src/core/config.js';
+import { configParDefaut, comboServie, PROFILS_IA, placement } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
@@ -281,13 +281,13 @@ console.log('\nJokers');
     verifier('trois jokers servent aussi d’autres combinaisons',
       dispo.length > 1, dispo.map((d) => d.id).join(','));
     verifier('… mais c’est l’échec qui est joué',
-      m._comboAJouer(dispo).id === 'echecJokers');
+      m._comboAJouer(j, dispo).id === 'echecJokers');
   }
   {
     const m = new Moteur(configParDefaut(6, { echecJokers: false }), spec, 'joker-libre');
     const j = m.joueurs.find((x) => x.lots.length);
     poser(j.lots[0], ['joker', 'joker', 'joker', 'vache']);
-    const choisi = m._comboAJouer(m.combosDisponibles(j));
+    const choisi = m._comboAJouer(j, m.combosDisponibles(j));
     verifier('règle décochée : trois jokers servent la combinaison voulue',
       choisi && choisi.id !== 'echecJokers', choisi ? choisi.id : 'aucune');
   }
@@ -309,7 +309,10 @@ console.log('\nJokers');
       m.choisirCombo(0, 'reveil') && j.departEnAttente.dispo.id === 'reveil'
       && j.departEnAttente.motif === 'combo');
     m.avancerJusqua(m.now + 5000);
-    verifier('c’est bien le réveil qui a été joué', j.eveille && j.stats.combos.reveil === 1);
+    // On mesure le réveil joué, pas l'état final : un voisin peut le rendormir
+    // dans la seconde — les profils pénibles ne s'en privent pas.
+    verifier('c’est bien le réveil qui a été joué',
+      j.stats.combos.reveil === 1 && j.stats.reveils === 1 && !j.stats.combos.collision);
   }
 }
 
@@ -359,6 +362,63 @@ console.log('\nAttrape gagnante');
     verifier('sans la variante, aucune manche n’est emportée à l’attrape',
       !m.journal.some((e) => /attrape/i.test(e.texte) && /remportent la manche/.test(e.texte)));
   }
+}
+
+// ── 3 quater. Les caractères des IA font ce qu'ils annoncent ─────────────────
+console.log('\nCaractères des IA');
+{
+  const N = 100;
+  const par = {};
+  for (const id of Object.keys(PROFILS_IA)) {
+    const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i}`, type: 'ia', profil: id }));
+    const r = lancerCampagne(configParDefaut(6), spec, `car-${id}`, N);
+    par[id] = {
+      reveil: (r.combos.reveil || 0) / N,
+      vache: (r.combos.vache || 0) / N,
+      zzz: (r.combos.endormir || 0) / N,
+      attrape: (r.combos.collision || 0) / N,
+      bloque: (r.combos.blocage || 0) / N,
+    };
+  }
+  const dit = (id) => `${PROFILS_IA[id].nom} : ${par[id].reveil.toFixed(0)} réveils, `
+    + `${par[id].vache.toFixed(0)} vaches, ${par[id].zzz.toFixed(0)} ZzZ, ${par[id].attrape.toFixed(0)} attrapes`;
+
+  const maxSur = (cle) => Object.keys(par).reduce((a, b) => (par[b][cle] > par[a][cle] ? b : a));
+  verifier(`le Logique retourne le plus de vaches — ${dit('logique')}`,
+    maxSur('vache') === 'logique');
+  verifier(`le Très agressif attrape le plus — ${dit('tresAgressif')}`,
+    maxSur('attrape') === 'tresAgressif');
+  verifier(`le Très pénible endort le plus — ${dit('tresPenible')}`,
+    maxSur('zzz') === 'tresPenible');
+  verifier(`l'Agressif attrape trois fois plus que le Logique — ${dit('agressif')}`,
+    par.agressif.attrape > par.logique.attrape * 2.5);
+  verifier('… mais se réveille et fait la vache quand même',
+    par.agressif.reveil > 10 && par.agressif.vache > 5);
+  verifier(`le Pénible endort trois fois plus que le Logique — ${dit('penible')}`,
+    par.penible.zzz > par.logique.zzz * 2.5);
+  verifier('… mais se réveille et fait la vache quand même',
+    par.penible.reveil > 10 && par.penible.vache > 5);
+  verifier(`l'Équilibré tient le milieu sur les deux axes — ${dit('equilibre')}`,
+    par.equilibre.attrape > par.logique.attrape && par.equilibre.attrape < par.agressif.attrape
+    && par.equilibre.zzz > par.logique.zzz && par.equilibre.zzz < par.penible.zzz);
+  verifier(`l'Idiot gâche plus de lots que le Logique — ${dit('idiot')}`,
+    par.idiot.bloque > par.logique.bloque * 1.4);
+
+  // Le classement compte autant que les intentions : jouer pour gagner doit gagner.
+  const duel = (a, b) => {
+    const sieges = placement(6);
+    const spec = sieges.map((eq, i) => ({ nom: `J${i}`, type: 'ia', profil: eq === 'bleu' ? a : b }));
+    const r = lancerCampagne(configParDefaut(6), spec, `duel-${a}-${b}`, 200);
+    return (r.victoires.bleu || 0) / 200;
+  };
+  const miroir = duel('equilibre', 'equilibre');
+  verifier(`deux équipes identiques font jeu égal (${(miroir * 100).toFixed(0)} % pour les Bleus)`,
+    Math.abs(miroir - 0.5) < 0.12);
+  const logiqueVsIdiot = duel('logique', 'idiot');
+  verifier(`le Logique écrase l'Idiot (${(logiqueVsIdiot * 100).toFixed(0)} %)`, logiqueVsIdiot > 0.8);
+  const logiqueVsPenible = duel('logique', 'penible');
+  verifier(`le Logique l'emporte sur le Pénible (${(logiqueVsPenible * 100).toFixed(0)} %)`,
+    logiqueVsPenible > 0.6);
 }
 
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────

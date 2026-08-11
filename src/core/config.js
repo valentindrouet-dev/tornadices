@@ -312,32 +312,87 @@ export const MISE_EN_PLACE = {
 // `lancersAvantPasse` : nombre de relances tolérées avant de rendre le lot.
 // `peur` : sensibilité au danger quand le joueur précédent tient aussi un lot.
 // `reflexe` : millisecondes moyennes entre deux actions. `adresse` : chance de toucher.
+/**
+ * Profils d'IA.
+ *
+ * `vise` dit ce que le joueur cherche, selon que sa Tornade dort ou veille :
+ * des poids relatifs, tirés au sort à chaque nouveau lot. Un symbole absent vaut
+ * zéro — ce profil ne le cherche jamais. Le reste décrit son tempérament :
+ * combien de fois il relance avant de rendre le lot, sa peur du voisin, son
+ * adresse à l'attrape et sa vitesse de décision.
+ *
+ * Une combinaison servie reste jouée d'office, c'est la règle du jeu : le profil
+ * dit ce que l'IA cherche, pas ce qu'elle accepte. Un « Très agressif » qui sort
+ * trois tornades par accident se réveille quand même.
+ */
 export const PROFILS_IA = {
-  prudent: {
-    id: 'prudent', nom: 'Prudent',
-    lancersAvantPasse: 4, ecartLancers: 1.5, peur: 0.85,
-    reflexe: 950, ecartReflexe: 260, adresse: 0.5, esquive: 0.5, erreur: 0.02,
-    desc: 'Rend le lot vite, joue la sécurité.',
+  logique: {
+    id: 'logique', nom: 'Logique',
+    vise: { endormi: { tornade: 1 }, eveille: { vache: 1 } },
+    lancersAvantPasse: 7, ecartLancers: 2, peur: 0.55,
+    reflexe: 780, ecartReflexe: 200, adresse: 0.52, esquive: 0.58, erreur: 0.02,
+    desc: 'Joue pour gagner : d’abord les tornades pour se réveiller, ensuite les vaches.',
+  },
+  agressif: {
+    id: 'agressif', nom: 'Agressif',
+    vise: { endormi: { eclair: 3, tornade: 1 }, eveille: { eclair: 3, vache: 1 } },
+    lancersAvantPasse: 9, ecartLancers: 3, peur: 0.3,
+    reflexe: 690, ecartReflexe: 180, adresse: 0.68, esquive: 0.55, erreur: 0.04,
+    desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
+  },
+  tresAgressif: {
+    id: 'tresAgressif', nom: 'Très agressif',
+    vise: { endormi: { eclair: 1 }, eveille: { eclair: 1 } },
+    lancersAvantPasse: 14, ecartLancers: 4, peur: 0.12,
+    reflexe: 620, ecartReflexe: 160, adresse: 0.74, esquive: 0.5, erreur: 0.06,
+    desc: 'Ne cherche que les éclairs, et garde le lot jusqu’à les avoir.',
+  },
+  penible: {
+    id: 'penible', nom: 'Pénible',
+    vise: { endormi: { zzz: 3, tornade: 1 }, eveille: { zzz: 3, vache: 1 } },
+    lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.45,
+    reflexe: 760, ecartReflexe: 200, adresse: 0.5, esquive: 0.6, erreur: 0.03,
+    desc: 'Endort ses voisins trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
+  },
+  tresPenible: {
+    id: 'tresPenible', nom: 'Très pénible',
+    vise: { endormi: { zzz: 1 }, eveille: { zzz: 1 } },
+    lancersAvantPasse: 13, ecartLancers: 4, peur: 0.2,
+    reflexe: 700, ecartReflexe: 180, adresse: 0.48, esquive: 0.6, erreur: 0.05,
+    desc: 'Ne cherche que les ZzZ : il ne joue pas pour gagner, il joue pour gêner.',
   },
   equilibre: {
     id: 'equilibre', nom: 'Équilibré',
-    lancersAvantPasse: 7, ecartLancers: 2.5, peur: 0.5,
-    reflexe: 800, ecartReflexe: 220, adresse: 0.55, esquive: 0.55, erreur: 0.03,
-    desc: 'Pèse le gain et le risque de collision.',
+    // Emprunte le style d'un autre profil, et en change à chaque lot.
+    styles: ['logique', 'agressif', 'penible'],
+    lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.5,
+    reflexe: 760, ecartReflexe: 220, adresse: 0.57, esquive: 0.57, erreur: 0.03,
+    desc: 'Varie : d’un lot à l’autre il se fait logique, agressif ou pénible.',
   },
-  temeraire: {
-    id: 'temeraire', nom: 'Téméraire',
-    lancersAvantPasse: 12, ecartLancers: 4, peur: 0.2,
-    reflexe: 640, ecartReflexe: 180, adresse: 0.62, esquive: 0.6, erreur: 0.05,
-    desc: 'Garde le lot jusqu’au bout, quitte à se faire toucher.',
-  },
-  hasard: {
-    id: 'hasard', nom: 'Hasard',
+  idiot: {
+    id: 'idiot', nom: 'Idiot',
+    // Vise n'importe lequel des quatre symboles, y compris celui qui ne lui sert
+    // à rien — la vache en dormant, la tornade une fois réveillé.
+    vise: {
+      endormi: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
+      eveille: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
+    },
+    bevue: 0.35,   // et une fois sur trois, il garde le mauvais dé
     lancersAvantPasse: 6, ecartLancers: 5, peur: 0.5,
-    reflexe: 820, ecartReflexe: 400, adresse: 0.5, esquive: 0.5, erreur: 0.05,
-    desc: 'Choisit au hasard parmi les coups possibles — étalon de comparaison.',
+    reflexe: 900, ecartReflexe: 420, adresse: 0.42, esquive: 0.42, erreur: 0.08,
+    desc: 'Pas de stratégie : vise au hasard, même l’inutile, et se trompe souvent de dés.',
   },
 };
+
+// Les anciens profils, pour les réglages déjà enregistrés dans le navigateur.
+const PROFILS_ANCIENS = {
+  prudent: 'logique', temeraire: 'agressif', hasard: 'idiot',
+};
+
+/** Profil d'IA par identifiant, anciens noms compris. */
+export function profilIA(id) {
+  return PROFILS_IA[id] || PROFILS_IA[PROFILS_ANCIENS[id]] || PROFILS_IA.equilibre;
+}
 
 export const PROFIL_HUMAIN = {
   id: 'humain', nom: 'Humain',

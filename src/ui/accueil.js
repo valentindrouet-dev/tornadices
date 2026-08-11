@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.14';
-import { store } from './store.js?v=1.14';
-import { aller } from './app.js?v=1.14';
-import { lancerPartie, partieEnCours } from './table.js?v=1.14';
-import { construireConfig, variables } from './variables.js?v=1.14';
+import { h, remplacer } from './dom.js?v=1.15';
+import { store } from './store.js?v=1.15';
+import { aller } from './app.js?v=1.15';
+import { lancerPartie, partieEnCours } from './table.js?v=1.15';
+import { construireConfig, variables } from './variables.js?v=1.15';
 import {
-  infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.14';
-import { pastilleSymbole } from './icons.js?v=1.14';
-import { randomSeed } from '../core/rng.js?v=1.14';
+  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
+} from '../core/config.js?v=1.15';
+import { pastilleSymbole } from './icons.js?v=1.15';
+import { randomSeed } from '../core/rng.js?v=1.15';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -36,7 +36,7 @@ export function reglagesJoueurs(nb) {
     out.push({
       nom: s.nom || NOMS[i] || `Joueur ${i + 1}`,
       type: s.type || (i === 0 ? 'humain' : 'ia'),
-      profil: s.profil || 'equilibre',
+      profil: profilIA(s.profil).id,
       equipe: sieges[i],
     });
   }

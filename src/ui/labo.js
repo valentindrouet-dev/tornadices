@@ -1,17 +1,17 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.14';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.14';
-import { store } from './store.js?v=1.14';
-import { lancerCampagne } from '../core/sim.js?v=1.14';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.15';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.15';
+import { store } from './store.js?v=1.15';
+import { lancerCampagne } from '../core/sim.js?v=1.15';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents,
+  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-} from '../core/config.js?v=1.14';
+} from '../core/config.js?v=1.15';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.14';
+} from '../core/proba.js?v=1.15';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -148,12 +148,13 @@ function panneauConfig(rafraichir) {
       ...Array.from({ length: cfg.nbJoueurs }, (_, i) => h('div.rangee.rangee--serree',
         h('span.badge', { class: `badge--${sieges[i]}`, style: { width: '54px', textAlign: 'center' } },
           `J${i + 1}`),
-        h('div.segment', { style: { flex: '1' } },
-          ...Object.values(PROFILS_IA).map((p) => h('button', {
-            class: (etat.profils[i] || 'equilibre') === p.id ? 'on' : '',
-            title: p.desc,
-            onclick: () => { etat.profils[i] = p.id; rafraichir(); },
-          }, p.nom))),
+        h('select', {
+          style: { flex: '1' },
+          onchange: (e) => { etat.profils[i] = e.target.value; rafraichir(); },
+        }, ...Object.values(PROFILS_IA).map((p) => h('option', {
+          value: p.id, title: p.desc,
+          selected: profilIA(etat.profils[i]).id === p.id,
+        }, p.nom))),
       )),
     ),
 
@@ -377,7 +378,7 @@ function resultats(r) {
           h('thead', h('tr', h('th', 'Profil'), h('th.num', 'Sièges'), h('th.num', 'Victoires'),
             h('th.num', 'Jetons/partie'), h('th.num', 'Lancers/partie'))),
           h('tbody', ...r.parProfil.map((p) => h('tr',
-            h('td', (PROFILS_IA[p.profil] || {}).nom || p.profil),
+            h('td', profilIA(p.profil).nom),
             h('td.num', p.parties),
             h('td.num', pourcent(p.victoires / p.parties, 0)),
             h('td.num', nombre(p.jetons / p.parties, 2)),

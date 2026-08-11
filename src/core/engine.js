@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.14';
+import { makeRng } from './rng.js?v=1.15';
 import {
-  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES,
+  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.14';
+} from './config.js?v=1.15';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -110,9 +110,7 @@ export class Moteur {
     this.joueurs = [];
     for (let i = 0; i < n; i++) {
       const s = spec[i] || {};
-      const base = s.type === 'humain'
-        ? PROFIL_HUMAIN
-        : (PROFILS_IA[s.profil] || PROFILS_IA.equilibre);
+      const base = s.type === 'humain' ? PROFIL_HUMAIN : profilIA(s.profil);
       const equipe = s.equipe || sieges[i];
       this.joueurs.push({
         id: i,
@@ -133,6 +131,7 @@ export class Moteur {
         planifie: false,
         fige: false,         // une étape est en cours, le joueur ne peut rien faire
         stats: statsVides(),
+        objectif: null,      // ce que l'IA cherche avec le lot qu'elle tient
         _lotDepuis: 0,
       });
     }
@@ -186,6 +185,7 @@ export class Moteur {
       j.planifie = false;
       j.fige = false;
       j.departEnAttente = null;
+      j.objectif = null;
     }
     for (const e of Object.values(this.equipes)) e.retournes = 0;
 
@@ -398,28 +398,63 @@ export class Moteur {
     return n;
   }
 
+  /** Tirage pondéré parmi des symboles ; un poids nul ne sort jamais. */
+  _tirerPondere(poids) {
+    const entrees = Object.entries(poids || {}).filter(([, p]) => p > 0);
+    if (!entrees.length) return null;
+    const total = entrees.reduce((a, [, p]) => a + p, 0);
+    let x = this.rng() * total;
+    for (const [sym, p] of entrees) { x -= p; if (x <= 0) return sym; }
+    return entrees[entrees.length - 1][0];
+  }
+
+  /**
+   * Ce que l'IA cherche avec ce lot. Le tirage vaut pour toute la possession :
+   * changer d'objectif à chaque jet reviendrait à ne rien poursuivre. Il est
+   * repris quand la Tornade change d'état, car les objectifs ne sont plus les
+   * mêmes une fois réveillé.
+   */
+  _objectifIA(j, lot) {
+    const etat = j.eveille ? 'eveille' : 'endormi';
+    const cle = `${lot.id}:${etat}`;
+    if (j.objectif && j.objectif.cle === cle) return j.objectif.sym;
+    // « Équilibré » emprunte le style d'un autre profil, le temps d'un lot.
+    const source = j.profil.styles
+      ? (PROFILS_IA[this.rng.pick(j.profil.styles)] || j.profil)
+      : j.profil;
+    const sym = this._tirerPondere(source.vise && source.vise[etat]);
+    j.objectif = { cle, sym, style: source.id };
+    return sym;
+  }
+
+  /** Le profil qui gouverne le lot en cours — celui emprunté, le cas échéant. */
+  _styleCourant(j) {
+    const s = j.objectif && j.objectif.style;
+    return (s && PROFILS_IA[s]) || j.profil;
+  }
+
   /** Indices des dés qu'une IA choisit de relancer : elle garde ceux qui servent. */
   _choixDesIA(j, lot) {
-    const bloquant = this.cfg.symboleBloquant || 'x';
     const libres = lot.des.map((d, i) => ({ d, i })).filter(({ d }) => !d.verrou);
-    if (!lot.lance || j.profil.id === 'hasard') return libres.map(({ i }) => i);
+    if (!lot.lance) return libres.map(({ i }) => i);
+    const objectif = this._objectifIA(j, lot);
+    if (!objectif) return libres.map(({ i }) => i);
 
-    const poids = j.eveille
-      ? { vache: 1, eclair: 0.62, zzz: 0.5, tornade: 0.12 }
-      : { tornade: 1, eclair: 0.62, zzz: 0.5, vache: 0.15 };
-    const compte = this._compter(lot);
-    let objectif = null, meilleur = -1;
-    for (const [sym, p] of Object.entries(poids)) {
-      if (sym === bloquant) continue;
-      // Un joker compte pour le symbole visé : il le remplacera.
-      const note = p * ((compte[sym] || 0) + this._jokersPour(compte, sym) + 0.05);
-      if (note > meilleur) { meilleur = note; objectif = sym; }
+    // Sert l'objectif : le symbole visé, et tout joker capable de le prendre.
+    const sert = (d) => d.sym === objectif
+      || (estJoker(d.sym) && (remplacements(d.sym) || []).includes(objectif));
+    const garde = libres.filter(({ d }) => sert(d));
+    const aRelancer = libres.filter(({ d }) => !sert(d));
+
+    // La bévue de l'Idiot : relancer un dé utile, ou garder un dé qui ne l'est pas.
+    const bevue = j.profil.bevue || 0;
+    if (bevue && this.rng() < bevue) {
+      if (garde.length && this.rng() < 0.5) aRelancer.push(this.rng.pick(garde));
+      else if (aRelancer.length) aRelancer.splice(this.rng.int(aRelancer.length), 1);
     }
-    // On ne relance jamais un joker : il vaut déjà le symbole que l'on cherche.
-    const aRelancer = libres
-      .filter(({ d }) => d.sym !== objectif && !estJoker(d.sym))
-      .map(({ i }) => i);
-    return aRelancer.length ? aRelancer : libres.map(({ i }) => i);
+
+    // Tout garder n'est pas une option : sans relance, le joueur resterait figé.
+    return aRelancer.length ? aRelancer.map(({ i }) => i) : libres.map(({ i }) => i);
   }
 
   // ── Combinaisons ────────────────────────────────────────────────────────────
@@ -455,7 +490,7 @@ export class Moteur {
    * Toute combinaison servie est jouée : on ne relance jamais par-dessus.
    * Reste à savoir laquelle, quand plusieurs sortent au même jet.
    */
-  _comboAJouer(dispo) {
+  _comboAJouer(j, dispo) {
     if (!dispo.length) return null;
     const estEchec = (d) => !!(d.combo && d.combo.echec);
     // Trois jokers passent avant tout : sans cela, le joker n'aurait aucun revers
@@ -468,7 +503,7 @@ export class Moteur {
     if (attrape) return attrape;                               // puis l'attrape
     const autres = dispo.filter((d) => !estEchec(d));
     if (autres.length) {
-      autres.sort((a, b) => this._noterCombo(b) - this._noterCombo(a));
+      autres.sort((a, b) => this._noterCombo(j, b) - this._noterCombo(j, a));
       return autres[0];
     }
     return dispo.find((d) => d.id === 'blocage') || null;       // bloqué en dernier
@@ -500,8 +535,18 @@ export class Moteur {
     return true;
   }
 
-  _noterCombo(d) {
-    return { vache: 100, reveil: 90, endormir: 70 }[d.id] ?? 10;
+  /**
+   * Entre deux combinaisons servies au même jet, l'IA joue celle qui va dans son
+   * sens : le Pénible endort plutôt que de se réveiller, le Logique fait l'inverse.
+   */
+  _noterCombo(j, d) {
+    const base = { vache: 100, reveil: 90, endormir: 70 }[d.id] ?? 10;
+    const sym = { reveil: 'tornade', vache: 'vache', endormir: 'zzz', collision: 'eclair' }[d.id];
+    if (!sym || j.type === 'humain') return base;
+    const source = this._styleCourant(j);
+    const etat = j.eveille ? 'eveille' : 'endormi';
+    const gout = (source.vise && source.vise[etat] && source.vise[etat][sym]) || 0;
+    return base + gout * 120;
   }
 
   _voisinsEveilles(j) { return this._voisinsDirects(j).filter((v) => v.eveille); }
@@ -608,7 +653,7 @@ export class Moteur {
     }
 
     const dispo = this.combosDisponibles(j);
-    const choisi = this._comboAJouer(dispo);
+    const choisi = this._comboAJouer(j, dispo);
     if (choisi) {
       this._demanderDepart(
         j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi, null,

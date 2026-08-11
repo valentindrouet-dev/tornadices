@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.14';
+export const VERSION = '1.15';
 export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.15',
+    date: '11/08/2026',
+    notes: [
+      'Sept caractères d’IA remplacent les quatre anciens : Logique, Agressif, Très agressif, Pénible, Très pénible, Équilibré et Idiot. Chacun dit ce que l’IA cherche à faire de ses dés — l’objectif est tiré une fois par lot, selon les goûts du caractère, et repris quand la Tornade change d’état.',
+      'Le Logique se réveille puis fait ses vaches, rien d’autre. L’Agressif cherche l’attrape trois lots sur quatre, le Pénible endort ses voisins autant, tous deux jouant le coup logique le reste du temps. Les deux « très » ne visent plus que leur symbole. L’Équilibré emprunte à chaque lot le style de l’un des trois. L’Idiot vise au hasard, y compris l’inutile, et garde le mauvais dé une fois sur trois.',
+      'Quand deux combinaisons sortent au même jet, l’IA joue celle qui va dans son sens : le Pénible endort plutôt que de se réveiller, le Logique fait l’inverse.',
+      'Ce que cela donne, six exemplaires du même caractère autour de la table : le Logique retourne 24 vaches par partie, le Très agressif tente 115 attrapes, le Très pénible endort 68 fois. Équipe contre équipe, l’ordre de force est net — Logique, Équilibré, Pénible, Agressif, Très pénible, Très agressif, Idiot : jouer pour gagner bat jouer pour gêner.',
+      'Une combinaison servie reste jouée d’office : le caractère dit ce que l’IA cherche, pas ce qu’elle accepte. Un Très agressif qui sort trois tornades se réveille quand même.',
+      'Les caractères sont décrits dans la page Règles, et les réglages déjà enregistrés sont repris : Prudent devient Logique, Téméraire devient Agressif, Hasard devient Idiot.',
+    ],
+  },
   {
     version: '1.14',
     date: '10/08/2026',

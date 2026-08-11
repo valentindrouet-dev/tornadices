@@ -1,8 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.14';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.14';
-import { COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE } from '../core/config.js?v=1.14';
+import { h } from './dom.js?v=1.15';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.15';
+import {
+  COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
+} from '../core/config.js?v=1.15';
 
 export function vueRegles() {
   return h('div.page',
@@ -160,6 +162,20 @@ export function vueRegles() {
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
         '* Ligne extrapolée : le tableau officiel V4.5 s’arrête à 8 joueurs.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'Les caractères des IA'),
+      h('p.petit', 'Chaque siège tenu par une IA reçoit un caractère, choisi sur l’accueil. '
+        + 'Il dit ce que cette IA cherche à faire de ses dés — pas ce qu’elle accepte : '
+        + 'une combinaison servie reste jouée d’office, même par un joueur qui ne la visait pas.'),
+      h('table.tbl',
+        h('thead', h('tr', h('th', 'Caractère'), h('th', 'Ce qu’il cherche'))),
+        h('tbody', ...Object.values(PROFILS_IA).map((p) => h('tr',
+          h('td', { style: { fontWeight: '700', whiteSpace: 'nowrap' } }, p.nom),
+          h('td.petit', p.desc),
+        ))),
+      ),
     ),
 
     h('div.carte',

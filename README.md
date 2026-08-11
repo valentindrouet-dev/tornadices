@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.14     # estampille tout le site
+node scripts/version.mjs 1.15     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.14`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.15`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -92,7 +92,7 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
-- profil et vitesse de chaque IA (Prudent, Équilibré, Téméraire, Hasard).
+- caractère et vitesse de chaque IA (voir plus bas).
 
 Chaque campagne est reproductible : même graine, mêmes chiffres.
 
@@ -169,6 +169,56 @@ réussi se règle dans les Variables :
 
 Mesuré sur 300 parties simulées. En `combo` la fenêtre de réflexe disparaît et
 la course aux vaches avec elle : c’est une partie éclair, pas un équilibrage.
+
+## Les caractères des IA
+
+Chaque siège tenu par une IA reçoit un caractère. Il dit **ce que l’IA cherche**
+à faire de ses dés — pas ce qu’elle accepte : une combinaison servie reste jouée
+d’office, donc un « Très agressif » qui sort trois tornades se réveille quand
+même. L’objectif est tiré au sort une fois par lot, selon les poids du
+caractère, et repris quand la Tornade change d’état.
+
+| Caractère | Ce qu’il vise |
+|---|---|
+| **Logique** | tornades tant qu’il dort, vaches une fois réveillé. Rien d’autre. |
+| **Agressif** | éclairs trois lots sur quatre, sinon le coup logique |
+| **Très agressif** | éclairs, uniquement |
+| **Pénible** | ZzZ trois lots sur quatre, sinon le coup logique |
+| **Très pénible** | ZzZ, uniquement |
+| **Équilibré** | emprunte à chaque lot le style du Logique, de l’Agressif ou du Pénible |
+| **Idiot** | vise au hasard, même l’inutile, et garde le mauvais dé une fois sur trois |
+
+Ce que chacun produit, six exemplaires du même caractère autour de la table,
+200 parties à 6 joueurs :
+
+| Caractère | Durée | Réveils | Vaches | ZzZ | Attrapes |
+|---|---|---|---|---|---|
+| Logique | 5,0 min | 35 | **24** | 14 | 26 |
+| Agressif | 7,5 min | 32 | 16 | 18 | 82 |
+| Très agressif | 8,6 min | 29 | 11 | 17 | **115** |
+| Pénible | 12,3 min | 65 | 15 | 58 | 68 |
+| Très pénible | 15,5 min | 70 | 10 | **68** | 92 |
+| Équilibré | 7,7 min | 42 | 19 | 28 | 55 |
+| Idiot | 9,7 min | 40 | 17 | 27 | 64 |
+
+Les attrapes ne tombent jamais à zéro, même chez le Logique : trois éclairs
+forcent le passage, qu’on les ait cherchés ou non.
+
+Et leur force réelle, équipe contre équipe, 300 parties à 6 joueurs — Logique >
+Équilibré > Pénible > Agressif > Très pénible > Très agressif > Idiot :
+
+| Bleus \ Jaunes | Logique | Agressif | Très agr. | Pénible | Très pén. | Équilibré | Idiot |
+|---|---|---|---|---|---|---|---|
+| **Logique** | 49 % | 95 % | 98 % | 83 % | 91 % | 75 % | 99 % |
+| **Agressif** | 6 % | 49 % | 74 % | 40 % | 67 % | 21 % | 79 % |
+| **Très agressif** | 4 % | 27 % | 53 % | 26 % | 49 % | 13 % | 56 % |
+| **Pénible** | 14 % | 68 % | 80 % | 52 % | 72 % | 46 % | 89 % |
+| **Très pénible** | 7 % | 38 % | 44 % | 30 % | 49 % | 21 % | 65 % |
+| **Équilibré** | 25 % | 75 % | 88 % | 58 % | 78 % | 45 % | 91 % |
+| **Idiot** | 3 % | 31 % | 45 % | 15 % | 34 % | 9 % | 50 % |
+
+La diagonale à ~50 % vérifie que rien ne penche du côté des Bleus : deux équipes
+du même caractère font jeu égal.
 
 ## Le rythme d’un lot
 
