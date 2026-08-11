@@ -145,6 +145,10 @@ a { color: var(--accent-fonce); }
 .grille--jeu { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rangee--serree { gap: 6px; }
+.pousse { flex: 1 1 auto; }
+/* Un joueur sur une ligne : pastille, nom, rôle, équipe. */
+.ligne-joueur { flex-wrap: nowrap; }
+.ligne-joueur select { flex: 0 1 auto; min-width: 0; }
 .muted { color: var(--gris); }
 .petit { font-size: 13px; }
 .mini { font-size: 12px; }
@@ -772,31 +776,137 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .badge--vert { background: #e4f5e9; color: #2b7141; border-color: #bfe6cc; }
 
 @media (max-width: 1080px) {
-  .grille--labo, .grille--jeu, .grille--3, .grille--4 { grid-template-columns: 1fr; }
-  .grille--2 { grid-template-columns: 1fr; }
+  /* minmax(0, 1fr) et non 1fr : sans cela une carte au contenu large déborde de
+     sa colonne, et la page se met à défiler de travers. */
+  .grille--labo, .grille--jeu, .grille--3, .grille--4 { grid-template-columns: minmax(0, 1fr); }
+  .grille--2 { grid-template-columns: minmax(0, 1fr); }
 }
-/* Sous cette largeur, la table ronde ne tient plus : les sièges se rangent en
-   liste, la carte Journée passe en tête. */
+/* ── Disposition mobile ───────────────────────────────────────────────────── */
+/* Sous cette largeur la table ronde ne tient plus : tout passe en flux vertical,
+   plus rien ne se recouvre, et la barre du haut se replie derrière un menu.
+   Rien ici ne s'applique au-dessus de 860 px : l'affichage bureau est intact. */
+
+/* Le clignotement d'un joueur touché : hors média, il servait aussi au bureau. */
+.siege--touche { animation: clignote .5s; }
+@keyframes clignote {
+  0%, 100% { background: #fff; }
+  50% { background: #fdecea; }
+}
+
+/* Menu repliable : invisible tant que l'écran est large. */
+.burger, .lien-accueil { display: none; }
+.liens { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
 @media (max-width: 860px) {
+  /* ── Barre du haut : une seule ligne, le reste derrière trois traits ─────── */
+  .barre { flex-wrap: nowrap; gap: 8px; position: relative; }
+  .barre .marque:first-child { flex: none; }
+  .marque .nom { font-size: 15px; letter-spacing: .1em; }
+  .lien-accueil { display: inline-flex; }
+  .burger {
+    display: flex; flex-direction: column; justify-content: center; gap: 4.5px;
+    width: 44px; height: 38px; padding: 0 10px; flex: none;
+    border: 1px solid var(--bord-fort); border-radius: 13px;
+    background: rgba(255, 255, 255, .82); cursor: pointer;
+  }
+  .burger span { display: block; height: 2.5px; border-radius: 2px; background: var(--encre); }
+  .burger:active { transform: none; }
+  .barre--ouverte .burger { background: var(--accent-clair); border-color: var(--accent-bord); }
+  .liens {
+    display: none;
+    position: absolute; right: 14px; top: calc(100% - 4px); z-index: 30;
+    flex-direction: column; align-items: stretch; gap: 6px;
+    min-width: 200px; padding: 10px;
+    background: #fff; border: 1px solid var(--bord-fort); border-radius: 16px;
+    box-shadow: var(--ombre-forte);
+  }
+  .barre--ouverte .liens { display: flex; }
+  .liens .lien-nav { text-align: left; }
+
+  /* La ligne d'un joueur ne tient pas dans 390 px : elle se replie au lieu de
+     déborder de l'écran. */
+  .ligne-joueur { flex-wrap: wrap; }
+  .ligne-joueur input { flex: 1 1 130px; }
+  .ligne-joueur select { flex: 1 1 130px; }
+
+  /* ── Entête de partie : deux lignes, pas cinq ────────────────────────────── */
+  /* Les repères de manche défilent sur place plutôt que de s'empiler, et les
+     commandes tiennent sur la ligne suivante. */
+  .entete-jeu { gap: 6px; }
+  .entete-jeu .pousse { display: none; }
+  .badges-jeu {
+    flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none; padding-bottom: 2px;
+  }
+  .badges-jeu::-webkit-scrollbar { display: none; }
+  .badges-jeu .badge { white-space: nowrap; }
+  .entete-jeu .segment button { padding: 6px 11px; font-size: 12.5px; }
+  .entete-jeu .btn--petit { padding: 7px 12px; }
+
+  /* ── Table : carte, pioche, scores et sièges les uns sous les autres ─────── */
   .table-zone {
     aspect-ratio: auto;
     min-height: 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
   .tapis { display: none; }
+  .coin { position: static; width: auto; }
+  .coin--carte { flex: 1 1 58%; }
+  .coin--pioche { flex: 1 1 30%; }
+  .coin--scores { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+  .coin--scores .score-equipe { flex: 1 1 30%; margin: 0; }
+  .pioche-pile { height: 60px; }
   .siege {
     position: static;
     transform: none;
     left: auto !important;
     top: auto !important;
     width: auto;
+    flex: 1 1 46%;
   }
-  .siege--touche { animation: clignote .5s; }
-  @keyframes clignote {
-  0%, 100% { background: #fff; }
-  50% { background: #fdecea; }
+
+  /* L'annonce se pose SUR le haut de la zone du joueur : au-dessus, elle
+     sortirait de la table et irait recouvrir la barre du haut. */
+  .annonce--siege {
+    transform: translate(-50%, 8px);
+    max-width: 90vw;
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+  .annonce--siege.annonce--sortie { transform: translate(-50%, -18px); }
+  @keyframes annonceSiege {
+    from { opacity: 0; transform: translate(-50%, 22px) scale(.9); }
+  }
+
+  /* ── Panneau du joueur : ancré en bas de l'écran ─────────────────────────── */
+  /* En flux, il tombait mille pixels sous la table : on ne voyait jamais ses dés
+     en même temps que le jeu. Il reste donc collé au bas de l'écran, et la page
+     se réserve la place qu'il occupe. */
+  .zone-panneaux:not(:empty) {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    margin: 0;
+    max-height: 66vh; overflow-y: auto;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(246, 251, 255, 0), rgba(246, 251, 255, .94) 20%);
+  }
+  .zone-panneaux .panneau-humain { position: static; }
+  .page--large { padding-bottom: 250px; }
+
+  /* ── Les dés prennent toute la largeur ───────────────────────────────────── */
+  /* Et les boutons gardent leur place : à largeur fixe, un libellé qui change
+     ne les fait plus glisser sous le doigt. */
+  .panneau-humain .zone-des { flex: 1 1 100%; padding: 10px 12px; border-radius: 16px; }
+  .panneau-humain .des-panneau { display: flex; gap: 8px; width: 100%; }
+  .panneau-humain .des-panneau .de {
+    flex: 1 1 0; width: auto; height: auto; aspect-ratio: 1;
+    min-width: 0; border-radius: 14px; padding: 6px;
+  }
+  .des-panneau--fantome { left: 12px; right: 12px; top: 10px; }
+  .panneau-humain .pousse, .aide-clavier { display: none; }
+  .panneau-humain .rangee > .btn { flex: 1 1 0; min-width: 0; }
+  .choix-combo .combo-btn { flex: 1 1 100%; justify-content: center; }
 }
 
 @media (max-width: 760px) {
@@ -805,9 +915,28 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   .de--grand { width: 48px; height: 48px; }
   .barre { padding: 12px 14px 8px; gap: 7px; }
   .lien-nav { padding: 7px 12px; font-size: 13px; }
-  .marque .nom { font-size: 16px; letter-spacing: .12em; }
   .panneau-humain { padding: 12px; }
 }
+
+/* Très petits écrans : la barre se resserre pour tenir sur sa ligne. */
+@media (max-width: 400px) {
+  .barre { padding: 10px 12px 8px; gap: 6px; }
+  .marque { gap: 7px; margin-right: 0; }
+  .marque svg { width: 28px; height: 28px; }
+  .marque .nom { font-size: 13px; letter-spacing: .06em; }
+  .pastille-version { padding: 2px 8px; font-size: 11.5px; }
+  .lien-accueil { padding: 7px 11px; font-size: 13px; }
+  .burger { width: 40px; height: 36px; }
+  .titre-jeu { font-size: clamp(27px, 8.4vw, 44px); letter-spacing: .1em; }
+}
+
+/* En dessous, le nom écrit cède la place : le logo suffit à identifier le site. */
+@media (max-width: 340px) {
+  .marque .nom { display: none; }
+}
+
 @media (max-width: 520px) {
-  .table-zone { grid-template-columns: 1fr; }
+  /* Les sièges restent à deux par ligne : un par ligne, la table n'en finit pas.
+     La carte et la pioche aussi gardent leur place côte à côte. */
+  .coin--scores .score-equipe { flex: 1 1 100%; }
 }

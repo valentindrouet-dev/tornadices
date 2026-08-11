@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.13';
-import { store } from './store.js?v=1.13';
-import { aller } from './app.js?v=1.13';
-import { lancerPartie, partieEnCours } from './table.js?v=1.13';
-import { construireConfig, variables } from './variables.js?v=1.13';
+import { h, remplacer } from './dom.js?v=1.14';
+import { store } from './store.js?v=1.14';
+import { aller } from './app.js?v=1.14';
+import { lancerPartie, partieEnCours } from './table.js?v=1.14';
+import { construireConfig, variables } from './variables.js?v=1.14';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.13';
-import { pastilleSymbole } from './icons.js?v=1.13';
-import { randomSeed } from '../core/rng.js?v=1.13';
+} from '../core/config.js?v=1.14';
+import { pastilleSymbole } from './icons.js?v=1.14';
+import { randomSeed } from '../core/rng.js?v=1.14';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -125,7 +125,7 @@ export function vueAccueil() {
 
   function ligneJoueur(j) {
     const eq = COULEURS_EQUIPE[j.equipe];
-    return h('div.rangee.rangee--serree', { style: { flexWrap: 'nowrap' } },
+    return h('div.rangee.rangee--serree.ligne-joueur',
       h('span', {
         title: eq.nom,
         style: {

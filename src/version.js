@@ -1,9 +1,24 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.13';
-export const BUILD_DATE = '2026-08-10';
+export const VERSION = '1.14';
+export const BUILD_DATE = '2026-08-11';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.14',
+    date: '10/08/2026',
+    notes: [
+      'Refonte de l’affichage mobile, sans toucher à l’affichage bureau : tout passe par la règle « écran de moins de 860 px », et le bouton de menu reste invisible au-delà.',
+      'La barre du haut tient sur une seule ligne : la marque, Accueil, et tout le reste derrière un bouton à trois traits qui déplie le menu.',
+      'La carte Journée, la pioche et les compteurs ne recouvrent plus la zone de jeu : ils passent en colonne au-dessus des joueurs, chacun sa place.',
+      'Les quatre dés du joueur occupent toute la largeur de l’écran, et les boutons gardent leur position : à largeur fixe, un libellé qui change — « Lancer » puis « Tout relancer » — ne les fait plus glisser sous le doigt. Les rappels de touches disparaissent, sans clavier ils n’ont rien à dire.',
+      'Le panneau du joueur reste ancré en bas de l’écran : il se trouvait mille pixels sous la table, on ne voyait jamais ses dés en même temps que le jeu.',
+      'L’entête de la partie tient sur deux lignes au lieu de quatre : les repères de manche défilent sur place, les commandes suivent en dessous.',
+      'Plus rien ne déborde de l’écran, de 320 à 430 px de large : la ligne d’un joueur se replie, les cartes ne dépassent plus de leur colonne, et la barre se resserre sur les très petits écrans.',
+      'Les annonces se posent sur le haut de la zone du joueur au lieu de déborder sur la barre du haut.',
+      'Correction de fond : le bloc mobile de la feuille de style n’était jamais refermé, tout ce qui suivait s’y trouvait enfermé — dont le clignotement d’un joueur touché, qui ne marchait donc pas sur ordinateur.',
+    ],
+  },
   {
     version: '1.13',
     date: '10/08/2026',

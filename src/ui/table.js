@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.13';
+import { h, remplacer, duree, vider } from './dom.js?v=1.14';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.13';
-import { Moteur } from '../core/engine.js?v=1.13';
+} from './icons.js?v=1.14';
+import { Moteur } from '../core/engine.js?v=1.14';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.13';
-import { ajouterHistorique } from './store.js?v=1.13';
-import { aller } from './app.js?v=1.13';
+} from '../core/config.js?v=1.14';
+import { ajouterHistorique } from './store.js?v=1.14';
+import { aller } from './app.js?v=1.14';
 
 let moteur = null;
 let vitesse = 1;
@@ -55,6 +55,9 @@ function alerteDesDes(lot, combos) {
   return null;
 }
 
+/** Sous cette largeur, la table passe en disposition verticale. */
+const surMobile = () => window.innerWidth <= 860;
+
 /** Ne reconstruit `hote` que si la signature a changé. */
 function siChange(hote, signature, construire) {
   if (hote.dataset.sig === signature) return false;
@@ -83,10 +86,10 @@ export function vueTable() {
   const racine = h('div.page.page--large');
 
   // ── Entête : badges variables à gauche, contrôles fixes à droite ──────────
-  const zoneBadges = h('div.rangee.rangee--serree');
-  const zoneEntete = h('div.rangee', { style: { marginBottom: '10px' } },
+  const zoneBadges = h('div.rangee.rangee--serree.badges-jeu');
+  const zoneEntete = h('div.rangee.entete-jeu', { style: { marginBottom: '10px' } },
     zoneBadges,
-    h('div', { style: { flex: '1' } }),
+    h('div.pousse'),
     h('div.segment', ...[0.5, 1, 2, 4].map((v) => {
       const b = h('button', { class: v === vitesse ? 'on' : '' }, `×${v}`);
       b.onclick = () => {
@@ -125,7 +128,7 @@ export function vueTable() {
   function placerSieges() {
     const zw = zoneTable.clientWidth;
     const zh = zoneTable.clientHeight;
-    if (!zw || !zh || window.innerWidth <= 860) return;
+    if (!zw || !zh || surMobile()) return;
 
     const marge = 20;
     const bandeGauche = Math.max(elCarte.offsetWidth, elScores.offsetWidth) + marge;
@@ -172,7 +175,7 @@ export function vueTable() {
   }
 
   function volLot(a, b, motif, des, dureeJeu) {
-    if (window.innerWidth <= 860) return;   // en disposition verticale, sans objet
+    if (surMobile()) return;   // en disposition verticale, sans objet
     if (!a || !b) return;
     // Le vol dure exactement le temps de jeu du passage, à la vitesse d'affichage.
     const duree = Math.max(80, (dureeJeu ?? 1000) / vitesse);
@@ -240,7 +243,7 @@ export function vueTable() {
     for (const el of zoneTable.querySelectorAll('.jeton-vol')) el.remove();
   }
 
-  const zonePanneaux = h('div', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
+  const zonePanneaux = h('div.zone-panneaux', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
   const zoneJournal = h('div.journal');
 
   const zoneCote = h('div', { style: { display: 'grid', gap: '16px', alignContent: 'start' } },
@@ -624,7 +627,7 @@ export function vueTable() {
       const options = j.departEnAttente && j.departEnAttente.options;
       return `${j.id}:${j.lots.length}:${j.eveille}:${j.fige}:${lot.lance}:${des}`
         + `:${alerteDe(j) || ''}:${options ? options.map((o) => o.id).join('+') : ''}`;
-    }).join('||');
+    }).join('||') + (surMobile() ? '|m' : '|d');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
 
@@ -653,21 +656,25 @@ export function vueTable() {
         h('strong', j.nom),
         h('span.petit.muted', j.eveille ? 'Tornade éveillée' : 'Tornade endormie'),
         j.lots.length > 1 ? h('span.badge', `${j.lots.length} lots en main`) : null,
-        h('div', { style: { flex: '1' } }),
-        h('span.mini.muted',
+        h('div.pousse'),
+        h('span.mini.muted.aide-clavier',
           `clic sur un dé : le relancer · ${t.libLancer} : tout relancer · ${t.libPasser} : passer`),
       ),
       h('div.rangee',
         zoneDesPanneau(j, lot, peutAgir),
-        h('div', { style: { flex: '1' } }),
+        h('div.pousse'),
+        // Sans clavier, la touche n'a rien à faire sur le bouton : au doigt, le
+        // libellé doit rester court et surtout ne pas changer de largeur.
         h('button.btn.btn--primaire', {
           disabled: !peutAgir || !libres.length,
           onclick: () => moteur.lancerHumain(j.id, null),
-        }, lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`),
+        }, surMobile()
+          ? (lot.lance ? 'Tout relancer' : 'Lancer')
+          : (lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`)),
         h('button.btn', {
           disabled: !peutAgir || !pose,
           onclick: () => moteur.passerHumain(j.id),
-        }, `Passer (${t.libPasser})`),
+        }, surMobile() ? 'Passer' : `Passer (${t.libPasser})`),
       ),
       options
         ? h('div.choix-combo',

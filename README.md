@@ -23,10 +23,10 @@ poussée — à activer une fois dans *Settings → Pages → Source : GitHub Ac
 ## Changer de version
 
 ```bash
-node scripts/version.mjs 1.12     # estampille tout le site
+node scripts/version.mjs 1.14     # estampille tout le site
 ```
 
-Chaque module est importé avec son numéro de version (`./dom.js?v=1.12`). Sans
+Chaque module est importé avec son numéro de version (`./dom.js?v=1.14`). Sans
 cela, les navigateurs gardent les modules ES en cache sous leur URL et peuvent
 continuer de servir une version périmée — un écran restait bloqué sur une
 ancienne version sans qu'on le voie. Le script réécrit tous les imports, le
@@ -47,6 +47,16 @@ si l'écran est en retard.
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
 | **Règles** | Les règles telles que le moteur les applique. |
 | **Versions** | Journal des versions, incrémenté à chaque modification livrée. |
+
+## Bureau et mobile
+
+Une seule feuille de style, deux dispositions. Tout ce qui est propre au
+téléphone tient dans `@media (max-width: 860px)` : la table ronde devient une
+colonne (carte, pioche, compteurs, puis les sièges deux par ligne, sans aucun
+recouvrement), la barre du haut se replie derrière un menu à trois traits, le
+panneau du joueur s'ancre en bas de l'écran et ses dés prennent toute la
+largeur. Au-dessus de cette largeur, ni le bouton de menu ni ces règles
+n'existent : modifier le mobile ne touche pas au bureau.
 
 ## Architecture
 

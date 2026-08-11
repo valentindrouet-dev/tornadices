@@ -7,7 +7,7 @@
 //     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
 //     nombre de X déjà figés.
 
-import { comboServie, remplacements } from './config.js?v=1.13';
+import { comboServie, remplacements } from './config.js?v=1.14';
 
 const facto = [1];
 function fact(n) {
