@@ -5,9 +5,9 @@
 // C'est plus proche du geste réel que la grille de compteurs d'avant, où il
 // fallait traduire mentalement « 3 » en trois dés.
 
-import { h } from './dom.js?v=1.23';
-import { pastilleSymbole } from './icons.js?v=1.23';
-import { ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE } from '../core/config.js?v=1.23';
+import { h } from './dom.js?v=1.24';
+import { pastilleSymbole } from './icons.js?v=1.24';
+import { ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE } from '../core/config.js?v=1.24';
 
 /** { vache: 3 } → ['vache', 'vache', 'vache', ''] sur un lot de quatre dés. */
 export function requisEnCases(requis, nbDes) {
@@ -57,7 +57,7 @@ export function tableauCombos(cfg, ecrireCombo, ecrireCarte, rafraichir) {
   const ligne = (nom, requis, ecrire, carte = false) => {
     const cases = requisEnCases(requis, nbDes);
     return h('tr', { class: carte ? 'ligne-carte' : '' },
-      h('td', { style: { fontWeight: '700' } }, nom,
+      h('td.cellule-nom', h('div.nom-combo', nom),
         carte ? h('span.badge.badge--carte', 'Journée') : null),
       ...cases.map((sym, i) => h('td', caseDe(sym, (val) => {
         const suite = cases.slice();
@@ -72,7 +72,7 @@ export function tableauCombos(cfg, ecrireCombo, ecrireCarte, rafraichir) {
   // Sur téléphone, une colonne par dé ne tient pas : le tableau défile dans son
   // propre cadre plutôt que d'écraser les menus jusqu'à l'illisible.
   return h('div.tbl-defile', h('table.tbl.tbl--combos', { style: { tableLayout: 'fixed' } },
-    h('colgroup', h('col', { style: { width: '26%' } }), ...Array.from({ length: nbDes }, () => h('col'))),
+    h('colgroup', h('col.col-nom'), ...Array.from({ length: nbDes }, () => h('col'))),
     h('thead', h('tr',
       h('th', 'Combinaison'),
       ...Array.from({ length: nbDes }, (_, i) => h('th', `Dé ${i + 1}`)),

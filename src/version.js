@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.23';
+export const VERSION = '1.24';
 export const BUILD_DATE = '2026-08-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.24',
+    date: '12/08/2026',
+    notes: [
+      'Correction : la page remontait toute seule en haut dès qu’on cliquait un bouton ou une case des Variables. En cause, le focus — Chrome ramène la page au sommet quand on retire l’élément qui l’a, et c’est le cas de tout bouton qu’on vient de cliquer. On lui retire le focus avant l’échange, et la page reste où elle est, dans les Variables comme au Laboratoire.',
+      '« Dés par lot », « Type de dé » et « Lots en jeu » retrouvent la même ligne : le texte d’aide sous le choix du dé est supprimé, et un champ à trois lignes ne décale plus son contrôle par rapport à ses voisins.',
+      'Les menus déroulants des combinaisons sont deux fois moins larges (208 → 104 px) : six intitulés à afficher n’en demandaient pas davantage.',
+      'Au Laboratoire, « Lancer la simulation » passe tout en haut du panneau, au-dessus de « Configuration testée » : c’est le geste qu’on répète, il ne demande plus de dérouler tout le formulaire.',
+      'Toujours au Laboratoire, les menus et le choix du dé sortaient de leur colonne. Le tableau des combinaisons défile désormais dans son cadre au lieu d’élargir la carte, la pastille « Journée » passe sous le nom de la carte pour rendre de la place aux dés, et les trois boutons d6/d8/d10 se partagent la largeur de leur champ.',
+    ],
+  },
   {
     version: '1.23',
     date: '12/08/2026',

@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.23';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.23';
-import { store } from './store.js?v=1.23';
-import { lancerCampagne } from '../core/sim.js?v=1.23';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.24';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.24';
+import { store } from './store.js?v=1.24';
+import { lancerCampagne } from '../core/sim.js?v=1.24';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.23';
-import { tableauCombos } from './combos.js?v=1.23';
+} from '../core/config.js?v=1.24';
+import { tableauCombos } from './combos.js?v=1.24';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.23';
+} from '../core/proba.js?v=1.24';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -125,6 +125,21 @@ function panneauConfig(rafraichir) {
   }
 
   return h('div.carte',
+    h('div.rangee', { style: { marginBottom: '16px' } },
+      h('button.btn.btn--primaire.btn--grand', {
+        style: { flex: '1' }, onclick: lancer, disabled: etat.calcul,
+      }, 'Lancer la simulation'),
+      h('button.btn.btn--petit', {
+        onclick: () => {
+          const base = configParDefaut(cfg.nbJoueurs);
+          base.combosCartes = {};
+          etat.cfg = base;
+          store.set('cfgLabo', base);
+          rafraichir();
+        },
+      }, 'Réglages d’origine'),
+    ),
+
     h('div.titre-section', 'Configuration testée'),
 
     h('div.grille.grille--3', { style: { gap: '10px' } },
@@ -174,8 +189,7 @@ function panneauConfig(rafraichir) {
             rafraichir();
           },
         }, `d${n}`))),
-        h('span.mini.muted', { style: { fontWeight: '400' } },
-          cfg.faces.length === 6 ? 'le dé du jeu' : 'variante d’équilibrage')),
+      ),
       num('Lots en jeu', cfg.lots, (v) => { cfg.lots = Math.max(1, v); }, { min: 1, max: 9 }),
     ),
     h('div.faces-edit', { style: { marginTop: '10px' } },
@@ -305,19 +319,6 @@ function panneauConfig(rafraichir) {
       num('Erreur punie par l’adversaire', cfg.penaliteErreurAdverse, (v) => { cfg.penaliteErreurAdverse = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.05 }),
     ),
 
-    h('div.rangee', { style: { marginTop: '20px' } },
-      h('button.btn.btn--primaire.btn--grand', { onclick: lancer, disabled: etat.calcul },
-        'Lancer la simulation'),
-      h('button.btn', {
-        onclick: () => {
-          const base = configParDefaut(cfg.nbJoueurs);
-          base.combosCartes = {};
-          etat.cfg = base;
-          store.set('cfgLabo', base);
-          rafraichir();
-        },
-      }, 'Réglages d’origine'),
-    ),
   );
 }
 

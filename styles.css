@@ -239,7 +239,17 @@ input[type=text], input[type=number], select {
 }
 input[type=number] { background: var(--fond-doux); }
 input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-offset: 1px; }
-label.champ { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--encre-doux); }
+/* `align-content: start` : sans lui, les lignes d'une grille étirée se
+   répartissent la hauteur restante, et un champ à trois lignes — libellé,
+   contrôle, aide — décalait son contrôle par rapport à ses voisins. */
+label.champ {
+  display: grid; gap: 5px; align-content: start;
+  font-size: 12.5px; font-weight: 700; color: var(--encre-doux);
+}
+/* Un segment dans un champ occupe sa colonne et la partage : à trois boutons
+   dans une colonne étroite, le dernier sortait de la carte. */
+.champ .segment { width: 100%; box-sizing: border-box; }
+.champ .segment button { flex: 1 1 0; min-width: 0; padding: 6px 4px; }
 
 /* ── Symboles et dés ──────────────────────────────────────────────────────── */
 .pastille-sym { display: inline-block; vertical-align: middle; }
@@ -798,16 +808,27 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
    de la face « vide », qui est un vrai symbole. */
 .tbl--combos td, .tbl--combos th { padding: 6px 5px; }
 .tbl--combos th { font-size: 11px; }
-.tbl--combos .face-case select { width: 100%; font-size: 11px; padding: 3px 2px; }
+/* Le menu n'a que six intitulés à afficher : au-delà, il ne gagne qu'en vide. */
+.tbl--combos .face-case select {
+  width: 100%; max-width: 104px; font-size: 11px; padding: 3px 2px;
+}
 .tbl--combos .face-case .select--libre { color: var(--gris); }
+.tbl--combos .col-nom { width: 118px; }
+.cellule-nom { font-weight: 700; }
+/* La pastille « Journée » passe sous le nom : la colonne tient sur une largeur
+   de mot, et rend le reste aux dés. */
+.cellule-nom .nom-combo { margin-bottom: 3px; }
 .pastille-libre {
   width: 26px; height: 26px; border-radius: 50%;
   border: 2px dashed var(--bord); box-sizing: border-box;
 }
-/* Le tableau garde une largeur lisible et défile dans son cadre quand l'écran
-   est trop étroit : le corps de la page, lui, ne défile jamais de côté. */
-.tbl-defile { overflow-x: auto; }
-.tbl-defile .tbl--combos { min-width: 520px; }
+/* Le tableau garde une largeur lisible et défile dans son cadre quand la colonne
+   est trop étroite : ni le panneau ni la page ne débordent de côté. */
+.tbl-defile { overflow-x: auto; max-width: 100%; }
+.tbl-defile .tbl--combos { min-width: 420px; }
+/* Sans cela, un tableau plus large que la colonne élargit la colonne elle-même
+   au lieu de défiler : les menus du Laboratoire sortaient de leur carte. */
+.grille--labo > * { min-width: 0; }
 
 .curseur { flex: 1; min-width: 140px; accent-color: var(--accent); }
 .valeur-curseur { font-size: 12px; font-weight: 600; color: var(--encre-doux); white-space: nowrap; }

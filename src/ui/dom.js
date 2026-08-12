@@ -41,7 +41,28 @@ function ajouter(el, enfants) {
 
 export function vider(el) { while (el.firstChild) el.removeChild(el.firstChild); }
 
-export function remplacer(el, ...enfants) { vider(el); ajouter(el, enfants); return el; }
+/**
+ * Remplace le contenu de `el` en un seul geste.
+ *
+ * Vider puis re-remplir ferait passer la page par une hauteur nulle, et le
+ * navigateur ramènerait le défilement en haut au passage : cocher une case en
+ * bas du menu Variables renvoyait le lecteur au titre. On monte donc le nouveau
+ * contenu dans un fragment détaché, et on l'échange d'un coup — la hauteur ne
+ * s'effondre jamais, le défilement ne bouge pas.
+ */
+export function remplacer(el, ...enfants) {
+  const frag = document.createDocumentFragment();
+  ajouter(frag, enfants);
+  // Chrome ramène la page en haut quand on retire l'élément qui a le focus — et
+  // c'est le cas de tout bouton qu'on vient de cliquer. Cocher une case en bas
+  // du menu Variables renvoyait donc le lecteur au titre. Le bouton disparaît de
+  // toute façon dans l'échange : on lui retire le focus avant, et la page reste
+  // où elle est.
+  const actif = document.activeElement;
+  if (actif && actif !== document.body && el.contains(actif)) actif.blur();
+  el.replaceChildren(frag);
+  return el;
+}
 
 // ── Formats ───────────────────────────────────────────────────────────────────
 export const pourcent = (x, dec = 1) => `${(x * 100).toFixed(dec)} %`;
