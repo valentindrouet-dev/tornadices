@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.20';
+import { makeRng } from './rng.js?v=1.21';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.20';
+} from './config.js?v=1.21';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -659,12 +659,24 @@ export class Moteur {
     if (choisi) {
       if (choisi.combo && choisi.combo.echec) this._flash('echec', j.id);
       this._demanderDepart(
-        j, choisi.id === 'collision' ? 'attrape' : 'combo', choisi, null,
+        j, this._attrapeAuDepart(j, choisi) ? 'attrape' : 'combo', choisi, null,
         this._optionsDeChoix(j, dispo),
       );
       return;
     }
     this._planifier(j.id);
+  }
+
+  /**
+   * Le lot part-il en tentant d'attraper ? Les trois éclairs, toujours ; et dans
+   * le mode sans face éclair, l'échec lui-même — le lot est perdu de toute façon,
+   * autant s'en servir pour toucher le voisin, s'il a un lot à se faire prendre.
+   */
+  _attrapeAuDepart(j, choisi) {
+    if (choisi.id === 'collision') return true;
+    return this.cfg.attrapeSur === 'echec'
+      && choisi.id === 'blocage'
+      && this._suivant(j).lots.length > 0;
   }
 
   /**
@@ -756,6 +768,7 @@ export class Moteur {
   /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
   _issueDuTour(motif, dispo) {
     if (motif === 'interruption') return 'Touché !';
+    if (motif === 'attrape' && dispo && dispo.id === 'blocage') return 'Échec — attrape !';
     if (motif === 'passe') return 'Passé';
     if (motif === 'pousse') return 'Poussé';
     if (motif === 'megarde') return 'Mégarde';
@@ -791,23 +804,29 @@ export class Moteur {
     const q = this.joueurs[t.vers];
 
     // Un joueur ne tient jamais deux lots : quand deux se rencontrent, celui
-    // qu'il avait en main est poussé aussitôt vers le voisin suivant.
-    if (q.departEnAttente) {
-      // Son lot était déjà sur le départ : on le fait partir tout de suite.
-      const d = q.departEnAttente;
-      this._depart(q, d.lot, d.motif, d.dispo, d.choix);
-      if (this.termine || this.transition) return;
-    }
-    if (q.lots.length) {
-      const pousse = q.lots[0];
-      for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
-      this._envoyerLot(q, pousse, 'pousse');
+    // qu'il avait en main est poussé aussitôt vers le voisin suivant. Sauf en
+    // mode cumulé, où les lots s'empilent et attendent leur tour.
+    if (!this.cfg.lotsCumules) {
+      if (q.departEnAttente) {
+        // Son lot était déjà sur le départ : on le fait partir tout de suite.
+        const d = q.departEnAttente;
+        this._depart(q, d.lot, d.motif, d.dispo, d.choix);
+        if (this.termine || this.transition) return;
+      }
+      if (q.lots.length) {
+        const pousse = q.lots[0];
+        for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
+        this._envoyerLot(q, pousse, 'pousse');
+      }
     }
 
-    if (!q.lots.length) q._lotDepuis = this.now;
+    const premier = !q.lots.length;
+    if (premier) q._lotDepuis = this.now;
     q.lots.push(t.lot);
-    q.fige = false;
-    q.planifie = false;
+    if (premier || !this.cfg.lotsCumules) {
+      q.fige = false;
+      q.planifie = false;
+    }
     this._planifier(q.id);
     if (this.onEtatChange) this.onEtatChange();
   }

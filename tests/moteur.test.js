@@ -419,6 +419,88 @@ console.log('\nAttrape à vide');
     !!j.departEnAttente && j.departEnAttente.motif === 'attrape');
 }
 
+// ── 3 ter ter. Les deux nouveaux modes de partie ─────────────────────────────
+console.log('\nModes de partie');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const poser = (lot, syms) => {
+    lot.des.forEach((d, i) => {
+      d.sym = syms[i]; d.roule = false; d.finRoule = 0; d.verrou = syms[i] === 'x';
+    });
+    lot.lance = true;
+  };
+
+  // ── Attrape sur échec : plus de face éclair, le double X tente le contact ──
+  const cfgEchec = configParDefaut(6, { attrapeSur: 'echec' });
+  verifier(`le dé perd sa face éclair (${cfgEchec.faces.join(', ')})`,
+    !cfgEchec.faces.includes('eclair'));
+  verifier('et la combinaison des trois éclairs disparaît',
+    !cfgEchec.combos.some((c) => c.id === 'collision'));
+
+  {
+    const m = new Moteur(cfgEchec, spec, 'echec-attrape');
+    const j = m.joueurs.find((x) => x.lots.length);
+    const suivant = m._suivant(j);
+    suivant.lots = [m._nouveauLot()];
+    poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
+    m._finLancer(j, []);
+    verifier('voisin chargé : l’échec part en tentant l’attrape',
+      j.departEnAttente && j.departEnAttente.motif === 'attrape'
+      && j.departEnAttente.dispo.id === 'blocage');
+    m.avancerJusqua(m.now + 4000);
+    verifier('… et le contact est bien tenté', j.stats.collisionsTentees === 1);
+  }
+  {
+    const m = new Moteur(cfgEchec, spec, 'echec-sans-cible');
+    const j = m.joueurs.find((x) => x.lots.length);
+    m._suivant(j).lots = [];
+    poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
+    m._finLancer(j, []);
+    verifier('voisin vide : l’échec reste un échec',
+      j.departEnAttente && j.departEnAttente.motif === 'combo');
+  }
+  {
+    const cfg = configParDefaut(6, { attrapeSur: 'echec' });
+    let contacts = 0, parties = 0;
+    for (let g = 0; g < 20; g++) {
+      const r = new Moteur(cfg, spec, `echec-partie-${g}`).jouerJusquAuBout();
+      if (r.raison === 'cartes') parties++;
+      contacts += r.joueurs.reduce((a, j) => a + j.stats.collisionsTentees, 0);
+    }
+    verifier(`mode « attrape sur échec » — 20 parties menées à terme, ${(contacts / 20).toFixed(1)} contacts par partie`,
+      parties === 20 && contacts > 0);
+  }
+
+  // ── Lots empilés : plus de poussée, les lots attendent leur tour ──────────
+  {
+    const cfg = configParDefaut(6, { lotsCumules: true });
+    let maxEnMain = 0, poussees = 0, finies = 0;
+    for (let g = 0; g < 20; g++) {
+      const m = new Moteur(cfg, spec, `cumul-${g}`);
+      m.onEtatChange = () => {
+        maxEnMain = Math.max(maxEnMain, ...m.joueurs.map((j) => j.lots.length));
+      };
+      m.onJournal = (e) => { if (e.issue === 'Poussé') poussees++; };
+      const r = m.jouerJusquAuBout();
+      if (r.raison === 'cartes') finies++;
+    }
+    verifier(`lots empilés — jusqu’à ${maxEnMain} lots dans la même main`, maxEnMain >= 2);
+    verifier('… et plus aucune poussée', poussees === 0);
+    verifier('… 20 parties menées à terme', finies === 20, `${finies}/20`);
+  }
+  {
+    // Règle de base : la poussée reprend, et personne ne tient deux lots.
+    const cfg = configParDefaut(6);
+    let maxEnMain = 0;
+    const m = new Moteur(cfg, spec, 'sans-cumul');
+    m.onEtatChange = () => {
+      maxEnMain = Math.max(maxEnMain, ...m.joueurs.map((j) => j.lots.length));
+    };
+    m.jouerJusquAuBout();
+    verifier('sans l’option, un joueur ne tient toujours qu’un lot', maxEnMain === 1);
+  }
+}
+
 // ── 3 ter bis. Les moments à souligner sont signalés ─────────────────────────
 console.log('\nÉclats d\u2019écran');
 {

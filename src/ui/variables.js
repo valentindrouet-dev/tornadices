@@ -3,17 +3,18 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.20';
-import { pastilleSymbole } from './icons.js?v=1.20';
-import { store } from './store.js?v=1.20';
-import { aller } from './app.js?v=1.20';
-import { lancerPartie } from './table.js?v=1.20';
+import { h, remplacer } from './dom.js?v=1.21';
+import { pastilleSymbole } from './icons.js?v=1.21';
+import { store } from './store.js?v=1.21';
+import { aller } from './app.js?v=1.21';
+import { lancerPartie } from './table.js?v=1.21';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   symbolesPertinents, OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-} from '../core/config.js?v=1.20';
-import { randomSeed } from '../core/rng.js?v=1.20';
-import { reglagesJoueurs } from './accueil.js?v=1.20';
+  OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
+} from '../core/config.js?v=1.21';
+import { randomSeed } from '../core/rng.js?v=1.21';
+import { reglagesJoueurs } from './accueil.js?v=1.21';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -24,7 +25,11 @@ export function variables() {
 /** Configuration complète d'une partie : défauts du nombre de joueurs + réglages. */
 export function construireConfig(nbJoueurs) {
   const v = variables();
-  const cfg = configParDefaut(nbJoueurs, { echecJokers: v.echecJokers !== false });
+  const cfg = configParDefaut(nbJoueurs, {
+    echecJokers: v.echecJokers !== false,
+    attrapeSur: v.attrapeSur,
+    lotsCumules: v.lotsCumules,
+  });
   for (const [cle, val] of Object.entries(v)) {
     if (val === undefined || val === null) continue;
     if (cle === 'suivreTableau') continue;
@@ -155,6 +160,24 @@ export function vueVariables() {
               + 'C’est le seul revers du joker — décochez la règle pour jouer sans.'
             : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.'),
 
+        h('div.titre-section', { style: { marginTop: '20px' } }, 'Ce qui déclenche l’attrape'),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
+              class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
+              onclick: () => {
+                ecrire('attrapeSur', id);
+                // Le dé suit le mode : sans combinaison d'éclairs, la face éclair
+                // n'aurait plus rien à servir.
+                ecrire('faces', (id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice());
+                dessiner();
+              },
+            }, lib)),
+          ),
+        ),
+        h('p.mini.muted', { style: { marginTop: '8px' } },
+          AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
+
         h('div.titre-section', { style: { marginTop: '20px' } }, 'Ce que rapporte l’attrape'),
         h('div.rangee.rangee--serree',
           h('div.segment',
@@ -165,6 +188,23 @@ export function vueVariables() {
           ),
         ),
         h('p.mini.muted', { style: { marginTop: '8px' } }, AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
+
+        h('div.titre-section', { style: { marginTop: '20px' } }, 'Quand deux lots se rencontrent'),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...[['pousse', 'Le lot en cours est poussé'], ['cumul', 'Les lots s’empilent']]
+              .map(([id, lib]) => h('button', {
+                class: (cfg.lotsCumules ? 'cumul' : 'pousse') === id ? 'on' : '',
+                onclick: () => { ecrire('lotsCumules', id === 'cumul'); dessiner(); },
+              }, lib)),
+          ),
+        ),
+        h('p.mini.muted', { style: { marginTop: '8px' } },
+          cfg.lotsCumules
+            ? 'Les lots s’accumulent dans la même main : on joue le premier arrivé, les autres '
+              + 'attendent leur tour. Un joueur lent peut se retrouver avec toute la table sur les bras.'
+            : 'Règle de base : le lot que l’on tenait part aussitôt vers le voisin suivant — la '
+              + 'poussée peut se propager — et l’on enchaîne sur celui qui vient d’arriver.'),
       ),
 
       // ── Rythme ────────────────────────────────────────────────────────────
@@ -301,8 +341,13 @@ function tableauCombos(cfg, rafraichir) {
   const symboles = symbolesPertinents(cfg);
   const v = variables();
 
-  const ligne = (nom, requis, ecrireLigne) => h('tr',
-    h('td', { style: { fontWeight: '700' } }, nom),
+  // Les combinaisons de cartes Journée sont bleutées : elles ne valent que le
+  // temps d'une manche, contrairement aux cinq combinaisons de la Tornade.
+  const ligne = (nom, requis, ecrireLigne, carte = false) => h('tr', {
+    class: carte ? 'ligne-carte' : '',
+  },
+    h('td', { style: { fontWeight: '700' } }, nom,
+      carte ? h('span.badge.badge--carte', 'Journée') : null),
     ...symboles.map((s) => h('td.num', h('input', {
       type: 'number', min: 0, max: 12, value: requis[s] || 0,
       style: { width: '100%', minWidth: '0', padding: '4px', textAlign: 'right' },
@@ -317,6 +362,7 @@ function tableauCombos(cfg, rafraichir) {
       ...symboles.map((s) => h('th.num', pastilleSymbole(s, 20))),
     )),
     h('tbody',
+      h('tr.ligne-titre', h('td', { colspan: symboles.length + 1 }, 'Toujours en jeu')),
       ...cfg.combos.map((c) => ligne(c.nom, c.requis, (sym, n) => {
         const combos = { ...(v.combos || {}) };
         const cur = { ...(combos[c.id] || c.requis) };
@@ -324,6 +370,9 @@ function tableauCombos(cfg, rafraichir) {
         combos[c.id] = cur;
         ecrire('combos', combos);
       })),
+      h('tr.ligne-titre.ligne-titre--carte',
+        h('td', { colspan: symboles.length + 1 },
+          'Cartes Journée — seulement pendant la manche où la carte est en jeu')),
       ...CARTES_JOURNEE.filter((c) => c.combo).map((carte) => {
         const requis = (cfg.combosCartes && cfg.combosCartes[carte.combo.id]) || carte.combo.requis;
         return ligne(carte.court, requis, (sym, n) => {
@@ -332,7 +381,7 @@ function tableauCombos(cfg, rafraichir) {
           if (n > 0) cur[sym] = n; else delete cur[sym];
           cartes[carte.combo.id] = cur;
           ecrire('combosCartes', cartes);
-        });
+        }, true);
       }),
     ),
   );

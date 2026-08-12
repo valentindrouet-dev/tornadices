@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.20';
-export const BUILD_DATE = '2026-08-11';
+export const VERSION = '1.21';
+export const BUILD_DATE = '2026-08-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.21',
+    date: '12/08/2026',
+    notes: [
+      'Nouveau mode de jeu dans les Variables, « Ce qui déclenche l’attrape » : la face éclair disparaît du dé — une seconde vache prend sa place — et c’est l’échec qui tente le contact. Deux X font partir le lot comme d’habitude, mais si le voisin à qui on le passe tient un lot, on essaie de le toucher au passage. La combinaison des trois éclairs est retirée avec la face, et le rappel des combinaisons signale que l’échec « tente l’attrape ».',
+      'On ne choisit donc plus d’attaquer : on attaque chaque fois que le hasard le permet, et l’échec cesse d’être une pure perte. Sur 200 parties à 6 joueurs, la partie raccourcit d’une bonne minute — 4:24 → 3:11 pour des Logiques, 5:25 → 3:34 pour des Équilibrés — parce que la seconde vache double les chances de retourner un jeton. L’Agressif, privé de sa cible, retombe de 15,4 à 8,0 contacts par partie.',
+      'Nouveau réglage « Quand deux lots se rencontrent » : les lots peuvent s’empiler au lieu de se pousser. Le lot qui arrive attend son tour derrière celui qu’on a en main, plus rien ne rebondit sur le voisin, et c’est le joueur lent qui accumule. Sur 60 parties, 1,9 % des mains portent alors deux lots ou plus — jamais plus de trois.',
+      'Dans le tableau des combinaisons, les combinaisons de cartes Journée se distinguent enfin des universelles : deux intertitres séparent « toujours en jeu » de « seulement pendant la manche où la carte est en jeu », et les lignes de cartes passent en bleu, filet à gauche et pastille « Journée ». Même traitement au Laboratoire.',
+    ],
+  },
   {
     version: '1.20',
     date: '11/08/2026',

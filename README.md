@@ -105,8 +105,12 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
+- ce qui déclenche l'attrape : les trois éclairs, ou l'échec sur un dé sans face
+  éclair ;
 - ce que rapporte l'attrape : un jeton, la manche si le contact réussit, ou la
   manche dès les trois éclairs ;
+- ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
+  les lots s'empilent dans la même main ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe ;
@@ -143,7 +147,11 @@ n’a pas été lancé.
 
 **On ne tient jamais deux lots** : quand deux se rencontrent, celui qu’on avait
 en main est poussé vers le voisin suivant — la poussée peut se propager — et on
-enchaîne sur le nouveau.
+enchaîne sur le nouveau. L’option `lotsCumules` remplace cette poussée par une
+pile : le lot qui arrive attend son tour, plus rien ne rebondit sur le voisin.
+Sur 60 parties à 6 joueurs, 1,9 % des mains portent alors deux lots ou plus,
+jamais plus de trois — assez pour se sentir débordé, trop rare pour bloquer la
+table.
 
 **Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
 Quand il y en a plusieurs — c’est le joker qui les sert, le plus souvent — le
@@ -198,6 +206,27 @@ réussi se règle dans les Variables :
 
 Mesuré sur 300 parties simulées. En `combo` la fenêtre de réflexe disparaît et
 la course aux vaches avec elle : c’est une partie éclair, pas un équilibrage.
+
+### Le mode sans éclair
+
+`attrapeSur: 'echec'` retire la face éclair du dé — une seconde vache prend sa
+place — et confie le contact à l’échec : deux X font partir le lot comme
+d’habitude, mais **si le voisin à qui on le passe tient un lot, on tente de le
+toucher au passage**. La combinaison des trois éclairs est retirée avec la face.
+
+On ne choisit donc plus d’attaquer : on attaque chaque fois que le hasard le
+permet, et l’échec cesse d’être une pure perte. Sur 200 parties à 6 joueurs :
+
+| Caractère | Base | Sans éclair |
+|---|---|---|
+| Logique | 4:24, 4,7 contacts | 3:11, 4,7 contacts |
+| Équilibré | 5:25, 9,2 contacts | 3:34, 6,3 contacts |
+| Agressif | 5:56, 15,4 contacts | 3:42, 8,0 contacts |
+
+La partie raccourcit d’une bonne minute partout : la seconde vache double les
+chances de retourner un jeton, et c’est la course aux vaches qui décide la
+manche. Le Logique attrape autant qu’avant — il ne visait déjà pas l’éclair —
+tandis que l’Agressif, privé de sa cible, retombe à moitié moins de contacts.
 
 ## Les caractères des IA
 

@@ -98,6 +98,22 @@ export const ALERTES = {
   endormir: 'violet',
 };
 
+// Ce qui déclenche l'attrape. « eclair » : les trois éclairs, règle de base.
+// « echec » : le double X — le lot part quand même, mais on tente le contact au
+// passage, et la face éclair disparaît du dé, faute de combinaison à servir.
+export const OPTIONS_DECLENCHEUR = [
+  ['eclair', 'Trois éclairs'],
+  ['echec', 'Un échec (double X)'],
+];
+
+export const AIDE_DECLENCHEUR = {
+  eclair: 'Règle de base : trois éclairs passent le lot et tentent le contact. Le dé porte '
+    + 'une face éclair.',
+  echec: 'Sans face éclair : c’est l’échec qui tente le contact. Deux X font partir le lot comme '
+    + 'd’habitude, mais si le joueur suivant tient un lot, on l’attrape au passage. L’échec '
+    + 'cesse d’être une perte sèche.',
+};
+
 // Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
 // en font l'enjeu de la manche.
 export const OPTIONS_ATTRAPE = [
@@ -120,9 +136,14 @@ export const AIDE_ATTRAPE = {
 // Modifiable face par face dans les options de partie et dans le Laboratoire.
 export const FACES_PAR_DEFAUT = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
 
+// Le dé du mode « attrape sur échec » : pas de face éclair, la vache prend sa
+// place. Hypothèse de travail — les faces restent modifiables une par une.
+export const FACES_SANS_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'vache'];
+
 export const PRESETS_FACES = [
   { nom: 'Officiel', faces: ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'] },
   { nom: 'Sans joker', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },
+  { nom: 'Sans éclair', faces: FACES_SANS_ECLAIR },
   { nom: 'Joker double', faces: ['tornade', 'joker', 'x', 'jokerDouble', 'vache', 'eclair'] },
   { nom: 'Deux jokers', faces: ['tornade', 'joker', 'joker', 'x', 'vache', 'eclair'] },
   { nom: 'Symétrique', faces: ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'] },
@@ -415,18 +436,26 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
   // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
   // disparaît purement et simplement du jeu.
   const echecJokers = opts.echecJokers !== false;
+  // Sur échec, la combinaison des trois éclairs n'existe plus : c'est le double X
+  // qui tente le contact, et le dé perd sa face éclair.
+  const attrapeSur = opts.attrapeSur === 'echec' ? 'echec' : 'eclair';
   return {
     nbJoueurs,
     desParLot: 4,
-    faces: FACES_PAR_DEFAUT.slice(),
+    faces: (attrapeSur === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
     echecJokers,
+    attrapeSur,
+    // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
+    // s'empilent dans la même main.
+    lotsCumules: !!opts.lotsCumules,
     // Variante d'attrape : 'non' (un jeton retourné, la règle de base),
     // 'touche' (le contact réussi emporte la manche) ou 'combo' (les trois
     // éclairs l'emportent sans même tenter le contact).
     attrapeGagneManche: 'non',
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
+      .filter((c) => !(attrapeSur === 'echec' && c.id === 'collision'))
       .map((c) => ({ ...c, requis: { ...c.requis } })),
     cartes: CARTES_JOURNEE.map((c) => c.id),
     lots: mep.lots,

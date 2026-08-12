@@ -1,17 +1,18 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.20';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.20';
-import { store } from './store.js?v=1.20';
-import { lancerCampagne } from '../core/sim.js?v=1.20';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.21';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.21';
+import { store } from './store.js?v=1.21';
+import { lancerCampagne } from '../core/sim.js?v=1.21';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents, profilIA,
-  OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-} from '../core/config.js?v=1.20';
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
+  FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
+} from '../core/config.js?v=1.21';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.20';
+} from '../core/proba.js?v=1.21';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -207,6 +208,27 @@ function panneauConfig(rafraichir) {
     ),
     tableauCombosEditables(rafraichir),
 
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
+    h('div.segment',
+      ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
+        class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => {
+          cfg.attrapeSur = id;
+          cfg.faces = (id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice();
+          // La combinaison des éclairs disparaît avec la face qui la servait.
+          cfg.combos = configParDefaut(cfg.nbJoueurs, {
+            echecJokers: cfg.combos.some((c) => c.id === 'echecJokers'), attrapeSur: id,
+          }).combos.map((c) => {
+            const garde = cfg.combos.find((x) => x.id === c.id);
+            return { ...c, requis: { ...((garde && garde.requis) || c.requis) } };
+          });
+          rafraichir();
+        },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
+
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
     h('div.segment',
       ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
@@ -217,6 +239,19 @@ function panneauConfig(rafraichir) {
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
       AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
+
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Quand deux lots se rencontrent'),
+    h('div.segment',
+      ...[['pousse', 'Poussé'], ['cumul', 'Empilés']].map(([id, lib]) => h('button', {
+        class: (cfg.lotsCumules ? 'cumul' : 'pousse') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => { cfg.lotsCumules = id === 'cumul'; rafraichir(); },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      cfg.lotsCumules
+        ? 'Les lots s’empilent dans la même main et attendent leur tour.'
+        : 'Le lot en cours est poussé vers le voisin suivant, la poussée peut se propager.'),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
     h('div.grille.grille--4', { style: { gap: '10px' } },
@@ -267,8 +302,11 @@ function tableauCombosEditables(rafraichir) {
   const symboles = symbolesPertinents(cfg);
   const cartesAvecCombo = CARTES_JOURNEE.filter((c) => c.combo);
 
-  const ligne = (nom, requis, ecrire) => h('tr',
-    h('td', { style: { fontWeight: '700' } }, nom),
+  const ligne = (nom, requis, ecrire, carte = false) => h('tr', {
+    class: carte ? 'ligne-carte' : '',
+  },
+    h('td', { style: { fontWeight: '700' } }, nom,
+      carte ? h('span.badge.badge--carte', 'Journée') : null),
     ...symboles.map((s) => h('td.num', h('input', {
       type: 'number', min: 0, max: 12, value: requis[s] || 0,
       style: { width: '100%', minWidth: '0', padding: '4px 4px', textAlign: 'right' },
@@ -284,9 +322,12 @@ function tableauCombosEditables(rafraichir) {
       ...symboles.map((s) => h('th.num', pastilleSymbole(s, 18))),
     )),
     h('tbody',
+      h('tr.ligne-titre', h('td', { colspan: symboles.length + 1 }, 'Toujours en jeu')),
       ...cfg.combos.map((c) => ligne(c.nom, c.requis, (s, v) => {
         if (v > 0) c.requis[s] = v; else delete c.requis[s];
       })),
+      h('tr.ligne-titre.ligne-titre--carte',
+        h('td', { colspan: symboles.length + 1 }, 'Cartes Journée — le temps d’une manche')),
       ...cartesAvecCombo.map((carte) => {
         const requis = cfg.combosCartes?.[carte.combo.id] || carte.combo.requis;
         return ligne(
@@ -298,6 +339,7 @@ function tableauCombosEditables(rafraichir) {
             if (v > 0) cur[s] = v; else delete cur[s];
             cfg.combosCartes[carte.combo.id] = cur;
           },
+          true,
         );
       }),
     ),

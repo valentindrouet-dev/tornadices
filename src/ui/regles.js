@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.20';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.20';
+import { h } from './dom.js?v=1.21';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.21';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.20';
+} from '../core/config.js?v=1.21';
 
 export function vueRegles() {
   return h('div.page',
@@ -21,6 +21,11 @@ export function vueRegles() {
       h('p.petit', 'On ne tient jamais deux lots. Quand deux se rencontrent, celui qu’on avait '
         + 'en main est poussé aussitôt vers le voisin suivant — quitte à le pousser à son tour — '
         + 'et on enchaîne sur le nouveau, faces « ? », à lancer.'),
+      h('div.encart.encart--info', { style: { margin: '10px 0' } },
+        'Variante des Variables : les lots s’empilent au lieu de se pousser. Le lot qui arrive '
+        + 'attend son tour derrière celui qu’on a en main, et l’on s’en occupe une fois le '
+        + 'premier parti. Rien ne rebondit plus sur le voisin — c’est le joueur lent qui '
+        + 'accumule, et il peut se retrouver avec toute la table sur les bras.'),
       h('p.petit.muted', 'Entre deux manches, les dés reviennent au centre de la table puis '
         + 'repartent vers l’équipe qui vient de perdre, pendant que la carte Journée suivante '
         + 'recouvre la précédente.'),
@@ -140,6 +145,20 @@ export function vueRegles() {
         'Variante réglable dans les Variables : l’attrape peut emporter la manche entière, '
         + 'soit quand le contact réussit, soit dès les trois éclairs. La manche devient alors '
         + 'une course à l’attrape plutôt qu’une course aux vaches.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'Le mode sans éclair'),
+      h('p.petit', 'Autre réglage des Variables : la face éclair disparaît du dé — une seconde '
+        + 'vache prend sa place — et c’est l’échec qui tente le contact. Deux X font partir le lot '
+        + 'comme d’habitude, mais si le voisin à qui on le passe a un lot en main, on tente de le '
+        + 'toucher au passage.'),
+      h('p.petit.muted', 'On ne choisit donc plus d’attaquer : on attaque à chaque fois que le '
+        + 'hasard le permet, et l’échec cesse d’être une pure perte. Le voisin n’a un lot qu’une '
+        + 'fois sur quatre environ — les contacts restent rares, mais ils ne coûtent plus un jet.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Dans ce mode, la combinaison des trois éclairs n’existe plus : la liste des '
+        + 'combinaisons de la table le montre, et l’échec y porte la mention « tente l’attrape ».'),
     ),
 
     h('div.carte',
