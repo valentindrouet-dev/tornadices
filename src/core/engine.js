@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.24';
+import { makeRng } from './rng.js?v=1.25';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.24';
+} from './config.js?v=1.25';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -686,9 +686,10 @@ export class Moteur {
    */
   _attrapeAuDepart(j, choisi) {
     if (choisi.id === 'collision') return true;
-    return this.cfg.attrapeSur === 'echec'
-      && choisi.id === 'blocage'
-      && this._suivant(j).lots.length > 0;
+    if (this.cfg.attrapeSur !== 'echec' || choisi.id !== 'blocage') return false;
+    // Un dormeur ne tend pas la main : règle décochable dans les Variables.
+    if (this.cfg.attrapeEveille !== false && !j.eveille) return false;
+    return this._suivant(j).lots.length > 0;
   }
 
   /**

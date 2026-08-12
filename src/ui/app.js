@@ -1,15 +1,15 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.24';
-import { SVG_LOGO } from './icons.js?v=1.24';
-import { VERSION } from '../version.js?v=1.24';
-import { vueAccueil } from './accueil.js?v=1.24';
-import { vueTable, partieEnCours } from './table.js?v=1.24';
-import { vueLabo } from './labo.js?v=1.24';
-import { vueVariables } from './variables.js?v=1.24';
-import { vueHistorique } from './historique.js?v=1.24';
-import { vueVersions } from './versions.js?v=1.24';
-import { vueRegles } from './regles.js?v=1.24';
+import { h, remplacer } from './dom.js?v=1.25';
+import { SVG_LOGO } from './icons.js?v=1.25';
+import { VERSION } from '../version.js?v=1.25';
+import { vueAccueil } from './accueil.js?v=1.25';
+import { vueTable, partieEnCours } from './table.js?v=1.25';
+import { vueLabo } from './labo.js?v=1.25';
+import { vueVariables } from './variables.js?v=1.25';
+import { vueHistorique } from './historique.js?v=1.25';
+import { vueVersions } from './versions.js?v=1.25';
+import { vueRegles } from './regles.js?v=1.25';
 
 const ROUTES = {
   '': vueAccueil,
@@ -59,12 +59,18 @@ function barre() {
     type: 'button', 'aria-label': 'Menu', 'aria-expanded': 'false',
   }, h('span'), h('span'), h('span'));
 
+  // La marque ramène à l'accueil, le numéro mène au journal des versions :
+  // ce sont les deux gestes que l'on tente d'instinct sur un en-tête.
   const entete = h('header.barre',
-    h('div.marque', { html: SVG_LOGO }),
-    h('div.marque',
+    h('button.marque.marque--lien', {
+      type: 'button', title: 'Retour à l’accueil', onclick: () => aller('/'),
+    },
+      h('span.logo', { html: SVG_LOGO }),
       h('span.nom', 'TORNADICES'),
-      h('span.pastille-version', `v${VERSION}`),
     ),
+    h('button.pastille-version', {
+      type: 'button', title: 'Journal des versions', onclick: () => aller('/versions'),
+    }, `v${VERSION}`),
     h('div.espace'),
     lien('Accueil', '/', { classe: 'lien-accueil' }),
     bascule,

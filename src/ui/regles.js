@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.24';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.24';
+import { h } from './dom.js?v=1.25';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.25';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.24';
+} from '../core/config.js?v=1.25';
 
 export function vueRegles() {
   return h('div.page',
@@ -166,6 +166,11 @@ export function vueRegles() {
       h('div.encart', { style: { marginTop: '10px' } },
         'Dans ce mode, la combinaison des trois éclairs n’existe plus : la liste des '
         + 'combinaisons de la table le montre, et l’échec y porte la mention « tente l’attrape ».'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Un dormeur ne tend pas la main : Tornade endormie, l’échec reste un échec sec, on '
+        + 'passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au '
+        + 'passage — règle décochable dans les Variables. Elle ne touche pas les trois '
+        + 'éclairs, qui valent dans les deux états.'),
     ),
 
     h('div.carte',

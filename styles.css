@@ -78,6 +78,20 @@ a { color: var(--accent-fonce); }
 }
 .marque { display: flex; align-items: center; gap: 11px; margin-right: 4px; }
 .marque svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .10)); }
+.marque .logo { display: flex; }
+/* Marque et numéro de version sont des boutons, mais ne doivent pas en avoir
+   l'air : ni fond, ni bordure, ni décalage au clic — seulement le curseur et un
+   contour au focus clavier. */
+.marque--lien {
+  border: 0; background: none; padding: 0; margin-right: 4px;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.marque--lien:hover .nom { color: var(--accent-fonce); }
+.pastille-version { cursor: pointer; }
+.pastille-version:hover { background: var(--accent-bord); }
+.marque--lien:focus-visible, .pastille-version:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
 .marque .nom {
   font-weight: 900;
   font-size: 19px;
@@ -89,6 +103,7 @@ a { color: var(--accent-fonce); }
   color: var(--accent-fonce);
   border-radius: 999px;
   padding: 3px 11px;
+  font-family: inherit;
   font-size: 12.5px;
   font-weight: 800;
   border: 1px solid rgba(30, 131, 204, .22);

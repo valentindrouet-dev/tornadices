@@ -106,7 +106,7 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
 - ce qui déclenche l'attrape : les trois éclairs, ou l'échec sur un dé sans face
-  éclair ;
+  éclair — et, pour ce dernier, s'il faut être réveillé pour tenter le contact ;
 - ce que rapporte l'attrape : un jeton, ou la manche si le contact réussit ;
 - ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
   les lots s'empilent dans la même main ;
@@ -242,6 +242,12 @@ seuls n’emportent jamais rien.
 place — et confie le contact à l’échec : deux X font partir le lot comme
 d’habitude, mais **si le voisin à qui on le passe tient un lot, on tente de le
 toucher au passage**. La combinaison des trois éclairs est retirée avec la face.
+
+**Il faut être réveillé** (`attrapeEveille`, actif par défaut) : Tornade
+endormie, l’échec reste un échec sec. Sur 300 parties à 6 joueurs, la règle
+divise les contacts par deux — 4,7 → 2,4 chez le Logique, 7,4 → 3,2 chez
+l’Agressif — sans toucher la durée (3:09 → 3:12). Elle ne concerne que l’attrape
+sur échec ; les trois éclairs valent dans les deux états.
 
 On ne choisit donc plus d’attaquer : on attaque chaque fois que le hasard le
 permet, et l’échec cesse d’être une pure perte. Sur 200 parties à 6 joueurs :

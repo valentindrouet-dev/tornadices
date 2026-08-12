@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.24';
+export const VERSION = '1.25';
 export const BUILD_DATE = '2026-08-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.25',
+    date: '12/08/2026',
+    notes: [
+      'La marque « TORNADICES » et son logo ramènent à l’accueil, et le numéro de version ouvre le journal des versions — les deux gestes que l’on tente d’instinct sur un en-tête.',
+      'Nouvelle règle, cochée par défaut : un dormeur ne tend pas la main. Dans le mode « attrape sur échec », Tornade endormie, le double X reste un échec sec — on passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au passage. Décochable dans les Variables et au Laboratoire.',
+      'Sur 300 parties à 6 joueurs, la règle divise les contacts par deux — 4,7 → 2,4 chez le Logique, 7,4 → 3,2 chez l’Agressif — sans changer la durée d’une partie (3:09 → 3:12). Le réveil devient le passage obligé de tout ce qu’on peut entreprendre.',
+      'Elle ne concerne que l’attrape sur échec : les trois éclairs continuent de valoir dans les deux états, comme la règle du jeu le veut.',
+    ],
+  },
   {
     version: '1.24',
     date: '12/08/2026',

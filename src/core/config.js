@@ -523,6 +523,10 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     symboleBloquant: SYMBOLE_BLOQUANT,
     echecJokers,
     attrapeSur,
+    // Un dormeur ne tend pas la main : l'attrape sur échec demande d'être
+    // réveillé. Ne concerne pas les trois éclairs, qui valent dans les deux
+    // états. Décochable dans les Variables.
+    attrapeEveille: opts.attrapeEveille !== false,
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.
     lotsCumules: !!opts.lotsCumules,

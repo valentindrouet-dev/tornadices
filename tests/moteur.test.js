@@ -452,27 +452,46 @@ console.log('\nModes de partie');
   verifier('et la combinaison des trois éclairs disparaît',
     !cfgEchec.combos.some((c) => c.id === 'collision'));
 
-  {
-    const m = new Moteur(cfgEchec, spec, 'echec-attrape');
+  // Un échec sur un voisin chargé : le départ, l'état du lanceur et le réglage
+  // « il faut être réveillé » décident ensemble s'il y a contact.
+  const departEchec = (cfg, graine, { eveille, voisinCharge }) => {
+    const m = new Moteur(cfg, spec, graine);
     const j = m.joueurs.find((x) => x.lots.length);
-    const suivant = m._suivant(j);
-    suivant.lots = [m._nouveauLot()];
+    j.eveille = eveille;
+    m._suivant(j).lots = voisinCharge ? [m._nouveauLot()] : [];
     poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
     m._finLancer(j, []);
-    verifier('voisin chargé : l’échec part en tentant l’attrape',
-      j.departEnAttente && j.departEnAttente.motif === 'attrape'
-      && j.departEnAttente.dispo.id === 'blocage');
+    return { m, j, motif: j.departEnAttente && j.departEnAttente.motif };
+  };
+
+  {
+    const { m, j, motif } = departEchec(cfgEchec, 'echec-attrape', { eveille: true, voisinCharge: true });
+    verifier('réveillé, voisin chargé : l’échec part en tentant l’attrape',
+      motif === 'attrape' && j.departEnAttente.dispo.id === 'blocage', `motif ${motif}`);
     m.avancerJusqua(m.now + 4000);
     verifier('… et le contact est bien tenté', j.stats.collisionsTentees === 1);
   }
+  verifier('réveillé, voisin vide : l’échec reste un échec',
+    departEchec(cfgEchec, 'echec-sans-cible', { eveille: true, voisinCharge: false }).motif === 'combo');
+  verifier('endormi, voisin chargé : pas de contact, un dormeur ne tend pas la main',
+    departEchec(cfgEchec, 'echec-endormi', { eveille: false, voisinCharge: true }).motif === 'combo');
   {
-    const m = new Moteur(cfgEchec, spec, 'echec-sans-cible');
+    const libre = configParDefaut(6, { attrapeSur: 'echec', attrapeEveille: false });
+    verifier('règle décochée : l’endormi attrape de nouveau',
+      departEchec(libre, 'echec-endormi-libre', { eveille: false, voisinCharge: true }).motif === 'attrape');
+    verifier('… et le réglage voyage bien dans la configuration',
+      cfgEchec.attrapeEveille === true && libre.attrapeEveille === false);
+  }
+  // Les trois éclairs, eux, valent dans les deux états : rien n'a bougé.
+  {
+    const m = new Moteur(configParDefaut(6), spec, 'eclair-endormi');
     const j = m.joueurs.find((x) => x.lots.length);
-    m._suivant(j).lots = [];
-    poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
+    j.eveille = false;
+    m._suivant(j).lots = [m._nouveauLot()];
+    poser(j.lots[0], ['eclair', 'eclair', 'eclair', 'vache']);
     m._finLancer(j, []);
-    verifier('voisin vide : l’échec reste un échec',
-      j.departEnAttente && j.departEnAttente.motif === 'combo');
+    verifier('l’attrape aux trois éclairs vaut toujours, même endormi',
+      j.departEnAttente && j.departEnAttente.motif === 'attrape');
   }
   {
     const cfg = configParDefaut(6, { attrapeSur: 'echec' });
