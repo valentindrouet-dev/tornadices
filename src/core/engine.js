@@ -10,11 +10,11 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.22';
+import { makeRng } from './rng.js?v=1.23';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.22';
+} from './config.js?v=1.23';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -356,9 +356,21 @@ export class Moteur {
     return Math.max(40, this.rng.normal(base * lent, this.cfg.ecartReflexion ?? 120, 40));
   }
 
+  /**
+   * Rythme irrégulier : `variance` étire ou raccourcit chaque durée, coup par
+   * coup. À 0 le tempo est mécanique — la durée annoncée est celle qu'on
+   * observe ; à 0,3 elle va du simple 70 % au 130 %. Le tirage passe par le
+   * générateur de la partie, donc une même graine redonne le même rythme.
+   */
+  _varier(ms) {
+    const v = this.cfg.variance || 0;
+    if (!v || ms <= 0) return ms;
+    return Math.max(0, ms * (1 + (this.rng() * 2 - 1) * v));
+  }
+
   _dureeLancer() {
     const lent = this.passif.lenteur || 1;
-    return Math.max(60, (this.cfg.dureeLancer ?? 1000) * lent);
+    return Math.max(60, this._varier((this.cfg.dureeLancer ?? 1000) * lent));
   }
 
   // ── Dés ─────────────────────────────────────────────────────────────────────
@@ -693,7 +705,7 @@ export class Moteur {
     // combinaisons demande un peu plus — ce délai est du temps de jeu lui aussi.
     const constat = motif === 'interruption' ? 0
       : options ? (this.cfg.dureeChoix ?? this.cfg.dureeConstat ?? 900)
-        : (this.cfg.dureeConstat ?? 900);
+        : this._varier(this.cfg.dureeConstat ?? 900);
     j.departEnAttente.expire = this.now + constat;
     this.file.pousser(this.now + constat, {
       type: 'depart', pid: j.id, lot, motif, dispo, choix,
@@ -709,22 +721,8 @@ export class Moteur {
     const q = this._envoyerLot(j, lot, motif, dispo);
     if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
 
-    if (motif === 'attrape') {
-      // Variante : les trois éclairs emportent la manche sans même tenter le
-      // contact. La partie se joue alors sur la course à l'attrape.
-      if (this.cfg.attrapeGagneManche === 'combo') {
-        this._log(
-          `${j.nom} sort l’attrape — ${this._nomEquipe(j.equipe)} remportent la manche.`,
-          'combo', j.id,
-        );
-        this._annoncer(
-          `Attrape — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
-        );
-        this._finManche(j.equipe);
-      } else {
-        this._tenterAttrape(j, q);
-      }
-    } else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
+    if (motif === 'attrape') this._tenterAttrape(j, q);
+    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
 
     if (!this.termine && j.lots.length) this._planifier(j.id);
     if (this.onEtatChange) this.onEtatChange();
@@ -745,7 +743,7 @@ export class Moteur {
     lot.lance = false;
 
     const q = this._suivant(j);
-    const duree = Math.max(0, this.cfg.dureePassage ?? 1000);
+    const duree = Math.max(0, this._varier(this.cfg.dureePassage ?? 1000));
     const transit = {
       id: ++this.compteurTransit, lot, de: j.id, vers: q.id, motif,
       depart: this.now, arrivee: this.now + duree,

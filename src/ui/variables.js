@@ -3,19 +3,20 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.22';
-import { pastilleSymbole } from './icons.js?v=1.22';
-import { store } from './store.js?v=1.22';
-import { aller } from './app.js?v=1.22';
-import { lancerPartie } from './table.js?v=1.22';
+import { h, remplacer } from './dom.js?v=1.23';
+import { pastilleSymbole } from './icons.js?v=1.23';
+import { store } from './store.js?v=1.23';
+import { aller } from './app.js?v=1.23';
+import { lancerPartie } from './table.js?v=1.23';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
-  symbolesPertinents, OPTIONS_ATTRAPE, AIDE_ATTRAPE,
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
-  assainirFaces, assainirRequis,
-} from '../core/config.js?v=1.22';
-import { randomSeed } from '../core/rng.js?v=1.22';
-import { reglagesJoueurs } from './accueil.js?v=1.22';
+  assainirFaces, assainirRequis, TYPES_DE, facesPourDe, PRESETS_FACES, aideVariance,
+} from '../core/config.js?v=1.23';
+import { tableauCombos } from './combos.js?v=1.23';
+import { randomSeed } from '../core/rng.js?v=1.23';
+import { reglagesJoueurs } from './accueil.js?v=1.23';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -107,9 +108,21 @@ export function vueVariables() {
         h('div.titre-section', 'Dés'),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
-          num('Faces par dé', cfg.faces.length, '__faces', {
-            min: 2, max: 12, disabled: true, aide: 'utilisez + et − ci-dessous',
-          }),
+          h('label.champ', 'Type de dé',
+            h('div.segment', ...TYPES_DE.map((n) => h('button', {
+              class: cfg.faces.length === n ? 'on' : '',
+              // Changer de dé repart de la répartition officielle étirée sur le
+              // nouveau nombre de faces : garder les anciennes en tronquant
+              // ferait disparaître des symboles sans le dire.
+              onclick: () => {
+                ecrire('faces', facesPourDe(n, cfg.attrapeSur === 'echec'
+                  ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT));
+                dessiner();
+              },
+            }, `d${n}`))),
+            h('span.mini.muted', { style: { fontWeight: '400' } },
+              cfg.faces.length === 6 ? 'le dé du jeu' : 'variante d’équilibrage'),
+          ),
           num('Lots en jeu', cfg.lots, 'lots', {
             min: 1, max: 9, disabled: suivreTableau,
             aide: suivreTableau ? `tableau officiel : ${mep.lots}` : '',
@@ -131,17 +144,15 @@ export function vueVariables() {
           )),
         ),
         h('div.rangee.rangee--serree', { style: { marginTop: '12px' } },
-          h('button.btn.btn--petit', {
-            onclick: () => { ecrire('faces', [...cfg.faces, 'vide'].slice(0, 12)); dessiner(); },
-          }, '+ une face'),
-          h('button.btn.btn--petit', {
-            disabled: cfg.faces.length <= 2,
-            onclick: () => { ecrire('faces', cfg.faces.slice(0, -1)); dessiner(); },
-          }, '− une face'),
-          h('span.mini.muted',
-            'Base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
-            + 'Le X fige son dé — il ne se relance jamais.'),
+          h('span.mini.muted', 'Modèles :'),
+          ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
+            onclick: () => { ecrire('faces', facesPourDe(cfg.faces.length, p.faces)); dessiner(); },
+          }, p.nom)),
         ),
+        h('p.mini.muted', { style: { marginTop: '10px' } },
+          'Le d6 est le dé du jeu : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
+          + 'Le X fige son dé — il ne se relance jamais. Le d8 et le d10 reprennent la '
+          + 'même série depuis le début, et chaque face reste modifiable une à une.'),
         h('p.mini.muted', { style: { marginTop: '10px' } },
           'Le joker prend la face de n’importe quel symbole sauf le X, et valide donc '
           + 'n’importe quelle combinaison. Le joker double, absent des dés au départ, ne '
@@ -158,7 +169,10 @@ export function vueVariables() {
             onclick: () => { ecrire('echecJokers', cfg.echecJokers === false); dessiner(); },
           }, h('span.case', '✓'), 'Trois jokers = échec'),
         ),
-        tableauCombos(cfg, dessiner),
+        tableauCombos(cfg,
+          (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
+          (id, requis) => ecrire('combosCartes', { ...(v.combosCartes || {}), [id]: requis }),
+          dessiner),
         h('p.mini.muted', { style: { marginTop: '10px' } },
           'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus. '
           + 'Quand le joker en sert plusieurs à la fois, le joueur choisit laquelle.'),
@@ -177,8 +191,9 @@ export function vueVariables() {
               onclick: () => {
                 ecrire('attrapeSur', id);
                 // Le dé suit le mode : sans combinaison d'éclairs, la face éclair
-                // n'aurait plus rien à servir.
-                ecrire('faces', (id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice());
+                // n'aurait plus rien à servir. Le type de dé choisi est conservé.
+                ecrire('faces', facesPourDe(cfg.faces.length,
+                  id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT));
                 dessiner();
               },
             }, lib)),
@@ -241,6 +256,28 @@ export function vueVariables() {
           num('Fenêtre de réflexe (ms)', cfg.fenetreReflexe, 'fenetreReflexe',
             { min: 100, max: 4000, step: 50, aide: 'pour toucher ou retirer sa main' }),
         ),
+        h('label.champ', { style: { marginTop: '14px' } }, 'Irrégularité du rythme',
+          h('div.rangee.rangee--serree',
+            h('input.curseur', {
+              type: 'range', min: 0, max: 50, step: 5,
+              value: Math.round((cfg.variance || 0) * 100),
+              oninput: (e) => {
+                ecrire('variance', Number(e.target.value) / 100);
+                const cible = e.target.parentNode.querySelector('.valeur-curseur');
+                if (cible) cible.textContent = aideVariance(Number(e.target.value) / 100, cfg);
+              },
+              onchange: () => dessiner(),
+            }),
+            h('span.valeur-curseur', aideVariance(cfg.variance || 0, cfg)),
+          ),
+        ),
+        h('p.mini.muted', { style: { marginTop: '8px' } },
+          cfg.variance
+            ? 'Chaque lancer, chaque constat et chaque passage est tiré au sort autour de sa '
+              + 'durée réglée : aucun geste ne dure exactement pareil, comme à une vraie table. '
+              + 'À graine égale, le rythme reste pourtant reproductible.'
+            : 'À 0 %, le tempo est mécanique : un passage réglé à 1000 ms dure toujours 1000 ms. '
+              + 'Montez le curseur pour que chaque geste varie autour de sa durée.'),
         h('div.encart', { style: { marginTop: '12px' } },
           'Ces durées comptent dans le temps de partie : les allonger ralentit le jeu et rallonge '
           + 'les manches, exactement comme sur une vraie table.'),
@@ -346,52 +383,3 @@ export function vueVariables() {
   return racine;
 }
 
-function tableauCombos(cfg, rafraichir) {
-  const symboles = symbolesPertinents(cfg);
-  const v = variables();
-
-  // Les combinaisons de cartes Journée sont bleutées : elles ne valent que le
-  // temps d'une manche, contrairement aux cinq combinaisons de la Tornade.
-  const ligne = (nom, requis, ecrireLigne, carte = false) => h('tr', {
-    class: carte ? 'ligne-carte' : '',
-  },
-    h('td', { style: { fontWeight: '700' } }, nom,
-      carte ? h('span.badge.badge--carte', 'Journée') : null),
-    ...symboles.map((s) => h('td.num', h('input', {
-      type: 'number', min: 0, max: 12, value: requis[s] || 0,
-      style: { width: '100%', minWidth: '0', padding: '4px', textAlign: 'right' },
-      onchange: (e) => { ecrireLigne(s, Math.max(0, Number(e.target.value) || 0)); rafraichir(); },
-    }))),
-  );
-
-  return h('table.tbl.tbl--compacte', { style: { tableLayout: 'fixed' } },
-    h('colgroup', h('col', { style: { width: '34%' } }), ...symboles.map(() => h('col'))),
-    h('thead', h('tr',
-      h('th', 'Combinaison'),
-      ...symboles.map((s) => h('th.num', pastilleSymbole(s, 20))),
-    )),
-    h('tbody',
-      h('tr.ligne-titre', h('td', { colspan: symboles.length + 1 }, 'Toujours en jeu')),
-      ...cfg.combos.map((c) => ligne(c.nom, c.requis, (sym, n) => {
-        const combos = { ...(v.combos || {}) };
-        const cur = { ...(combos[c.id] || c.requis) };
-        if (n > 0) cur[sym] = n; else delete cur[sym];
-        combos[c.id] = cur;
-        ecrire('combos', combos);
-      })),
-      h('tr.ligne-titre.ligne-titre--carte',
-        h('td', { colspan: symboles.length + 1 },
-          'Cartes Journée — seulement pendant la manche où la carte est en jeu')),
-      ...CARTES_JOURNEE.filter((c) => c.combo).map((carte) => {
-        const requis = (cfg.combosCartes && cfg.combosCartes[carte.combo.id]) || carte.combo.requis;
-        return ligne(carte.court, requis, (sym, n) => {
-          const cartes = { ...(v.combosCartes || {}) };
-          const cur = { ...(cartes[carte.combo.id] || carte.combo.requis) };
-          if (n > 0) cur[sym] = n; else delete cur[sym];
-          cartes[carte.combo.id] = cur;
-          ecrire('combosCartes', cartes);
-        }, true);
-      }),
-    ),
-  );
-}

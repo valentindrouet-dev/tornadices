@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.22';
+export const VERSION = '1.23';
 export const BUILD_DATE = '2026-08-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.23',
+    date: '12/08/2026',
+    notes: [
+      'Le nombre de faces ne se règle plus à l’unité : on choisit un type de dé, d6, d8 ou d10. Le d6 reste le dé du jeu ; le d8 et le d10 reprennent la même série de symboles depuis le début — le d8 ajoute une tornade et un joker, le d10 y ajoute un X et un ZzZ — et chaque face reste modifiable une à une. Sur 300 parties à 6 joueurs : d8 4:39, d6 5:25, d10 7:29. Tout se joue sur la densité de X, un sur huit au d8 contre deux sur dix au d10.',
+      'La variante « Manche gagnée dès les 3 éclairs » est retirée : elle n’existe pas au jeu. Il faut toujours toucher pour emporter la manche. Un réglage enregistré sur cette variante retombe sur « Manche gagnée si le contact réussit ».',
+      'Le tableau des combinaisons se lit désormais comme un lot posé sur la table : un menu déroulant par dé du lot, avec la face choisie en miniature au-dessus, et « — » pour un dé qu’on ne demande pas. Fini la grille de compteurs où il fallait traduire « 3 » en trois dés. Sur téléphone, le tableau défile dans son propre cadre au lieu d’écraser les menus.',
+      'Nouveau curseur « Irrégularité du rythme », de 0 à 50 % : chaque lancer, chaque constat et chaque passage est tiré autour de sa durée réglée. À 0 % un passage de 1000 ms en dure toujours 1000 ; à 30 % il va de 700 à 1300 ms. La moyenne ne bouge pas — la médiane d’une partie passe de 5:26 à 5:30 entre 0 et 50 % — et à graine égale le rythme se rejoue à l’identique.',
+    ],
+  },
   {
     version: '1.22',
     date: '12/08/2026',

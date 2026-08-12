@@ -119,15 +119,12 @@ export const AIDE_DECLENCHEUR = {
 export const OPTIONS_ATTRAPE = [
   ['non', 'Un jeton'],
   ['touche', 'Manche gagnée si le contact réussit'],
-  ['combo', 'Manche gagnée dès les 3 éclairs'],
 ];
 
 export const AIDE_ATTRAPE = {
   non: 'Règle de base : un contact réussi interrompt le voisin et retourne un jeton de votre équipe.',
   touche: 'Trois éclairs, vous passez le lot et tentez le contact — s’il réussit, votre équipe '
     + 'remporte la manche sur-le-champ. Les jetons ne servent plus qu’à la course parallèle.',
-  combo: 'Trois éclairs suffisent : la manche est remportée sans même tenter le contact. '
-    + 'La manche devient une course à l’attrape, sans fenêtre de réflexe.',
 };
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
@@ -183,6 +180,11 @@ export function assainirConfig(cfg) {
 
   const sortie = { ...base, ...cfg };
   sortie.faces = assainirFaces(cfg.faces);
+  // « Manche gagnée dès les 3 éclairs » n'existe pas dans le jeu : un réglage
+  // qui la porte encore retombe sur la variante voisine, celle où il faut
+  // toucher pour emporter la manche.
+  if (cfg.attrapeGagneManche === 'combo') sortie.attrapeGagneManche = 'touche';
+  sortie.variance = Math.min(0.5, Math.max(0, Number(cfg.variance) || 0));
   sortie.combos = (Array.isArray(cfg.combos) ? cfg.combos : base.combos)
     .map((c) => ({ ...c, requis: assainirRequis(c.requis) }));
   if (cfg.combosCartes && typeof cfg.combosCartes === 'object') {
@@ -190,6 +192,29 @@ export function assainirConfig(cfg) {
       .map(([id, requis]) => [id, assainirRequis(requis)]));
   }
   return sortie;
+}
+
+/** « 20 % — un passage de 1000 ms dure de 800 à 1200 ms ». */
+export function aideVariance(v, cfg) {
+  const pct = Math.round(v * 100);
+  if (!pct) return '0 % — durées fixes';
+  const base = (cfg && cfg.dureePassage) || 1000;
+  return `${pct} % — un passage de ${base} ms dure de `
+    + `${Math.round(base * (1 - v))} à ${Math.round(base * (1 + v))} ms`;
+}
+
+// Le dé de base est toujours le d6 ; le d8 et le d10 sont là pour l'équilibrage.
+export const TYPES_DE = [6, 8, 10];
+
+/**
+ * Étire une répartition de six faces sur un dé plus grand en reprenant la série
+ * depuis le début : le d8 ajoute une tornade et un joker, le d10 y ajoute un X
+ * et un ZzZ. C'est la façon la plus régulière de garder les proportions du d6,
+ * et chaque face reste modifiable une à une.
+ */
+export function facesPourDe(nbFaces, base = FACES_PAR_DEFAUT) {
+  const modele = base.length ? base : FACES_PAR_DEFAUT;
+  return Array.from({ length: nbFaces }, (_, i) => modele[i % modele.length]);
 }
 
 export const PRESETS_FACES = [
@@ -527,6 +552,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     tempsReflexion: 300,       // temps de décision d'une IA entre deux gestes
     ecartReflexion: 120,       // écart-type de cette décision
     fenetreReflexe: 900,       // fenêtre pour toucher ou retirer sa main
+    variance: 0,               // 0 à 0,5 : irrégularité du rythme, coup par coup
 
     adresseBase: 0.55,         // chance de toucher, avant écart d'adresse
     tauxErreur: 0.03,          // chance de relancer un X par mégarde

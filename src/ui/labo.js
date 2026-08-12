@@ -1,18 +1,19 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.22';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.22';
-import { store } from './store.js?v=1.22';
-import { lancerCampagne } from '../core/sim.js?v=1.22';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.23';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.23';
+import { store } from './store.js?v=1.23';
+import { lancerCampagne } from '../core/sim.js?v=1.23';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents, profilIA,
+  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig,
-} from '../core/config.js?v=1.22';
+  FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig, TYPES_DE, facesPourDe, aideVariance,
+} from '../core/config.js?v=1.23';
+import { tableauCombos } from './combos.js?v=1.23';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.22';
+} from '../core/proba.js?v=1.23';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -165,12 +166,16 @@ function panneauConfig(rafraichir) {
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Dés'),
     h('div.grille.grille--3', { style: { gap: '10px' } },
       num('Dés par lot', cfg.desParLot, (v) => { cfg.desParLot = Math.max(1, Math.min(12, v)); }, { min: 1, max: 12 }),
-      num('Faces par dé', cfg.faces.length, (v) => {
-        const n = Math.max(2, Math.min(12, v));
-        const f = cfg.faces.slice(0, n);
-        while (f.length < n) f.push('vide');
-        cfg.faces = f;
-      }, { min: 2, max: 12 }),
+      h('label.champ', 'Type de dé',
+        h('div.segment', ...TYPES_DE.map((n) => h('button', {
+          class: cfg.faces.length === n ? 'on' : '',
+          onclick: () => {
+            cfg.faces = facesPourDe(n, cfg.attrapeSur === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT);
+            rafraichir();
+          },
+        }, `d${n}`))),
+        h('span.mini.muted', { style: { fontWeight: '400' } },
+          cfg.faces.length === 6 ? 'le dé du jeu' : 'variante d’équilibrage')),
       num('Lots en jeu', cfg.lots, (v) => { cfg.lots = Math.max(1, v); }, { min: 1, max: 9 }),
     ),
     h('div.faces-edit', { style: { marginTop: '10px' } },
@@ -184,7 +189,7 @@ function panneauConfig(rafraichir) {
     h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
       h('span.mini.muted', 'Modèles :'),
       ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
-        onclick: () => { cfg.faces = p.faces.slice(); rafraichir(); },
+        onclick: () => { cfg.faces = facesPourDe(cfg.faces.length, p.faces); rafraichir(); },
       }, p.nom)),
     ),
     h('div.mini.muted', { style: { marginTop: '8px' } },
@@ -209,7 +214,16 @@ function panneauConfig(rafraichir) {
         },
       }, h('span.case', '✓'), 'Trois jokers = échec'),
     ),
-    tableauCombosEditables(rafraichir),
+    tableauCombos(cfg,
+      (id, requis) => {
+        const c = cfg.combos.find((x) => x.id === id);
+        if (c) c.requis = requis;
+      },
+      (id, requis) => {
+        if (!cfg.combosCartes) cfg.combosCartes = {};
+        cfg.combosCartes[id] = requis;
+      },
+      rafraichir),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',
@@ -218,7 +232,8 @@ function panneauConfig(rafraichir) {
         style: { fontSize: '12.5px' },
         onclick: () => {
           cfg.attrapeSur = id;
-          cfg.faces = (id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice();
+          cfg.faces = facesPourDe(cfg.faces.length,
+            id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT);
           // La combinaison des éclairs disparaît avec la face qui la servait.
           cfg.combos = configParDefaut(cfg.nbJoueurs, {
             echecJokers: cfg.combos.some((c) => c.id === 'echecJokers'), attrapeSur: id,
@@ -280,6 +295,12 @@ function panneauConfig(rafraichir) {
       num('Adresse de base', cfg.adresseBase, (v) => { cfg.adresseBase = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.05 }),
     ),
     h('div.grille.grille--2', { style: { gap: '10px', marginTop: '10px' } },
+      num('Irrégularité du rythme (%)', Math.round((cfg.variance || 0) * 100),
+        (v) => { cfg.variance = Math.min(0.5, Math.max(0, v / 100)); }, { min: 0, max: 50, step: 5 }),
+      h('div.mini.muted', { style: { alignSelf: 'end', paddingBottom: '6px' } },
+        aideVariance(cfg.variance || 0, cfg)),
+    ),
+    h('div.grille.grille--2', { style: { gap: '10px', marginTop: '10px' } },
       num('Taux d’erreur', cfg.tauxErreur, (v) => { cfg.tauxErreur = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.01 }),
       num('Erreur punie par l’adversaire', cfg.penaliteErreurAdverse, (v) => { cfg.penaliteErreurAdverse = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.05 }),
     ),
@@ -296,55 +317,6 @@ function panneauConfig(rafraichir) {
           rafraichir();
         },
       }, 'Réglages d’origine'),
-    ),
-  );
-}
-
-function tableauCombosEditables(rafraichir) {
-  const cfg = etat.cfg;
-  const symboles = symbolesPertinents(cfg);
-  const cartesAvecCombo = CARTES_JOURNEE.filter((c) => c.combo);
-
-  const ligne = (nom, requis, ecrire, carte = false) => h('tr', {
-    class: carte ? 'ligne-carte' : '',
-  },
-    h('td', { style: { fontWeight: '700' } }, nom,
-      carte ? h('span.badge.badge--carte', 'Journée') : null),
-    ...symboles.map((s) => h('td.num', h('input', {
-      type: 'number', min: 0, max: 12, value: requis[s] || 0,
-      style: { width: '100%', minWidth: '0', padding: '4px 4px', textAlign: 'right' },
-      onchange: (e) => { ecrire(s, Math.max(0, Number(e.target.value))); rafraichir(); },
-    }))),
-  );
-
-  return h('table.tbl.tbl--compacte', { style: { tableLayout: 'fixed' } },
-    h('colgroup', h('col', { style: { width: '38%' } }),
-      ...symboles.map(() => h('col'))),
-    h('thead', h('tr',
-      h('th', 'Combinaison'),
-      ...symboles.map((s) => h('th.num', pastilleSymbole(s, 18))),
-    )),
-    h('tbody',
-      h('tr.ligne-titre', h('td', { colspan: symboles.length + 1 }, 'Toujours en jeu')),
-      ...cfg.combos.map((c) => ligne(c.nom, c.requis, (s, v) => {
-        if (v > 0) c.requis[s] = v; else delete c.requis[s];
-      })),
-      h('tr.ligne-titre.ligne-titre--carte',
-        h('td', { colspan: symboles.length + 1 }, 'Cartes Journée — le temps d’une manche')),
-      ...cartesAvecCombo.map((carte) => {
-        const requis = cfg.combosCartes?.[carte.combo.id] || carte.combo.requis;
-        return ligne(
-          carte.court,
-          requis,
-          (s, v) => {
-            if (!cfg.combosCartes) cfg.combosCartes = {};
-            const cur = { ...(cfg.combosCartes[carte.combo.id] || carte.combo.requis) };
-            if (v > 0) cur[s] = v; else delete cur[s];
-            cfg.combosCartes[carte.combo.id] = cur;
-          },
-          true,
-        );
-      }),
     ),
   );
 }

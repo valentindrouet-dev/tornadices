@@ -3,7 +3,8 @@
 import { Moteur } from '../src/core/engine.js';
 import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
-  assainirFaces, assainirRequis, assainirConfig,
+  assainirFaces, assainirRequis, assainirConfig, FACES_SANS_ECLAIR,
+  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
@@ -358,24 +359,35 @@ console.log('\nAttrape gagnante');
   }
 
   // Variante « le contact réussi emporte la manche ».
-  for (const mode of ['touche', 'combo']) {
+  {
     const cfg = configParDefaut(6);
-    cfg.attrapeGagneManche = mode;
-    const m = new Moteur(cfg, spec, `attrape-${mode}`);
+    cfg.attrapeGagneManche = 'touche';
+    const m = new Moteur(cfg, spec, 'attrape-touche');
     m.jouerJusquAuBout();
     const parAttrape = m.journal.filter((e) => /remportent la manche/.test(e.texte)).length;
     const manchesGagnees = m.statsManches.filter((s) => s.vainqueur).length;
-    verifier(`mode « ${mode} » — partie menée à terme en ${m.manche} manches, vainqueur ${m.vainqueur}`,
+    verifier(`mode « touche » — partie menée à terme en ${m.manche} manches, vainqueur ${m.vainqueur}`,
       m.termine && !!m.vainqueur && manchesGagnees > 0, `raison ${m.raisonFin}`);
-    verifier(`mode « ${mode} » — des manches sont bien emportées à l’attrape (${parAttrape})`,
+    verifier(`mode « touche » — des manches sont bien emportées à l’attrape (${parAttrape})`,
       parAttrape > 0);
-    if (mode === 'combo') {
-      verifier('mode « combo » — plus aucune tentative de contact',
-        m.joueurs.every((j) => j.stats.collisionsTentees === 0));
-    } else {
-      verifier('mode « touche » — le contact est toujours tenté',
-        m.joueurs.some((j) => j.stats.collisionsTentees > 0));
-    }
+    verifier('mode « touche » — le contact est toujours tenté',
+      m.joueurs.some((j) => j.stats.collisionsTentees > 0));
+  }
+
+  // « Manche gagnée dès les 3 éclairs » n'existe pas au jeu : la variante a été
+  // retirée, et un réglage qui la porte encore retombe sur « touche ».
+  {
+    verifier('la variante « dès les 3 éclairs » a disparu des options',
+      !OPTIONS_ATTRAPE.some(([id]) => id === 'combo')
+      && OPTIONS_ATTRAPE.length === 2);
+    verifier('un réglage enregistré sur cette variante retombe sur « touche »',
+      assainirConfig({ nbJoueurs: 6, attrapeGagneManche: 'combo' }).attrapeGagneManche === 'touche');
+    const cfg = configParDefaut(6);
+    cfg.attrapeGagneManche = 'combo';
+    const m = new Moteur(cfg, spec, 'attrape-combo');
+    m.jouerJusquAuBout();
+    verifier('et le moteur tente le contact quoi qu’il arrive',
+      m.joueurs.some((j) => j.stats.collisionsTentees > 0));
   }
 
   // Règle de base inchangée : l'attrape ne rapporte qu'un jeton.
@@ -666,6 +678,71 @@ console.log('\nRéglages enregistrés d’une ancienne version');
     soigne.combos.reveil > 0, `${soigne.combos.reveil} réveils`);
   verifier('après : les parties se terminent toujours',
     !soigne.raisons.limite && !soigne.raisons.manchesMax);
+}
+
+// ── 3 quinquies. Type de dé et irrégularité du rythme ────────────────────────
+console.log('\nType de dé');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  verifier('le d6 est bien la répartition officielle',
+    facesPourDe(6).join(',') === FACES_PAR_DEFAUT.join(','));
+  verifier('le d8 reprend la série depuis le début (tornade, joker en plus)',
+    facesPourDe(8).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker',
+    facesPourDe(8).join(','));
+  verifier('le d10 y ajoute un X et un ZzZ',
+    facesPourDe(10).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker,x,zzz');
+  verifier('un modèle sans éclair s’étire pareil',
+    facesPourDe(8, FACES_SANS_ECLAIR).join(',') === 'tornade,joker,x,zzz,vache,vache,tornade,joker');
+
+  for (const n of TYPES_DE) {
+    const cfg = configParDefaut(6);
+    cfg.faces = facesPourDe(n);
+    const r = lancerCampagne(cfg, spec, `de-${n}`, 40);
+    verifier(`d${n} — 40 parties menées à terme, ${(r.duree.medianeMs / 60000).toFixed(1)} min`,
+      !r.raisons.limite && !r.raisons.manchesMax
+      && Object.values(r.victoires).reduce((a, b) => a + b, 0) === 40);
+  }
+}
+
+console.log('\nIrrégularité du rythme');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const passages = (variance, graine) => {
+    const cfg = configParDefaut(6);
+    cfg.variance = variance;
+    const m = new Moteur(cfg, spec, graine);
+    const vus = [];
+    m.onMouvement = (de, vers, motif, lot, d) => vus.push(d);
+    m.jouerJusquAuBout();
+    return vus;
+  };
+
+  const fixe = passages(0, 'rythme');
+  verifier(`à 0 %, tous les passages durent exactement 1000 ms (${fixe.length} passages)`,
+    fixe.length > 50 && fixe.every((d) => d === 1000));
+
+  const varie = passages(0.3, 'rythme');
+  const min = Math.min(...varie), max = Math.max(...varie);
+  const moy = varie.reduce((a, b) => a + b, 0) / varie.length;
+  verifier(`à 30 %, les passages s’étalent de ${Math.round(min)} à ${Math.round(max)} ms`,
+    min >= 700 && max <= 1300 && max - min > 400);
+  verifier(`… et la moyenne reste sur la durée réglée (${Math.round(moy)} ms)`,
+    Math.abs(moy - 1000) < 25);
+  verifier('… aucune durée ne dépasse les bornes du réglage',
+    varie.every((d) => d >= 700 - 1e-9 && d <= 1300 + 1e-9));
+
+  verifier('à graine égale, le rythme irrégulier se rejoue à l’identique',
+    JSON.stringify(passages(0.3, 'rythme')) === JSON.stringify(varie));
+  verifier('à graine différente, il change',
+    JSON.stringify(passages(0.3, 'autre-graine')) !== JSON.stringify(varie));
+
+  const r = lancerCampagne(Object.assign(configParDefaut(6), { variance: 0.5 }), spec, 'var', 40);
+  verifier(`à 50 %, 40 parties vont toujours au bout (${(r.duree.medianeMs / 60000).toFixed(1)} min)`,
+    !r.raisons.limite && !r.raisons.manchesMax);
+  verifier('le réglage est borné à 50 %',
+    assainirConfig({ nbJoueurs: 6, variance: 3 }).variance === 0.5
+    && assainirConfig({ nbJoueurs: 6, variance: -1 }).variance === 0);
 }
 
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────

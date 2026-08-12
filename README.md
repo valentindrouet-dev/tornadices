@@ -101,19 +101,18 @@ et non un modèle parallèle qui aurait dérivé.
 
 Tout passe par l’objet de configuration, entièrement exposé dans le Laboratoire :
 
-- nombre de dés par lot, nombre de faces, **symbole de chaque face** — depuis les
-  options de partie comme depuis le Laboratoire ;
+- nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
+  face** — depuis les options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
 - ce qui déclenche l'attrape : les trois éclairs, ou l'échec sur un dé sans face
   éclair ;
-- ce que rapporte l'attrape : un jeton, la manche si le contact réussit, ou la
-  manche dès les trois éclairs ;
+- ce que rapporte l'attrape : un jeton, ou la manche si le contact réussit ;
 - ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
   les lots s'empilent dans la même main ;
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
-  IA, fenêtre de réflexe ;
+  IA, fenêtre de réflexe, et **irrégularité du rythme** de 0 à 50 % ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
 - caractère et vitesse de chaque IA (voir plus bas).
 
@@ -121,7 +120,8 @@ Chaque campagne est reproductible : même graine, mêmes chiffres.
 
 ## Le dé
 
-Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**.
+Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**. Le **d6 est
+et reste le dé du jeu** ; le d8 et le d10 sont là pour l’équilibrage.
 
 | Symbole | Combinaison | Effet | Possible quand | Alerte |
 |---|---|---|---|---|
@@ -145,6 +145,25 @@ Chaque dé roule pour son propre compte : on peut en relancer un pendant qu’un
 autre tourne encore. Un lot qui arrive en main porte la face « ? » tant qu’il
 n’a pas été lancé.
 
+### d6, d8, d10
+
+`facesPourDe(n)` étire la répartition officielle sur un dé plus grand en
+reprenant la série depuis le début : le d8 ajoute une tornade et un joker, le
+d10 y ajoute un X et un ZzZ. C’est la façon la plus régulière de garder les
+proportions du d6, et chaque face reste modifiable une à une.
+
+Ce que ça change, sur 300 parties d’Équilibrés à 6 joueurs :
+
+| Dé | Partie | Lancers | Réveils | Échecs |
+|---|---|---|---|---|
+| **d6** | 5:25 | 463 | 32,8 | 66,9 |
+| d8 | 4:39 | 367 | 40,3 | 32,9 |
+| d10 | 7:29 | 606 | 52,0 | 113,7 |
+
+Tout se joue sur la densité de X : un sur huit au d8, deux sur dix au d10. Le d8
+casse deux fois moins de tours et raccourcit la partie ; le d10 en casse presque
+le double et l’allonge de deux minutes. C’est le d6 qui tient le milieu.
+
 **On ne tient jamais deux lots** : quand deux se rencontrent, celui qu’on avait
 en main est poussé vers le voisin suivant — la poussée peut se propager — et on
 enchaîne sur le nouveau. L’option `lotsCumules` remplace cette poussée par une
@@ -152,6 +171,17 @@ pile : le lot qui arrive attend son tour, plus rien ne rebondit sur le voisin.
 Sur 60 parties à 6 joueurs, 1,9 % des mains portent alors deux lots ou plus,
 jamais plus de trois — assez pour se sentir débordé, trop rare pour bloquer la
 table.
+
+### Le rythme irrégulier
+
+`variance`, de 0 à 0,5, étire ou raccourcit chaque lancer, chaque constat et
+chaque passage, coup par coup. À 0 le tempo est mécanique — un passage réglé à
+1000 ms dure toujours 1000 ms ; à 0,3 il va de 700 à 1300 ms. Le tirage passe par
+le générateur de la partie : à graine égale, le rythme se rejoue à l’identique.
+
+C’est un réglage de sensation, pas d’équilibrage — la moyenne ne bouge pas. Sur
+300 parties à 6 joueurs, la médiane passe de 5:26 (0 %) à 5:30 (50 %), et le
+nombre de manches de 5,15 à 5,25.
 
 **Une combinaison servie est jouée d’office** : on ne relance pas par-dessus.
 Quand il y en a plusieurs — c’est le joker qui les sert, le plus souvent — le
@@ -202,10 +232,9 @@ réussi se règle dans les Variables :
 |---|---|---|---|
 | `non` (défaut) | le voisin est interrompu, un jeton retourné | 5,6 min | 27 |
 | `touche` | l’équipe qui touche remporte la manche | 4,3 min | 18 |
-| `combo` | les trois éclairs emportent la manche, sans contact | 0,9 min | 1 |
 
-Mesuré sur 300 parties simulées. En `combo` la fenêtre de réflexe disparaît et
-la course aux vaches avec elle : c’est une partie éclair, pas un équilibrage.
+Mesuré sur 300 parties simulées. Il faut toujours **toucher** : les trois éclairs
+seuls n’emportent jamais rien.
 
 ### Le mode sans éclair
 

@@ -791,7 +791,26 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* ── Éditeur de faces ─────────────────────────────────────────────────────── */
 .faces-edit { display: flex; gap: 8px; flex-wrap: wrap; }
 .face-case { display: grid; gap: 5px; justify-items: center; }
-.face-case select { padding: 4px 6px; font-size: 12px; border-radius: 8px; }
+.face-case select { padding: 4px 6px; font-size: 12px; border-radius: 8px; max-width: 100%; }
+
+/* Une combinaison se lit comme un lot posé : un menu par dé, la face au-dessus.
+   Le cercle pointillé marque le dé qu'on ne demande pas — il se distingue ainsi
+   de la face « vide », qui est un vrai symbole. */
+.tbl--combos td, .tbl--combos th { padding: 6px 5px; }
+.tbl--combos th { font-size: 11px; }
+.tbl--combos .face-case select { width: 100%; font-size: 11px; padding: 3px 2px; }
+.tbl--combos .face-case .select--libre { color: var(--gris); }
+.pastille-libre {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px dashed var(--bord); box-sizing: border-box;
+}
+/* Le tableau garde une largeur lisible et défile dans son cadre quand l'écran
+   est trop étroit : le corps de la page, lui, ne défile jamais de côté. */
+.tbl-defile { overflow-x: auto; }
+.tbl-defile .tbl--combos { min-width: 520px; }
+
+.curseur { flex: 1; min-width: 140px; accent-color: var(--accent); }
+.valeur-curseur { font-size: 12px; font-weight: 600; color: var(--encre-doux); white-space: nowrap; }
 
 /* ── Divers ───────────────────────────────────────────────────────────────── */
 .encart {

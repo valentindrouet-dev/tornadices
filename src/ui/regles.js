@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.22';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.22';
+import { h } from './dom.js?v=1.23';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.23';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.22';
+} from '../core/config.js?v=1.23';
 
 export function vueRegles() {
   return h('div.page',
@@ -18,6 +18,9 @@ export function vueRegles() {
         + 'elles font le tempo du jeu et comptent dans la durée d’une partie.'),
       h('p.petit.muted', 'Chaque dé roule pour son propre compte : on peut en relancer un pendant '
         + 'qu’un autre tourne encore, un clic par dé, la barre espace pour tous.'),
+      h('p.petit.muted', 'Un curseur d’irrégularité, dans les Variables, fait varier ces durées '
+        + 'd’un geste à l’autre : à 0 % le tempo est mécanique, à 30 % un passage réglé à '
+        + '1000 ms dure entre 700 et 1300 ms. La table respire, sans que la moyenne bouge.'),
       h('p.petit', 'On ne tient jamais deux lots. Quand deux se rencontrent, celui qu’on avait '
         + 'en main est poussé aussitôt vers le voisin suivant — quitte à le pousser à son tour — '
         + 'et on enchaîne sur le nouveau, faces « ? », à lancer.'),
@@ -58,6 +61,10 @@ export function vueRegles() {
         'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
         + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
         + 'plus assez de dés libres pour former quoi que ce soit : le lot part aussitôt.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Le dé du jeu est et reste le d6. Les Variables proposent un d8 et un d10 pour '
+        + 'l’équilibrage : ils reprennent la même série de symboles depuis le début, et chaque '
+        + 'face y reste modifiable une à une.'),
     ),
 
     h('div.carte',
@@ -142,9 +149,9 @@ export function vueRegles() {
         + 'le toucheur appuie pour toucher, la cible pour retirer sa main. Entre IA, elle se '
         + 'résout à l’adresse et à l’esquive de chacun.'),
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
-        'Variante réglable dans les Variables : l’attrape peut emporter la manche entière, '
-        + 'soit quand le contact réussit, soit dès les trois éclairs. La manche devient alors '
-        + 'une course à l’attrape plutôt qu’une course aux vaches.'),
+        'Variante réglable dans les Variables : un contact réussi peut emporter la manche '
+        + 'entière. Elle devient alors une course à l’attrape plutôt qu’une course aux vaches — '
+        + 'mais il faut toujours toucher, les trois éclairs seuls ne suffisent jamais.'),
     ),
 
     h('div.carte',
