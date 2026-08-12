@@ -1,24 +1,27 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.21';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.21';
-import { store } from './store.js?v=1.21';
-import { lancerCampagne } from '../core/sim.js?v=1.21';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.22';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.22';
+import { store } from './store.js?v=1.22';
+import { lancerCampagne } from '../core/sim.js?v=1.22';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, symbolesPertinents, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
-} from '../core/config.js?v=1.21';
+  FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig,
+} from '../core/config.js?v=1.22';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.21';
+} from '../core/proba.js?v=1.22';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
 function cfgLabo() {
   const enregistre = store.get('cfgLabo', null);
-  if (enregistre) return enregistre;
+  // Un Laboratoire ouvert de longue date garde ses réglages tels quels : il faut
+  // les retraduire, sinon les faces d'avant le renommage de la v1.3 restent au
+  // dé sans que rien ne les reconnaisse.
+  if (enregistre) return assainirConfig(enregistre);
   const c = configParDefaut(6);
   c.combosCartes = {};
   return c;

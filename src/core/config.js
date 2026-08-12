@@ -140,6 +140,58 @@ export const FACES_PAR_DEFAUT = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclai
 // place. Hypothèse de travail — les faces restent modifiables une par une.
 export const FACES_SANS_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'vache'];
 
+// Les faces ont été renommées en v1.3 : la « cloche » est devenue la tornade, et
+// l'« étoile » — la face jamais relançable qui déclenchait la collision — est
+// devenue le X. Un réglage enregistré avant ce renommage porte encore les
+// anciens noms, et rien ne les traduisait : le dé gardait des faces que ni
+// l'affichage ni le moteur ne reconnaissaient, muettes et sans effet.
+export const SYMBOLES_ANCIENS = { cloche: 'tornade', etoile: 'x' };
+
+/** Traduit une face enregistrée ; « vide » pour un symbole devenu inconnu. */
+export function assainirSymbole(id) {
+  if (SYMBOLES[id]) return id;
+  return SYMBOLES_ANCIENS[id] || 'vide';
+}
+
+/** Traduit une liste de faces enregistrée, longueur conservée. */
+export function assainirFaces(faces) {
+  if (!Array.isArray(faces) || !faces.length) return FACES_PAR_DEFAUT.slice();
+  return faces.map(assainirSymbole);
+}
+
+/** Traduit les clés d'une exigence { cloche: 3 } → { tornade: 3 }. */
+export function assainirRequis(requis) {
+  if (!requis || typeof requis !== 'object') return {};
+  const sortie = {};
+  for (const [sym, n] of Object.entries(requis)) {
+    if (!n) continue;
+    const cle = assainirSymbole(sym);
+    sortie[cle] = (sortie[cle] || 0) + n;
+  }
+  return sortie;
+}
+
+/**
+ * Remet une configuration enregistrée au goût du jour : les réglages apparus
+ * depuis reprennent leur valeur par défaut, et les faces comme les exigences
+ * sont retraduites. Sans quoi un Laboratoire ouvert de longue date simule des
+ * règles que le moteur ne comprend plus.
+ */
+export function assainirConfig(cfg) {
+  const base = configParDefaut(cfg && cfg.nbJoueurs ? cfg.nbJoueurs : 6, cfg || {});
+  if (!cfg || typeof cfg !== 'object') return base;
+
+  const sortie = { ...base, ...cfg };
+  sortie.faces = assainirFaces(cfg.faces);
+  sortie.combos = (Array.isArray(cfg.combos) ? cfg.combos : base.combos)
+    .map((c) => ({ ...c, requis: assainirRequis(c.requis) }));
+  if (cfg.combosCartes && typeof cfg.combosCartes === 'object') {
+    sortie.combosCartes = Object.fromEntries(Object.entries(cfg.combosCartes)
+      .map(([id, requis]) => [id, assainirRequis(requis)]));
+  }
+  return sortie;
+}
+
 export const PRESETS_FACES = [
   { nom: 'Officiel', faces: ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'] },
   { nom: 'Sans joker', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },

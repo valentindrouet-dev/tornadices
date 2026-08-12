@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.21';
+export const VERSION = '1.22';
 export const BUILD_DATE = '2026-08-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.22',
+    date: '12/08/2026',
+    notes: [
+      'Correction : dans le Laboratoire, certaines faces de dés s’affichaient vides, avec un menu déroulant retombé sur « Tornade ». Les faces avaient été renommées en v1.3 — la « cloche » est devenue la tornade, l’« étoile » est devenue le X — et un réglage enregistré avant ce renommage gardait les anciens noms, que plus rien ne reconnaissait.',
+      'Le défaut ne touchait pas que l’affichage : ces faces ne valaient rien pour le moteur, donc un tiers du dé ne servait à rien et toutes les campagnes lancées depuis ces réglages tournaient sur un dé amputé — plus aucun réveil possible, par exemple.',
+      'Les réglages enregistrés sont désormais retraduits à l’ouverture, au Laboratoire comme dans le menu Variables : les anciens noms de faces retrouvent leur symbole, les exigences des combinaisons et des cartes Journée suivent, les réglages apparus depuis reprennent leur valeur par défaut, et un symbole devenu introuvable devient « vide » plutôt que de disparaître en silence.',
+    ],
+  },
   {
     version: '1.21',
     date: '12/08/2026',

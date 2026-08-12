@@ -3,18 +3,19 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.21';
-import { pastilleSymbole } from './icons.js?v=1.21';
-import { store } from './store.js?v=1.21';
-import { aller } from './app.js?v=1.21';
-import { lancerPartie } from './table.js?v=1.21';
+import { h, remplacer } from './dom.js?v=1.22';
+import { pastilleSymbole } from './icons.js?v=1.22';
+import { store } from './store.js?v=1.22';
+import { aller } from './app.js?v=1.22';
+import { lancerPartie } from './table.js?v=1.22';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   symbolesPertinents, OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
-} from '../core/config.js?v=1.21';
-import { randomSeed } from '../core/rng.js?v=1.21';
-import { reglagesJoueurs } from './accueil.js?v=1.21';
+  assainirFaces, assainirRequis,
+} from '../core/config.js?v=1.22';
+import { randomSeed } from '../core/rng.js?v=1.22';
+import { reglagesJoueurs } from './accueil.js?v=1.22';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -39,11 +40,19 @@ export function construireConfig(nbJoueurs) {
     if (v.suivreTableau !== false && CHAMPS_MISE_EN_PLACE.includes(cle)) continue;
     cfg[cle] = Array.isArray(val) ? val.slice() : val;
   }
+  // Des réglages enregistrés avant le renommage des faces (v1.3) porteraient
+  // encore « cloche » et « étoile » : on les retraduit plutôt que de laisser au
+  // dé des symboles que plus rien ne reconnaît.
+  cfg.faces = assainirFaces(cfg.faces);
   if (v.combos) {
     cfg.combos = cfg.combos.map((c) => ({
       ...c,
-      requis: { ...(v.combos[c.id] || c.requis) },
+      requis: assainirRequis(v.combos[c.id] || c.requis),
     }));
+  }
+  if (cfg.combosCartes) {
+    cfg.combosCartes = Object.fromEntries(Object.entries(cfg.combosCartes)
+      .map(([id, requis]) => [id, assainirRequis(requis)]));
   }
   return cfg;
 }

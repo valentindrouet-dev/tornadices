@@ -321,6 +321,11 @@ des valeurs par défaut explicites, toutes modifiables :
    réglable et la règle se décoche.
 7. **Le joker double ne compte pas dans les trois jokers** : c’est une autre
    face, qui ne remplace que l’éclair et le ZzZ.
+8. **Les réglages enregistrés sont traduits, jamais jetés.** Les faces ont été
+   renommées en v1.3 (`cloche` → tornade, `etoile` → X) ; `assainirConfig`
+   retraduit les anciens noms, complète les réglages apparus depuis et remplace
+   par « vide » un symbole devenu introuvable. Sans cela, un Laboratoire ouvert
+   de longue date simulait avec des faces que le moteur ne reconnaissait plus.
 6. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
    maladresse ») sont modélisés par un surcoût de temps et un taux d’erreur.
 

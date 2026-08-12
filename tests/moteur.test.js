@@ -1,7 +1,10 @@
 // Vérifications du moteur et des probabilités : `node tests/moteur.test.js`.
 
 import { Moteur } from '../src/core/engine.js';
-import { configParDefaut, comboServie, PROFILS_IA, placement } from '../src/core/config.js';
+import {
+  configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
+  assainirFaces, assainirRequis, assainirConfig,
+} from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
@@ -606,6 +609,63 @@ console.log('\nCaractères des IA');
   const logiqueVsPenible = duel('logique', 'penible');
   verifier(`le Logique l'emporte sur le Pénible (${(logiqueVsPenible * 100).toFixed(0)} %)`,
     logiqueVsPenible > 0.6);
+}
+
+// ── 3 quater. Les réglages d'avant le renommage des faces ────────────────────
+console.log('\nRéglages enregistrés d’une ancienne version');
+{
+  // Tel qu'un Laboratoire ouvert en v1.1 l'a laissé : « cloche » pour la
+  // tornade, « étoile » pour le X, et une vache échangée contre un ZzZ.
+  const ancien = {
+    nbJoueurs: 6, desParLot: 4, lots: 3,
+    faces: ['cloche', 'cloche', 'vache', 'zzz', 'zzz', 'etoile'],
+    combos: [
+      { id: 'reveil', nom: 'Réveil', requis: { cloche: 3 }, face: 'endormie' },
+      { id: 'vache', nom: 'Vache', requis: { vache: 3 }, face: 'active' },
+      { id: 'endormir', nom: 'Endormi', requis: { zzz: 3 }, face: 'active' },
+      { id: 'collision', nom: 'Attrape', requis: { etoile: 2 }, face: 'toutes' },
+    ],
+    combosCartes: { fatigue: { cloche: 4 } },
+  };
+
+  verifier('cloche redevient tornade, étoile redevient X',
+    assainirFaces(ancien.faces).join(',') === 'tornade,tornade,vache,zzz,zzz,x',
+    assainirFaces(ancien.faces).join(','));
+  verifier('un symbole vraiment inconnu tombe sur « vide »',
+    assainirFaces(['tornade', 'brouette']).join(',') === 'tornade,vide');
+  verifier('la longueur du dé est conservée',
+    assainirFaces(ancien.faces).length === ancien.faces.length);
+  verifier('des faces absentes rendent le dé par défaut',
+    assainirFaces(undefined).join(',') === FACES_PAR_DEFAUT.join(','));
+  verifier('les exigences sont retraduites elles aussi',
+    JSON.stringify(assainirRequis({ cloche: 3 })) === JSON.stringify({ tornade: 3 }));
+  verifier('deux anciens noms qui retombent sur le même symbole s’additionnent',
+    JSON.stringify(assainirRequis({ tornade: 1, cloche: 2 })) === JSON.stringify({ tornade: 3 }));
+
+  const cfg = assainirConfig(ancien);
+  verifier('la config assainie ne garde plus aucune face inconnue',
+    cfg.faces.every((f) => SYMBOLES[f]), cfg.faces.join(','));
+  verifier('les exigences de combinaison non plus',
+    cfg.combos.every((c) => Object.keys(c.requis).every((s) => SYMBOLES[s])));
+  verifier('celles des cartes Journée non plus',
+    JSON.stringify(cfg.combosCartes.fatigue) === JSON.stringify({ tornade: 4 }));
+  verifier('les réglages apparus depuis reprennent leur valeur par défaut',
+    cfg.attrapeSur === 'eclair' && cfg.lotsCumules === false
+    && cfg.dureeLancer > 0 && cfg.dureeChoix > 0,
+    `attrapeSur=${cfg.attrapeSur} lotsCumules=${cfg.lotsCumules}`);
+  verifier('les réglages d’origine sont conservés',
+    cfg.desParLot === 4 && cfg.lots === 3 && cfg.nbJoueurs === 6);
+
+  // Sans traduction, un tiers du dé ne servait à rien : la preuve par le jeu.
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const brut = lancerCampagne({ ...ancien, ...configParDefaut(6), faces: ancien.faces }, spec, 'ancien', 40);
+  const soigne = lancerCampagne(cfg, spec, 'ancien', 40);
+  verifier('avant : aucun réveil, les tornades manquaient au dé',
+    !brut.combos.reveil, `${brut.combos.reveil || 0} réveils`);
+  verifier('après : le réveil revient',
+    soigne.combos.reveil > 0, `${soigne.combos.reveil} réveils`);
+  verifier('après : les parties se terminent toujours',
+    !soigne.raisons.limite && !soigne.raisons.manchesMax);
 }
 
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────
