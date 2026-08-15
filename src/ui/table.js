@@ -4,16 +4,16 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.25';
+import { h, remplacer, duree, vider } from './dom.js?v=1.26';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.25';
-import { Moteur } from '../core/engine.js?v=1.25';
+} from './icons.js?v=1.26';
+import { Moteur } from '../core/engine.js?v=1.26';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.25';
-import { ajouterHistorique } from './store.js?v=1.25';
-import { aller } from './app.js?v=1.25';
+} from '../core/config.js?v=1.26';
+import { ajouterHistorique } from './store.js?v=1.26';
+import { aller } from './app.js?v=1.26';
 
 let moteur = null;
 let vitesse = 1;
@@ -295,10 +295,13 @@ export function vueTable() {
             c.face !== 'toutes'
               ? h('span.muted', ` · carte ${c.face === 'active' ? 'éveillée' : 'endormie'}`)
               : null,
-            // En mode « attrape sur échec », c'est l'échec qui tente le contact :
-            // sans ce rappel, la liste ne dit nulle part comment on attrape.
+            // Le rappel dit laquelle des deux combinaisons porte le contact —
+            // et que l'autre, en mode « Échecs », ne se joue plus.
             moteur.cfg.attrapeSur === 'echec' && c.id === 'blocage'
               ? h('span.muted', ' · tente l’attrape')
+              : null,
+            moteur.cfg.attrapeSur === 'echec' && c.id === 'collision'
+              ? h('span.muted', ' · hors jeu dans ce mode')
               : null),
         )),
         moteur.carte && moteur.carte.combo

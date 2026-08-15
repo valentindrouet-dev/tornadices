@@ -4,7 +4,7 @@ import { Moteur } from '../src/core/engine.js';
 import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
   assainirFaces, assainirRequis, assainirConfig, FACES_SANS_ECLAIR,
-  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE,
+  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
@@ -447,10 +447,46 @@ console.log('\nModes de partie');
 
   // ── Attrape sur échec : plus de face éclair, le double X tente le contact ──
   const cfgEchec = configParDefaut(6, { attrapeSur: 'echec' });
-  verifier(`le dé perd sa face éclair (${cfgEchec.faces.join(', ')})`,
-    !cfgEchec.faces.includes('eclair'));
-  verifier('et la combinaison des trois éclairs disparaît',
-    !cfgEchec.combos.some((c) => c.id === 'collision'));
+  verifier('le dé ne change pas : c’est la combinaison qui décide, pas la face',
+    cfgEchec.faces.join(',') === FACES_PAR_DEFAUT.join(','));
+  verifier('l’Attaque reste dans le tableau, réglable',
+    cfgEchec.combos.some((c) => c.id === 'collision'));
+  verifier('mais c’est l’Échec qui porte le contact',
+    comboDeclencheur(cfgEchec) === 'blocage'
+    && comboDeclencheur(configParDefaut(6)) === 'collision');
+  {
+    // Le déclencheur suit la combinaison, quels que soient les dés qu'on lui met.
+    const cfg = configParDefaut(6, { attrapeSur: 'echec' });
+    cfg.combos = cfg.combos.map((c) => (c.id === 'blocage' ? { ...c, requis: { x: 3 } } : c));
+    const m = new Moteur(cfg, spec, 'echec-3x');
+    const j = m.joueurs.find((x) => x.lots.length);
+    j.eveille = true;
+    m._suivant(j).lots = [m._nouveauLot()];
+    poser(j.lots[0], ['x', 'x', 'tornade', 'vache']);
+    m._finLancer(j, []);
+    verifier('deux X ne suffisent plus quand l’Échec en demande trois',
+      !j.departEnAttente, `motif ${j.departEnAttente && j.departEnAttente.motif}`);
+
+    const m2 = new Moteur(cfg, spec, 'echec-3x-bis');
+    const j2 = m2.joueurs.find((x) => x.lots.length);
+    j2.eveille = true;
+    m2._suivant(j2).lots = [m2._nouveauLot()];
+    poser(j2.lots[0], ['x', 'x', 'x', 'vache']);
+    m2._finLancer(j2, []);
+    verifier('trois X déclenchent l’attrape, comme réglé',
+      j2.departEnAttente && j2.departEnAttente.motif === 'attrape');
+  }
+  {
+    // En mode « Échecs », l'Attaque ne se joue plus : elle coûterait le lot sans
+    // rien tenter.
+    const m = new Moteur(cfgEchec, spec, 'attaque-inerte');
+    const j = m.joueurs.find((x) => x.lots.length);
+    j.eveille = true;
+    m._suivant(j).lots = [m._nouveauLot()];
+    poser(j.lots[0], ['eclair', 'eclair', 'eclair', 'vache']);
+    verifier('l’Attaque n’est plus jouable en mode « Échecs »',
+      !m.combosDisponibles(j).some((c) => c.id === 'collision'));
+  }
 
   // Un échec sur un voisin chargé : le départ, l'état du lanceur et le réglage
   // « il faut être réveillé » décident ensemble s'il y a contact.

@@ -98,20 +98,28 @@ export const ALERTES = {
   endormir: 'violet',
 };
 
-// Ce qui déclenche l'attrape. « eclair » : les trois éclairs, règle de base.
-// « echec » : le double X — le lot part quand même, mais on tente le contact au
-// passage, et la face éclair disparaît du dé, faute de combinaison à servir.
+// Laquelle des deux combinaisons porte l'attrape. Ce sont bien les combinaisons
+// qui décident des dés : changez « Attaque » dans le tableau et le déclencheur
+// suit, quel que soit le nombre d'éclairs ou de X qu'on y met.
+export const COMBO_DECLENCHEUR = { eclair: 'collision', echec: 'blocage' };
+
 export const OPTIONS_DECLENCHEUR = [
-  ['eclair', 'Trois éclairs'],
-  ['echec', 'Un échec (double X)'],
+  ['eclair', 'Éclairs'],
+  ['echec', 'Échecs'],
 ];
 
+/** Identifiant de la combinaison qui tente le contact. */
+export function comboDeclencheur(cfg) {
+  return COMBO_DECLENCHEUR[(cfg && cfg.attrapeSur) === 'echec' ? 'echec' : 'eclair'];
+}
+
 export const AIDE_DECLENCHEUR = {
-  eclair: 'Règle de base : trois éclairs passent le lot et tentent le contact. Le dé porte '
-    + 'une face éclair.',
-  echec: 'Sans face éclair : c’est l’échec qui tente le contact. Deux X font partir le lot comme '
-    + 'd’habitude, mais si le joueur suivant tient un lot, on l’attrape au passage. L’échec '
-    + 'cesse d’être une perte sèche.',
+  eclair: 'Règle de base : c’est la combinaison « Attaque » qui passe le lot et tente le '
+    + 'contact — trois éclairs au départ, mais réglez la ligne Attaque du tableau et le '
+    + 'déclencheur suit. L’Échec, lui, fait partir le lot sans rien tenter.',
+  echec: 'C’est la combinaison « Échec » qui tente le contact : elle fait partir le lot comme '
+    + 'd’habitude, mais si le joueur suivant tient un lot, on l’attrape au passage. Deux X au '
+    + 'départ, trois si vous le décidez dans le tableau. L’Attaque, elle, ne se joue plus.',
 };
 
 // Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
@@ -519,7 +527,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
   return {
     nbJoueurs,
     desParLot: 4,
-    faces: (attrapeSur === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT).slice(),
+    faces: FACES_PAR_DEFAUT.slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
     echecJokers,
     attrapeSur,
@@ -536,7 +544,6 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     attrapeGagneManche: 'non',
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
-      .filter((c) => !(attrapeSur === 'echec' && c.id === 'collision'))
       .map((c) => ({ ...c, requis: { ...c.requis } })),
     cartes: CARTES_JOURNEE.map((c) => c.id),
     lots: mep.lots,

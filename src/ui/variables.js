@@ -3,20 +3,20 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.25';
-import { pastilleSymbole } from './icons.js?v=1.25';
-import { store } from './store.js?v=1.25';
-import { aller } from './app.js?v=1.25';
-import { lancerPartie } from './table.js?v=1.25';
+import { h, remplacer } from './dom.js?v=1.26';
+import { pastilleSymbole } from './icons.js?v=1.26';
+import { store } from './store.js?v=1.26';
+import { aller } from './app.js?v=1.26';
+import { lancerPartie } from './table.js?v=1.26';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, PRESETS_FACES, aideVariance,
-} from '../core/config.js?v=1.25';
-import { tableauCombos } from './combos.js?v=1.25';
-import { randomSeed } from '../core/rng.js?v=1.25';
-import { reglagesJoueurs } from './accueil.js?v=1.25';
+} from '../core/config.js?v=1.26';
+import { tableauCombos } from './combos.js?v=1.26';
+import { randomSeed } from '../core/rng.js?v=1.26';
+import { reglagesJoueurs } from './accueil.js?v=1.26';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -58,6 +58,36 @@ export function construireConfig(nbJoueurs) {
   return cfg;
 }
 
+/**
+ * Un point d'interrogation au bout d'un titre. Au survol : la première phrase en
+ * infobulle. Au clic : toute la description s'installe sous le titre.
+ *
+ * Les pavés d'explication sous chaque champ finissaient par occuper plus de
+ * place que les réglages eux-mêmes, et il fallait dérouler la page entière pour
+ * retrouver un bouton. Le texte n'a pas disparu : il attend qu'on le demande.
+ */
+function titreAide(titre, texte, ...suite) {
+  const lignes = Array.isArray(texte) ? texte.filter(Boolean) : [texte];
+  const panneau = h('div.aide-texte', ...lignes.map((t) => h('p', t)));
+  const bouton = h('button.aide-btn', {
+    type: 'button', 'aria-label': `Aide : ${titre}`, 'aria-expanded': 'false',
+  }, '?', h('span.aide-bulle', lignes[0]));
+  bouton.onclick = () => {
+    const ouvert = panneau.classList.toggle('ouvert');
+    bouton.classList.toggle('on', ouvert);
+    bouton.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+  };
+  return h('div.entete-reglage',
+    h('div.rangee.rangee--serree',
+      h('div.titre-section', { style: { margin: 0 } }, titre),
+      bouton,
+      suite.length ? h('div.pousse') : null,
+      ...suite,
+    ),
+    panneau,
+  );
+}
+
 function ecrire(cle, valeur) {
   const v = variables();
   v[cle] = valeur;
@@ -87,7 +117,6 @@ export function vueVariables() {
           dessiner();
         },
       }),
-      opts.aide ? h('span.mini.muted', { style: { fontWeight: '400' } }, opts.aide) : null,
     );
 
     remplacer(racine,
@@ -105,7 +134,16 @@ export function vueVariables() {
 
       // ── Dés ───────────────────────────────────────────────────────────────
       h('div.carte',
-        h('div.titre-section', 'Dés'),
+        titreAide('Dés', [
+          `Le lot compte ${cfg.desParLot} dés, et ${cfg.lots} lots tournent autour de la table`
+          + `${suivreTableau ? ` — le tableau officiel en prévoit ${mep.lots} à ${nb} joueurs` : ''}.`,
+          'Le d6 est le dé du jeu : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. Le X fige '
+          + 'son dé — il ne se relance jamais. Le d8 et le d10 reprennent la même série depuis le '
+          + 'début, et chaque face reste modifiable une à une.',
+          'Le joker prend la face de n’importe quel symbole sauf le X, et valide donc n’importe '
+          + 'quelle combinaison. Le joker double, absent des dés au départ, ne remplace que '
+          + 'l’éclair et le ZzZ : ajoutez-le ici pour l’essayer.',
+        ]),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
           h('label.champ', 'Type de dé',
@@ -114,17 +152,10 @@ export function vueVariables() {
               // Changer de dé repart de la répartition officielle étirée sur le
               // nouveau nombre de faces : garder les anciennes en tronquant
               // ferait disparaître des symboles sans le dire.
-              onclick: () => {
-                ecrire('faces', facesPourDe(n, cfg.attrapeSur === 'echec'
-                  ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT));
-                dessiner();
-              },
+              onclick: () => { ecrire('faces', facesPourDe(n)); dessiner(); },
             }, `d${n}`))),
           ),
-          num('Lots en jeu', cfg.lots, 'lots', {
-            min: 1, max: 9, disabled: suivreTableau,
-            aide: suivreTableau ? `tableau officiel : ${mep.lots}` : '',
-          }),
+          num('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9, disabled: suivreTableau }),
         ),
         h('div.faces-edit', { style: { marginTop: '14px' } },
           ...cfg.faces.map((f, i) => h('div.face-case',
@@ -147,20 +178,23 @@ export function vueVariables() {
             onclick: () => { ecrire('faces', facesPourDe(cfg.faces.length, p.faces)); dessiner(); },
           }, p.nom)),
         ),
-        h('p.mini.muted', { style: { marginTop: '10px' } },
-          'Le d6 est le dé du jeu : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
-          + 'Le X fige son dé — il ne se relance jamais. Le d8 et le d10 reprennent la '
-          + 'même série depuis le début, et chaque face reste modifiable une à une.'),
-        h('p.mini.muted', { style: { marginTop: '10px' } },
-          'Le joker prend la face de n’importe quel symbole sauf le X, et valide donc '
-          + 'n’importe quelle combinaison. Le joker double, absent des dés au départ, ne '
-          + 'remplace que l’éclair et le ZzZ : ajoutez-le ici pour l’essayer.'),
       ),
 
       // ── Combinaisons ──────────────────────────────────────────────────────
       h('div.carte',
-        h('div.rangee', { style: { marginBottom: '12px' } },
-          h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
+        titreAide('Combinaisons requises', [
+          'Chaque combinaison se lit comme un lot posé sur la table : un menu par dé, « — » pour '
+          + 'un dé qu’on ne demande pas.',
+          'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus. Quand '
+          + 'le joker en sert plusieurs à la fois, le joueur choisit laquelle.',
+          cfg.echecJokers !== false
+            ? 'Trois jokers d’un coup valent un échec : le lot part sans rien tenter, et cet '
+              + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. C’est le '
+              + 'seul revers du joker — décochez la règle pour jouer sans.'
+            : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.',
+          'Les lignes bleues sont les combinaisons des cartes Journée : elles ne valent que le '
+          + 'temps de la manche où la carte est en jeu.',
+        ],
           h('button', {
             class: `chip${cfg.echecJokers !== false ? ' on' : ''}`,
             title: 'Trois jokers d’un coup font partir le lot, comme deux X',
@@ -171,29 +205,27 @@ export function vueVariables() {
           (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
           (id, requis) => ecrire('combosCartes', { ...(v.combosCartes || {}), [id]: requis }),
           dessiner),
-        h('p.mini.muted', { style: { marginTop: '10px' } },
-          'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus. '
-          + 'Quand le joker en sert plusieurs à la fois, le joueur choisit laquelle.'),
-        h('p.mini.muted',
-          cfg.echecJokers !== false
-            ? 'Trois jokers d’un coup valent un échec : le lot part sans rien tenter, et cet '
-              + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. '
-              + 'C’est le seul revers du joker — décochez la règle pour jouer sans.'
-            : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.'),
 
-        h('div.titre-section', { style: { marginTop: '20px' } }, 'Ce qui déclenche l’attrape'),
+        titreAide('Ce qui déclenche l’attrape', [
+          AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
+          cfg.attrapeSur === 'echec'
+            ? (cfg.attrapeEveille !== false
+              ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter le '
+                + 'contact. Il faut s’être réveillé pour attraper au passage.'
+              : 'L’attrape sur Échec vaut même endormi : chaque Échec tente le contact, dès que '
+                + 'le voisin a un lot.')
+            : 'La case « Il faut être réveillé » ne concerne que l’attrape sur Échec — '
+              + 'l’Attaque vaut dans les deux états.',
+          'Dans les deux cas, on n’attrape que ce qui existe : si le joueur suivant a les mains '
+          + 'vides, il ne se passe rien.',
+        ]),
         h('div.rangee.rangee--serree',
           h('div.segment',
             ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
               class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
-              onclick: () => {
-                ecrire('attrapeSur', id);
-                // Le dé suit le mode : sans combinaison d'éclairs, la face éclair
-                // n'aurait plus rien à servir. Le type de dé choisi est conservé.
-                ecrire('faces', facesPourDe(cfg.faces.length,
-                  id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT));
-                dessiner();
-              },
+              // Le dé ne bouge plus : les deux combinaisons restent réglables
+              // dans le tableau, et c'est là qu'on décide de leurs dés.
+              onclick: () => { ecrire('attrapeSur', id); dessiner(); },
             }, lib)),
           ),
           h('button', {
@@ -202,19 +234,8 @@ export function vueVariables() {
             onclick: () => { ecrire('attrapeEveille', cfg.attrapeEveille === false); dessiner(); },
           }, h('span.case', '✓'), 'Il faut être réveillé'),
         ),
-        h('p.mini.muted', { style: { marginTop: '8px' } },
-          AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
-        h('p.mini.muted',
-          cfg.attrapeSur === 'echec'
-            ? (cfg.attrapeEveille !== false
-              ? 'Tornade endormie, l’échec reste un échec sec : on passe le lot sans tenter '
-                + 'le contact. Il faut s’être réveillé pour attraper au passage.'
-              : 'L’attrape sur échec vaut même endormi : chaque double X tente le contact, '
-                + 'dès que le voisin a un lot.')
-            : 'La case « Il faut être réveillé » ne concerne que l’attrape sur échec — '
-              + 'les trois éclairs valent dans les deux états.'),
 
-        h('div.titre-section', { style: { marginTop: '20px' } }, 'Ce que rapporte l’attrape'),
+        titreAide('Ce que rapporte l’attrape', AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
         h('div.rangee.rangee--serree',
           h('div.segment',
             ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
@@ -223,9 +244,13 @@ export function vueVariables() {
             }, lib)),
           ),
         ),
-        h('p.mini.muted', { style: { marginTop: '8px' } }, AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
 
-        h('div.titre-section', { style: { marginTop: '20px' } }, 'Quand deux lots se rencontrent'),
+        titreAide('Quand deux lots se rencontrent',
+          cfg.lotsCumules
+            ? 'Les lots s’accumulent dans la même main : on joue le premier arrivé, les autres '
+              + 'attendent leur tour. Un joueur lent peut se retrouver avec toute la table sur les bras.'
+            : 'Règle de base : le lot que l’on tenait part aussitôt vers le voisin suivant — la '
+              + 'poussée peut se propager — et l’on enchaîne sur celui qui vient d’arriver.'),
         h('div.rangee.rangee--serree',
           h('div.segment',
             ...[['pousse', 'Le lot en cours est poussé'], ['cumul', 'Les lots s’empilent']]
@@ -235,30 +260,37 @@ export function vueVariables() {
               }, lib)),
           ),
         ),
-        h('p.mini.muted', { style: { marginTop: '8px' } },
-          cfg.lotsCumules
-            ? 'Les lots s’accumulent dans la même main : on joue le premier arrivé, les autres '
-              + 'attendent leur tour. Un joueur lent peut se retrouver avec toute la table sur les bras.'
-            : 'Règle de base : le lot que l’on tenait part aussitôt vers le voisin suivant — la '
-              + 'poussée peut se propager — et l’on enchaîne sur celui qui vient d’arriver.'),
       ),
 
       // ── Rythme ────────────────────────────────────────────────────────────
       h('div.carte',
-        h('div.titre-section', 'Rythme de la table'),
+        titreAide('Rythme de la table', [
+          'Ces durées comptent dans le temps de partie : les allonger ralentit le jeu et rallonge '
+          + 'les manches, exactement comme sur une vraie table.',
+          'Lancer : le temps que les dés roulent. Constat : pour voir le résultat avant que le lot '
+          + 'parte. Passage : le lot traverse jusqu’au voisin. Transition : les dés reviennent au '
+          + 'centre entre deux manches. Choix : le délai laissé quand plusieurs combinaisons '
+          + 'sortent d’un coup. Réflexe : la fenêtre pour toucher ou retirer sa main.',
+          cfg.variance
+            ? 'Irrégularité : chaque lancer, chaque constat et chaque passage est tiré au sort '
+              + 'autour de sa durée réglée. Aucun geste ne dure exactement pareil, comme à une '
+              + 'vraie table — et à graine égale, le rythme reste pourtant reproductible.'
+            : 'Irrégularité à 0 % : le tempo est mécanique, un passage réglé à 1000 ms dure '
+              + 'toujours 1000 ms. Montez le curseur pour que chaque geste varie autour de sa durée.',
+        ]),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Durée d’un lancer (ms)', cfg.dureeLancer, 'dureeLancer',
-            { min: 0, max: 6000, step: 50, aide: 'le temps que les dés roulent' }),
+            { min: 0, max: 6000, step: 50 }),
           num('Temps de constat (ms)', cfg.dureeConstat, 'dureeConstat',
-            { min: 0, max: 6000, step: 50, aide: 'pour voir le résultat avant que le lot parte' }),
+            { min: 0, max: 6000, step: 50 }),
           num('Durée du passage (ms)', cfg.dureePassage, 'dureePassage',
-            { min: 0, max: 6000, step: 50, aide: 'le lot traverse jusqu’au voisin' }),
+            { min: 0, max: 6000, step: 50 }),
         ),
         h('div.grille.grille--3', { style: { gap: '12px', marginTop: '12px' } },
           num('Transition de manche (ms)', cfg.dureeTransition, 'dureeTransition',
-            { min: 0, max: 12000, step: 100, aide: 'les dés reviennent au centre et repartent' }),
+            { min: 0, max: 12000, step: 100 }),
           num('Choix de combinaison (ms)', cfg.dureeChoix, 'dureeChoix',
-            { min: 0, max: 12000, step: 100, aide: 'quand plusieurs combinaisons sortent d’un coup' }),
+            { min: 0, max: 12000, step: 100 }),
         ),
         h('div.grille.grille--3', { style: { gap: '12px', marginTop: '12px' } },
           num('Réflexion d’une IA (ms)', cfg.tempsReflexion, 'tempsReflexion',
@@ -266,7 +298,7 @@ export function vueVariables() {
           num('Écart de réflexion (ms)', cfg.ecartReflexion, 'ecartReflexion',
             { min: 0, max: 2000, step: 10 }),
           num('Fenêtre de réflexe (ms)', cfg.fenetreReflexe, 'fenetreReflexe',
-            { min: 100, max: 4000, step: 50, aide: 'pour toucher ou retirer sa main' }),
+            { min: 100, max: 4000, step: 50 }),
         ),
         h('label.champ', { style: { marginTop: '14px' } }, 'Irrégularité du rythme',
           h('div.rangee.rangee--serree',
@@ -283,22 +315,20 @@ export function vueVariables() {
             h('span.valeur-curseur', aideVariance(cfg.variance || 0, cfg)),
           ),
         ),
-        h('p.mini.muted', { style: { marginTop: '8px' } },
-          cfg.variance
-            ? 'Chaque lancer, chaque constat et chaque passage est tiré au sort autour de sa '
-              + 'durée réglée : aucun geste ne dure exactement pareil, comme à une vraie table. '
-              + 'À graine égale, le rythme reste pourtant reproductible.'
-            : 'À 0 %, le tempo est mécanique : un passage réglé à 1000 ms dure toujours 1000 ms. '
-              + 'Montez le curseur pour que chaque geste varie autour de sa durée.'),
-        h('div.encart', { style: { marginTop: '12px' } },
-          'Ces durées comptent dans le temps de partie : les allonger ralentit le jeu et rallonge '
-          + 'les manches, exactement comme sur une vraie table.'),
       ),
 
       // ── Mise en place ─────────────────────────────────────────────────────
       h('div.carte',
-        h('div.rangee', { style: { marginBottom: '14px' } },
-          h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Mise en place'),
+        titreAide('Mise en place', [
+          `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
+          + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
+          'Décochez « Suivre le tableau officiel » pour régler ces valeurs à la main.',
+          mep.extrapole
+            ? 'À 9 joueurs, le tableau officiel s’arrête : ces valeurs sont extrapolées.'
+            : '',
+          'Manches maximum est un garde-fou : une partie qui l’atteint est comptée comme '
+          + 'interrompue, jamais comme gagnée.',
+        ],
           h('button', {
             class: `chip${suivreTableau ? ' on' : ''}`,
             onclick: () => { ecrire('suivreTableau', !suivreTableau); dessiner(); },
@@ -306,36 +336,40 @@ export function vueVariables() {
         ),
         h('div.grille.grille--4', { style: { gap: '12px' } },
           num('Jetons Bleu / Jaune', cfg.jetons, 'jetons',
-            { min: 1, max: 12, disabled: suivreTableau, aide: suivreTableau ? `officiel : ${mep.jetons}` : '' }),
+            { min: 1, max: 12, disabled: suivreTableau }),
           num('Jetons du Vert', cfg.jetonsVert, 'jetonsVert',
-            { min: 1, max: 12, disabled: suivreTableau, aide: suivreTableau ? `officiel : ${mep.jetonsVert}` : '' }),
+            { min: 1, max: 12, disabled: suivreTableau }),
           num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
-            { min: 1, max: 12, disabled: suivreTableau, aide: suivreTableau ? `officiel : ${mep.cartes}` : '' }),
+            { min: 1, max: 12, disabled: suivreTableau }),
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
         ),
-        mep.extrapole
-          ? h('p.mini.muted', { style: { marginTop: '8px' } },
-              'À 9 joueurs, le tableau officiel s’arrête : ces valeurs sont extrapolées.')
-          : null,
       ),
 
       // ── Adresse et incidents ──────────────────────────────────────────────
       h('div.carte',
-        h('div.titre-section', 'Adresse et incidents'),
+        titreAide('Adresse et incidents', [
+          'Adresse de base : la chance de toucher, de 0 à 1, avant l’écart propre à chaque joueur.',
+          'Taux d’erreur : la part des gestes où l’on relance un X par mégarde — ce qui fait '
+          + 'partir le lot. Erreur punie : la part de ces bourdes assez graves pour offrir un '
+          + 'jeton aux équipes adverses.',
+        ]),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Adresse de base', cfg.adresseBase, 'adresseBase',
-            { min: 0, max: 1, step: 0.05, aide: 'chance de toucher, de 0 à 1' }),
+            { min: 0, max: 1, step: 0.05 }),
           num('Taux d’erreur', cfg.tauxErreur, 'tauxErreur',
-            { min: 0, max: 1, step: 0.01, aide: 'relancer un X par mégarde' }),
+            { min: 0, max: 1, step: 0.01 }),
           num('Erreur punie', cfg.penaliteErreurAdverse, 'penaliteErreurAdverse',
-            { min: 0, max: 1, step: 0.05, aide: 'part des erreurs qui offrent un jeton' }),
+            { min: 0, max: 1, step: 0.05 }),
         ),
       ),
 
       // ── Cartes Journée ────────────────────────────────────────────────────
       h('div.carte',
-        h('div.rangee', { style: { marginBottom: '12px' } },
-          h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Cartes Journée en jeu'),
+        titreAide('Cartes Journée en jeu', [
+          'Une carte par manche, dans l’ordre de la pile. Décochez celles que vous ne voulez pas '
+          + 'voir sortir.',
+          'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.',
+        ],
           h('button', {
             class: `chip${cfg.melangerCartes !== false ? ' on' : ''}`,
             onclick: () => { ecrire('melangerCartes', cfg.melangerCartes === false); dessiner(); },
@@ -354,13 +388,14 @@ export function vueVariables() {
             }, h('span.case', '✓'), c.court);
           }),
         ),
-        h('p.mini.muted', { style: { marginTop: '10px' } },
-          'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit.'),
       ),
 
       // ── Graine ────────────────────────────────────────────────────────────
       h('div.carte',
-        h('div.titre-section', 'Graine'),
+        titreAide('Graine',
+          'À graine fixée, deux parties aux mêmes réglages se déroulent exactement pareil — '
+          + 'même dés, même rythme, même issue. Sans graine manuelle, chaque partie en tire une '
+          + 'au hasard.'),
         h('div.rangee',
           h('button', {
             class: `chip${v.graineManuelle ? ' on' : ''}`,
@@ -373,8 +408,6 @@ export function vueVariables() {
               })
             : h('span.petit.muted', 'Chaque partie tire une graine au hasard.'),
         ),
-        h('p.mini.muted', { style: { marginTop: '8px' } },
-          'À graine fixée, deux parties aux mêmes réglages se déroulent exactement pareil.'),
       ),
 
       h('div.rangee', { style: { justifyContent: 'center', marginTop: '26px' } },

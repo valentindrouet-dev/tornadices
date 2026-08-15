@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.25';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.25';
+import { h } from './dom.js?v=1.26';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.26';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.25';
+} from '../core/config.js?v=1.26';
 
 export function vueRegles() {
   return h('div.page',
@@ -155,22 +155,20 @@ export function vueRegles() {
     ),
 
     h('div.carte',
-      h('div.titre-section', 'Le mode sans éclair'),
-      h('p.petit', 'Autre réglage des Variables : la face éclair disparaît du dé — une seconde '
-        + 'vache prend sa place — et c’est l’échec qui tente le contact. Deux X font partir le lot '
-        + 'comme d’habitude, mais si le voisin à qui on le passe a un lot en main, on tente de le '
-        + 'toucher au passage.'),
-      h('p.petit.muted', 'On ne choisit donc plus d’attaquer : on attaque à chaque fois que le '
-        + 'hasard le permet, et l’échec cesse d’être une pure perte. Le voisin n’a un lot qu’une '
-        + 'fois sur quatre environ — les contacts restent rares, mais ils ne coûtent plus un jet.'),
-      h('div.encart', { style: { marginTop: '10px' } },
-        'Dans ce mode, la combinaison des trois éclairs n’existe plus : la liste des '
-        + 'combinaisons de la table le montre, et l’échec y porte la mention « tente l’attrape ».'),
+      h('div.titre-section', 'Qui porte l’attrape'),
+      h('p.petit', 'Deux combinaisons peuvent tenter le contact, et les Variables disent '
+        + 'laquelle : « Éclairs » désigne l’Attaque — la règle de base — et « Échecs » désigne '
+        + 'l’Échec. Ce sont bien les combinaisons qui décident des dés : réglez la ligne du '
+        + 'tableau, et le déclencheur suit, qu’il demande trois éclairs, deux X ou trois X.'),
+      h('p.petit.muted', 'En mode « Échecs », on ne choisit plus d’attaquer : on attaque à chaque '
+        + 'fois que le hasard le permet, et l’échec cesse d’être une pure perte. L’Attaque, elle, '
+        + 'reste réglable dans le tableau mais ne se joue plus — sans quoi elle coûterait le lot '
+        + 'sans rien tenter. La liste des combinaisons de la table le rappelle.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Un dormeur ne tend pas la main : Tornade endormie, l’échec reste un échec sec, on '
+        'Un dormeur ne tend pas la main : Tornade endormie, l’Échec reste un échec sec, on '
         + 'passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au '
-        + 'passage — règle décochable dans les Variables. Elle ne touche pas les trois '
-        + 'éclairs, qui valent dans les deux états.'),
+        + 'passage — règle décochable dans les Variables. Elle ne touche pas l’Attaque, '
+        + 'qui vaut dans les deux états.'),
     ),
 
     h('div.carte',

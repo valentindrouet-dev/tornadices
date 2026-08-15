@@ -10,11 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.25';
+import { makeRng } from './rng.js?v=1.26';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-} from './config.js?v=1.25';
+  comboDeclencheur,
+} from './config.js?v=1.26';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -486,6 +487,10 @@ export class Moteur {
       if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
       // On n'attrape que ce qui existe : si le voisin a les mains vides, les
       // trois éclairs ne valent rien et le lot reste en main.
+      // En mode « Échecs », c'est l'Échec qui porte l'attrape : l'Attaque reste
+      // réglable dans le tableau mais ne se joue plus — sans quoi elle coûterait
+      // le lot sans rien tenter.
+      if (combo.id === 'collision' && this.cfg.attrapeSur === 'echec') continue;
       if (combo.id === 'collision' && !this._suivant(j).lots.length) continue;
       out.push({ id: combo.id, source: 'tornade', combo, obligatoire: !!combo.obligatoire });
     }
@@ -680,15 +685,16 @@ export class Moteur {
   }
 
   /**
-   * Le lot part-il en tentant d'attraper ? Les trois éclairs, toujours ; et dans
-   * le mode sans face éclair, l'échec lui-même — le lot est perdu de toute façon,
-   * autant s'en servir pour toucher le voisin, s'il a un lot à se faire prendre.
+   * Le lot part-il en tentant d'attraper ? C'est la combinaison désignée dans les
+   * Variables qui porte le contact — l'Attaque par défaut, l'Échec si on l'a
+   * choisi — quels que soient les dés qu'on lui a réglés.
    */
   _attrapeAuDepart(j, choisi) {
-    if (choisi.id === 'collision') return true;
-    if (this.cfg.attrapeSur !== 'echec' || choisi.id !== 'blocage') return false;
-    // Un dormeur ne tend pas la main : règle décochable dans les Variables.
-    if (this.cfg.attrapeEveille !== false && !j.eveille) return false;
+    if (choisi.id !== comboDeclencheur(this.cfg)) return false;
+    // L'Attaque n'existe que pour attraper : elle n'a jamais eu besoin d'être
+    // réveillée. L'Échec, lui, part de toute façon — d'où la règle décochable
+    // « il faut être réveillé », qui ne concerne que ce mode-là.
+    if (choisi.id === 'blocage' && this.cfg.attrapeEveille !== false && !j.eveille) return false;
     return this._suivant(j).lots.length > 0;
   }
 

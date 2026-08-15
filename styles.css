@@ -845,6 +845,46 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
    au lieu de défiler : les menus du Laboratoire sortaient de leur carte. */
 .grille--labo > * { min-width: 0; }
 
+/* ── Aide au bout des titres ──────────────────────────────────────────────── */
+/* Un rond « ? » : au survol l'infobulle, au clic la description sous le titre.
+   Le texte n'est plus étalé sous chaque champ, mais il reste à un geste. */
+.entete-reglage { margin-bottom: 12px; }
+/* Les paragraphes séparaient les réglages ; sans eux, c'est au titre suivant de
+   prendre ses distances. */
+.carte > * + .entete-reglage { margin-top: 24px; }
+.aide-btn {
+  position: relative;
+  width: 18px; height: 18px; flex: none; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--accent-bord); border-radius: 50%;
+  background: var(--accent-clair); color: var(--accent-fonce);
+  font-family: inherit; font-size: 11px; font-weight: 800; line-height: 1;
+  cursor: pointer;
+}
+.aide-btn:hover, .aide-btn.on {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.aide-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.aide-bulle {
+  position: absolute; top: calc(100% + 8px); left: -6px; z-index: 40;
+  width: max-content; max-width: min(300px, 72vw);
+  padding: 8px 11px; border-radius: 10px;
+  background: var(--encre); color: #fff;
+  font-size: 12px; font-weight: 500; line-height: 1.45; text-align: left;
+  box-shadow: 0 6px 20px rgba(20, 36, 48, .22);
+  pointer-events: none;
+  /* `display: none` et non `visibility` : une bulle de 300 px seulement masquée
+     reste dans la mise en page et élargit la page sur téléphone. */
+  display: none;
+}
+.aide-btn:hover .aide-bulle { display: block; }
+.aide-texte { display: none; margin-top: 8px; }
+.aide-texte.ouvert { display: block; }
+.aide-texte p {
+  margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; color: var(--encre-doux);
+}
+.aide-texte p:last-child { margin-bottom: 0; }
+
 .curseur { flex: 1; min-width: 140px; accent-color: var(--accent); }
 .valeur-curseur { font-size: 12px; font-weight: 600; color: var(--encre-doux); white-space: nowrap; }
 

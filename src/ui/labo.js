@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.25';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.25';
-import { store } from './store.js?v=1.25';
-import { lancerCampagne } from '../core/sim.js?v=1.25';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.26';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.26';
+import { store } from './store.js?v=1.26';
+import { lancerCampagne } from '../core/sim.js?v=1.26';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.25';
-import { tableauCombos } from './combos.js?v=1.25';
+} from '../core/config.js?v=1.26';
+import { tableauCombos } from './combos.js?v=1.26';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.25';
+} from '../core/proba.js?v=1.26';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -184,10 +184,7 @@ function panneauConfig(rafraichir) {
       h('label.champ', 'Type de dé',
         h('div.segment', ...TYPES_DE.map((n) => h('button', {
           class: cfg.faces.length === n ? 'on' : '',
-          onclick: () => {
-            cfg.faces = facesPourDe(n, cfg.attrapeSur === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT);
-            rafraichir();
-          },
+          onclick: () => { cfg.faces = facesPourDe(n); rafraichir(); },
         }, `d${n}`))),
       ),
       num('Lots en jeu', cfg.lots, (v) => { cfg.lots = Math.max(1, v); }, { min: 1, max: 9 }),
@@ -244,19 +241,9 @@ function panneauConfig(rafraichir) {
       ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
         class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
         style: { fontSize: '12.5px' },
-        onclick: () => {
-          cfg.attrapeSur = id;
-          cfg.faces = facesPourDe(cfg.faces.length,
-            id === 'echec' ? FACES_SANS_ECLAIR : FACES_PAR_DEFAUT);
-          // La combinaison des éclairs disparaît avec la face qui la servait.
-          cfg.combos = configParDefaut(cfg.nbJoueurs, {
-            echecJokers: cfg.combos.some((c) => c.id === 'echecJokers'), attrapeSur: id,
-          }).combos.map((c) => {
-            const garde = cfg.combos.find((x) => x.id === c.id);
-            return { ...c, requis: { ...((garde && garde.requis) || c.requis) } };
-          });
-          rafraichir();
-        },
+        // Les deux combinaisons restent en place : le réglage ne fait que
+        // désigner celle qui porte le contact.
+        onclick: () => { cfg.attrapeSur = id; rafraichir(); },
       }, lib)),
     ),
     h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },

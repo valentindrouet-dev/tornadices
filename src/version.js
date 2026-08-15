@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.25';
-export const BUILD_DATE = '2026-08-12';
+export const VERSION = '1.26';
+export const BUILD_DATE = '2026-08-15';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.26',
+    date: '12/08/2026',
+    notes: [
+      'Le déclencheur de l’attrape ne parle plus de dés, mais de combinaisons : les deux boutons sont désormais « Éclairs » et « Échecs », et ils désignent laquelle des deux lignes du tableau — Attaque ou Échec — tente le contact. Réglez l’Échec sur trois X, cochez « Échecs », et ce sont bien trois X qui attrapent. Le dé, lui, ne change plus tout seul quand on bascule.',
+      'La combinaison Attaque revient dans le tableau en toutes circonstances : elle avait disparu en mode « Échecs », alors qu’il faut pouvoir la régler. En mode « Échecs », elle reste réglable mais ne se joue plus — sans quoi elle coûterait le lot sans rien tenter — et la liste des combinaisons de la table le signale.',
+      'La page Variables est débarrassée de ses pavés d’explication : chaque titre porte un petit « ? » dans un rond. Au survol, l’infobulle donne la phrase essentielle ; au clic, toute la description s’installe sous le titre. La page perd 500 pixels de hauteur sur grand écran, et les réglages redeviennent lisibles d’un coup d’œil.',
+      'Les textes n’ont pas été jetés, ils ont été rassemblés : ce qui traînait sous chaque champ — le temps que les dés roulent, la chance de toucher, les valeurs du tableau officiel — se retrouve dans le « ? » de la section correspondante.',
+    ],
+  },
   {
     version: '1.25',
     date: '12/08/2026',

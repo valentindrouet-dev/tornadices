@@ -105,8 +105,8 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   face** — depuis les options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
-- ce qui déclenche l'attrape : les trois éclairs, ou l'échec sur un dé sans face
-  éclair — et, pour ce dernier, s'il faut être réveillé pour tenter le contact ;
+- laquelle des deux combinaisons porte l'attrape — l'Attaque ou l'Échec — et,
+  pour l'Échec, s'il faut être réveillé pour tenter le contact ;
 - ce que rapporte l'attrape : un jeton, ou la manche si le contact réussit ;
 - ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
   les lots s'empilent dans la même main ;
@@ -236,12 +236,18 @@ réussi se règle dans les Variables :
 Mesuré sur 300 parties simulées. Il faut toujours **toucher** : les trois éclairs
 seuls n’emportent jamais rien.
 
-### Le mode sans éclair
+### Qui porte l’attrape
 
-`attrapeSur: 'echec'` retire la face éclair du dé — une seconde vache prend sa
-place — et confie le contact à l’échec : deux X font partir le lot comme
-d’habitude, mais **si le voisin à qui on le passe tient un lot, on tente de le
-toucher au passage**. La combinaison des trois éclairs est retirée avec la face.
+`attrapeSur` désigne **laquelle des deux combinaisons tente le contact** :
+`'eclair'` l’Attaque (règle de base), `'echec'` l’Échec. Ce sont les
+combinaisons qui décident des dés, pas l’inverse — `comboDeclencheur(cfg)` rend
+l’identifiant, et l’exigence réglée dans le tableau suit, qu’elle demande trois
+éclairs, deux X ou trois X. Le dé, lui, ne change pas avec le mode.
+
+En `'echec'`, deux X font partir le lot comme d’habitude, mais **si le voisin à
+qui on le passe tient un lot, on tente de le toucher au passage**. L’Attaque
+reste dans le tableau, réglable, mais n’est plus jouable : elle coûterait le lot
+sans rien tenter.
 
 **Il faut être réveillé** (`attrapeEveille`, actif par défaut) : Tornade
 endormie, l’échec reste un échec sec. Sur 300 parties à 6 joueurs, la règle
