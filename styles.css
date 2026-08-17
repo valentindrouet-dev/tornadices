@@ -156,6 +156,16 @@ a { color: var(--accent-fonce); }
 .grille--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grille--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grille--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grille--cartes { gap: 12px; align-items: start; }
+/* Une carte Journée telle qu'on la coche : son nom, sa combinaison et son effet
+   au même endroit — l'infobulle ne montrait rien de tout cela. */
+.carte-journee {
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  background: var(--fond-doux);
+  padding: 12px;
+}
+.carte-journee.hors-jeu { opacity: .5; }
 .grille--labo { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); align-items: start; }
 .grille--jeu { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -242,6 +252,14 @@ a { color: var(--accent-fonce); }
 .segment button.on {
   background: linear-gradient(180deg, #4aa5e2, #1e83cc);
   color: #fff; box-shadow: 0 1px 5px rgba(30, 131, 204, .3);
+}
+/* Un choix que le mode de jeu impose : on montre lequel s'applique, sans laisser
+   croire qu'il reste à prendre. */
+.segment--fige { opacity: .62; }
+.segment--fige button { cursor: not-allowed; }
+.segment--fige button.on {
+  background: linear-gradient(180deg, #9db4c6, #7d97ac);
+  box-shadow: none;
 }
 
 /* ── Champs ───────────────────────────────────────────────────────────────── */

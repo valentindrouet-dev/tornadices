@@ -129,8 +129,9 @@ export const AIDE_DECLENCHEUR = {
 //
 // « sansPoints » — on ne compte plus rien : il faut se réveiller puis sortir la
 // combinaison Vache, et le premier qui y arrive arrête la manche sur-le-champ.
-// Son équipe prend la carte Journée, et l'on recommence. C'est le nombre de
-// cartes qui fait la partie.
+// Son équipe prend la carte Journée, et l'on recommence. Une attrape réussie
+// emporte la manche de la même façon — sans jeton à prendre, elle n'aurait plus
+// rien à rapporter. C'est le nombre de cartes qui fait la partie.
 export const OPTIONS_MANCHE = [
   ['jetons', 'Retourner tous les jetons'],
   ['sansPoints', 'Sans les points'],
@@ -141,8 +142,9 @@ export const AIDE_MANCHE = {
     + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
   sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche la Vache. Le '
     + 'premier joueur qui la sort arrête la manche sur-le-champ — son équipe prend la carte '
-    + 'Journée, et la manche suivante commence. Plus aucun jeton n’est compté ; c’est le nombre '
-    + 'de cartes qui fait le vainqueur, quatre en général.',
+    + 'Journée, et la manche suivante commence. Une attrape réussie emporte la manche de la '
+    + 'même façon. Plus aucun jeton n’est compté ; c’est le nombre de cartes qui fait le '
+    + 'vainqueur, quatre en général.',
 };
 
 // Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
@@ -157,6 +159,36 @@ export const AIDE_ATTRAPE = {
   touche: 'Trois éclairs, vous passez le lot et tentez le contact — s’il réussit, votre équipe '
     + 'remporte la manche sur-le-champ. Les jetons ne servent plus qu’à la course parallèle.',
 };
+
+/**
+ * Ce que vaut un contact réussi. Sans les points, il n'y a plus de jeton à
+ * prendre : l'attrape emporte la manche, sans quoi elle ne vaudrait plus rien.
+ * Le réglage ne se pose donc que dans le mode de base.
+ */
+export function attrapeEmporteManche(cfg) {
+  return !!cfg.sansPoints || cfg.attrapeGagneManche === 'touche';
+}
+
+/**
+ * Ce que le mode de jeu fait — ou défait — à une carte Journée. Sans les points,
+ * celles qui manipulent les jetons n'ont plus le même sens : autant le dire sur
+ * la carte, dans les Réglages comme au Laboratoire, plutôt que de laisser
+ * découvrir en partie qu'elle ne sert à rien.
+ */
+export function noteCarteMode(carte, cfg) {
+  if (!cfg.sansPoints || !carte.combo) return '';
+  switch (carte.combo.effet) {
+    case 'jeton1':
+    case 'jeton2':
+      return 'Sans les points : cette combinaison emporte la manche, comme la Vache.';
+    case 'cacherJetonAdverse':
+      return 'Sans les points : sans effet, il n’y a plus de jeton à recacher.';
+    case 'auChoix':
+      return 'Sans les points : le choix se réduit au réveil ou à la Vache, qui emporte la manche.';
+    default:
+      return '';
+  }
+}
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
 // Le dé officiel : 2 tornades, 1 X, 1 vache, 2 ZzZ. Ni joker ni éclair — les

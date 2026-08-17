@@ -8,7 +8,7 @@ import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  OPTIONS_MANCHE, AIDE_MANCHE,
+  OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
 } from '../core/config.js?v=1.32';
 import { tableauCombos } from './combos.js?v=1.32';
@@ -277,15 +277,20 @@ function panneauConfig(rafraichir) {
     h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
-    h('div.segment',
+    h('div.segment', { class: cfg.sansPoints ? 'segment--fige' : '' },
       ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-        class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+        // Sans les points, le contact emporte la manche : plus rien à choisir.
+        class: (cfg.sansPoints ? 'touche' : cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
         style: { fontSize: '12.5px' },
+        disabled: cfg.sansPoints,
         onclick: () => { cfg.attrapeGagneManche = id; rafraichir(); },
       }, lib)),
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
-      AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
+      cfg.sansPoints
+        ? 'Sans les points, un contact réussi emporte la manche : il n’y a plus de jeton à '
+          + 'prendre. Le réglage est figé dans ce mode.'
+        : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Quand deux lots se rencontrent'),
     h('div.segment',
@@ -732,7 +737,8 @@ function ongletRegles() {
             ? h('div.rangee.rangee--serree',
                 suiteSymboles((cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis, 18))
             : h('span.mini.muted', 'effet permanent')),
-          h('td.petit', c.texte),
+          h('td.petit', c.texte,
+            noteCarteMode(c, cfg) ? h('div.mini.muted', noteCarteMode(c, cfg)) : null),
         ))),
       ),
     ),

@@ -5,7 +5,7 @@ import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
   // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
-  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
+  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace, attrapeEmporteManche,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
@@ -922,9 +922,16 @@ console.log('\nManche sans les points');
       Object.values(m.equipes).every((e) => e.retournes === 0));
   }
 
-  // L'attrape garde son effet — interrompre le voisin — mais ne rapporte rien,
-  // puisqu'il n'y a plus de jeton à prendre.
+  // Sans les points, il n'y a plus de jeton à prendre : un contact réussi
+  // emporte la manche. Le réglage « Ce que rapporte l'attrape » ne s'y pose plus.
   {
+    verifier('le contact réussi emporte la manche, quel que soit le réglage',
+      attrapeEmporteManche({ sansPoints: true, attrapeGagneManche: 'non' })
+      && attrapeEmporteManche({ sansPoints: true, attrapeGagneManche: 'touche' }));
+    verifier('en mode jetons, le réglage décide comme avant',
+      !attrapeEmporteManche({ sansPoints: false, attrapeGagneManche: 'non' })
+      && attrapeEmporteManche({ sansPoints: false, attrapeGagneManche: 'touche' }));
+
     const cfg = configParDefaut(6, { sansPoints: true });
     const m = new Moteur(cfg, spec(6), 'sp-attrape');
     const sources = new Set();
@@ -933,7 +940,20 @@ console.log('\nManche sans les points');
     const tentees = m.joueurs.reduce((a, j) => a + j.stats.collisionsTentees, 0);
     const reussies = m.joueurs.reduce((a, j) => a + j.stats.collisionsReussies, 0);
     verifier(`des contacts sont bien tentés (${tentees}, dont ${reussies} réussis)`, tentees > 0);
-    verifier('aucune manche n’est prise sur une attrape', !sources.has('collision'));
+    verifier('aucun jeton n’est jamais annoncé sur une attrape', !sources.has('collision'));
+
+    // Sur une campagne, des manches doivent réellement se gagner à l'attrape.
+    let parAttrape = 0, parVache = 0;
+    for (let g = 0; g < 60; g++) {
+      const p = new Moteur(cfg, spec(6), `sp-att-${g}`);
+      p.jouerJusquAuBout();
+      for (const e of p.journal) {
+        if (/Le contact réussit/.test(e.texte || '')) parAttrape++;
+        else if (/sort la Vache/.test(e.texte || '')) parVache++;
+      }
+    }
+    verifier(`sur 60 parties : ${parAttrape} manches prises à l’attrape, ${parVache} à la Vache`,
+      parAttrape > 0 && parVache > 0);
   }
 
   // Le mode ne change rien à la version de base : même graine, même partie.

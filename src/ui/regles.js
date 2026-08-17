@@ -218,9 +218,10 @@ export function vueRegles() {
         + 'les X qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le '
         + 'vainqueur, quatre en général au lieu de trois.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'L’attrape garde son intérêt sans rapporter de jeton : elle coupe le tour du voisin et '
-        + 'lui fait lâcher son lot, ce qui suffit à le sortir de la course. Pour qu’elle emporte '
-        + 'la manche, il reste le réglage « Ce que rapporte l’attrape ».'),
+        'L’attrape emporte la manche elle aussi : il n’y a plus de jeton à prendre, un contact '
+        + 'réussi vaut donc la manche entière. La course se gagne des deux mains — sortir la '
+        + 'Vache, ou attraper celui qui allait la sortir. Le réglage « Ce que rapporte '
+        + 'l’attrape » est figé dans ce mode, il n’a plus de second terme à proposer.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Certaines cartes Journée manipulent les jetons : dans ce mode, elles ne font rien de '
         + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '

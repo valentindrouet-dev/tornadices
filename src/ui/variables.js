@@ -4,7 +4,7 @@
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
 import { h, remplacer } from './dom.js?v=1.32';
-import { pastilleSymbole } from './icons.js?v=1.32';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.32';
 import { store } from './store.js?v=1.32';
 import { aller } from './app.js?v=1.32';
 import { lancerPartie } from './table.js?v=1.32';
@@ -12,7 +12,7 @@ import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  OPTIONS_MANCHE, AIDE_MANCHE,
+  OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
 } from '../core/config.js?v=1.32';
 import { tableauCombos } from './combos.js?v=1.32';
@@ -147,9 +147,9 @@ export function vueVariables() {
         titreAide('Comment se joue une manche', [
           AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons'],
           cfg.sansPoints
-            ? 'Le reste des réglages tient : les dés, les combinaisons, l’attrape, le rythme. '
-              + 'Seuls les jetons sortent du jeu — et les cartes Journée qui les manipulent ne '
-              + 'font simplement plus rien.'
+            ? 'Deux façons de prendre la manche, donc : sortir la Vache, ou attraper son voisin. '
+              + 'Le reste des réglages tient — les dés, les combinaisons, le rythme. Seuls les '
+              + 'jetons sortent du jeu, avec les cartes Journée qui les manipulent.'
             : '',
         ]),
         h('div.rangee.rangee--serree',
@@ -260,11 +260,20 @@ export function vueVariables() {
           }, h('span.case', '✓'), 'Il faut être réveillé'),
         ),
 
-        titreAide('Ce que rapporte l’attrape', AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
+        // Sans les points, il n'y a plus de jeton à prendre : le contact réussi
+        // emporte la manche, et le réglage n'a plus de second terme à proposer.
+        titreAide('Ce que rapporte l’attrape', [
+          cfg.sansPoints
+            ? 'Sans les points, un contact réussi emporte la manche : il n’y a plus de jeton à '
+              + 'prendre, et l’attrape serait sans objet autrement. Le réglage est donc figé — '
+              + 'revenez au mode « Retourner tous les jetons » pour le rouvrir.'
+            : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
+        ]),
         h('div.rangee.rangee--serree',
-          h('div.segment',
+          h('div.segment', { class: cfg.sansPoints ? 'segment--fige' : '' },
             ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-              class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+              class: (cfg.sansPoints ? 'touche' : cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+              disabled: cfg.sansPoints,
               onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
             }, lib)),
           ),
@@ -426,17 +435,34 @@ export function vueVariables() {
             onclick: () => { ecrire('melangerCartes', cfg.melangerCartes === false); dessiner(); },
           }, h('span.case', '✓'), 'Mélanger la pile'),
         ),
-        h('div.rangee.rangee--serree',
+        // Les pastilles seules ne disaient pas ce qu'on cochait : l'effet de la
+        // carte était caché dans une infobulle, et sa combinaison nulle part.
+        // Chaque carte porte désormais les deux, sous les yeux.
+        h('div.grille.grille--3.grille--cartes',
           ...CARTES_JOURNEE.map((c) => {
             const dedans = cfg.cartes.includes(c.id);
-            return h('button', {
-              class: `chip${dedans ? ' on' : ''}`, title: c.texte,
-              onclick: () => {
-                const liste = dedans ? cfg.cartes.filter((x) => x !== c.id) : [...cfg.cartes, c.id];
-                ecrire('cartes', liste);
-                dessiner();
-              },
-            }, h('span.case', '✓'), c.court);
+            const requis = c.combo
+              ? (cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis
+              : null;
+            const note = noteCarteMode(c, cfg);
+            return h('div.carte-journee', { class: dedans ? '' : 'hors-jeu' },
+              h('button', {
+                class: `chip${dedans ? ' on' : ''}`,
+                onclick: () => {
+                  const liste = dedans
+                    ? cfg.cartes.filter((x) => x !== c.id)
+                    : [...cfg.cartes, c.id];
+                  ecrire('cartes', liste);
+                  dessiner();
+                },
+              }, h('span.case', '✓'), c.court),
+              requis
+                ? h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
+                    suiteSymboles(requis, 20))
+                : h('div.mini.muted', { style: { marginTop: '8px' } }, 'Effet permanent'),
+              h('div.petit', { style: { marginTop: '6px' } }, c.texte),
+              note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,
+            );
           }),
         ),
       ),

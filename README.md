@@ -141,30 +141,34 @@ deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas
 | Mode | La manche se gagne | Ce qui fait la partie |
 |---|---|---|
 | `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Vache | 3 cartes Journée |
-| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé | 4 cartes Journée |
+| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé — ou attrape son voisin | 4 cartes Journée |
 
 Sans les points, on se réveille aux trois tornades, puis on cherche les trois
 vaches ; le premier qui les sort arrête la manche sur-le-champ et son équipe
-prend la carte. Tout le reste tient — le dé, les combinaisons, l’attrape, les X
-qui figent, le rythme. Deux effets de bord assumés :
+prend la carte. **Une attrape réussie emporte la manche de la même façon** : il
+n’y a plus de jeton à prendre, un contact vaut donc la manche entière —
+`attrapeEmporteManche(cfg)` en est l’unique juge, et le réglage
+`attrapeGagneManche` n’a plus de second terme à proposer, il est figé dans les
+deux menus. Sur 60 parties à six joueurs, **105 manches sont prises à l’attrape
+contre 310 à la Vache** : la course se gagne des deux mains.
 
-- **l’attrape ne rapporte rien** (il n’y a plus de jeton à prendre) mais garde
-  son intérêt : elle coupe le tour du voisin et lui fait lâcher son lot, ce qui
-  suffit à le sortir de la course. Pour qu’elle emporte la manche, il reste
-  `attrapeGagneManche: 'touche'` ;
-- **les cartes Journée qui manipulent les jetons** ne font plus rien de plus
-  qu’une carte ordinaire ; celles dont la combinaison retourne un jeton
-  (`jeton1`, `jeton2`) emportent la manche comme la Vache. Une bourde punie
-  (`penaliteErreurAdverse`) ne donne rien aux adversaires.
+Tout le reste tient — le dé, les combinaisons, les X qui figent, le rythme. Deux
+effets de bord assumés :
 
-La manche est trois fois plus courte, la partie deux fois — sur 100 parties
+- **les cartes Journée qui manipulent les jetons** changent de sens : « Jour sans
+  vent » (`cacherJetonAdverse`) ne fait plus rien, tandis que « Élevage
+  intensif » et « Troupeau » (`jeton1`, `jeton2`) emportent la manche comme la
+  Vache. Chaque carte le dit sur elle-même dans les Réglages ;
+- une bourde punie (`penaliteErreurAdverse`) ne donne rien aux adversaires.
+
+La manche est trois fois plus courte, la partie deux fois — sur 200 parties
 d’IA équilibrées par ligne :
 
 | Joueurs | Manche `jetons` | Manche `sansPoints` | Partie `jetons` | Partie `sansPoints` |
 |---|---|---|---|---|
-| 4 | 89 s | 36 s | 8:30 | 5:13 |
-| 6 | 82 s | 27 s | 7:54 | 4:05 |
-| 9 | 55 s | 22 s | 5:37 | 3:31 |
+| 4 | 102 s | 38 s | 8:30 | 4:27 |
+| 6 | 95 s | 31 s | 7:54 | 3:34 |
+| 9 | 56 s | 23 s | 5:37 | 3:02 |
 
 À nombre impair, la manche devient une course où **chacun joue pour soi** : le
 Vert, seul contre deux équipes, la perd presque toujours. Mesuré sur 300 parties
@@ -172,9 +176,9 @@ sans les points, `cartesVert` le remet à niveau :
 
 | Joueurs | 4 cartes (défaut) | 2 cartes | 1 carte |
 |---|---|---|---|
-| 5 | 12 % | 44 % | 76 % |
-| 7 | 4 % | 29 % | 62 % |
-| 9 | 1 % | 20 % | 56 % |
+| 5 | 7 % | 43 % | 74 % |
+| 7 | 2 % | 30 % | 64 % |
+| 9 | 1 % | 18 % | 59 % |
 
 ## Le dé
 

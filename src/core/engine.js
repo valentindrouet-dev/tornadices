@@ -14,7 +14,7 @@ import { makeRng } from './rng.js?v=1.32';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
-  comboDeclencheur,
+  comboDeclencheur, attrapeEmporteManche,
 } from './config.js?v=1.32';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
@@ -930,8 +930,10 @@ export class Moteur {
       j.stats.collisionsReussies++;
       q.stats.foisTouche++;
       this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
-      // Variante : un contact réussi emporte la manche au lieu d'un seul jeton.
-      if (this.cfg.attrapeGagneManche === 'touche') {
+      // Un contact réussi emporte la manche au lieu d'un seul jeton : la
+      // variante du mode de base, et la règle sans les points, où il n'y a
+      // plus de jeton à prendre.
+      if (attrapeEmporteManche(this.cfg)) {
         this._log(
           `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
         );
@@ -1053,9 +1055,9 @@ export class Moteur {
   _retournerJeton(j, n = 1, source = 'vache') {
     // Manche « sans les points » : rien ne se compte. La combinaison qui aurait
     // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
-    // carte Journée. L'attrape, elle, ne rapporte plus rien — il lui reste son
-    // effet propre, interrompre le voisin. Pour qu'elle emporte la manche, il y
-    // a le réglage « Ce que rapporte l'attrape ».
+    // carte Journée. L'attrape ne passe plus par ici — elle emporte la manche
+    // depuis `_resoudreAttrape` — mais la garde reste : rien ne doit pouvoir
+    // gagner une manche au nom d'un jeton qui n'existe pas.
     if (this.cfg.sansPoints) {
       if (source === 'collision') return;
       this._annoncer(`Vache ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
