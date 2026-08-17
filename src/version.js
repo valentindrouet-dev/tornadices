@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.26';
-export const BUILD_DATE = '2026-08-15';
+export const VERSION = '1.27';
+export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.27',
+    date: '12/08/2026',
+    notes: [
+      'Le jeu s’appelle désormais TornaDice, sans S. Le nom change partout : le titre de l’accueil et son dégradé de lettres, la marque de l’en-tête, l’onglet du navigateur, le raccourci sur l’écran d’accueil des téléphones, le titre de la page Règles, la description du site, l’étiquette de l’icône, les fichiers exportés — historique et campagnes — et les commentaires du code.',
+      'Une seule exception, invisible : la clé sous laquelle le navigateur enregistre vos réglages garde son ancien nom. La renommer aurait rendu introuvables les variables, l’historique et les configurations du Laboratoire déjà en place.',
+    ],
+  },
   {
     version: '1.26',
     date: '12/08/2026',
@@ -18,7 +26,7 @@ export const CHANGELOG = [
     version: '1.25',
     date: '12/08/2026',
     notes: [
-      'La marque « TORNADICES » et son logo ramènent à l’accueil, et le numéro de version ouvre le journal des versions — les deux gestes que l’on tente d’instinct sur un en-tête.',
+      'La marque « TORNADICE » et son logo ramènent à l’accueil, et le numéro de version ouvre le journal des versions — les deux gestes que l’on tente d’instinct sur un en-tête.',
       'Nouvelle règle, cochée par défaut : un dormeur ne tend pas la main. Dans le mode « attrape sur échec », Tornade endormie, le double X reste un échec sec — on passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au passage. Décochable dans les Variables et au Laboratoire.',
       'Sur 300 parties à 6 joueurs, la règle divise les contacts par deux — 4,7 → 2,4 chez le Logique, 7,4 → 3,2 chez l’Agressif — sans changer la durée d’une partie (3:09 → 3:12). Le réveil devient le passage obligé de tout ce qu’on peut entreprendre.',
       'Elle ne concerne que l’attrape sur échec : les trois éclairs continuent de valoir dans les deux états, comme la règle du jeu le veut.',
@@ -279,7 +287,7 @@ export const CHANGELOG = [
     version: '1.1',
     date: '09/08/2026',
     notes: [
-      'Première table de jeu virtuelle TornaDices : 3 à 9 joueurs, chaque siège au choix Humain ou IA, en temps réel autour d’une table circulaire.',
+      'Première table de jeu virtuelle TornaDice : 3 à 9 joueurs, chaque siège au choix Humain ou IA, en temps réel autour d’une table circulaire.',
       'Moteur de jeu à événements datés — les mêmes règles servent la partie jouée et la simulation, donc les statistiques décrivent bien le jeu réel.',
       'Les quatre symboles (cloche, vache, ZzZ, étoile), les combinaisons, les 12 cartes Journée et le tableau de mise en place sont implémentés d’après les règles V4.5.',
       'Laboratoire d’équilibrage : campagnes de parties simulées, taux de victoire par équipe, durées, collisions, fréquence de chaque combinaison et avantage de la place à table.',

@@ -1,9 +1,9 @@
 {
-  "name": "tornadices",
+  "name": "tornadice",
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Table de jeu virtuelle et laboratoire d'équilibrage pour TornaDices",
+  "description": "Table de jeu virtuelle et laboratoire d'équilibrage pour TornaDice",
   "scripts": {
     "start": "npx --yes serve -l 5173 .",
     "test": "node tests/moteur.test.js"

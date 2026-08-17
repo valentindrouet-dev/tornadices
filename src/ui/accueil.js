@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.26';
-import { store } from './store.js?v=1.26';
-import { aller } from './app.js?v=1.26';
-import { lancerPartie, partieEnCours } from './table.js?v=1.26';
-import { construireConfig, variables } from './variables.js?v=1.26';
+import { h, remplacer } from './dom.js?v=1.27';
+import { store } from './store.js?v=1.27';
+import { aller } from './app.js?v=1.27';
+import { lancerPartie, partieEnCours } from './table.js?v=1.27';
+import { construireConfig, variables } from './variables.js?v=1.27';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.26';
-import { pastilleSymbole } from './icons.js?v=1.26';
-import { randomSeed } from '../core/rng.js?v=1.26';
+} from '../core/config.js?v=1.27';
+import { pastilleSymbole } from './icons.js?v=1.27';
+import { randomSeed } from '../core/rng.js?v=1.27';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -70,7 +70,7 @@ export function vueAccueil() {
     const nbHumains = joueurs.filter((j) => j.type === 'humain').length;
 
     remplacer(racine,
-      h('h1.titre-jeu', ...titreColore('TORNADICES')),
+      h('h1.titre-jeu', ...titreColore('TORNADICE')),
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '2px' } },
         'Un jeu de Sylvain Bonnafous'),
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '22px' } },
@@ -94,7 +94,7 @@ export function vueAccueil() {
 
       nbHumains > 1
         ? h('div.encart.encart--info', { style: { marginTop: '18px' } },
-            `${nbHumains} joueurs humains partagent le même écran. TornaDices se joue en simultané : `
+            `${nbHumains} joueurs humains partagent le même écran. TornaDice se joue en simultané : `
             + 'chacun agit depuis son propre panneau, en bas de la table. À deux mains sur un clavier '
             + 'cela reste jouable, au-delà mieux vaut confier les autres sièges à des IA.')
         : null,

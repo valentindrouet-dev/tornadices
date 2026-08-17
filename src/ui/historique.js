@@ -1,8 +1,8 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.26';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.26';
-import { COULEURS_EQUIPE } from '../core/config.js?v=1.26';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.27';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.27';
+import { COULEURS_EQUIPE } from '../core/config.js?v=1.27';
 
 export function vueHistorique() {
   const racine = h('div.page');
@@ -36,7 +36,7 @@ export function vueHistorique() {
               h('div.rangee', { style: { marginBottom: '12px' } },
                 h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Parties'),
                 h('button.btn.btn--petit', {
-                  onclick: () => telecharger('tornadices-historique.csv', historiqueCSV()),
+                  onclick: () => telecharger('tornadice-historique.csv', historiqueCSV()),
                 }, 'Exporter en CSV'),
                 h('button.btn.btn--petit.btn--danger', {
                   onclick: () => { if (confirm('Effacer tout l’historique ?')) { viderHistorique(); dessiner(); } },

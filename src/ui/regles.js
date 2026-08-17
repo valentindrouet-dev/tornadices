@@ -1,14 +1,14 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.26';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.26';
+import { h } from './dom.js?v=1.27';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.27';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.26';
+} from '../core/config.js?v=1.27';
 
 export function vueRegles() {
   return h('div.page',
-    h('div.rangee', { style: { margin: '6px 0 18px' } }, h('h1', 'Règles — TornaDices V4.5')),
+    h('div.rangee', { style: { margin: '6px 0 18px' } }, h('h1', 'Règles — TornaDice V4.5')),
 
     h('div.carte',
       h('div.titre-section', 'Le rythme d’un lot'),

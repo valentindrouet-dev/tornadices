@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.26';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.26';
-import { store } from './store.js?v=1.26';
-import { lancerCampagne } from '../core/sim.js?v=1.26';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.27';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.27';
+import { store } from './store.js?v=1.27';
+import { lancerCampagne } from '../core/sim.js?v=1.27';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.26';
-import { tableauCombos } from './combos.js?v=1.26';
+} from '../core/config.js?v=1.27';
+import { tableauCombos } from './combos.js?v=1.27';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.26';
+} from '../core/proba.js?v=1.27';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -436,10 +436,10 @@ function resultats(r) {
       h('div.rangee',
         h('div.titre-section', { style: { margin: '0', flex: '1' } }, 'Export'),
         h('button.btn.btn--petit', {
-          onclick: () => telecharger(`tornadices-campagne-${etat.graine}.csv`, campagneCSV(r)),
+          onclick: () => telecharger(`tornadice-campagne-${etat.graine}.csv`, campagneCSV(r)),
         }, 'Exporter en CSV'),
         h('button.btn.btn--petit', {
-          onclick: () => telecharger(`tornadices-campagne-${etat.graine}.json`,
+          onclick: () => telecharger(`tornadice-campagne-${etat.graine}.json`,
             JSON.stringify({ config: etat.cfg, profils: etat.profils, resultat: r }, null, 2),
             'application/json'),
         }, 'Exporter le réglage complet (JSON)'),

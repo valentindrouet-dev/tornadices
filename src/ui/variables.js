@@ -3,20 +3,20 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.26';
-import { pastilleSymbole } from './icons.js?v=1.26';
-import { store } from './store.js?v=1.26';
-import { aller } from './app.js?v=1.26';
-import { lancerPartie } from './table.js?v=1.26';
+import { h, remplacer } from './dom.js?v=1.27';
+import { pastilleSymbole } from './icons.js?v=1.27';
+import { store } from './store.js?v=1.27';
+import { aller } from './app.js?v=1.27';
+import { lancerPartie } from './table.js?v=1.27';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, PRESETS_FACES, aideVariance,
-} from '../core/config.js?v=1.26';
-import { tableauCombos } from './combos.js?v=1.26';
-import { randomSeed } from '../core/rng.js?v=1.26';
-import { reglagesJoueurs } from './accueil.js?v=1.26';
+} from '../core/config.js?v=1.27';
+import { tableauCombos } from './combos.js?v=1.27';
+import { randomSeed } from '../core/rng.js?v=1.27';
+import { reglagesJoueurs } from './accueil.js?v=1.27';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 

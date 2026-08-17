@@ -1,4 +1,4 @@
-// Moteur TornaDices — simulation à événements datés.
+// Moteur TornaDice — simulation à événements datés.
 //
 // Le temps est virtuel (millisecondes). Chaque étape d'un joueur est un événement
 // planifié dans une file de priorité. La table de jeu fait avancer l'horloge au
@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.26';
+import { makeRng } from './rng.js?v=1.27';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.26';
+} from './config.js?v=1.27';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 

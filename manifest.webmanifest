@@ -1,7 +1,7 @@
 {
-  "name": "TornaDices",
-  "short_name": "TornaDices",
-  "description": "Table de jeu virtuelle et laboratoire d’équilibrage pour TornaDices.",
+  "name": "TornaDice",
+  "short_name": "TornaDice",
+  "description": "Table de jeu virtuelle et laboratoire d’équilibrage pour TornaDice.",
   "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,5 +1,8 @@
 // Persistance locale : réglages, partie en cours, historique.
 
+// Le jeu s'appelle TornaDice depuis la v1.27, mais cette clé garde son ancien
+// nom : la renommer rendrait invisibles les réglages, l'historique et les
+// configurations du Laboratoire déjà enregistrés dans les navigateurs.
 const CLE = 'tornadices.v1';
 
 function lire() {

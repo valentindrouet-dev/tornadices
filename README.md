@@ -1,7 +1,7 @@
-# TornaDices — table de jeu virtuelle et laboratoire d’équilibrage
+# TornaDice — table de jeu virtuelle et laboratoire d’équilibrage
 
 Site statique, sans dépendance ni étape de compilation : du HTML, du CSS et des
-modules JavaScript natifs. Il implémente les règles V4.5 de TornaDices pour 3 à
+modules JavaScript natifs. Il implémente les règles V4.5 de TornaDice pour 3 à
 9 joueurs, chaque siège pouvant être tenu par un humain ou par une IA, et fournit
 les outils d’analyse nécessaires à l’équilibrage.
 

@@ -1,15 +1,15 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.26';
-import { SVG_LOGO } from './icons.js?v=1.26';
-import { VERSION } from '../version.js?v=1.26';
-import { vueAccueil } from './accueil.js?v=1.26';
-import { vueTable, partieEnCours } from './table.js?v=1.26';
-import { vueLabo } from './labo.js?v=1.26';
-import { vueVariables } from './variables.js?v=1.26';
-import { vueHistorique } from './historique.js?v=1.26';
-import { vueVersions } from './versions.js?v=1.26';
-import { vueRegles } from './regles.js?v=1.26';
+import { h, remplacer } from './dom.js?v=1.27';
+import { SVG_LOGO } from './icons.js?v=1.27';
+import { VERSION } from '../version.js?v=1.27';
+import { vueAccueil } from './accueil.js?v=1.27';
+import { vueTable, partieEnCours } from './table.js?v=1.27';
+import { vueLabo } from './labo.js?v=1.27';
+import { vueVariables } from './variables.js?v=1.27';
+import { vueHistorique } from './historique.js?v=1.27';
+import { vueVersions } from './versions.js?v=1.27';
+import { vueRegles } from './regles.js?v=1.27';
 
 const ROUTES = {
   '': vueAccueil,
@@ -66,7 +66,7 @@ function barre() {
       type: 'button', title: 'Retour à l’accueil', onclick: () => aller('/'),
     },
       h('span.logo', { html: SVG_LOGO }),
-      h('span.nom', 'TORNADICES'),
+      h('span.nom', 'TORNADICE'),
     ),
     h('button.pastille-version', {
       type: 'button', title: 'Journal des versions', onclick: () => aller('/versions'),
