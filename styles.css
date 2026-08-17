@@ -388,6 +388,10 @@ label.champ {
 .siege--eveille .entete { color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 60%, #08131c); }
 .siege--eveille .de { border-color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 40%, #fff); }
 .siege .des-mini { display: flex; gap: 4px; margin-top: 7px; min-height: 36px; align-items: center; }
+.siege .profil-siege {
+  font-size: 10.5px; font-weight: 600; color: var(--gris); white-space: nowrap;
+  flex: none;
+}
 .siege .badge-lots {
   background: var(--accent-clair); color: #10557f; border-radius: 999px;
   padding: 1px 7px; font-size: 11px; font-weight: 800;

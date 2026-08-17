@@ -136,14 +136,14 @@ export const AIDE_ATTRAPE = {
 };
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Répartition de base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair —
-// le joker a pris la place de la seconde tornade.
-// Modifiable face par face dans les options de partie et dans le Laboratoire.
-export const FACES_PAR_DEFAUT = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
+// Le dé officiel : 2 tornades, 1 X, 1 vache, 2 ZzZ. Ni joker ni éclair — les
+// deux faces restent disponibles dans les menus, à poser soi-même.
+// Modifiable face par face dans les réglages de partie et dans le Laboratoire.
+export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz'];
 
-// Le dé du mode « attrape sur échec » : pas de face éclair, la vache prend sa
-// place. Hypothèse de travail — les faces restent modifiables une par une.
-export const FACES_SANS_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'vache'];
+// Le dé d'avant, avec joker et éclair : la combinaison Attaque n'est servie que
+// par un dé qui porte des éclairs.
+export const FACES_JOKER_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
 
 // Les faces ont été renommées en v1.3 : la « cloche » est devenue la tornade, et
 // l'« étoile » — la face jamais relançable qui déclenchait la collision — est
@@ -225,14 +225,16 @@ export function facesPourDe(nbFaces, base = FACES_PAR_DEFAUT) {
   return Array.from({ length: nbFaces }, (_, i) => modele[i % modele.length]);
 }
 
+// Répartitions de rechange, proposées au Laboratoire seulement : les réglages
+// de partie s'en tiennent au dé officiel, face par face.
 export const PRESETS_FACES = [
-  { nom: 'Officiel', faces: ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'] },
-  { nom: 'Sans joker', faces: ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'] },
-  { nom: 'Sans éclair', faces: FACES_SANS_ECLAIR },
+  { nom: 'Officiel', faces: FACES_PAR_DEFAUT },
+  { nom: 'Joker et éclair', faces: FACES_JOKER_ECLAIR },
+  { nom: 'Avec éclair', faces: ['tornade', 'tornade', 'x', 'vache', 'zzz', 'eclair'] },
+  { nom: 'Avec joker', faces: ['tornade', 'joker', 'x', 'vache', 'zzz', 'zzz'] },
   { nom: 'Joker double', faces: ['tornade', 'joker', 'x', 'jokerDouble', 'vache', 'eclair'] },
-  { nom: 'Deux jokers', faces: ['tornade', 'joker', 'joker', 'x', 'vache', 'eclair'] },
   { nom: 'Symétrique', faces: ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'] },
-  { nom: 'Orageux (2 X)', faces: ['tornade', 'joker', 'x', 'x', 'vache', 'eclair'] },
+  { nom: 'Orageux (2 X)', faces: ['tornade', 'tornade', 'x', 'x', 'vache', 'zzz'] },
 ];
 
 // ── Combinaisons de la carte Tornade ──────────────────────────────────────────
@@ -448,7 +450,7 @@ export const PROFILS_IA = {
     desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
   },
   tresAgressif: {
-    id: 'tresAgressif', nom: 'Très agressif',
+    id: 'tresAgressif', nom: 'Très agressif', court: 'T. agressif',
     vise: { endormi: { eclair: 1 }, eveille: { eclair: 1 } },
     lancersAvantPasse: 14, ecartLancers: 4, peur: 0.12,
     reflexe: 620, ecartReflexe: 160, adresse: 0.74, esquive: 0.5, erreur: 0.06,
@@ -463,7 +465,7 @@ export const PROFILS_IA = {
     desc: 'Endort ses voisins trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
   },
   tresPenible: {
-    id: 'tresPenible', nom: 'Très pénible',
+    id: 'tresPenible', nom: 'Très pénible', court: 'T. pénible',
     // Il se réveille parce qu'il le faut, puis ne joue plus que le ZzZ.
     vise: { endormi: { tornade: 1 }, eveille: { zzz: 1 } },
     lancersAvantPasse: 13, ecartLancers: 4, peur: 0.2,
@@ -521,9 +523,10 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
   // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
   // disparaît purement et simplement du jeu.
   const echecJokers = opts.echecJokers !== false;
-  // Sur échec, la combinaison des trois éclairs n'existe plus : c'est le double X
-  // qui tente le contact, et le dé perd sa face éclair.
-  const attrapeSur = opts.attrapeSur === 'echec' ? 'echec' : 'eclair';
+  // Le dé officiel ne porte pas d'éclair : c'est donc l'Échec qui tente le
+  // contact par défaut, sinon l'attrape ne se produirait jamais. Repassez sur
+  // « Éclairs » après avoir posé une face éclair sur le dé.
+  const attrapeSur = opts.attrapeSur === 'eclair' ? 'eclair' : 'echec';
   return {
     nbJoueurs,
     desParLot: 4,
@@ -533,7 +536,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     attrapeSur,
     // Un dormeur ne tend pas la main : l'attrape sur échec demande d'être
     // réveillé. Ne concerne pas les trois éclairs, qui valent dans les deux
-    // états. Décochable dans les Variables.
+    // états. Décochable dans les Réglages.
     attrapeEveille: opts.attrapeEveille !== false,
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.

@@ -1,15 +1,15 @@
-// Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
+// Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.29';
-import { store } from './store.js?v=1.29';
-import { aller } from './app.js?v=1.29';
-import { lancerPartie, partieEnCours } from './table.js?v=1.29';
-import { construireConfig, variables } from './variables.js?v=1.29';
+import { h, remplacer } from './dom.js?v=1.30';
+import { store } from './store.js?v=1.30';
+import { aller } from './app.js?v=1.30';
+import { lancerPartie, partieEnCours } from './table.js?v=1.30';
+import { construireConfig, variables } from './variables.js?v=1.30';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.29';
-import { pastilleSymbole } from './icons.js?v=1.29';
-import { randomSeed } from '../core/rng.js?v=1.29';
+} from '../core/config.js?v=1.30';
+import { pastilleSymbole } from './icons.js?v=1.30';
+import { randomSeed } from '../core/rng.js?v=1.30';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -89,8 +89,8 @@ export function vueAccueil() {
 
       h('div.rangee.actions-accueil', { style: { justifyContent: 'center', marginTop: '26px' } },
         h('button.btn.btn--primaire.btn--grand', { onclick: demarrer }, 'Commencer la partie'),
-        h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/variables'); } },
-          'Variables'),
+        h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/reglages'); } },
+          'Réglages'),
         h('button.btn.btn--grand', { onclick: () => { sauver(); aller('/labo'); } },
           'Laboratoire d’équilibrage'),
       ),
@@ -157,7 +157,7 @@ export function vueAccueil() {
     );
   }
 
-  /** Aperçu en lecture seule de ce qui est réglé dans Variables. */
+  /** Aperçu en lecture seule de ce qui est réglé dans Réglages. */
   function carteApercu() {
     const cfg = construireConfig(nb);
     const compte = {};
@@ -165,8 +165,8 @@ export function vueAccueil() {
 
     return h('div.carte.carte-apercu',
       h('div.rangee', { style: { marginBottom: '14px' } },
-        h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Variables de la partie'),
-        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/variables'); } }, 'Modifier'),
+        h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Réglages de la partie'),
+        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/reglages'); } }, 'Modifier'),
       ),
       h('div.rangee.rangee--serree', { style: { marginBottom: '12px' } },
         ...cfg.faces.map((f) => pastilleSymbole(f, 34)),

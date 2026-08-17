@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.29';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.29';
+import { h } from './dom.js?v=1.30';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.30';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.29';
+} from '../core/config.js?v=1.30';
 
 export function vueRegles() {
   return h('div.page',
@@ -14,18 +14,18 @@ export function vueRegles() {
       h('div.titre-section', 'Le rythme d’un lot'),
       h('p.petit', 'Un lot qui arrive porte la face « ? » : rien n’est encore lancé. Les dés '
         + 'roulent une seconde, on lit le résultat, on a le temps de le voir, puis le lot met une '
-        + 'seconde à rejoindre le voisin. Ces trois durées se règlent dans le menu Variables — '
+        + 'seconde à rejoindre le voisin. Ces trois durées se règlent dans le menu Réglages — '
         + 'elles font le tempo du jeu et comptent dans la durée d’une partie.'),
       h('p.petit.muted', 'Chaque dé roule pour son propre compte : on peut en relancer un pendant '
         + 'qu’un autre tourne encore, un clic par dé, la barre espace pour tous.'),
-      h('p.petit.muted', 'Un curseur d’irrégularité, dans les Variables, fait varier ces durées '
+      h('p.petit.muted', 'Un curseur d’irrégularité, dans les Réglages, fait varier ces durées '
         + 'd’un geste à l’autre : à 0 % le tempo est mécanique, à 30 % un passage réglé à '
         + '1000 ms dure entre 700 et 1300 ms. La table respire, sans que la moyenne bouge.'),
       h('p.petit', 'On ne tient jamais deux lots. Quand deux se rencontrent, celui qu’on avait '
         + 'en main est poussé aussitôt vers le voisin suivant — quitte à le pousser à son tour — '
         + 'et on enchaîne sur le nouveau, faces « ? », à lancer.'),
       h('div.encart.encart--info', { style: { margin: '10px 0' } },
-        'Variante des Variables : les lots s’empilent au lieu de se pousser. Le lot qui arrive '
+        'Variante des Réglages : les lots s’empilent au lieu de se pousser. Le lot qui arrive '
         + 'attend son tour derrière celui qu’on a en main, et l’on s’en occupe une fois le '
         + 'premier parti. Rien ne rebondit plus sur le voisin — c’est le joueur lent qui '
         + 'accumule, et il peut se retrouver avec toute la table sur les bras.'),
@@ -49,22 +49,27 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Les symboles du dé'),
       h('div.grille.grille--3',
-        ...['tornade', 'vache', 'zzz', 'eclair', 'joker', 'x'].map((s) => h('div.stat',
+        ...['tornade', 'vache', 'zzz', 'x', 'eclair', 'joker'].map((s) => h('div.stat',
           h('div.rangee.rangee--serree', pastilleSymbole(s, 30),
             h('strong', SYMBOLES[s].nom)),
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
       h('p.petit', { style: { marginTop: '12px' } },
-        'Un dé porte six faces : une tornade, un joker, un X, un ZzZ, une vache et un éclair. '
-        + 'Le joker occupe la place de la seconde tornade.'),
+        'Le dé officiel porte six faces : deux tornades, un X, une vache et deux ZzZ. '
+        + 'L’éclair et le joker n’y sont plus — ils restent disponibles dans les Réglages, '
+        + 'à poser soi-même sur une face pour les essayer.'),
       h('div.encart', { style: { marginTop: '14px' } },
         'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
         + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
         + 'plus assez de dés libres pour former quoi que ce soit : le lot part aussitôt.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Le dé du jeu est et reste le d6. Les Variables proposent un d8 et un d10 pour '
+        'Le dé du jeu est et reste le d6. Les Réglages proposent un d8 et un d10 pour '
         + 'l’équilibrage : ils reprennent la même série de symboles depuis le début, et chaque '
         + 'face y reste modifiable une à une.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Sans face éclair, la combinaison Attaque ne peut pas sortir : c’est donc l’Échec — '
+        + 'le double X — qui porte l’attrape par défaut. Posez un éclair sur une face et '
+        + 'repassez le déclencheur sur « Éclairs » pour retrouver l’attaque choisie.'),
     ),
 
     h('div.carte',
@@ -82,12 +87,12 @@ export function vueRegles() {
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
         'Trois jokers d’un coup : c’est un échec, comme deux X. Le lot part sans rien tenter, '
         + 'et cet échec l’emporte sur tout ce que les jokers auraient pu servir — sans quoi le '
-        + 'joker n’aurait aucun revers. Règle décochable dans les Variables de partie.'),
+        + 'joker n’aurait aucun revers. Règle décochable dans les Réglages de partie.'),
       h('div.rangee', { style: { marginTop: '14px' } },
         pastilleSymbole('jokerDouble', 40),
         h('p.petit', { style: { flex: '1', margin: 0 } },
           h('strong', SYMBOLES.jokerDouble.nom), ' — un joker limité à l’éclair et au ZzZ. '
-          + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Variables '
+          + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Réglages '
           + 'pour l’essayer. Il ne compte pas dans les trois jokers de l’échec.'),
       ),
     ),
@@ -149,14 +154,14 @@ export function vueRegles() {
         + 'le toucheur appuie pour toucher, la cible pour retirer sa main. Entre IA, elle se '
         + 'résout à l’adresse et à l’esquive de chacun.'),
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
-        'Variante réglable dans les Variables : un contact réussi peut emporter la manche '
+        'Variante réglable dans les Réglages : un contact réussi peut emporter la manche '
         + 'entière. Elle devient alors une course à l’attrape plutôt qu’une course aux vaches — '
         + 'mais il faut toujours toucher, les trois éclairs seuls ne suffisent jamais.'),
     ),
 
     h('div.carte',
       h('div.titre-section', 'Qui porte l’attrape'),
-      h('p.petit', 'Deux combinaisons peuvent tenter le contact, et les Variables disent '
+      h('p.petit', 'Deux combinaisons peuvent tenter le contact, et les Réglages disent '
         + 'laquelle : « Éclairs » désigne l’Attaque — la règle de base — et « Échecs » désigne '
         + 'l’Échec. Ce sont bien les combinaisons qui décident des dés : réglez la ligne du '
         + 'tableau, et le déclencheur suit, qu’il demande trois éclairs, deux X ou trois X.'),
@@ -167,7 +172,7 @@ export function vueRegles() {
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Un dormeur ne tend pas la main : Tornade endormie, l’Échec reste un échec sec, on '
         + 'passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au '
-        + 'passage — règle décochable dans les Variables. Elle ne touche pas l’Attaque, '
+        + 'passage — règle décochable dans les Réglages. Elle ne touche pas l’Attaque, '
         + 'qui vaut dans les deux états.'),
     ),
 

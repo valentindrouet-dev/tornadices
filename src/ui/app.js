@@ -1,20 +1,22 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.29';
-import { SVG_LOGO } from './icons.js?v=1.29';
-import { VERSION } from '../version.js?v=1.29';
-import { vueAccueil } from './accueil.js?v=1.29';
-import { vueTable, partieEnCours } from './table.js?v=1.29';
-import { vueLabo } from './labo.js?v=1.29';
-import { vueVariables } from './variables.js?v=1.29';
-import { vueHistorique } from './historique.js?v=1.29';
-import { vueVersions } from './versions.js?v=1.29';
-import { vueRegles } from './regles.js?v=1.29';
+import { h, remplacer } from './dom.js?v=1.30';
+import { SVG_LOGO } from './icons.js?v=1.30';
+import { VERSION } from '../version.js?v=1.30';
+import { vueAccueil } from './accueil.js?v=1.30';
+import { vueTable, partieEnCours } from './table.js?v=1.30';
+import { vueLabo } from './labo.js?v=1.30';
+import { vueVariables } from './variables.js?v=1.30';
+import { vueHistorique } from './historique.js?v=1.30';
+import { vueVersions } from './versions.js?v=1.30';
+import { vueRegles } from './regles.js?v=1.30';
 
 const ROUTES = {
   '': vueAccueil,
   '/': vueAccueil,
   '/table': vueTable,
+  '/reglages': vueVariables,
+  // L'ancienne adresse reste valable : un lien déjà posé ne doit pas se briser.
   '/variables': vueVariables,
   '/labo': vueLabo,
   '/historique': vueHistorique,
@@ -48,7 +50,7 @@ function barre() {
       ? h('button.lien-nav.actif', { onclick: () => aller('/table') }, '▸ Partie en cours')
       : null,
     chemin !== '/' ? lien('Accueil', '/') : null,
-    lien('Variables', '/variables'),
+    lien('Réglages', '/reglages'),
     lien('Laboratoire', '/labo'),
     lien('Historique', '/historique'),
     lien('Règles', '/regles'),

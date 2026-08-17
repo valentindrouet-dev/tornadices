@@ -3,13 +3,25 @@
 import { Moteur } from '../src/core/engine.js';
 import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
-  assainirFaces, assainirRequis, assainirConfig, FACES_SANS_ECLAIR,
+  // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
+  assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
   TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
 } from '../src/core/proba.js';
+
+/**
+ * Configuration sur le dé d'avant — joker et éclair — avec l'Attaque au
+ * déclencheur. Le dé officiel n'a plus d'éclair : tout ce qui éprouve l'Attaque
+ * doit dire explicitement sur quel dé il tourne.
+ */
+function cfgEclair(n = 6, opts = {}) {
+  const cfg = configParDefaut(n, { ...opts, attrapeSur: 'eclair' });
+  cfg.faces = FACES_JOKER_ECLAIR.slice();
+  return cfg;
+}
 
 let echecs = 0;
 function verifier(nom, condition, detail = '') {
@@ -319,7 +331,7 @@ console.log('\nJokers');
   // Le joueur humain tranche entre les combinaisons que le joker lui sert.
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
-    const m = new Moteur(configParDefaut(6), humains, 'joker-choix');
+    const m = new Moteur(cfgEclair(), humains, 'joker-choix');
     const j = m.joueurs[0];
     if (!j.lots.length) j.lots.push(m._nouveauLot());
     poser(j.lots[0], ['joker', 'joker', 'eclair', 'tornade']);
@@ -360,7 +372,7 @@ console.log('\nAttrape gagnante');
 
   // Variante « le contact réussi emporte la manche ».
   {
-    const cfg = configParDefaut(6);
+    const cfg = cfgEclair();
     cfg.attrapeGagneManche = 'touche';
     const m = new Moteur(cfg, spec, 'attrape-touche');
     m.jouerJusquAuBout();
@@ -382,7 +394,7 @@ console.log('\nAttrape gagnante');
       && OPTIONS_ATTRAPE.length === 2);
     verifier('un réglage enregistré sur cette variante retombe sur « touche »',
       assainirConfig({ nbJoueurs: 6, attrapeGagneManche: 'combo' }).attrapeGagneManche === 'touche');
-    const cfg = configParDefaut(6);
+    const cfg = cfgEclair();
     cfg.attrapeGagneManche = 'combo';
     const m = new Moteur(cfg, spec, 'attrape-combo');
     m.jouerJusquAuBout();
@@ -392,7 +404,7 @@ console.log('\nAttrape gagnante');
 
   // Règle de base inchangée : l'attrape ne rapporte qu'un jeton.
   {
-    const m = new Moteur(configParDefaut(6), spec, 'attrape-non');
+    const m = new Moteur(cfgEclair(), spec, 'attrape-non');
     m.jouerJusquAuBout();
     verifier('sans la variante, aucune manche n’est emportée à l’attrape',
       !m.journal.some((e) => /attrape/i.test(e.texte) && /remportent la manche/.test(e.texte)));
@@ -410,7 +422,7 @@ console.log('\nAttrape à vide');
     lot.lance = true;
   };
 
-  const m = new Moteur(configParDefaut(6), spec, 'attrape-vide');
+  const m = new Moteur(cfgEclair(), spec, 'attrape-vide');
   const j = m.joueurs.find((x) => x.lots.length);
   const suivant = m._suivant(j);
   const lot = j.lots[0];
@@ -453,7 +465,7 @@ console.log('\nModes de partie');
     cfgEchec.combos.some((c) => c.id === 'collision'));
   verifier('mais c’est l’Échec qui porte le contact',
     comboDeclencheur(cfgEchec) === 'blocage'
-    && comboDeclencheur(configParDefaut(6)) === 'collision');
+    && comboDeclencheur(configParDefaut(6, { attrapeSur: 'eclair' })) === 'collision');
   {
     // Le déclencheur suit la combinaison, quels que soient les dés qu'on lui met.
     const cfg = configParDefaut(6, { attrapeSur: 'echec' });
@@ -520,7 +532,7 @@ console.log('\nModes de partie');
   }
   // Les trois éclairs, eux, valent dans les deux états : rien n'a bougé.
   {
-    const m = new Moteur(configParDefaut(6), spec, 'eclair-endormi');
+    const m = new Moteur(cfgEclair(), spec, 'eclair-endormi');
     const j = m.joueurs.find((x) => x.lots.length);
     j.eveille = false;
     m._suivant(j).lots = [m._nouveauLot()];
@@ -628,7 +640,7 @@ console.log('\nCaractères des IA');
   const par = {};
   for (const id of Object.keys(PROFILS_IA)) {
     const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i}`, type: 'ia', profil: id }));
-    const r = lancerCampagne(configParDefaut(6), spec, `car-${id}`, N);
+    const r = lancerCampagne(cfgEclair(), spec, `car-${id}`, N);
     par[id] = {
       reveil: (r.combos.reveil || 0) / N,
       vache: (r.combos.vache || 0) / N,
@@ -721,7 +733,7 @@ console.log('\nRéglages enregistrés d’une ancienne version');
   verifier('celles des cartes Journée non plus',
     JSON.stringify(cfg.combosCartes.fatigue) === JSON.stringify({ tornade: 4 }));
   verifier('les réglages apparus depuis reprennent leur valeur par défaut',
-    cfg.attrapeSur === 'eclair' && cfg.lotsCumules === false
+    cfg.attrapeSur === 'echec' && cfg.lotsCumules === false
     && cfg.dureeLancer > 0 && cfg.dureeChoix > 0,
     `attrapeSur=${cfg.attrapeSur} lotsCumules=${cfg.lotsCumules}`);
   verifier('les réglages d’origine sont conservés',
@@ -746,13 +758,13 @@ console.log('\nType de dé');
 
   verifier('le d6 est bien la répartition officielle',
     facesPourDe(6).join(',') === FACES_PAR_DEFAUT.join(','));
-  verifier('le d8 reprend la série depuis le début (tornade, joker en plus)',
-    facesPourDe(8).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker',
+  verifier('le d8 reprend la série depuis le début (2 tornades en plus)',
+    facesPourDe(8).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade',
     facesPourDe(8).join(','));
-  verifier('le d10 y ajoute un X et un ZzZ',
-    facesPourDe(10).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker,x,zzz');
-  verifier('un modèle sans éclair s’étire pareil',
-    facesPourDe(8, FACES_SANS_ECLAIR).join(',') === 'tornade,joker,x,zzz,vache,vache,tornade,joker');
+  verifier('le d10 y ajoute un X et une vache',
+    facesPourDe(10).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade,x,vache');
+  verifier('un autre modèle s’étire pareil',
+    facesPourDe(8, FACES_JOKER_ECLAIR).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker');
 
   for (const n of TYPES_DE) {
     const cfg = configParDefaut(6);
@@ -811,7 +823,7 @@ console.log('\nL’IA agressive vise une cible, pas le vide');
 
   {
     // Voisin vide : l'Agressif abandonne l'éclair et joue le coup utile.
-    const m = new Moteur(configParDefaut(6), spec(6, 'agressif'), 'vise-vide');
+    const m = new Moteur(cfgEclair(), spec(6, 'agressif'), 'vise-vide');
     const j = m.joueurs.find((x) => x.lots.length);
     m._suivant(j).lots = [];
     j.eveille = true;
@@ -825,7 +837,7 @@ console.log('\nL’IA agressive vise une cible, pas le vide');
   {
     // Le Très agressif ne vise que l'éclair : sans cible, il joue quand même
     // quelque chose d'utile plutôt que de relancer à l'aveugle.
-    const m = new Moteur(configParDefaut(6), spec(6, 'tresAgressif'), 'vise-vide-tres');
+    const m = new Moteur(cfgEclair(), spec(6, 'tresAgressif'), 'vise-vide-tres');
     const j = m.joueurs.find((x) => x.lots.length);
     m._suivant(j).lots = [];
     verifier('endormi sans cible, le Très agressif vise la tornade',
@@ -837,7 +849,7 @@ console.log('\nL’IA agressive vise une cible, pas le vide');
 
   // À l'échelle d'une campagne : moins d'attrapes tentées dans le vide.
   for (const profil of ['agressif', 'tresAgressif']) {
-    const r = lancerCampagne(configParDefaut(6), spec(6, profil), `vise-${profil}`, 60);
+    const r = lancerCampagne(cfgEclair(), spec(6, profil), `vise-${profil}`, 60);
     const taux = r.collisions.tentees ? r.collisions.reussies / r.collisions.tentees : 0;
     verifier(`${profil} — ${r.collisions.parPartie.toFixed(1)} contacts par partie, `
       + `${Math.round(taux * 100)} % réussis, médiane ${(r.duree.medianeMs / 60000).toFixed(1)} min`,

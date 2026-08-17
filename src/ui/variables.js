@@ -1,22 +1,22 @@
-// Menu Variables : toutes les options d'une partie, en un seul endroit.
+// Menu Réglages : toutes les options d'une partie, en un seul endroit.
 //
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.29';
-import { pastilleSymbole } from './icons.js?v=1.29';
-import { store } from './store.js?v=1.29';
-import { aller } from './app.js?v=1.29';
-import { lancerPartie } from './table.js?v=1.29';
+import { h, remplacer } from './dom.js?v=1.30';
+import { pastilleSymbole } from './icons.js?v=1.30';
+import { store } from './store.js?v=1.30';
+import { aller } from './app.js?v=1.30';
+import { lancerPartie } from './table.js?v=1.30';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-  OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
-  assainirFaces, assainirRequis, TYPES_DE, facesPourDe, PRESETS_FACES, aideVariance,
-} from '../core/config.js?v=1.29';
-import { tableauCombos } from './combos.js?v=1.29';
-import { randomSeed } from '../core/rng.js?v=1.29';
-import { reglagesJoueurs } from './accueil.js?v=1.29';
+  OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
+  assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
+} from '../core/config.js?v=1.30';
+import { tableauCombos } from './combos.js?v=1.30';
+import { randomSeed } from '../core/rng.js?v=1.30';
+import { reglagesJoueurs } from './accueil.js?v=1.30';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -121,11 +121,11 @@ export function vueVariables() {
 
     remplacer(racine,
       h('div.rangee', { style: { margin: '6px 0 6px' } },
-        h('h1', 'Variables de partie'),
+        h('h1', 'Réglages de la partie'),
         h('div', { style: { flex: '1' } }),
         h('button.btn.btn--petit', {
           onclick: () => { store.set('variables', {}); dessiner(); },
-        }, 'Réglages d’origine'),
+        }, 'Tout réinitialiser'),
         h('button.btn.btn--petit', { onclick: () => aller('/') }, '← Accueil'),
       ),
       h('p.petit.muted', { style: { marginBottom: '20px' } },
@@ -137,12 +137,13 @@ export function vueVariables() {
         titreAide('Dés', [
           `Le lot compte ${cfg.desParLot} dés, et ${cfg.lots} lots tournent autour de la table`
           + `${suivreTableau ? ` — le tableau officiel en prévoit ${mep.lots} à ${nb} joueurs` : ''}.`,
-          'Le d6 est le dé du jeu : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. Le X fige '
-          + 'son dé — il ne se relance jamais. Le d8 et le d10 reprennent la même série depuis le '
-          + 'début, et chaque face reste modifiable une à une.',
-          'Le joker prend la face de n’importe quel symbole sauf le X, et valide donc n’importe '
-          + 'quelle combinaison. Le joker double, absent des dés au départ, ne remplace que '
-          + 'l’éclair et le ZzZ : ajoutez-le ici pour l’essayer.',
+          'Le d6 est le dé du jeu : 2 tornades, 1 X, 1 vache, 2 ZzZ. Le X fige son dé — il ne se '
+          + 'relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et chaque '
+          + 'face se change une à une dans les menus ci-dessous.',
+          'Ni joker ni éclair au départ : posez-les vous-même sur une face pour les essayer. Le '
+          + 'joker prend la face de n’importe quel symbole sauf le X ; le joker double ne remplace '
+          + 'que l’éclair et le ZzZ. Sans face éclair, la combinaison Attaque ne peut pas sortir — '
+          + 'passez le déclencheur sur « Échecs » pour garder une attrape.',
         ]),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
@@ -171,12 +172,6 @@ export function vueVariables() {
               value: sy, selected: sy === f,
             }, SYMBOLES[sy].nom))),
           )),
-        ),
-        h('div.rangee.rangee--serree', { style: { marginTop: '12px' } },
-          h('span.mini.muted', 'Modèles :'),
-          ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
-            onclick: () => { ecrire('faces', facesPourDe(cfg.faces.length, p.faces)); dessiner(); },
-          }, p.nom)),
         ),
       ),
 

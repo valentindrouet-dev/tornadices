@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.29';
+export const VERSION = '1.30';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.30',
+    date: '12/08/2026',
+    notes: [
+      'Le menu « Variables » s’appelle désormais « Réglages », partout : le lien de la barre du haut, le bouton de l’accueil, le titre de la page, le rappel de l’accueil, les règles et l’adresse (#/reglages — l’ancienne reste valable pour les liens déjà posés). Sur la page elle-même, « Réglages d’origine » devient « Tout réinitialiser », deux « Réglages » côte à côte se lisant mal.',
+      'Nouveau dé officiel : 2 tornades, 1 X, 1 vache, 2 ZzZ. Ni joker ni éclair — les deux faces restent disponibles dans les menus, à poser soi-même sur une face pour les essayer.',
+      'Conséquence assumée : sans face éclair, la combinaison Attaque ne peut plus sortir. C’est donc l’Échec — le double X — qui porte l’attrape par défaut, sinon elle ne se produirait jamais et la partie s’allongeait du simple au double. Posez un éclair sur une face et repassez le déclencheur sur « Éclairs » pour retrouver l’attaque choisie.',
+      'Les boutons « Modèles » quittent les Réglages : le dé s’y règle face par face. Ils restent au Laboratoire, dont c’est le métier de comparer des répartitions, avec « Officiel » remis à jour et deux nouvelles entrées, « Avec éclair » et « Avec joker ».',
+      'Une IA ne vise plus jamais une face que son dé ne porte pas : avec le dé officiel, un Agressif aurait cherché l’éclair jusqu’à épuisement sans rien sortir. Elle retombe sur le coup utile du moment — la tornade si elle dort, la vache si elle est réveillée.',
+      'En partie, le caractère de chaque IA s’affiche en petit à côté de son nom : (Agressif), (T. pénible), (Idiot). À six autour de la table, savoir qui cherche à vous attraper change la façon de jouer.',
+    ],
+  },
   {
     version: '1.29',
     date: '12/08/2026',
@@ -18,7 +30,7 @@ export const CHANGELOG = [
       'Le N de TORNADICE repasse en jaune : les deux lettres vertes se recentrent sur le milieu du mot, A et D.',
       'Les IA agressives ne s’entêtent plus à chercher l’éclair quand le joueur suivant a les mains vides. L’objectif d’une IA est repris dès que le voisin prend ou lâche un lot : sans cible, le symbole de l’attrape sort de ses envies et elle retombe sur le reste de son caractère — ou, pour le Très agressif qui ne vise que ça, sur le coup utile du moment, la tornade s’il dort, la vache s’il est réveillé.',
       'Sur 300 parties à 6 joueurs, l’Agressif passe de 14,5 à 7,8 contacts tentés et de 14,6 à 20,6 vaches retournées ; le Très agressif de 20,5 à 9,3 contacts et de 9,6 à 19,7 vaches. La partie perd une bonne minute — 5:41 → 4:21 et 6:11 → 4:34 — puisqu’ils jouent enfin entre deux occasions.',
-      'Nouveau réglage, à nombre impair de joueurs : « Cartes du Vert ». Le Vert joue seul contre deux équipes, son objectif se règle donc à part, dans les Variables comme au Laboratoire. À 5 joueurs, une seule carte le fait passer de 33 % à 85 % de victoires, six le font retomber à 4 %.',
+      'Nouveau réglage, à nombre impair de joueurs : « Cartes du Vert ». Le Vert joue seul contre deux équipes, son objectif se règle donc à part, dans les Réglages comme au Laboratoire. À 5 joueurs, une seule carte le fait passer de 33 % à 85 % de victoires, six le font retomber à 4 %.',
       'Le contrôle « jamais deux lots en main » passe désormais après chaque événement du moteur, et non plus seulement à chaque repeint : 36 parties et 38 000 contrôles, sur cinq modes de jeu, avec des humains qui esquivent, touchent et passent.',
     ],
   },
@@ -36,7 +48,7 @@ export const CHANGELOG = [
     notes: [
       'Le déclencheur de l’attrape ne parle plus de dés, mais de combinaisons : les deux boutons sont désormais « Éclairs » et « Échecs », et ils désignent laquelle des deux lignes du tableau — Attaque ou Échec — tente le contact. Réglez l’Échec sur trois X, cochez « Échecs », et ce sont bien trois X qui attrapent. Le dé, lui, ne change plus tout seul quand on bascule.',
       'La combinaison Attaque revient dans le tableau en toutes circonstances : elle avait disparu en mode « Échecs », alors qu’il faut pouvoir la régler. En mode « Échecs », elle reste réglable mais ne se joue plus — sans quoi elle coûterait le lot sans rien tenter — et la liste des combinaisons de la table le signale.',
-      'La page Variables est débarrassée de ses pavés d’explication : chaque titre porte un petit « ? » dans un rond. Au survol, l’infobulle donne la phrase essentielle ; au clic, toute la description s’installe sous le titre. La page perd 500 pixels de hauteur sur grand écran, et les réglages redeviennent lisibles d’un coup d’œil.',
+      'La page Réglages est débarrassée de ses pavés d’explication : chaque titre porte un petit « ? » dans un rond. Au survol, l’infobulle donne la phrase essentielle ; au clic, toute la description s’installe sous le titre. La page perd 500 pixels de hauteur sur grand écran, et les réglages redeviennent lisibles d’un coup d’œil.',
       'Les textes n’ont pas été jetés, ils ont été rassemblés : ce qui traînait sous chaque champ — le temps que les dés roulent, la chance de toucher, les valeurs du tableau officiel — se retrouve dans le « ? » de la section correspondante.',
     ],
   },
@@ -45,7 +57,7 @@ export const CHANGELOG = [
     date: '12/08/2026',
     notes: [
       'La marque « TORNADICE » et son logo ramènent à l’accueil, et le numéro de version ouvre le journal des versions — les deux gestes que l’on tente d’instinct sur un en-tête.',
-      'Nouvelle règle, cochée par défaut : un dormeur ne tend pas la main. Dans le mode « attrape sur échec », Tornade endormie, le double X reste un échec sec — on passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au passage. Décochable dans les Variables et au Laboratoire.',
+      'Nouvelle règle, cochée par défaut : un dormeur ne tend pas la main. Dans le mode « attrape sur échec », Tornade endormie, le double X reste un échec sec — on passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au passage. Décochable dans les Réglages et au Laboratoire.',
       'Sur 300 parties à 6 joueurs, la règle divise les contacts par deux — 4,7 → 2,4 chez le Logique, 7,4 → 3,2 chez l’Agressif — sans changer la durée d’une partie (3:09 → 3:12). Le réveil devient le passage obligé de tout ce qu’on peut entreprendre.',
       'Elle ne concerne que l’attrape sur échec : les trois éclairs continuent de valoir dans les deux états, comme la règle du jeu le veut.',
     ],
@@ -54,7 +66,7 @@ export const CHANGELOG = [
     version: '1.24',
     date: '12/08/2026',
     notes: [
-      'Correction : la page remontait toute seule en haut dès qu’on cliquait un bouton ou une case des Variables. En cause, le focus — Chrome ramène la page au sommet quand on retire l’élément qui l’a, et c’est le cas de tout bouton qu’on vient de cliquer. On lui retire le focus avant l’échange, et la page reste où elle est, dans les Variables comme au Laboratoire.',
+      'Correction : la page remontait toute seule en haut dès qu’on cliquait un bouton ou une case des Réglages. En cause, le focus — Chrome ramène la page au sommet quand on retire l’élément qui l’a, et c’est le cas de tout bouton qu’on vient de cliquer. On lui retire le focus avant l’échange, et la page reste où elle est, dans les Réglages comme au Laboratoire.',
       '« Dés par lot », « Type de dé » et « Lots en jeu » retrouvent la même ligne : le texte d’aide sous le choix du dé est supprimé, et un champ à trois lignes ne décale plus son contrôle par rapport à ses voisins.',
       'Les menus déroulants des combinaisons sont deux fois moins larges (208 → 104 px) : six intitulés à afficher n’en demandaient pas davantage.',
       'Au Laboratoire, « Lancer la simulation » passe tout en haut du panneau, au-dessus de « Configuration testée » : c’est le geste qu’on répète, il ne demande plus de dérouler tout le formulaire.',
@@ -77,14 +89,14 @@ export const CHANGELOG = [
     notes: [
       'Correction : dans le Laboratoire, certaines faces de dés s’affichaient vides, avec un menu déroulant retombé sur « Tornade ». Les faces avaient été renommées en v1.3 — la « cloche » est devenue la tornade, l’« étoile » est devenue le X — et un réglage enregistré avant ce renommage gardait les anciens noms, que plus rien ne reconnaissait.',
       'Le défaut ne touchait pas que l’affichage : ces faces ne valaient rien pour le moteur, donc un tiers du dé ne servait à rien et toutes les campagnes lancées depuis ces réglages tournaient sur un dé amputé — plus aucun réveil possible, par exemple.',
-      'Les réglages enregistrés sont désormais retraduits à l’ouverture, au Laboratoire comme dans le menu Variables : les anciens noms de faces retrouvent leur symbole, les exigences des combinaisons et des cartes Journée suivent, les réglages apparus depuis reprennent leur valeur par défaut, et un symbole devenu introuvable devient « vide » plutôt que de disparaître en silence.',
+      'Les réglages enregistrés sont désormais retraduits à l’ouverture, au Laboratoire comme dans le menu Réglages : les anciens noms de faces retrouvent leur symbole, les exigences des combinaisons et des cartes Journée suivent, les réglages apparus depuis reprennent leur valeur par défaut, et un symbole devenu introuvable devient « vide » plutôt que de disparaître en silence.',
     ],
   },
   {
     version: '1.21',
     date: '12/08/2026',
     notes: [
-      'Nouveau mode de jeu dans les Variables, « Ce qui déclenche l’attrape » : la face éclair disparaît du dé — une seconde vache prend sa place — et c’est l’échec qui tente le contact. Deux X font partir le lot comme d’habitude, mais si le voisin à qui on le passe tient un lot, on essaie de le toucher au passage. La combinaison des trois éclairs est retirée avec la face, et le rappel des combinaisons signale que l’échec « tente l’attrape ».',
+      'Nouveau mode de jeu dans les Réglages, « Ce qui déclenche l’attrape » : la face éclair disparaît du dé — une seconde vache prend sa place — et c’est l’échec qui tente le contact. Deux X font partir le lot comme d’habitude, mais si le voisin à qui on le passe tient un lot, on essaie de le toucher au passage. La combinaison des trois éclairs est retirée avec la face, et le rappel des combinaisons signale que l’échec « tente l’attrape ».',
       'On ne choisit donc plus d’attaquer : on attaque chaque fois que le hasard le permet, et l’échec cesse d’être une pure perte. Sur 200 parties à 6 joueurs, la partie raccourcit d’une bonne minute — 4:24 → 3:11 pour des Logiques, 5:25 → 3:34 pour des Équilibrés — parce que la seconde vache double les chances de retourner un jeton. L’Agressif, privé de sa cible, retombe de 15,4 à 8,0 contacts par partie.',
       'Nouveau réglage « Quand deux lots se rencontrent » : les lots peuvent s’empiler au lieu de se pousser. Le lot qui arrive attend son tour derrière celui qu’on a en main, plus rien ne rebondit sur le voisin, et c’est le joueur lent qui accumule. Sur 60 parties, 1,9 % des mains portent alors deux lots ou plus — jamais plus de trois.',
       'Dans le tableau des combinaisons, les combinaisons de cartes Journée se distinguent enfin des universelles : deux intertitres séparent « toujours en jeu » de « seulement pendant la manche où la carte est en jeu », et les lignes de cartes passent en bleu, filet à gauche et pastille « Journée ». Même traitement au Laboratoire.',
@@ -138,7 +150,7 @@ export const CHANGELOG = [
       'Règle : endormir un voisin demande d’être réveillé, comme retourner une vache. Les trois ZzZ rejoignent les trois vaches du côté « Tornade éveillée » ; les trois tornades restent réservées au dormeur ; l’attrape et les deux échecs valent dans les deux états.',
       'Ce que cela change, mesuré : les parties raccourcissent nettement — une table de Pénibles passe de 12,3 à 7,5 min, une table de Très pénibles de 15,5 à 8,8 min. Le cercle vicieux où tout le monde se rendormait est rompu, et les vaches remontent partout.',
       'Les caractères Pénible et Très pénible visent maintenant la tornade tant qu’ils dorment : sans réveil, ils ne pourraient plus endormir personne. Une fois debout, ils reprennent leur ZzZ.',
-      'Mobile : le bouton « Commencer la partie » passe juste sous le choix des joueurs, avant le rappel des variables.',
+      'Mobile : le bouton « Commencer la partie » passe juste sous le choix des joueurs, avant le rappel des réglages.',
       'Mobile : les combinaisons et le journal disparaissent de la table — ils repoussaient la partie hors de l’écran. Ils restent affichés sur grand écran.',
     ],
   },
@@ -183,7 +195,7 @@ export const CHANGELOG = [
     date: '10/08/2026',
     notes: [
       'On voit d’où vient un point : le jeton retourné quitte la zone du joueur, traverse la table et va se poser dans le compteur de son équipe — aux trois vaches comme sur une attrape réussie. Le compteur ne s’allume qu’à l’arrivée, et en pause le jeton reste en vol.',
-      'Nouvelle variable de partie, « Ce que rapporte l’attrape » : la règle de base (un jeton), ou la manche emportée quand le contact réussit, ou la manche emportée dès les trois éclairs. Réglable dans les Variables comme au Laboratoire.',
+      'Nouveau réglage de partie, « Ce que rapporte l’attrape » : la règle de base (un jeton), ou la manche emportée quand le contact réussit, ou la manche emportée dès les trois éclairs. Réglable dans les Réglages comme au Laboratoire.',
       'Ce que valent les deux variantes, sur 300 parties à 6 joueurs : contact gagnant, la partie passe de 5,6 à 4,3 min et les jetons retournés de 27 à 18 ; trois éclairs gagnants, la partie tombe à 0,9 min et la course aux vaches disparaît — à réserver à une partie éclair.',
     ],
   },
@@ -192,13 +204,13 @@ export const CHANGELOG = [
     date: '10/08/2026',
     notes: [
       'Le joker entre dans le dé, à la place de la seconde tornade : il prend la face de n’importe quel symbole sauf le X, et valide donc n’importe quelle combinaison.',
-      'Quand le joker sert plusieurs combinaisons au même jet, c’est le joueur qui tranche : les combinaisons s’affichent dans son panneau et il choisit la sienne. Sans réponse, la meilleure part d’office. Le délai est réglable dans Variables.',
-      'Trois jokers d’un coup valent un échec, comme deux X : le lot part sans rien tenter, et cet échec l’emporte sur ce que les jokers auraient pu servir. Règle décochable dans les Variables comme au Laboratoire.',
-      'Nouvelle face joker double, orange et violette : un joker limité à l’éclair et au ZzZ. Absente des dés au départ, elle s’ajoute face par face dans les Variables.',
+      'Quand le joker sert plusieurs combinaisons au même jet, c’est le joueur qui tranche : les combinaisons s’affichent dans son panneau et il choisit la sienne. Sans réponse, la meilleure part d’office. Le délai est réglable dans Réglages.',
+      'Trois jokers d’un coup valent un échec, comme deux X : le lot part sans rien tenter, et cet échec l’emporte sur ce que les jokers auraient pu servir. Règle décochable dans les Réglages comme au Laboratoire.',
+      'Nouvelle face joker double, orange et violette : un joker limité à l’éclair et au ZzZ. Absente des dés au départ, elle s’ajoute face par face dans les Réglages.',
       'Ce que le joker change, mesuré : trois vaches passent de 3,7 % à 16,2 % et les quatre symboles se retrouvent à égalité, tandis que le réveil descend de 22,6 % à 16,2 %. En partie, les attrapes doublent, les blocages reculent d’un tiers et la partie perd près de deux minutes.',
       'Les dés ne heurtent plus de paroi invisible : la rangée du panneau vit désormais dans un plateau qui lui laisse la place de tourner et de glisser, au lieu d’être tranchée sur les bords.',
       'Sous le titre : un jeu de Sylvain Bonnafous, édité par Big Budi Games.',
-      'Correction : modifier une combinaison dans les Variables empêchait la partie de démarrer.',
+      'Correction : modifier une combinaison dans les Réglages empêchait la partie de démarrer.',
       'Numérotation : on reste en 1.xx — la livraison précédente, publiée en 2.0, est renumérotée 1.10.',
     ],
   },
@@ -244,7 +256,7 @@ export const CHANGELOG = [
     notes: [
       'Un lot qui arrive chez un joueur qui en tient déjà un passe devant : le lot en cours est poussé de côté et se reprend après.',
       'La table est réorganisée : carte de la manche en haut à gauche, pioche des Journées restantes en haut à droite, points des équipes en bas à gauche et bien plus gros.',
-      'Vraie transition entre les manches : grand message central, les dés reviennent au centre puis repartent vers l’équipe qui a perdu, et la carte suivante glisse depuis la pioche par-dessus la précédente. Durée réglable dans Variables.',
+      'Vraie transition entre les manches : grand message central, les dés reviennent au centre puis repartent vers l’équipe qui a perdu, et la carte suivante glisse depuis la pioche par-dessus la précédente. Durée réglable dans Réglages.',
       'Le statut de la Tornade saute aux yeux : pastille ÉVEILLÉE aux couleurs de l’équipe ou ENDORMIE en gris, et le siège entier change de teinte.',
       'Correction : un joueur humain ne relance plus un X « par mégarde ». Cet incident des règles suppose une vraie table — à l’écran l’interface interdit de toucher un dé figé. Il ne concerne plus que les IA.',
       'Chaque issue de tour est nommée dans le journal : Passé, Mégarde, Bloqué, Réveil !, Vache !, Attrape ! — on lit exactement pourquoi le lot est parti.',
@@ -271,7 +283,7 @@ export const CHANGELOG = [
       'Les dés roulent une seconde à l’écran, faces qui défilent : le résultat n’apparaît qu’une fois posés.',
       'Un temps de constat laisse voir le résultat avant que le lot ne quitte la main — sans lui, on ne comprenait pas ce qui venait de se passer.',
       'Le passage au voisin dure une seconde et se voit traverser la table, à la durée exacte réglée.',
-      'Nouveau menu Variables, à côté de « Commencer la partie » : faces des dés, combinaisons requises, rythme de la table, mise en place, adresse, cartes Journée et graine — tout y est réuni.',
+      'Nouveau menu Réglages, à côté de « Commencer la partie » : faces des dés, combinaisons requises, rythme de la table, mise en place, adresse, cartes Journée et graine — tout y est réuni.',
       'Ces trois durées comptent dans le temps de jeu : les parties passent de 2-3 min à 5-7 min, au plus près des 10 min annoncées sur la boîte.',
     ],
   },

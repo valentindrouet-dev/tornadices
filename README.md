@@ -42,7 +42,7 @@ si l'écran est en retard.
 | Page | Contenu |
 |---|---|
 | **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
-| **Variables** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Journée, graine. |
+| **Réglages** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Journée, graine. |
 | **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. Le siège d'un joueur réveillé prend la couleur de son équipe, celui d'un dormeur reste gris. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
@@ -122,8 +122,14 @@ Chaque campagne est reproductible : même graine, mêmes chiffres.
 
 ## Le dé
 
-Six faces : **1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair**. Le **d6 est
+Le dé officiel : **2 tornades, 1 X, 1 vache, 2 ZzZ**. Ni joker ni éclair — les
+deux faces restent disponibles dans les Réglages, à poser soi-même. Le **d6 est
 et reste le dé du jeu** ; le d8 et le d10 sont là pour l’équilibrage.
+
+Sans face éclair, la combinaison Attaque ne peut pas sortir : `attrapeSur` vaut
+donc `'echec'` par défaut, et c’est le double X qui porte l’attrape. Une IA ne
+vise jamais une face que son dé ne porte pas — sans quoi un Agressif chercherait
+l’éclair jusqu’à épuisement — et retombe sur le coup utile du moment.
 
 | Symbole | Combinaison | Effet | Possible quand | Alerte |
 |---|---|---|---|---|
@@ -200,11 +206,11 @@ meilleure part d’office au bout de `dureeChoix`.
 **Trois jokers d’un coup valent un échec**, comme deux X : le lot part sans rien
 tenter, et cet échec l’emporte sur les combinaisons que les jokers auraient pu
 servir — sans quoi le joker n’aurait aucun revers. Règle décochable dans les
-Variables comme au Laboratoire.
+Réglages comme au Laboratoire.
 
 Une seconde face joker, **le joker double** (orange et violet), ne remplace que
 l’éclair et le ZzZ et ne compte pas dans les trois jokers de l’échec. Elle n’est
-pas sur les dés au départ : on l’ajoute face par face dans les Variables.
+pas sur les dés au départ : on l’ajoute face par face dans les Réglages.
 
 Ce que le joker change, calculé sur le dé courant (4 dés, relance de tout) :
 
@@ -228,7 +234,7 @@ lots, le voisin n’a un lot qu’une fois sur quatre environ, et les attrapes
 tentées tombent de 76 à 19 par partie pour une table d’Agressifs.
 
 Trois éclairs font passer le lot et tenter le contact. Ce que vaut un contact
-réussi se règle dans les Variables :
+réussi se règle dans les Réglages :
 
 | Réglage | Effet | Partie à 6 | Jetons retournés |
 |---|---|---|---|
@@ -340,7 +346,7 @@ du même caractère font jeu égal.
 
 ## Le rythme d’un lot
 
-Quatre durées, réglables dans Variables, font le tempo — et comptent dans la durée
+Quatre durées, réglables dans Réglages, font le tempo — et comptent dans la durée
 d’une partie, à la table comme au Laboratoire :
 
 | Étape | Défaut | Ce qu’on voit |

@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.29';
+import { makeRng } from './rng.js?v=1.30';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.29';
+} from './config.js?v=1.30';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -428,6 +428,12 @@ export class Moteur {
    * repris quand la Tornade change d'état, car les objectifs ne sont plus les
    * mêmes une fois réveillé.
    */
+  /** Le dé peut-il sortir ce symbole, directement ou par un joker ? */
+  _deProduit(sym) {
+    return (this.cfg.faces || []).some((f) => f === sym
+      || (estJoker(f) && (remplacements(f) || []).includes(sym)));
+  }
+
   /**
    * Symbole que réclame la combinaison portant l'attrape — l'éclair par défaut.
    * C'est celui qu'une IA agressive vise, et qui ne vaut rien sans cible.
@@ -455,19 +461,16 @@ export class Moteur {
       ? (PROFILS_IA[this.rng.pick(j.profil.styles)] || j.profil)
       : j.profil;
 
-    let poids = (source.vise && source.vise[etat]) || null;
-    if (!cible) {
-      // Le voisin a les mains vides : viser l'attrape ne mène à rien. On retire
-      // ce symbole des envies, et l'on retombe sur le reste du caractère — ou,
-      // pour qui ne visait que ça, sur le coup utile du moment.
-      const attrape = this._symboleAttrape();
-      if (attrape && poids && poids[attrape]) {
-        const reste = Object.fromEntries(
-          Object.entries(poids).filter(([sym]) => sym !== attrape),
-        );
-        poids = Object.keys(reste).length ? reste : { [j.eveille ? 'vache' : 'tornade']: 1 };
-      }
-    }
+    // Deux envies sont écartées : celles que le dé ne peut pas produire — avec le
+    // dé officiel, sans joker ni éclair, un Agressif chercherait l'éclair jusqu'à
+    // épuisement — et l'attrape quand le voisin a les mains vides. Reste le coup
+    // utile du moment pour qui ne visait plus rien.
+    const attrape = cible ? null : this._symboleAttrape();
+    const brut = Object.entries((source.vise && source.vise[etat]) || {});
+    const retenu = brut.filter(([sym]) => sym !== attrape && this._deProduit(sym));
+    const poids = retenu.length
+      ? Object.fromEntries(retenu)
+      : { [j.eveille ? 'vache' : 'tornade']: 1 };
 
     const sym = this._tirerPondere(poids);
     j.objectif = { cle, sym, style: source.id };
@@ -719,7 +722,7 @@ export class Moteur {
 
   /**
    * Le lot part-il en tentant d'attraper ? C'est la combinaison désignée dans les
-   * Variables qui porte le contact — l'Attaque par défaut, l'Échec si on l'a
+   * Réglages qui porte le contact — l'Attaque par défaut, l'Échec si on l'a
    * choisi — quels que soient les dés qu'on lui a réglés.
    */
   _attrapeAuDepart(j, choisi) {
