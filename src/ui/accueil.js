@@ -1,15 +1,16 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.30';
-import { store } from './store.js?v=1.30';
-import { aller } from './app.js?v=1.30';
-import { lancerPartie, partieEnCours } from './table.js?v=1.30';
-import { construireConfig, variables } from './variables.js?v=1.30';
+import { h, remplacer } from './dom.js?v=1.31';
+import { store } from './store.js?v=1.31';
+import { aller } from './app.js?v=1.31';
+import { eveillerSons } from './sons.js?v=1.31';
+import { lancerPartie, partieEnCours } from './table.js?v=1.31';
+import { construireConfig, variables } from './variables.js?v=1.31';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.30';
-import { pastilleSymbole } from './icons.js?v=1.30';
-import { randomSeed } from '../core/rng.js?v=1.30';
+} from '../core/config.js?v=1.31';
+import { pastilleSymbole } from './icons.js?v=1.31';
+import { randomSeed } from '../core/rng.js?v=1.31';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -59,6 +60,9 @@ export function vueAccueil() {
 
   function demarrer() {
     sauver();
+    // Les navigateurs refusent d'ouvrir le son tant qu'on n'a rien cliqué : ce
+    // bouton est le geste qu'il leur faut.
+    eveillerSons();
     const v = variables();
     lancerPartie(
       construireConfig(nb), joueurs,

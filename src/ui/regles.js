@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.30';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.30';
+import { h } from './dom.js?v=1.31';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.31';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.30';
+} from '../core/config.js?v=1.31';
 
 export function vueRegles() {
   return h('div.page',
@@ -222,6 +222,16 @@ export function vueRegles() {
           h('td.petit', p.desc),
         ))),
       ),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'Les sons de la table'),
+      h('p.petit', 'Quatre sons ponctuent la partie : la sonnerie quand vous vous réveillez, '
+        + 'le ronflement quand on vous rendort, le meuglement d’une vache retournée — la vôtre '
+        + 'ou celle d’un autre — et l’alarme dès qu’une attrape est tentée, où que ce soit.'),
+      h('p.petit.muted', 'Le réveil et le ronflement ne sonnent que pour vous : à six autour de '
+        + 'la table, ils sonneraient sans arrêt. Le bouton 🔊 de l’en-tête les coupe en cours de '
+        + 'manche ; les Réglages en donnent le volume et permettent de les écouter un par un.'),
     ),
 
     h('div.carte',

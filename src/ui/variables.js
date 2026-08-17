@@ -3,20 +3,21 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.30';
-import { pastilleSymbole } from './icons.js?v=1.30';
-import { store } from './store.js?v=1.30';
-import { aller } from './app.js?v=1.30';
-import { lancerPartie } from './table.js?v=1.30';
+import { h, remplacer } from './dom.js?v=1.31';
+import { pastilleSymbole } from './icons.js?v=1.31';
+import { store } from './store.js?v=1.31';
+import { aller } from './app.js?v=1.31';
+import { lancerPartie } from './table.js?v=1.31';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.30';
-import { tableauCombos } from './combos.js?v=1.30';
-import { randomSeed } from '../core/rng.js?v=1.30';
-import { reglagesJoueurs } from './accueil.js?v=1.30';
+} from '../core/config.js?v=1.31';
+import { tableauCombos } from './combos.js?v=1.31';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.31';
+import { randomSeed } from '../core/rng.js?v=1.31';
+import { reglagesJoueurs } from './accueil.js?v=1.31';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -114,6 +115,9 @@ export function vueVariables() {
           if (!isFinite(x)) return;
           x = Math.min(opts.max ?? 99999, Math.max(opts.min ?? 0, x));
           ecrire(cle, x);
+          // Toucher une valeur du tableau officiel, c'est le quitter : inutile
+          // d'exiger de décocher la case d'abord, personne ne le devinait.
+          if (CHAMPS_MISE_EN_PLACE.includes(cle)) ecrire('suivreTableau', false);
           dessiner();
         },
       }),
@@ -156,7 +160,7 @@ export function vueVariables() {
               onclick: () => { ecrire('faces', facesPourDe(n)); dessiner(); },
             }, `d${n}`))),
           ),
-          num('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9, disabled: suivreTableau }),
+          num('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9 }),
         ),
         h('div.faces-edit', { style: { marginTop: '14px' } },
           ...cfg.faces.map((f, i) => h('div.face-case',
@@ -317,7 +321,8 @@ export function vueVariables() {
         titreAide('Mise en place', [
           `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
-          'Décochez « Suivre le tableau officiel » pour régler ces valeurs à la main.',
+          'Toutes ces valeurs se règlent à la main : en modifier une décroche le tableau '
+          + 'officiel. Recocher « Suivre le tableau officiel » les remet toutes d’aplomb.',
           mep.extrapole
             ? 'À 9 joueurs, le tableau officiel s’arrête : ces valeurs sont extrapolées.'
             : '',
@@ -336,11 +341,11 @@ export function vueVariables() {
         ),
         h('div.grille.grille--4', { style: { gap: '12px' } },
           num('Jetons Bleu / Jaune', cfg.jetons, 'jetons',
-            { min: 1, max: 12, disabled: suivreTableau }),
+            { min: 1, max: 12 }),
           num('Jetons du Vert', cfg.jetonsVert, 'jetonsVert',
-            { min: 1, max: 12, disabled: suivreTableau }),
+            { min: 1, max: 12 }),
           num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
-            { min: 1, max: 12, disabled: suivreTableau }),
+            { min: 1, max: 12 }),
           // Le Vert n'existe qu'à nombre impair : ailleurs, le champ n'aurait
           // personne à qui s'appliquer.
           nb % 2
@@ -396,6 +401,49 @@ export function vueVariables() {
         ),
       ),
 
+      // ── Sons ──────────────────────────────────────────────────────────────
+      h('div.carte',
+        titreAide('Sons', [
+          'Quatre sons ponctuent la partie : la sonnerie du réveil, le ronflement de '
+          + 'l’endormissement, le meuglement d’une vache retournée et l’alarme d’une attrape.',
+          'Le réveil et le ronflement ne sonnent que pour vous — à six autour de la table, ils '
+          + 'sonneraient sans arrêt. La vache se fête pour tout le monde, et l’alarme prévient la '
+          + 'table entière.',
+          'Aucun fichier n’est téléchargé : les sons sont fabriqués par le navigateur au moment '
+          + 'de les jouer. Le bouton 🔊 de la table les coupe sans quitter la partie.',
+        ],
+          h('button', {
+            class: `chip${sonsActifs() ? ' on' : ''}`,
+            onclick: () => { reglerSons(!sonsActifs()); eveillerSons(); dessiner(); },
+          }, h('span.case', '✓'), 'Sons de la partie'),
+        ),
+        sonsActifs()
+          ? h('div',
+              h('label.champ', 'Volume',
+                h('div.rangee.rangee--serree',
+                  h('input.curseur', {
+                    type: 'range', min: 0, max: 100, step: 5,
+                    value: Math.round(volumeSons() * 100),
+                    oninput: (e) => {
+                      reglerVolume(Number(e.target.value) / 100);
+                      const cible = e.target.parentNode.querySelector('.valeur-curseur');
+                      if (cible) cible.textContent = `${e.target.value} %`;
+                    },
+                  }),
+                  h('span.valeur-curseur', `${Math.round(volumeSons() * 100)} %`),
+                ),
+              ),
+              h('div.rangee.rangee--serree', { style: { marginTop: '12px' } },
+                h('span.mini.muted', 'Écouter :'),
+                ...SONS.map((nom) => h('button.btn.btn--petit', {
+                  title: NOMS_SONS[nom],
+                  onclick: () => { eveillerSons(); jouerSon(nom); },
+                }, NOMS_SONS[nom].split(' — ')[0])),
+              ),
+            )
+          : h('p.mini.muted', 'La partie se joue en silence.'),
+      ),
+
       // ── Graine ────────────────────────────────────────────────────────────
       h('div.carte',
         titreAide('Graine',
@@ -424,6 +472,7 @@ export function vueVariables() {
   }
 
   function commencer() {
+    eveillerSons();
     const v = variables();
     const cfg = construireConfig(nb);
     lancerPartie(cfg, reglagesJoueurs(nb), v.graineManuelle ? (v.graine || randomSeed()) : randomSeed());

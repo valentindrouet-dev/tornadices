@@ -49,6 +49,16 @@ si l'écran est en retard.
 | **Règles** | Les règles telles que le moteur les applique. |
 | **Versions** | Journal des versions, incrémenté à chaque modification livrée. |
 
+## Les sons
+
+Quatre sons — réveil, ronflement, meuglement, alarme d'attrape — **synthétisés à
+la volée** dans `src/ui/sons.js` : oscillateurs et bruit brun filtrés, aucun
+fichier audio, aucune licence, zéro octet à télécharger. Chaque son est une
+fonction qui pose ses nœuds sur un contexte donné : la table lui passe le
+contexte vivant, une épreuve lui passe un `OfflineAudioContext` et mesure ce qui
+en sort. Les navigateurs refusant d'ouvrir le son sans geste préalable, le
+contexte s'ouvre sur le bouton qui lance la partie.
+
 ## Bureau et mobile
 
 Une seule feuille de style, deux dispositions. Tout ce qui est propre au

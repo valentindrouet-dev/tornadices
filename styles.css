@@ -196,6 +196,8 @@ a { color: var(--accent-fonce); }
 .btn--grand { padding: 14px 30px; font-size: 17px; font-weight: 800; }
 .btn--petit { padding: 6px 13px; font-size: 13px; }
 .btn--danger { color: var(--rouge); border-color: #f0c9c7; }
+/* Bouton armé : le second clic est celui qui engage. */
+.btn--arme { background: var(--rouge); border-color: var(--rouge); color: #fff; }
 
 /* ── Pastilles à cocher (variantes / options) ─────────────────────────────── */
 .chip {

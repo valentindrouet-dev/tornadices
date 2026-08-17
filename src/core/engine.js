@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.30';
+import { makeRng } from './rng.js?v=1.31';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.30';
+} from './config.js?v=1.31';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -93,7 +93,7 @@ export class Moteur {
     this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
     this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
     this.onJeton = null;       // (idJoueur, equipe, nombre, source) — un jeton est retourné
-    this.onFlash = null;       // (type, idJoueur) — reveil | echec | endormi, à souligner
+    this.onFlash = null;       // (type, idJoueur) — reveil | echec | endormi | attrape
     this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
     this.onDebutManche = null; // ({manche, carte, porteurs})
     this.transition = null;    // entre deux manches : les dés reviennent au centre
@@ -881,6 +881,7 @@ export class Moteur {
     }
     j.stats.collisionsTentees++;
     this._log(`${j.nom} tente d’attraper ${q.nom} !`, 'collision', j.id);
+    this._flash('attrape', j.id);
 
     if (j.type === 'humain' || q.type === 'humain') {
       const fenetre = this.cfg.fenetreReflexe ?? 900;

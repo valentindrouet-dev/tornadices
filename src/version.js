@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.30';
+export const VERSION = '1.31';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.31',
+    date: '12/08/2026',
+    notes: [
+      'La table a quatre sons : la sonnerie du réveil, le ronflement de l’endormissement, le meuglement d’une vache retournée et l’alarme d’une attrape tentée. Aucun fichier n’est téléchargé — ils sont fabriqués par le navigateur au moment de les jouer, oscillateurs et bruit filtrés. Le site reste statique, sans dépendance et sans licence à traîner.',
+      'Le réveil et le ronflement ne sonnent que pour vous : à six autour de la table, ils sonneraient sans arrêt. La vache se fête pour tout le monde, et l’alarme prévient la table entière. Un bouton 🔊 dans l’en-tête de la partie les coupe sans quitter la manche, et une section « Sons » des Réglages règle le volume et permet de les écouter un par un.',
+      'Correction : « Quitter » ne quittait pas — la partie continuait en coulisse et « ▸ Partie en cours » restait dans la barre. Le bouton abandonne désormais pour de bon, en deux temps : un premier clic demande « Abandonner ? », un second confirme, et il se désarme seul au bout de quatre secondes.',
+      'Correction : les valeurs de mise en place — lots en jeu, jetons, cartes pour gagner — étaient grisées tant qu’on n’avait pas décoché « Suivre le tableau officiel », ce que rien n’indiquait. Elles se modifient maintenant directement, et en toucher une décroche le tableau ; recocher la case remet tout d’aplomb.',
+    ],
+  },
   {
     version: '1.30',
     date: '12/08/2026',

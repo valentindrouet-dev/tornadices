@@ -4,16 +4,17 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.30';
+import { h, remplacer, duree, vider } from './dom.js?v=1.31';
 import {
   faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.30';
-import { Moteur } from '../core/engine.js?v=1.30';
+} from './icons.js?v=1.31';
+import { Moteur } from '../core/engine.js?v=1.31';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.30';
-import { ajouterHistorique } from './store.js?v=1.30';
-import { aller } from './app.js?v=1.30';
+} from '../core/config.js?v=1.31';
+import { ajouterHistorique } from './store.js?v=1.31';
+import { aller } from './app.js?v=1.31';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.31';
 
 let moteur = null;
 let vitesse = 1;
@@ -22,6 +23,12 @@ let ancrage = 0;
 let partieArchivee = false;
 
 export function partieEnCours() { return moteur && !moteur.termine ? moteur : null; }
+
+/** Abandonne la partie en cours : la table est libre, l'accueil redevient net. */
+export function quitterPartie() {
+  moteur = null;
+  enPause = false;
+}
 
 export function lancerPartie(cfg, joueurs, graine) {
   moteur = new Moteur(cfg, joueurs, graine);
@@ -97,11 +104,41 @@ export function vueTable() {
       return b;
     })),
     (() => {
+      // Couper le son doit se faire sans quitter la table : c'est le genre de
+      // réglage qu'on change au milieu d'une manche, pas avant la partie.
+      const b = h('button.btn.btn--petit', { title: 'Sons de la partie' },
+        sonsActifs() ? '🔊' : '🔇');
+      b.onclick = () => {
+        reglerSons(!sonsActifs());
+        b.textContent = sonsActifs() ? '🔊' : '🔇';
+        if (sonsActifs()) { eveillerSons(); jouerSon('vache'); }
+      };
+      return b;
+    })(),
+    (() => {
       const b = h('button.btn.btn--petit', '⏸ Pause');
       b.onclick = () => { enPause = !enPause; b.textContent = enPause ? '▶ Reprendre' : '⏸ Pause'; };
       return b;
     })(),
-    h('button.btn.btn--petit', { onclick: () => aller('/') }, 'Quitter'),
+    (() => {
+      // Quitter abandonne vraiment la partie — mais pas sur un doigt qui glisse :
+      // il faut confirmer, et le bouton se désarme seul au bout de quatre secondes.
+      const b = h('button.btn.btn--petit.btn--danger', 'Quitter');
+      let arme = false;
+      const desarmer = () => { arme = false; b.textContent = 'Quitter'; b.classList.remove('btn--arme'); };
+      b.onclick = () => {
+        if (!arme && maPartie && !maPartie.termine) {
+          arme = true;
+          b.textContent = 'Abandonner ?';
+          b.classList.add('btn--arme');
+          setTimeout(desarmer, 4000);
+          return;
+        }
+        quitterPartie();
+        aller('/');
+      };
+      return b;
+    })(),
   );
 
   // ── Table ─────────────────────────────────────────────────────────────────
@@ -329,9 +366,10 @@ export function vueTable() {
     if (e.type === 'touche' && e.pid != null) touchesRecentes.set(e.pid, moteur.now);
   };
   moteur.onMouvement = (de, vers, motif, lot, duree) => animerPassage(de, vers, motif, lot, duree);
-  moteur.onJeton = (pid, equipe, nombre) => {
+  moteur.onJeton = (pid, equipe, nombre, source) => {
     volJeton(pid, equipe, nombre);
     eclat(COULEUR_ECLAT.vache);      // n'importe quel joueur : la vache se fête
+    if (source === 'vache') jouerSon('vache');
   };
 
   // Les moments qui comptent se voient sans rien lire : la couleur envahit
@@ -359,11 +397,16 @@ export function vueTable() {
   moteur.onFlash = (type, pid) => {
     const j = moteur.joueurs[pid];
     if (!j) return;
+    // L'alarme de l'attrape sonne pour toute la table : c'est l'avertissement.
+    if (type === 'attrape') { jouerSon('attrape'); return; }
     // Réveil, échec et endormissement ne concernent que celui qui les subit.
     if (j.type !== 'humain') return;
-    if (type === 'reveil') eclat(COULEURS_EQUIPE[j.equipe].hex);
+    if (type === 'reveil') { eclat(COULEURS_EQUIPE[j.equipe].hex); jouerSon('reveil'); }
     else if (type === 'echec') eclat(COULEUR_ECLAT.echec);
-    else if (type === 'endormi') eclat(COULEUR_ECLAT.endormi, { secousse: true });
+    else if (type === 'endormi') {
+      eclat(COULEUR_ECLAT.endormi, { secousse: true });
+      jouerSon('endormi');
+    }
   };
 
   // Les moments qui comptent s'affichent au-dessus de la zone du joueur concerné :
