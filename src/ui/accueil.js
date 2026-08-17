@@ -1,15 +1,15 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Variables.
 
-import { h, remplacer } from './dom.js?v=1.28';
-import { store } from './store.js?v=1.28';
-import { aller } from './app.js?v=1.28';
-import { lancerPartie, partieEnCours } from './table.js?v=1.28';
-import { construireConfig, variables } from './variables.js?v=1.28';
+import { h, remplacer } from './dom.js?v=1.29';
+import { store } from './store.js?v=1.29';
+import { aller } from './app.js?v=1.29';
+import { lancerPartie, partieEnCours } from './table.js?v=1.29';
+import { construireConfig, variables } from './variables.js?v=1.29';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.28';
-import { pastilleSymbole } from './icons.js?v=1.28';
-import { randomSeed } from '../core/rng.js?v=1.28';
+} from '../core/config.js?v=1.29';
+import { pastilleSymbole } from './icons.js?v=1.29';
+import { randomSeed } from '../core/rng.js?v=1.29';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -17,14 +17,14 @@ const NOMS = [
 
 // Les couleurs du titre sont celles des équipes : bleu et jaune en alternance,
 // et les deux lettres du centre en vert, comme le joueur solo au milieu de la table.
-// Deux lettres vertes au centre du mot — le joueur Vert, seul au milieu des
-// deux équipes. Sur un nombre impair de lettres, l'arrondi supérieur place la
-// paire à cheval sur la lettre du milieu plutôt qu'un cran à gauche.
+// Bleu et jaune alternent d'un bout à l'autre — les deux équipes — et le centre
+// du mot revient au Vert, seul au milieu : une lettre quand le mot en compte un
+// nombre impair, deux quand il en compte un nombre pair.
 function titreColore(mot) {
   const lettres = mot.split('');
-  const gauche = Math.round((lettres.length - 2) / 2);
+  const milieu = (lettres.length - 1) / 2;
   return lettres.map((c, i) => {
-    const vert = i === gauche || i === gauche + 1;
+    const vert = Math.abs(i - milieu) < 0.6;
     const classe = vert ? 'l-vert' : (i % 2 === 0 ? 'l-bleu' : 'l-jaune');
     return h('span', { class: classe }, c);
   });

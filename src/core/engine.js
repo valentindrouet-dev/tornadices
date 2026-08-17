@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.28';
+import { makeRng } from './rng.js?v=1.29';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.28';
+} from './config.js?v=1.29';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 

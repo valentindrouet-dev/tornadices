@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.28';
+export const VERSION = '1.29';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.29',
+    date: '12/08/2026',
+    notes: [
+      'Le titre de l’accueil suit exactement la séquence voulue : bleu, jaune, bleu, jaune, VERT, jaune, bleu, jaune, bleu. Bleu et jaune alternent d’un bout à l’autre — les deux équipes — et le Vert prend la lettre du milieu, seul entre les deux, comme à la table.',
+    ],
+  },
   {
     version: '1.28',
     date: '12/08/2026',
