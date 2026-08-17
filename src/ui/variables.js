@@ -3,22 +3,22 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.32';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.32';
-import { store } from './store.js?v=1.32';
-import { aller } from './app.js?v=1.32';
-import { lancerPartie } from './table.js?v=1.32';
+import { h, remplacer } from './dom.js?v=1.33';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.33';
+import { store } from './store.js?v=1.33';
+import { aller } from './app.js?v=1.33';
+import { lancerPartie } from './table.js?v=1.33';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.32';
-import { tableauCombos } from './combos.js?v=1.32';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.32';
-import { randomSeed } from '../core/rng.js?v=1.32';
-import { reglagesJoueurs } from './accueil.js?v=1.32';
+} from '../core/config.js?v=1.33';
+import { tableauCombos } from './combos.js?v=1.33';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.33';
+import { randomSeed } from '../core/rng.js?v=1.33';
+import { reglagesJoueurs } from './accueil.js?v=1.33';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 

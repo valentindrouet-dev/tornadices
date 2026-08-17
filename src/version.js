@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.32';
+export const VERSION = '1.33';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.33',
+    date: '17/08/2026',
+    notes: [
+      'Sur l’accueil, les deux noms passent en gras sous le titre : Sylvain Bonnafous et Big Budi Games. Ce sont eux que l’on vient lire, pas la mention qui les introduit.',
+    ],
+  },
   {
     version: '1.32',
     date: '17/08/2026',

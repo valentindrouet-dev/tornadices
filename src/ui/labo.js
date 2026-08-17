@@ -1,20 +1,20 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.32';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.32';
-import { store } from './store.js?v=1.32';
-import { lancerCampagne } from '../core/sim.js?v=1.32';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.33';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.33';
+import { store } from './store.js?v=1.33';
+import { lancerCampagne } from '../core/sim.js?v=1.33';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.32';
-import { tableauCombos } from './combos.js?v=1.32';
+} from '../core/config.js?v=1.33';
+import { tableauCombos } from './combos.js?v=1.33';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.32';
+} from '../core/proba.js?v=1.33';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 

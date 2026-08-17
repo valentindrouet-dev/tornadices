@@ -1,16 +1,16 @@
 // Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.32';
-import { store } from './store.js?v=1.32';
-import { aller } from './app.js?v=1.32';
-import { eveillerSons } from './sons.js?v=1.32';
-import { lancerPartie, partieEnCours } from './table.js?v=1.32';
-import { construireConfig, variables } from './variables.js?v=1.32';
+import { h, remplacer } from './dom.js?v=1.33';
+import { store } from './store.js?v=1.33';
+import { aller } from './app.js?v=1.33';
+import { eveillerSons } from './sons.js?v=1.33';
+import { lancerPartie, partieEnCours } from './table.js?v=1.33';
+import { construireConfig, variables } from './variables.js?v=1.33';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.32';
-import { pastilleSymbole } from './icons.js?v=1.32';
-import { randomSeed } from '../core/rng.js?v=1.32';
+} from '../core/config.js?v=1.33';
+import { pastilleSymbole } from './icons.js?v=1.33';
+import { randomSeed } from '../core/rng.js?v=1.33';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -78,10 +78,11 @@ export function vueAccueil() {
 
     remplacer(racine,
       h('h1.titre-jeu', ...titreColore('TORNADICE')),
+      // Les deux noms en gras : ce sont eux que l'on vient lire, pas la mention.
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '2px' } },
-        'Un jeu de Sylvain Bonnafous'),
+        'Un jeu de ', h('strong', 'Sylvain Bonnafous')),
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '22px' } },
-        'Édité par Big Budi Games'),
+        'Édité par ', h('strong', 'Big Budi Games')),
 
       partieEnCours()
         ? h('div', { style: { textAlign: 'center', marginBottom: '24px' } },
