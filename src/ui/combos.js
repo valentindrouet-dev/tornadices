@@ -5,9 +5,9 @@
 // C'est plus proche du geste réel que la grille de compteurs d'avant, où il
 // fallait traduire mentalement « 3 » en trois dés.
 
-import { h } from './dom.js?v=1.31';
-import { pastilleSymbole } from './icons.js?v=1.31';
-import { ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE } from '../core/config.js?v=1.31';
+import { h } from './dom.js?v=1.32';
+import { pastilleSymbole } from './icons.js?v=1.32';
+import { ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE } from '../core/config.js?v=1.32';
 
 /** { vache: 3 } → ['vache', 'vache', 'vache', ''] sur un lot de quatre dés. */
 export function requisEnCases(requis, nbDes) {

@@ -122,6 +122,29 @@ export const AIDE_DECLENCHEUR = {
     + 'départ, trois si vous le décidez dans le tableau. L’Attaque, elle, ne se joue plus.',
 };
 
+// Deux façons de jouer une manche.
+//
+// « jetons » — la règle de base : chaque équipe retourne ses jetons Vache un à
+// un, et la manche revient à celle qui les a tous retournés.
+//
+// « sansPoints » — on ne compte plus rien : il faut se réveiller puis sortir la
+// combinaison Vache, et le premier qui y arrive arrête la manche sur-le-champ.
+// Son équipe prend la carte Journée, et l'on recommence. C'est le nombre de
+// cartes qui fait la partie.
+export const OPTIONS_MANCHE = [
+  ['jetons', 'Retourner tous les jetons'],
+  ['sansPoints', 'Sans les points'],
+];
+
+export const AIDE_MANCHE = {
+  jetons: 'Règle de base : chaque Vache retourne un jeton de votre équipe, et la manche revient '
+    + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
+  sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche la Vache. Le '
+    + 'premier joueur qui la sort arrête la manche sur-le-champ — son équipe prend la carte '
+    + 'Journée, et la manche suivante commence. Plus aucun jeton n’est compté ; c’est le nombre '
+    + 'de cartes qui fait le vainqueur, quatre en général.',
+};
+
 // Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
 // en font l'enjeu de la manche.
 export const OPTIONS_ATTRAPE = [
@@ -552,7 +575,11 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     lots: mep.lots,
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,
-    cartesPourGagner: mep.cartes,
+    // « Sans les points » se joue en général en quatre cartes : les manches y
+    // sont bien plus courtes, il en faut davantage pour faire une partie.
+    cartesPourGagner: opts.sansPoints ? 4 : mep.cartes,
+    // Manche « sans les points » : la première Vache arrête tout.
+    sansPoints: !!opts.sansPoints,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.
     // `null` = même exigence que les Bleus et les Jaunes.
     cartesVert: null,

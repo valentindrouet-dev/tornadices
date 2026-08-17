@@ -111,6 +111,8 @@ et non un modèle parallèle qui aurait dérivé.
 
 Tout passe par l’objet de configuration, entièrement exposé dans le Laboratoire :
 
+- **la façon de jouer une manche** : retourner tous ses jetons Vache (la règle de
+  base) ou la version **sans les points** ;
 - nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
   face** — depuis les options de partie comme depuis le Laboratoire ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
@@ -129,6 +131,50 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - caractère et vitesse de chaque IA (voir plus bas).
 
 Chaque campagne est reproductible : même graine, mêmes chiffres.
+
+## Deux façons de jouer une manche
+
+Le réglage `sansPoints` (Réglages → « Comment se joue une manche ») choisit entre
+deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas**
+— même graine, même partie, aux mêmes chiffres.
+
+| Mode | La manche se gagne | Ce qui fait la partie |
+|---|---|---|
+| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Vache | 3 cartes Journée |
+| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé | 4 cartes Journée |
+
+Sans les points, on se réveille aux trois tornades, puis on cherche les trois
+vaches ; le premier qui les sort arrête la manche sur-le-champ et son équipe
+prend la carte. Tout le reste tient — le dé, les combinaisons, l’attrape, les X
+qui figent, le rythme. Deux effets de bord assumés :
+
+- **l’attrape ne rapporte rien** (il n’y a plus de jeton à prendre) mais garde
+  son intérêt : elle coupe le tour du voisin et lui fait lâcher son lot, ce qui
+  suffit à le sortir de la course. Pour qu’elle emporte la manche, il reste
+  `attrapeGagneManche: 'touche'` ;
+- **les cartes Journée qui manipulent les jetons** ne font plus rien de plus
+  qu’une carte ordinaire ; celles dont la combinaison retourne un jeton
+  (`jeton1`, `jeton2`) emportent la manche comme la Vache. Une bourde punie
+  (`penaliteErreurAdverse`) ne donne rien aux adversaires.
+
+La manche est trois fois plus courte, la partie deux fois — sur 100 parties
+d’IA équilibrées par ligne :
+
+| Joueurs | Manche `jetons` | Manche `sansPoints` | Partie `jetons` | Partie `sansPoints` |
+|---|---|---|---|---|
+| 4 | 89 s | 36 s | 8:30 | 5:13 |
+| 6 | 82 s | 27 s | 7:54 | 4:05 |
+| 9 | 55 s | 22 s | 5:37 | 3:31 |
+
+À nombre impair, la manche devient une course où **chacun joue pour soi** : le
+Vert, seul contre deux équipes, la perd presque toujours. Mesuré sur 300 parties
+sans les points, `cartesVert` le remet à niveau :
+
+| Joueurs | 4 cartes (défaut) | 2 cartes | 1 carte |
+|---|---|---|---|
+| 5 | 12 % | 44 % | 76 % |
+| 7 | 4 % | 29 % | 62 % |
+| 9 | 1 % | 20 % | 56 % |
 
 ## Le dé
 

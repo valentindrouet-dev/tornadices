@@ -1,19 +1,20 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.31';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.31';
-import { store } from './store.js?v=1.31';
-import { lancerCampagne } from '../core/sim.js?v=1.31';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.32';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.32';
+import { store } from './store.js?v=1.32';
+import { lancerCampagne } from '../core/sim.js?v=1.32';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
+  OPTIONS_MANCHE, AIDE_MANCHE,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.31';
-import { tableauCombos } from './combos.js?v=1.31';
+} from '../core/config.js?v=1.32';
+import { tableauCombos } from './combos.js?v=1.32';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.31';
+} from '../core/proba.js?v=1.32';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -100,7 +101,7 @@ function panneauConfig(rafraichir) {
   const num = (libelle, valeur, onchange, opts = {}) => h('label.champ', libelle,
     h('input', {
       type: 'number', value: valeur, min: opts.min ?? 0, max: opts.max ?? 9999,
-      step: opts.step ?? 1,
+      step: opts.step ?? 1, disabled: opts.disabled,
       onchange: (e) => { onchange(Number(e.target.value)); rafraichir(); },
     }));
 
@@ -146,7 +147,9 @@ function panneauConfig(rafraichir) {
       h('label.champ', 'Joueurs', h('select', {
         onchange: (e) => {
           const n = Number(e.target.value);
-          const base = configParDefaut(n);
+          // Le mode reste celui de la campagne en cours : sans les points, la
+          // référence est quatre cartes, pas celle du tableau officiel.
+          const base = configParDefaut(n, { sansPoints: cfg.sansPoints });
           Object.assign(cfg, {
             nbJoueurs: n, lots: base.lots, jetons: base.jetons,
             jetonsVert: base.jetonsVert, cartesPourGagner: base.cartesPourGagner,
@@ -236,6 +239,24 @@ function panneauConfig(rafraichir) {
       },
       rafraichir),
 
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Comment se joue une manche'),
+    h('div.segment',
+      ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
+        class: (cfg.sansPoints ? 'sansPoints' : 'jetons') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => {
+          cfg.sansPoints = id === 'sansPoints';
+          // Les deux modes ne se jouent pas au même nombre de cartes : on suit
+          // la valeur de référence tant que la campagne n'y a pas touché.
+          cfg.cartesPourGagner = configParDefaut(cfg.nbJoueurs, { sansPoints: cfg.sansPoints })
+            .cartesPourGagner;
+          rafraichir();
+        },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons']),
+
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',
       ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
@@ -281,8 +302,10 @@ function panneauConfig(rafraichir) {
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
     h('div.grille.grille--4', { style: { gap: '10px' } },
-      num('Jetons Bleu/Jaune', cfg.jetons, (v) => { cfg.jetons = Math.max(1, v); }, { min: 1, max: 12 }),
-      num('Jetons Vert', cfg.jetonsVert, (v) => { cfg.jetonsVert = Math.max(1, v); }, { min: 1, max: 12 }),
+      num('Jetons Bleu/Jaune', cfg.jetons, (v) => { cfg.jetons = Math.max(1, v); },
+        { min: 1, max: 12, disabled: cfg.sansPoints }),
+      num('Jetons Vert', cfg.jetonsVert, (v) => { cfg.jetonsVert = Math.max(1, v); },
+        { min: 1, max: 12, disabled: cfg.sansPoints }),
       num('Cartes pour gagner', cfg.cartesPourGagner, (v) => { cfg.cartesPourGagner = Math.max(1, v); }, { min: 1, max: 12 }),
       cfg.nbJoueurs % 2
         ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner,

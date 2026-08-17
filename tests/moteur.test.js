@@ -5,7 +5,7 @@ import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
   // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
-  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur,
+  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
@@ -882,6 +882,81 @@ console.log('\nCartes du Vert');
   verifier('les parties vont toujours au bout dans les deux cas',
     lancerCampagne(dur, spec(5), 'vert-fin', 40).raisons.manchesMax === undefined
     || true);
+}
+
+// ── 3 septies bis. La manche « sans les points » ─────────────────────────────
+console.log('\nManche sans les points');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  verifier('le mode est absent par défaut : la version de base ne bouge pas',
+    configParDefaut(6).sansPoints === false
+    && configParDefaut(6).cartesPourGagner === infosMiseEnPlace(6).cartes);
+  verifier('activé, la partie se joue en quatre cartes',
+    configParDefaut(6, { sansPoints: true }).sansPoints === true
+    && configParDefaut(6, { sansPoints: true }).cartesPourGagner === 4);
+  verifier('les deux modes sont proposés dans les réglages',
+    OPTIONS_MANCHE.length === 2
+    && OPTIONS_MANCHE.map(([id]) => id).join(',') === 'jetons,sansPoints');
+
+  // La règle du mode tient en une phrase : la première Vache arrête la manche.
+  // On la vérifie manche par manche plutôt que sur le résultat final.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    const m = new Moteur(cfg, spec(6), 'sp-manche');
+    const vaches = [];
+    m.onJeton = (pid, equipe, n, source) => vaches.push({ manche: m.manche, equipe, n, source });
+    m.jouerJusquAuBout();
+    const gagnees = m.statsManches.filter((s) => s.vainqueur);
+    verifier(`partie menée à terme en ${m.manche} manches, vainqueur ${m.vainqueur} (${m.raisonFin})`,
+      m.termine && m.vainqueur && m.raisonFin === 'cartes');
+    verifier('aucune manche ne compte plus d’une Vache',
+      vaches.every((v) => v.n === 1)
+      && gagnees.every((s) => vaches.filter((v) => v.manche === s.manche).length <= 1));
+    verifier('la Vache qui tombe emporte la manche pour son équipe',
+      vaches.length > 0 && vaches.every((v) => {
+        const s = m.statsManches.find((x) => x.manche === v.manche);
+        return s && s.vainqueur === v.equipe;
+      }));
+    verifier('plus aucun jeton n’est retourné : les compteurs restent à zéro',
+      Object.values(m.equipes).every((e) => e.retournes === 0));
+  }
+
+  // L'attrape garde son effet — interrompre le voisin — mais ne rapporte rien,
+  // puisqu'il n'y a plus de jeton à prendre.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    const m = new Moteur(cfg, spec(6), 'sp-attrape');
+    const sources = new Set();
+    m.onJeton = (pid, equipe, n, source) => sources.add(source);
+    m.jouerJusquAuBout();
+    const tentees = m.joueurs.reduce((a, j) => a + j.stats.collisionsTentees, 0);
+    const reussies = m.joueurs.reduce((a, j) => a + j.stats.collisionsReussies, 0);
+    verifier(`des contacts sont bien tentés (${tentees}, dont ${reussies} réussis)`, tentees > 0);
+    verifier('aucune manche n’est prise sur une attrape', !sources.has('collision'));
+  }
+
+  // Le mode ne change rien à la version de base : même graine, même partie.
+  {
+    const spec6 = spec(6);
+    const a = new Moteur(configParDefaut(6), spec6, 'sp-temoin').jouerJusquAuBout();
+    const b = new Moteur(configParDefaut(6, { sansPoints: false }), spec6, 'sp-temoin')
+      .jouerJusquAuBout();
+    verifier('mode « jetons » explicite ou par défaut : partie identique',
+      a.vainqueur === b.vainqueur && a.manches === b.manches && a.duree === b.duree);
+  }
+
+  // Les manches sont bien plus courtes : c'est tout l'intérêt du mode.
+  for (const n of [3, 4, 6, 9]) {
+    const cfg = configParDefaut(n, { sansPoints: true });
+    const r = lancerCampagne(cfg, spec(n), `sp-camp-${n}`, 100);
+    const base = lancerCampagne(configParDefaut(n), spec(n), `sp-camp-${n}`, 100);
+    const s = (ms) => `${Math.round(ms / 1000)} s`;
+    verifier(`${n} joueurs — 100 parties au bout, manche à ${s(r.dureeManche.medianeMs)} `
+      + `contre ${s(base.dureeManche.medianeMs)} en mode jetons`,
+      r.raisons.manchesMax === undefined
+      && r.dureeManche.medianeMs < base.dureeManche.medianeMs);
+  }
 }
 
 // ── 3 octies. Jamais deux lots en main, contrôlé après chaque événement ──────

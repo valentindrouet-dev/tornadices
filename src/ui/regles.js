@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.31';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.31';
+import { h } from './dom.js?v=1.32';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.32';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.31';
+} from '../core/config.js?v=1.32';
 
 export function vueRegles() {
   return h('div.page',
@@ -44,6 +44,8 @@ export function vueRegles() {
       h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Vache. '
         + 'La première à réunir le nombre requis de cartes Journée gagne la partie. '
         + 'Le sens de circulation s’inverse à chaque manche.'),
+      h('p.petit.muted', 'Les Réglages proposent une seconde façon de compter, « sans les '
+        + 'points » : la première vache arrête la manche. Elle est décrite plus bas.'),
     ),
 
     h('div.carte',
@@ -204,6 +206,25 @@ export function vueRegles() {
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
         '* Ligne extrapolée : le tableau officiel V4.5 s’arrête à 8 joueurs.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'La version sans les points'),
+      h('p.petit', 'Une seconde façon de jouer une manche, à choisir dans les Réglages. Les '
+        + 'jetons sortent du jeu : on se réveille aux trois tornades, puis on cherche les trois '
+        + 'vaches, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
+        + 'prend la carte Journée, et la manche suivante commence.'),
+      h('p.petit.muted', 'Tout le reste tient : le dé, les combinaisons, l’attrape, le rythme, '
+        + 'les X qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le '
+        + 'vainqueur, quatre en général au lieu de trois.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'L’attrape garde son intérêt sans rapporter de jeton : elle coupe le tour du voisin et '
+        + 'lui fait lâcher son lot, ce qui suffit à le sortir de la course. Pour qu’elle emporte '
+        + 'la manche, il reste le réglage « Ce que rapporte l’attrape ».'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Certaines cartes Journée manipulent les jetons : dans ce mode, elles ne font rien de '
+        + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '
+        + 'Vert est seul contre tous — « Cartes du Vert » est là pour le remettre à niveau.'),
     ),
 
     h('div.carte',

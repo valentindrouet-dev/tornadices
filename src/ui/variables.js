@@ -3,21 +3,22 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.31';
-import { pastilleSymbole } from './icons.js?v=1.31';
-import { store } from './store.js?v=1.31';
-import { aller } from './app.js?v=1.31';
-import { lancerPartie } from './table.js?v=1.31';
+import { h, remplacer } from './dom.js?v=1.32';
+import { pastilleSymbole } from './icons.js?v=1.32';
+import { store } from './store.js?v=1.32';
+import { aller } from './app.js?v=1.32';
+import { lancerPartie } from './table.js?v=1.32';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
+  OPTIONS_MANCHE, AIDE_MANCHE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.31';
-import { tableauCombos } from './combos.js?v=1.31';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.31';
-import { randomSeed } from '../core/rng.js?v=1.31';
-import { reglagesJoueurs } from './accueil.js?v=1.31';
+} from '../core/config.js?v=1.32';
+import { tableauCombos } from './combos.js?v=1.32';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.32';
+import { randomSeed } from '../core/rng.js?v=1.32';
+import { reglagesJoueurs } from './accueil.js?v=1.32';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -32,6 +33,9 @@ export function construireConfig(nbJoueurs) {
     echecJokers: v.echecJokers !== false,
     attrapeSur: v.attrapeSur,
     lotsCumules: v.lotsCumules,
+    // Le mode change la mise en place par défaut (quatre cartes) : il doit être
+    // connu avant que les valeurs du tableau officiel ne soient posées.
+    sansPoints: v.sansPoints,
   });
   for (const [cle, val] of Object.entries(v)) {
     if (val === undefined || val === null) continue;
@@ -135,6 +139,28 @@ export function vueVariables() {
       h('p.petit.muted', { style: { marginBottom: '20px' } },
         `Tout ce qui suit s’applique à la prochaine partie, à ${nb} joueurs. `
         + 'Le Laboratoire dispose des mêmes réglages pour ses campagnes simulées.'),
+
+      // ── Mode de jeu ───────────────────────────────────────────────────────
+      // Le premier réglage de la page, parce qu'il change la forme d'une manche
+      // et donc la lecture de tous les autres.
+      h('div.carte',
+        titreAide('Comment se joue une manche', [
+          AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons'],
+          cfg.sansPoints
+            ? 'Le reste des réglages tient : les dés, les combinaisons, l’attrape, le rythme. '
+              + 'Seuls les jetons sortent du jeu — et les cartes Journée qui les manipulent ne '
+              + 'font simplement plus rien.'
+            : '',
+        ]),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
+              class: (cfg.sansPoints ? 'sansPoints' : 'jetons') === id ? 'on' : '',
+              onclick: () => { ecrire('sansPoints', id === 'sansPoints'); dessiner(); },
+            }, lib)),
+          ),
+        ),
+      ),
 
       // ── Dés ───────────────────────────────────────────────────────────────
       h('div.carte',
@@ -321,6 +347,10 @@ export function vueVariables() {
         titreAide('Mise en place', [
           `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
+          cfg.sansPoints
+            ? 'Sans les points, les jetons ne servent plus : leurs champs restent grisés. Une '
+              + 'manche vaut une carte, et l’on joue en quatre par défaut.'
+            : '',
           'Toutes ces valeurs se règlent à la main : en modifier une décroche le tableau '
           + 'officiel. Recocher « Suivre le tableau officiel » les remet toutes d’aplomb.',
           mep.extrapole
@@ -331,6 +361,14 @@ export function vueVariables() {
               + 'part, pour l’alléger ou l’alourdir sans toucher aux Bleus ni aux Jaunes. Laissez '
               + `la même valeur (${cfg.cartesPourGagner}) pour qu’il gagne aux mêmes conditions.`
             : '',
+          // Sans les points, la manche est une course où chacun joue pour soi :
+          // le Vert, seul contre deux équipes, la perd presque toujours. Mesuré
+          // sur 300 parties d'IA équilibrées.
+          nb % 2 && cfg.sansPoints
+            ? 'Sans les points, la manche est une course : à un contre tous, le Vert ne gagne '
+              + `guère plus d’une partie sur dix à ${nb} joueurs. Deux cartes au lieu de quatre le `
+              + 'ramènent dans la course.'
+            : '',
           'Manches maximum est un garde-fou : une partie qui l’atteint est comptée comme '
           + 'interrompue, jamais comme gagnée.',
         ],
@@ -340,10 +378,12 @@ export function vueVariables() {
           }, h('span.case', '✓'), 'Suivre le tableau officiel'),
         ),
         h('div.grille.grille--4', { style: { gap: '12px' } },
+          // Sans les points, plus rien ne se retourne : les deux compteurs de
+          // jetons n'ont plus d'effet, autant le montrer.
           num('Jetons Bleu / Jaune', cfg.jetons, 'jetons',
-            { min: 1, max: 12 }),
+            { min: 1, max: 12, disabled: cfg.sansPoints }),
           num('Jetons du Vert', cfg.jetonsVert, 'jetonsVert',
-            { min: 1, max: 12 }),
+            { min: 1, max: 12, disabled: cfg.sansPoints }),
           num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
             { min: 1, max: 12 }),
           // Le Vert n'existe qu'à nombre impair : ailleurs, le champ n'aurait

@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.31';
+import { makeRng } from './rng.js?v=1.32';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.31';
+} from './config.js?v=1.32';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -1051,6 +1051,23 @@ export class Moteur {
   }
 
   _retournerJeton(j, n = 1, source = 'vache') {
+    // Manche « sans les points » : rien ne se compte. La combinaison qui aurait
+    // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
+    // carte Journée. L'attrape, elle, ne rapporte plus rien — il lui reste son
+    // effet propre, interrompre le voisin. Pour qu'elle emporte la manche, il y
+    // a le réglage « Ce que rapporte l'attrape ».
+    if (this.cfg.sansPoints) {
+      if (source === 'collision') return;
+      this._annoncer(`Vache ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
+      if (this.onJeton) this.onJeton(j.id, j.equipe, 1, source);
+      this._log(`${j.nom} sort la Vache — ${this._nomEquipe(j.equipe)} remportent la manche.`,
+        'jeton', j.id);
+      j.stats.jetonsRetournes += 1;
+      j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + 1;
+      this._finManche(j.equipe);
+      return;
+    }
+
     const eq = this.equipes[j.equipe];
     const avant = eq.retournes;
     eq.retournes = Math.min(eq.jetons, eq.retournes + n);
@@ -1074,6 +1091,9 @@ export class Moteur {
   }
 
   _jetonAuxAdverses(j) {
+    // Sans les points, il n'y a pas de jeton à offrir : la bourde reste une
+    // bourde — le lot est parti — mais elle ne donne rien aux adversaires.
+    if (this.cfg.sansPoints) return;
     for (const e of Object.values(this.equipes)) {
       if (e.id === j.equipe) continue;
       e.retournes = Math.min(e.jetons, e.retournes + 1);

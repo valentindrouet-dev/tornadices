@@ -1,9 +1,22 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.31';
+export const VERSION = '1.32';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.32',
+    date: '17/08/2026',
+    notes: [
+      'Nouvelle façon de jouer une manche, à choisir en haut des Réglages : « Sans les points ». On se réveille aux trois tornades, puis on cherche les trois vaches — et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe prend la carte Journée, et la manche suivante commence aussitôt. Plus aucun jeton n’est compté : c’est le nombre de cartes qui fait le vainqueur, quatre par défaut au lieu de trois.',
+      'La version de base ne bouge pas d’un pouce : le mode « Retourner tous les jetons » reste coché, et à graine égale la partie est rigoureusement la même qu’en 1.31 — c’est vérifié par les tests. Tout le reste des réglages continue de fonctionner dans les deux modes : le dé, les combinaisons, l’attrape, les X qui figent, le rythme de la table.',
+      'Sans les points, la manche est trois fois plus courte et la partie deux fois : à six joueurs, 27 s par manche contre 82 s, et 4:05 la partie contre 7:54. Mesuré sur 100 parties d’IA équilibrées par ligne, de 3 à 9 joueurs.',
+      'L’attrape ne rapporte plus de jeton dans ce mode — il n’y en a plus à prendre — mais elle garde tout son intérêt : elle coupe le tour du voisin et lui fait lâcher son lot, ce qui suffit à le sortir de la course. Pour qu’un contact réussi emporte la manche, le réglage « Ce que rapporte l’attrape » est toujours là.',
+      'Certaines cartes Journée manipulent les jetons : « Jour sans vent » ne fait plus rien de particulier, tandis que « Élevage intensif » et « Troupeau » emportent la manche comme la Vache. Rien de grave — c’est le prix d’un mode qui ne compte plus rien.',
+      'À nombre impair, la manche devient une course où chacun joue pour soi, et le Vert, seul contre deux équipes, la perd presque toujours : 12 % de victoires à 5 joueurs, 1 % à 9. Le réglage « Cartes du Vert » est là pour ça — deux cartes au lieu de quatre le ramènent à 44 % (5 joueurs) et 20 % (9 joueurs). Les Réglages le rappellent dès que le mode est actif.',
+      'Le mode se règle aussi au Laboratoire, pour comparer les deux décomptes sur la même graine. Sur la table, la ligne de jetons disparaît du coin des scores : seules les cartes font le score.',
+    ],
+  },
   {
     version: '1.31',
     date: '12/08/2026',
