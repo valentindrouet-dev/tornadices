@@ -3,20 +3,20 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.27';
-import { pastilleSymbole } from './icons.js?v=1.27';
-import { store } from './store.js?v=1.27';
-import { aller } from './app.js?v=1.27';
-import { lancerPartie } from './table.js?v=1.27';
+import { h, remplacer } from './dom.js?v=1.28';
+import { pastilleSymbole } from './icons.js?v=1.28';
+import { store } from './store.js?v=1.28';
+import { aller } from './app.js?v=1.28';
+import { lancerPartie } from './table.js?v=1.28';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR, FACES_SANS_ECLAIR, FACES_PAR_DEFAUT,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, PRESETS_FACES, aideVariance,
-} from '../core/config.js?v=1.27';
-import { tableauCombos } from './combos.js?v=1.27';
-import { randomSeed } from '../core/rng.js?v=1.27';
-import { reglagesJoueurs } from './accueil.js?v=1.27';
+} from '../core/config.js?v=1.28';
+import { tableauCombos } from './combos.js?v=1.28';
+import { randomSeed } from '../core/rng.js?v=1.28';
+import { reglagesJoueurs } from './accueil.js?v=1.28';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -326,6 +326,11 @@ export function vueVariables() {
           mep.extrapole
             ? 'À 9 joueurs, le tableau officiel s’arrête : ces valeurs sont extrapolées.'
             : '',
+          nb % 2
+            ? 'Le Vert joue seul contre deux équipes : « Cartes du Vert » règle son objectif à '
+              + 'part, pour l’alléger ou l’alourdir sans toucher aux Bleus ni aux Jaunes. Laissez '
+              + `la même valeur (${cfg.cartesPourGagner}) pour qu’il gagne aux mêmes conditions.`
+            : '',
           'Manches maximum est un garde-fou : une partie qui l’atteint est comptée comme '
           + 'interrompue, jamais comme gagnée.',
         ],
@@ -341,6 +346,12 @@ export function vueVariables() {
             { min: 1, max: 12, disabled: suivreTableau }),
           num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
             { min: 1, max: 12, disabled: suivreTableau }),
+          // Le Vert n'existe qu'à nombre impair : ailleurs, le champ n'aurait
+          // personne à qui s'appliquer.
+          nb % 2
+            ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner, 'cartesVert',
+                { min: 1, max: 12 })
+            : null,
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
         ),
       ),

@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.27';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.27';
-import { store } from './store.js?v=1.27';
-import { lancerCampagne } from '../core/sim.js?v=1.27';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.28';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.28';
+import { store } from './store.js?v=1.28';
+import { lancerCampagne } from '../core/sim.js?v=1.28';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   FACES_SANS_ECLAIR, FACES_PAR_DEFAUT, assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.27';
-import { tableauCombos } from './combos.js?v=1.27';
+} from '../core/config.js?v=1.28';
+import { tableauCombos } from './combos.js?v=1.28';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.27';
+} from '../core/proba.js?v=1.28';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -284,6 +284,10 @@ function panneauConfig(rafraichir) {
       num('Jetons Bleu/Jaune', cfg.jetons, (v) => { cfg.jetons = Math.max(1, v); }, { min: 1, max: 12 }),
       num('Jetons Vert', cfg.jetonsVert, (v) => { cfg.jetonsVert = Math.max(1, v); }, { min: 1, max: 12 }),
       num('Cartes pour gagner', cfg.cartesPourGagner, (v) => { cfg.cartesPourGagner = Math.max(1, v); }, { min: 1, max: 12 }),
+      cfg.nbJoueurs % 2
+        ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner,
+            (v) => { cfg.cartesVert = Math.max(1, v); }, { min: 1, max: 12 })
+        : null,
       num('Manches max.', cfg.manchesMax, (v) => { cfg.manchesMax = Math.max(1, v); }, { min: 1, max: 200 }),
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },

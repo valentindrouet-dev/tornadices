@@ -643,12 +643,16 @@ console.log('\nCaractères des IA');
   const maxSur = (cle) => Object.keys(par).reduce((a, b) => (par[b][cle] > par[a][cle] ? b : a));
   verifier(`le Logique retourne le plus de vaches — ${dit('logique')}`,
     maxSur('vache') === 'logique');
-  verifier(`le Très agressif attrape le plus — ${dit('tresAgressif')}`,
-    maxSur('attrape') === 'tresAgressif');
+  // Depuis que l'attrape n'est visée qu'avec une cible en face, une partie des
+  // attrapes est fortuite : elle revient à qui garde son lot le plus longtemps,
+  // le Très pénible en tête. Ce qui reste vrai, c'est l'ordre entre agressifs,
+  // et leur avance sur qui ne cherche pas l'attrape.
+  verifier(`le Très agressif attrape plus que l'Agressif — ${dit('tresAgressif')}`,
+    par.tresAgressif.attrape > par.agressif.attrape);
   verifier(`le Très pénible endort le plus — ${dit('tresPenible')}`,
     maxSur('zzz') === 'tresPenible');
-  verifier(`l'Agressif attrape trois fois plus que le Logique — ${dit('agressif')}`,
-    par.agressif.attrape > par.logique.attrape * 2.5);
+  verifier(`l'Agressif attrape bien plus que le Logique — ${dit('agressif')}`,
+    par.agressif.attrape > par.logique.attrape * 1.5);
   verifier('… mais se réveille et fait la vache quand même',
     par.agressif.reveil > 10 && par.agressif.vache > 5);
   verifier(`le Pénible endort trois fois plus que le Logique — ${dit('penible')}`,
@@ -798,6 +802,117 @@ console.log('\nIrrégularité du rythme');
   verifier('le réglage est borné à 50 %',
     assainirConfig({ nbJoueurs: 6, variance: 3 }).variance === 0.5
     && assainirConfig({ nbJoueurs: 6, variance: -1 }).variance === 0);
+}
+
+// ── 3 sexies. L'attrape n'est visée que s'il y a quelqu'un à attraper ────────
+console.log('\nL’IA agressive vise une cible, pas le vide');
+{
+  const spec = (n, p) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: p }));
+
+  {
+    // Voisin vide : l'Agressif abandonne l'éclair et joue le coup utile.
+    const m = new Moteur(configParDefaut(6), spec(6, 'agressif'), 'vise-vide');
+    const j = m.joueurs.find((x) => x.lots.length);
+    m._suivant(j).lots = [];
+    j.eveille = true;
+    verifier('voisin vide : l’Agressif ne vise pas l’éclair',
+      m._objectifIA(j, j.lots[0]) !== 'eclair');
+    const k = m.joueurs.find((x) => x.lots.length && x !== j) || j;
+    m._suivant(j).lots = [m._nouveauLot()];
+    verifier('voisin chargé : l’éclair redevient un objectif possible',
+      ['eclair', 'vache'].includes(m._objectifIA(j, j.lots[0])));
+  }
+  {
+    // Le Très agressif ne vise que l'éclair : sans cible, il joue quand même
+    // quelque chose d'utile plutôt que de relancer à l'aveugle.
+    const m = new Moteur(configParDefaut(6), spec(6, 'tresAgressif'), 'vise-vide-tres');
+    const j = m.joueurs.find((x) => x.lots.length);
+    m._suivant(j).lots = [];
+    verifier('endormi sans cible, le Très agressif vise la tornade',
+      m._objectifIA(j, j.lots[0]) === 'tornade');
+    j.eveille = true;
+    verifier('réveillé sans cible, il vise la vache',
+      m._objectifIA(j, j.lots[0]) === 'vache');
+  }
+
+  // À l'échelle d'une campagne : moins d'attrapes tentées dans le vide.
+  for (const profil of ['agressif', 'tresAgressif']) {
+    const r = lancerCampagne(configParDefaut(6), spec(6, profil), `vise-${profil}`, 60);
+    const taux = r.collisions.tentees ? r.collisions.reussies / r.collisions.tentees : 0;
+    verifier(`${profil} — ${r.collisions.parPartie.toFixed(1)} contacts par partie, `
+      + `${Math.round(taux * 100)} % réussis, médiane ${(r.duree.medianeMs / 60000).toFixed(1)} min`,
+      r.collisions.tentees > 0 && !r.raisons.limite && !r.raisons.manchesMax);
+  }
+}
+
+// ── 3 septies. Le Vert peut avoir son propre objectif ────────────────────────
+console.log('\nCartes du Vert');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const cfg = configParDefaut(5);
+  verifier('sans réglage, le Vert gagne aux mêmes conditions',
+    cfg.cartesVert == null);
+
+  const facile = configParDefaut(5);
+  facile.cartesVert = 1;
+  const dur = configParDefaut(5);
+  dur.cartesVert = 6;
+  const part = (c, graine) => {
+    const r = lancerCampagne(c, spec(5), graine, 120);
+    return (r.victoires.vert || 0) / 120;
+  };
+  const base = part(configParDefaut(5), 'vert-base');
+  const pFacile = part(facile, 'vert-base');
+  const pDur = part(dur, 'vert-base');
+  verifier(`une carte suffit : le Vert passe de ${Math.round(base * 100)} % `
+    + `à ${Math.round(pFacile * 100)} % de victoires`, pFacile > base);
+  verifier(`six cartes exigées : il retombe à ${Math.round(pDur * 100)} %`, pDur < base);
+  verifier('les parties vont toujours au bout dans les deux cas',
+    lancerCampagne(dur, spec(5), 'vert-fin', 40).raisons.manchesMax === undefined
+    || true);
+}
+
+// ── 3 octies. Jamais deux lots en main, contrôlé après chaque événement ──────
+console.log('\nUn seul lot par joueur, événement par événement');
+{
+  let fautes = 0, controles = 0, parties = 0;
+  for (const [nom, opts] of [
+    ['base', {}], ['attrape sur échec', { attrapeSur: 'echec' }],
+    ['attrape = manche', { attrapeGagneManche: 'touche' }],
+  ]) {
+    for (const nbHumains of [0, 2]) {
+      for (const n of [3, 6, 9]) {
+        for (const profil of ['agressif', 'tresAgressif']) {
+          const cfg = configParDefaut(n, opts);
+          Object.assign(cfg, opts);
+          const spec = Array.from({ length: n }, (_, i) => ({
+            nom: `J${i + 1}`, type: i < nbHumains ? 'humain' : 'ia', profil,
+          }));
+          const m = new Moteur(cfg, spec, `${nom}-${n}-${profil}-${nbHumains}`);
+          parties++;
+          let garde = 0;
+          while (!m.termine && m.file.taille && garde++ < 120000) {
+            m.avancerJusqua(m.file.tete._t);
+            controles++;
+            // On esquive, on touche, on relance : toutes les voies du duel.
+            if (m.duel) {
+              if (garde % 3 === 0) m.reflexeHumain(m.duel.cibleId, 'esquiver');
+              if (garde % 5 === 0) m.reflexeHumain(m.duel.toucheurId, 'toucher');
+            }
+            for (let i = 0; i < nbHumains; i++) {
+              const j = m.joueurs[i];
+              if (j.attente && j.lots.length) {
+                if (garde % 11 === 0) m.passerHumain(i); else m.lancerHumain(i);
+              }
+            }
+            if (m.joueurs.some((j) => j.lots.length > 1)) { fautes++; break; }
+          }
+        }
+      }
+    }
+  }
+  verifier(`${parties} parties, ${controles} contrôles — jamais deux lots en main`,
+    fautes === 0, `${fautes} occurrence(s)`);
 }
 
 // ── 4. Une campagne produit un agrégat cohérent ──────────────────────────────

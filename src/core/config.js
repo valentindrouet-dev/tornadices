@@ -550,6 +550,9 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,
     cartesPourGagner: mep.cartes,
+    // Le Vert joue seul contre deux équipes : son objectif se règle à part.
+    // `null` = même exigence que les Bleus et les Jaunes.
+    cartesVert: null,
     melangerCartes: true,
 
     // ── Rythme physique de la table ──────────────────────────────────────────

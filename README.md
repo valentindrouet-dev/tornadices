@@ -110,7 +110,9 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - ce que rapporte l'attrape : un jeton, ou la manche si le contact réussit ;
 - ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
   les lots s'empilent dans la même main ;
-- lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour gagner ;
+- lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour
+  gagner — et, à nombre impair, un objectif distinct pour le Vert (`cartesVert`),
+  qui joue seul contre deux équipes ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe, et **irrégularité du rythme** de 0 à 50 % ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
@@ -299,6 +301,23 @@ Ce que chacun produit, six exemplaires du même caractère autour de la table,
 | Très pénible | 8,8 min | 58 | 17 | **40** | 48 |
 | Équilibré | 5,9 min | 33 | 21 | 13 | 44 |
 | Idiot | 7,9 min | 28 | 18 | 11 | 51 |
+
+**Aucune IA ne vise l'attrape dans le vide.** L'objectif d'une IA est repris dès
+que le joueur suivant prend ou lâche un lot : sans cible, le symbole de l'attrape
+sort des envies et l'on retombe sur le reste du caractère — ou, pour qui ne
+visait que ça, sur le coup utile du moment. Sur 300 parties à 6 joueurs :
+
+| Caractère | Avant | Après |
+|---|---|---|
+| Agressif | 5:41 · 14,5 contacts · 14,6 vaches | 4:21 · 7,8 contacts · 20,6 vaches |
+| Très agressif | 6:11 · 20,5 contacts · 9,6 vaches | 4:34 · 9,3 contacts · 19,7 vaches |
+| Équilibré | 5:31 · 8,9 contacts | 4:50 · 7,1 contacts |
+
+Les agressifs cessent de s'entêter sur un voisin désarmé : ils se réveillent et
+retournent des jetons entre deux occasions, et la partie perd une bonne minute.
+Une partie des attrapes restantes est fortuite — trois éclairs qui tombent sans
+qu'on les cherche — si bien que ce sont les profils qui gardent leur lot le plus
+longtemps, Très pénible en tête, qui en accumulent le plus.
 
 Les attrapes ne tombent jamais à zéro, même chez le Logique : trois éclairs
 forcent le passage, qu’on les ait cherchés ou non.

@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.27';
+export const VERSION = '1.28';
 export const BUILD_DATE = '2026-08-17';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.28',
+    date: '12/08/2026',
+    notes: [
+      'Le N de TORNADICE repasse en jaune : les deux lettres vertes se recentrent sur le milieu du mot, A et D.',
+      'Les IA agressives ne s’entêtent plus à chercher l’éclair quand le joueur suivant a les mains vides. L’objectif d’une IA est repris dès que le voisin prend ou lâche un lot : sans cible, le symbole de l’attrape sort de ses envies et elle retombe sur le reste de son caractère — ou, pour le Très agressif qui ne vise que ça, sur le coup utile du moment, la tornade s’il dort, la vache s’il est réveillé.',
+      'Sur 300 parties à 6 joueurs, l’Agressif passe de 14,5 à 7,8 contacts tentés et de 14,6 à 20,6 vaches retournées ; le Très agressif de 20,5 à 9,3 contacts et de 9,6 à 19,7 vaches. La partie perd une bonne minute — 5:41 → 4:21 et 6:11 → 4:34 — puisqu’ils jouent enfin entre deux occasions.',
+      'Nouveau réglage, à nombre impair de joueurs : « Cartes du Vert ». Le Vert joue seul contre deux équipes, son objectif se règle donc à part, dans les Variables comme au Laboratoire. À 5 joueurs, une seule carte le fait passer de 33 % à 85 % de victoires, six le font retomber à 4 %.',
+      'Le contrôle « jamais deux lots en main » passe désormais après chaque événement du moteur, et non plus seulement à chaque repeint : 36 parties et 38 000 contrôles, sur cinq modes de jeu, avec des humains qui esquivent, touchent et passent.',
+    ],
+  },
   {
     version: '1.27',
     date: '12/08/2026',

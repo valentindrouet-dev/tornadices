@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.27';
+import { makeRng } from './rng.js?v=1.28';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur,
-} from './config.js?v=1.27';
+} from './config.js?v=1.28';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -428,15 +428,48 @@ export class Moteur {
    * repris quand la Tornade change d'état, car les objectifs ne sont plus les
    * mêmes une fois réveillé.
    */
+  /**
+   * Symbole que réclame la combinaison portant l'attrape — l'éclair par défaut.
+   * C'est celui qu'une IA agressive vise, et qui ne vaut rien sans cible.
+   */
+  _symboleAttrape() {
+    const id = comboDeclencheur(this.cfg);
+    const combo = (this.cfg.combos || []).find((c) => c.id === id);
+    let vise = null, mieux = 0;
+    for (const [sym, n] of Object.entries((combo && combo.requis) || {})) {
+      if (n > mieux) { vise = sym; mieux = n; }
+    }
+    return vise;
+  }
+
   _objectifIA(j, lot) {
     const etat = j.eveille ? 'eveille' : 'endormi';
-    const cle = `${lot.id}:${etat}`;
+    // La cible entre dans la clé : dès que le voisin prend ou lâche un lot,
+    // l'objectif est repris. Sans cela, un Agressif s'entêterait à chercher
+    // l'attrape tout un lot durant alors que personne n'est là à attraper.
+    const cible = this._suivant(j).lots.length > 0;
+    const cle = `${lot.id}:${etat}:${cible ? 'cible' : 'vide'}`;
     if (j.objectif && j.objectif.cle === cle) return j.objectif.sym;
     // « Équilibré » emprunte le style d'un autre profil, le temps d'un lot.
     const source = j.profil.styles
       ? (PROFILS_IA[this.rng.pick(j.profil.styles)] || j.profil)
       : j.profil;
-    const sym = this._tirerPondere(source.vise && source.vise[etat]);
+
+    let poids = (source.vise && source.vise[etat]) || null;
+    if (!cible) {
+      // Le voisin a les mains vides : viser l'attrape ne mène à rien. On retire
+      // ce symbole des envies, et l'on retombe sur le reste du caractère — ou,
+      // pour qui ne visait que ça, sur le coup utile du moment.
+      const attrape = this._symboleAttrape();
+      if (attrape && poids && poids[attrape]) {
+        const reste = Object.fromEntries(
+          Object.entries(poids).filter(([sym]) => sym !== attrape),
+        );
+        poids = Object.keys(reste).length ? reste : { [j.eveille ? 'vache' : 'tornade']: 1 };
+      }
+    }
+
+    const sym = this._tirerPondere(poids);
     j.objectif = { cle, sym, style: source.id };
     return sym;
   }
@@ -1074,7 +1107,7 @@ export class Moteur {
 
     if (equipeId) {
       const eq = this.equipes[equipeId];
-      if (eq.cartes.length >= this.cfg.cartesPourGagner) {
+      if (eq.cartes.length >= this._cartesPourGagner(equipeId)) {
         this._finPartie(equipeId, 'cartes');
         return;
       }
@@ -1120,6 +1153,17 @@ export class Moteur {
     }
     this.file.pousser(this.now + dureeTransition, { type: 'nouvelleManche' });
     if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /**
+   * Le Vert joue seul contre deux équipes : son objectif se règle à part, pour
+   * pouvoir l'alléger ou l'alourdir sans toucher aux Bleus ni aux Jaunes.
+   */
+  _cartesPourGagner(equipeId) {
+    const base = this.cfg.cartesPourGagner;
+    if (equipeId !== 'vert') return base;
+    const vert = this.cfg.cartesVert;
+    return vert == null || vert === '' ? base : vert;
   }
 
   _meneur() {
