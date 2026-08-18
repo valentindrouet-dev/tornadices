@@ -471,16 +471,16 @@ Trois leviers, plus la manche de chauffe :
 
 | Carte | Verso | Combinaison | Effet |
 |---|---|---|---|
-| Tornade de feuille | ↻ | — | manche de chauffe, aucune carte gagnée |
+| Tornade de feuille | ↻ | — | aucun pouvoir — mais elle se gagne comme les autres |
 | Tornade de Vaches | ↺ | — | les Bleus gagnent 2 cartes s’ils prennent la manche |
 | Tornade de Poules | ↺ | — | idem pour les Jaunes |
 | Tornade de Cow-boy | ↻ | — | idem pour le Vert (hors paquet à nombre pair) |
-| Tornade du Siècle | ↻ | 2 tornades + 2 vaches | emporte la manche, et elle vaut 2 cartes |
-| Tornade de Sommeil | ↺ | 4 ZzZ | emporte la manche |
+| Tornade du Siècle | ↻ | 4 Tornades vertes | emporte la manche, et elle vaut 2 cartes |
+| Tornade de Sommeil | ↺ | 3 ZzZ | emporte la manche |
 | Tornade électrique | ↻ | — | 2 cartes si la manche est prise **en attrapant** |
-| Tornade orageuse | ↻ | 2 ZzZ + 2 vaches | emporte la manche |
-| Tornade furieuse | ↺ | 3 tornades + 1 vache | emporte la manche |
-| Mega-Tornade | ↺ | 4 tornades | emporte la manche |
+| Tornade orageuse | ↻ | 3 éclairs | emporte la manche |
+| Tornade furieuse | ↺ | 3 X | emporte la manche |
+| Mega-Tornade | ↺ | Réveil + Tornade + ZzZ + éclair | emporte la manche |
 | Tornade F5 | ↻ | — | le vainqueur vole une carte à une autre équipe |
 
 **Deux cartes d’un coup** se paient sur la pioche : l’équipe prend la carte en
@@ -494,13 +494,30 @@ pas d’alterner — sans quoi la règle serait indiscernable de l’ancienne : 
 comptent 4 répétitions sur 10 passages. L’invariant `sens === pioche[1].sens` est
 contrôlé à chaque coup d’envoi, sur 178 manches.
 
-Mesuré sur 300 parties d’IA équilibrées : partie médiane 2:36 à six joueurs,
-6 manches. Taux de sortie des combinaisons de cartes — Mega-Tornade 48 %,
-furieuse 51 %, du Siècle 40 %, orageuse 39 %, de Sommeil 26 %.
+Mesuré sur 300 parties d’IA équilibrées : partie médiane 2:20 à six joueurs,
+5 manches.
+
+**Deux de ces combinaisons demandent une face que le dé officiel ne porte
+pas** — l’éclair, pour l’orageuse et la Mega-Tornade. Elles ne peuvent donc pas
+sortir tant qu’aucune face éclair n’est posée ; les Réglages le signalent sous la
+carte, et le taux de sortie du Laboratoire tombe à 0 %.
 
 **Les exigences se règlent carte par carte**, dans « Cartes Tornade en jeu » :
 chaque carte porte son texte, sa flèche et ses cases de dés au même endroit. Le
 tableau des combinaisons ne contient plus que les combinaisons de la Tornade.
+
+### À la table
+
+- **la carte du tour s’annonce en grand** avant de jouer : nom, pouvoir,
+  combinaison et sens de rotation. Espace ou clic pour passer ; sans réaction,
+  elle se retire seule après quelques secondes — une table d’IA ne doit pas
+  rester bloquée ;
+- **la pioche porte la flèche du sens en cours**, lue au dos de sa carte du
+  dessus ;
+- **la fin de manche s’annonce au centre**, aux couleurs de l’équipe :
+  « Louise fait gagner Jaunes en sortant la Vache ». La raison est explicite —
+  la Vache, le dernier jeton, l’attrape (avec le nom de la victime), ou la
+  combinaison de la carte.
 
 ## L’apparence des faces
 

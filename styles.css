@@ -1179,3 +1179,47 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* Les cases d'une combinaison de carte, posées sous son texte. */
 .cases-carte .face-case { width: 46px; }
 .cases-carte .face-case select { font-size: 11px; padding: 3px 2px; }
+
+/* ── La carte du tour, annoncée en grand ──────────────────────────────────── */
+/* On révèle la Tornade avant de jouer : la partie attend qu'on l'ait lue. */
+.voile-carte {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(12, 34, 54, .55);
+  backdrop-filter: blur(3px);
+  animation: voile-entree .18s ease-out;
+  cursor: pointer;
+}
+@keyframes voile-entree { from { opacity: 0; } to { opacity: 1; } }
+.carte-annonce {
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: 22px;
+  box-shadow: var(--ombre-forte);
+  padding: 28px 34px;
+  max-width: min(460px, 88vw);
+  text-align: center;
+  animation: carte-entree .22s cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes carte-entree {
+  from { opacity: 0; transform: translateY(14px) scale(.94); }
+  to { opacity: 1; transform: none; }
+}
+.texte-carte-grand { font-size: 16px; line-height: 1.45; color: var(--encre-doux); }
+/* La flèche du dos, posée sur la pioche : le sens de la manche en cours. */
+.dos-fleche {
+  position: absolute; top: -8px; left: -8px;
+  background: #fff; color: var(--accent-fonce);
+  border: 1px solid var(--accent-bord); border-radius: 999px;
+  width: 26px; height: 26px; line-height: 24px; text-align: center;
+  font-size: 15px; font-weight: 800;
+  box-shadow: 0 1px 4px rgba(20, 55, 95, .18);
+}
+/* La victoire d'une manche : au centre, en grand, le temps de la lire. */
+.annonce--manche {
+  font-size: 21px;
+  padding: 14px 26px;
+  font-weight: 800;
+  box-shadow: var(--ombre-forte);
+  z-index: 40;
+}

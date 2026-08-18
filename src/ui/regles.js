@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.38';
+import { h } from './dom.js?v=1.39';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.38';
+} from './icons.js?v=1.39';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.38';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.38';
+} from '../core/config.js?v=1.39';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.39';
 
 export function vueRegles() {
   return h('div.page',
@@ -240,6 +240,9 @@ export function vueRegles() {
         'On révèle une Tornade et on la joue. Une équipe qui doit gagner deux cartes prend celle '
         + 'en cours et la première du dessus de la pioche, qu’elle garde face cachée dans sa '
         + 'pile : deux points d’un coup.'),
+      h('p.mini.muted', { style: { marginTop: '10px' } },
+        'La Tornade de feuille ouvre la partie sans pouvoir particulier, mais elle se gagne '
+        + 'comme les autres : l’équipe qui prend la manche de chauffe la met dans sa pile.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Le sens de rotation ne s’inverse plus d’une manche à l’autre : chaque Tornade porte une '
         + 'flèche au dos, et l’on joue la manche dans le sens qu’annonce la prochaine carte, '

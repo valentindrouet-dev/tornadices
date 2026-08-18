@@ -7,7 +7,7 @@ import {
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
   TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
-  clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode,
+  clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
   COULEURS_EQUIPE,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
@@ -1110,13 +1110,41 @@ console.log('\nCartes Tornade — un paquet par mode');
     const sorties = new Set(m.statsManches.map((s) => s.carte));
     verifier('une partie sans les points ne tire que des Tornades',
       [...sorties].every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)));
-    verifier('elle ouvre sur la Tornade de feuille — la manche de chauffe',
-      m.statsManches[0].carte === 'spFeuille' && m.statsManches[0].compte === false);
+    // La Tornade de feuille n'a pas de pouvoir, mais elle se gagne comme les
+    // autres : l'équipe qui prend la manche de chauffe la met dans sa pile.
+    verifier('elle ouvre sur la Tornade de feuille, qui rapporte bien son point',
+      m.statsManches[0].carte === 'spFeuille' && m.statsManches[0].compte === true);
 
     const avecJetons = new Moteur(avec, spec(6), 'paquet-sp');
     avecJetons.jouerJusquAuBout();
     verifier('et une partie avec les jetons ne tire que des cartes Journée',
       avecJetons.statsManches.every((s) => CARTES_TORNADE.some((c) => c.id === s.carte)));
+  }
+
+  // Une exigence réglée doit arriver jusqu'au moteur — et jusqu'à l'écran. La
+  // table lisait `carte.combo.requis`, la référence, et montrait donc la
+  // combinaison d'origine quoi qu'on ait réglé dans les menus.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    cfg.melangerCartes = false;
+    cfg.cartesSansPoints = ['spOrageuse'];
+    // Une exigence d'un seul ZzZ : impossible à confondre avec la référence.
+    cfg.combosCartesSansPoints = { spOrageuse: { zzz: 1 } };
+    const combo = CARTES_PAR_ID.spOrageuse.combo;
+    verifier('l’exigence réglée l’emporte sur celle de la carte',
+      JSON.stringify(requisCarte(cfg, combo)) === '{"zzz":1}'
+      && JSON.stringify(combo.requis) !== '{"zzz":1}');
+
+    // Et le moteur la sert : avec un seul ZzZ demandé, la combinaison de la
+    // carte doit tomber presque à chaque manche.
+    let realisations = 0;
+    for (let g = 0; g < 40; g++) {
+      const m = new Moteur(cfg, spec(6), `cablage-${g}`);
+      m.jouerJusquAuBout();
+      realisations += m.statsManches.reduce((a, s) => a + (s.comboCarte || 0), 0);
+    }
+    verifier(`le moteur applique l’exigence réglée (${realisations} réalisations sur 40 parties)`,
+      realisations > 0);
   }
 
   // Sans joueur Vert, la Tornade de Cow-boy ne désigne personne.

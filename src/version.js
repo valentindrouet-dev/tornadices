@@ -1,9 +1,24 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.38';
+export const VERSION = '1.39';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.39',
+    date: '18/08/2026',
+    notes: [
+      'Correction, la plus importante de cette version : les combinaisons réglées sur les cartes Tornade n’arrivaient pas à la table. Le moteur lisait bien les vôtres, mais l’affichage — la carte du jour, le panneau de la carte en cours, le pop-up d’ouverture — montrait les exigences d’origine. On jouait donc une combinaison et on en lisait une autre. Les trois lectures passent maintenant par le réglage, et une vérification le tient fermé : quarante parties avec une exigence forcée, quarante réalisations.',
+      'Les combinaisons par défaut des Tornades nommées sont enregistrées : Tornade du Siècle quatre Vaches, de Sommeil trois Zzz, orageuse trois éclairs, furieuse trois X, Mega-Tornade une de chaque — Réveil, Vache, Zzz, éclair. Les autres n’ont pas de combinaison, leur pouvoir joue tout seul.',
+      'Deux d’entre elles ne peuvent pas sortir sur le dé officiel : la Tornade orageuse demande trois éclairs et la Mega-Tornade en demande un, alors que le dé n’en porte aucun. Les Réglages le signalent sous la carte, le Laboratoire affiche 0 % de sortie. Il faut poser un éclair sur une face pour les rendre jouables.',
+      'À la fin d’une manche, un message central annonce qui l’emporte et pourquoi : « Louise fait gagner les Jaunes en sortant la Vache », « … en attrapant Marc », « … avec la combinaison de « Tornade furieuse » », « … en retournant le dernier jeton ». Il passe devant tout le reste et reste lisible plus longtemps qu’une annonce ordinaire.',
+      'Au début de chaque manche, la Tornade du tour s’affiche en grand : son nom, son pouvoir écrit en toutes lettres, sa combinaison s’il y en a une, et le sens dans lequel la manche va tourner. Espace, Entrée ou un clic passe l’écran ; il s’efface seul au bout de quelques secondes, et d’autant plus vite que la vitesse de jeu est haute.',
+      'La pioche porte la flèche du tour en cours — ↻ ou ↺, le sens qu’annonce la prochaine carte face cachée. Elle est au même endroit que le compte de tornades restantes, et elle s’accorde avec celle du pop-up.',
+      'La Tornade de Cow-boy sort du paquet quand aucun joueur Vert n’est en jeu ; les Réglages l’écrivent désormais sous la carte, aux nombres pairs de joueurs, au lieu de la laisser cochée sans effet.',
+      'Correction : la Tornade de feuille rapporte bien sa carte à l’équipe qui gagne la manche. Elle n’a simplement aucun pouvoir — c’est la manche de chauffe, elle se gagne et se compte comme les autres. Elle était comptée pour rien depuis la 1.38.',
+      'Mesuré après ces réglages, sur 300 parties d’IA équilibrées : partie médiane 2:57 en 5 manches à quatre joueurs, 2:40 en 6 à cinq, 2:20 en 5 à six, 2:03 en 6 à neuf.',
+    ],
+  },
   {
     version: '1.38',
     date: '18/08/2026',

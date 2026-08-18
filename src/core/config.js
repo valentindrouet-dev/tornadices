@@ -253,6 +253,11 @@ export const AIDE_EQUIPE_DEPART = {
  * découvrir en partie qu'elle ne sert à rien.
  */
 export function noteCarteMode(carte, cfg) {
+  // Une carte qui désigne une équipe absente ne rejoint pas la pioche : autant
+  // le dire ici, sans quoi on la croirait en jeu parce qu'elle est cochée.
+  if (carte.equipeRequise && cfg.nbJoueurs % 2 === 0 && carte.equipeRequise === 'vert') {
+    return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pile.';
+  }
   if (!cfg.sansPoints || !carte.combo) return '';
   switch (carte.combo.effet) {
     case 'jeton1':
@@ -565,10 +570,11 @@ export const CARTES_SANS_POINTS = [
     id: 'spFeuille',
     court: 'Tornade de feuille',
     nom: 'Tornade de feuille',
-    texte: 'Vous ne gagnez pas de carte Tornade à cette manche — c’est la manche de chauffe.',
+    // La première Tornade n'a pas de pouvoir, mais elle se gagne comme les
+    // autres : l'équipe qui prend la manche la met dans sa pile.
+    texte: 'Aucun pouvoir — la manche de chauffe. Elle se gagne comme les autres.',
     combo: null,
     effetPassif: null,
-    neCompted: true,
     toujoursPremiere: true,
     sens: 1,
   },
@@ -606,7 +612,7 @@ export const CARTES_SANS_POINTS = [
     court: 'Tornade du Siècle',
     nom: 'Tornade du Siècle',
     texte: 'Vous gagnez 2 cartes Tornade.',
-    combo: { id: 'spSiecle', requis: { tornade: 2, vache: 2 }, effet: 'gagnerManche2' },
+    combo: { id: 'spSiecle', requis: { vache: 4 }, effet: 'gagnerManche2' },
     effetPassif: null,
     sens: 1,
   },
@@ -615,7 +621,7 @@ export const CARTES_SANS_POINTS = [
     court: 'Tornade de Sommeil',
     nom: 'Tornade de Sommeil',
     texte: 'Vous gagnez la manche.',
-    combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'gagnerManche' },
+    combo: { id: 'spSommeil', requis: { zzz: 3 }, effet: 'gagnerManche' },
     effetPassif: null,
     sens: -1,
   },
@@ -633,7 +639,7 @@ export const CARTES_SANS_POINTS = [
     court: 'Tornade orageuse',
     nom: 'Tornade orageuse',
     texte: 'Vous gagnez la manche.',
-    combo: { id: 'spOrageuse', requis: { zzz: 2, vache: 2 }, effet: 'gagnerManche' },
+    combo: { id: 'spOrageuse', requis: { eclair: 3 }, effet: 'gagnerManche' },
     effetPassif: null,
     sens: 1,
   },
@@ -642,7 +648,7 @@ export const CARTES_SANS_POINTS = [
     court: 'Tornade furieuse',
     nom: 'Tornade furieuse',
     texte: 'Vous gagnez la manche.',
-    combo: { id: 'spFurieuse', requis: { tornade: 3, vache: 1 }, effet: 'gagnerManche' },
+    combo: { id: 'spFurieuse', requis: { x: 3 }, effet: 'gagnerManche' },
     effetPassif: null,
     sens: -1,
   },
@@ -651,7 +657,7 @@ export const CARTES_SANS_POINTS = [
     court: 'Mega-Tornade',
     nom: 'Mega-Tornade',
     texte: 'Vous gagnez la manche.',
-    combo: { id: 'spMega', requis: { tornade: 4 }, effet: 'gagnerManche' },
+    combo: { id: 'spMega', requis: { tornade: 1, vache: 1, zzz: 1, eclair: 1 }, effet: 'gagnerManche' },
     effetPassif: null,
     sens: -1,
   },

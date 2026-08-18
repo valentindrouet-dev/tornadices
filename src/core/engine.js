@@ -10,13 +10,13 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.38';
+import { makeRng } from './rng.js?v=1.39';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
-} from './config.js?v=1.38';
+} from './config.js?v=1.39';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -981,7 +981,7 @@ export class Moteur {
         // La Tornade électrique paie double une manche prise au contact : il
         // faut donc savoir comment celle-ci a été gagnée.
         this._mancheParAttrape = true;
-        this._finManche(j.equipe);
+        this._finManche(j.equipe, { joueur: j, raison: 'attrape', cible: q });
         return;
       }
       this._annoncer(`Attrape ${q.nom} !`, 'jaune', j.id);
@@ -1052,12 +1052,11 @@ export class Moteur {
       case 'gagnerManche2':
         this._bonusCartes = Math.max(this._bonusCartes, 1);
         this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée, et elle vaut deux cartes !`, 'combo', j.id);
-        this._annoncer(`${this.carte ? this.carte.court : 'Carte'} ! Deux cartes d’un coup`, 'jaune', j.id);
-        this._finManche(j.equipe);
+        this._finManche(j.equipe, { joueur: j, raison: 'carte' });
         return;
       case 'gagnerManche':
         this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée sur-le-champ !`, 'combo', j.id);
-        this._finManche(j.equipe);
+        this._finManche(j.equipe, { joueur: j, raison: 'carte' });
         return;
       case 'reveilEquipe': {
         let n = 0;
@@ -1114,7 +1113,7 @@ export class Moteur {
         'jeton', j.id);
       j.stats.jetonsRetournes += 1;
       j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + 1;
-      this._finManche(j.equipe);
+      this._finManche(j.equipe, { joueur: j, raison: 'vache' });
       return;
     }
 
@@ -1137,7 +1136,7 @@ export class Moteur {
         'vert', j.id,
       );
     }
-    if (eq.retournes >= eq.jetons) this._finManche(j.equipe);
+    if (eq.retournes >= eq.jetons) this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
   }
 
   _jetonAuxAdverses(j) {
@@ -1147,7 +1146,7 @@ export class Moteur {
     for (const e of Object.values(this.equipes)) {
       if (e.id === j.equipe) continue;
       e.retournes = Math.min(e.jetons, e.retournes + 1);
-      if (e.retournes >= e.jetons) { this._finManche(e.id); return; }
+      if (e.retournes >= e.jetons) { this._finManche(e.id, { raison: 'incident' }); return; }
     }
     this._log(`Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
@@ -1190,6 +1189,24 @@ export class Moteur {
     }
   }
 
+  /** « en sortant la Vache », « en attrapant Jade »… — la raison, en clair. */
+  _motifVictoire(cause) {
+    switch (cause.raison) {
+      case 'vache':
+        return 'en sortant la Vache';
+      case 'jetons':
+        return 'en retournant le dernier jeton';
+      case 'attrape':
+        return cause.cible ? `en attrapant ${cause.cible.nom}` : 'à l’attrape';
+      case 'carte':
+        return this.carte
+          ? `avec la combinaison de « ${this.carte.court} »`
+          : 'avec la combinaison de la carte';
+      default:
+        return 'à cette manche';
+    }
+  }
+
   /** L'équipe adverse la mieux fournie en cartes, s'il y en a une. */
   _plusRicheAutreQue(equipeId) {
     let best = null;
@@ -1201,10 +1218,21 @@ export class Moteur {
   }
 
   // ── Fin de manche / de partie ───────────────────────────────────────────────
-  _finManche(equipeId) {
+  _finManche(equipeId, cause = {}) {
     if (this.termine) return;
     const duree = this.now - this.debutManche;
     const carte = this.carte;
+    // Qui a emporté la manche, et par quoi : la table l'annonce en toutes
+    // lettres au centre, plutôt que de laisser deviner d'où vient le point.
+    if (equipeId && cause.joueur) {
+      this._annoncer(
+        `${cause.joueur.nom} fait gagner ${this._nomEquipe(equipeId)} `
+        + this._motifVictoire(cause),
+        // Au centre de la table, et non sur un siège : c'est le moment de la
+        // manche que tout le monde regarde.
+        equipeId, null, { manche: true },
+      );
+    }
     let compte = false;
     if (equipeId && carte && !carte.neCompted) {
       this.equipes[equipeId].cartes.push(carte.id);
@@ -1353,8 +1381,8 @@ export class Moteur {
    * Un moment qui compte. `pid` désigne le joueur concerné : l'annonce s'affiche
    * au-dessus de sa zone de jeu, d'où le texte sans son nom — on le lit dessous.
    */
-  _annoncer(texte, couleur = 'bleu', pid = null) {
-    if (this.onAnnonce) this.onAnnonce(texte, couleur, pid);
+  _annoncer(texte, couleur = 'bleu', pid = null, options = null) {
+    if (this.onAnnonce) this.onAnnonce(texte, couleur, pid, options);
   }
 
   /** Un moment à souligner d'un éclat de couleur. L'affichage décide du reste. */

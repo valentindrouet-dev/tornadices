@@ -4,18 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.38';
+import { h, remplacer, duree, vider } from './dom.js?v=1.39';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.38';
-import { Moteur } from '../core/engine.js?v=1.38';
+} from './icons.js?v=1.39';
+import { Moteur } from '../core/engine.js?v=1.39';
 import {
-  COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible,
-} from '../core/config.js?v=1.38';
-import { ajouterHistorique } from './store.js?v=1.38';
-import { aller } from './app.js?v=1.38';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.38';
+  COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
+} from '../core/config.js?v=1.39';
+import { ajouterHistorique } from './store.js?v=1.39';
+import { aller } from './app.js?v=1.39';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.39';
 
 let moteur = null;
 let vitesse = 1;
@@ -357,7 +357,14 @@ export function vueTable() {
     h('div.carte',
       h('div.titre-section', 'Carte du jour'),
       moteur.carte && moteur.carte.combo
-        ? ligneCombo({ ...moteur.carte.combo, nom: moteur.carte.court })
+        // L'exigence affichée est celle que le moteur applique — celle des
+        // Réglages, pas la référence de la carte. Lire `combo.requis` en direct
+        // montrait la combinaison d'origine quoi qu'on ait réglé.
+        ? ligneCombo({
+            ...moteur.carte.combo,
+            requis: requisCarte(moteur.cfg, moteur.carte.combo),
+            nom: moteur.carte.court,
+          })
         : h('div.mini.muted', 'Cette carte n’ouvre aucune combinaison.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Dès qu’une combinaison sort, elle est jouée : le lot part et l’effet s’applique.'),
@@ -430,15 +437,18 @@ export function vueTable() {
     annonces.clear();
   }
 
-  moteur.onAnnonce = (texte, couleur, pid = null) => {
-    if (enTransition) return;   // la transition de manche occupe déjà la table
+  moteur.onAnnonce = (texte, couleur, pid = null, options = null) => {
+    // La victoire de manche passe outre la transition : c'est justement elle
+    // qui l'ouvre, et c'est le message qu'on attend.
+    if (enTransition && !(options && options.manche)) return;
     const cle = pid == null ? '__centre' : pid;
     const ancienne = annonces.get(cle);
     if (ancienne) ancienne.remove();
 
     const surSiege = pid != null && elSieges[pid];
     const el = h('div', {
-      class: `annonce annonce--${couleur}${surSiege ? ' annonce--siege' : ''}`,
+      class: `annonce annonce--${couleur}${surSiege ? ' annonce--siege' : ''}`
+        + (options && options.manche ? ' annonce--manche' : ''),
     }, texte);
     if (surSiege) {
       const z = zoneTable.getBoundingClientRect();
@@ -452,7 +462,11 @@ export function vueTable() {
     annonces.set(cle, el);
     zoneTable.appendChild(el);
 
-    const vie = Math.max(500, 1700 / vitesse);
+    // Une victoire de manche reste plus longtemps : c'est une phrase à lire,
+    // pas un éclat à apercevoir.
+    const vie = options && options.manche
+      ? Math.max(1400, 3200 / vitesse)
+      : Math.max(500, 1700 / vitesse);
     setTimeout(() => el.classList.add('annonce--sortie'), vie);
     setTimeout(() => {
       el.remove();
@@ -514,12 +528,67 @@ export function vueTable() {
 
   moteur.onDebutManche = (info) => {
     viderJetonsEnVol();   // les jetons repartent à zéro : plus rien à faire voler
+    montrerCarte(info.carte, info.manche);
     if (info.premiere) return;
     elCarte.classList.remove('coin--echange');
     // Les lots repartent du centre vers leurs nouveaux porteurs.
     const d = Math.max(260, 700 / vitesse);
     for (const pid of info.porteurs) volLot('centre', pid, 'retour', desVides(), d);
   };
+
+  // ── La carte du tour, en grand ────────────────────────────────────────────
+  // On révèle la Tornade avant de jouer : son pouvoir doit être lu, pas deviné.
+  // La partie attend — c'est le moment où l'on regarde la carte à la table —
+  // et repart à l'espace, au clic, ou d'elle-même si personne ne réagit.
+  let carteEnAttente = null;
+  let panneauCarte = null;
+  let minuterieCarte = null;
+
+  function fermerCarte() {
+    if (minuterieCarte) { clearTimeout(minuterieCarte); minuterieCarte = null; }
+    if (panneauCarte) { panneauCarte.remove(); panneauCarte = null; }
+    carteEnAttente = null;
+    // L'horloge repart d'ici : sans cela le temps d'affichage serait rattrapé
+    // d'un coup et la manche démarrerait déjà commencée.
+    ancrage = performance.now();
+  }
+
+  function montrerCarte(carte, manche) {
+    if (!carte) return;
+    fermerCarte();
+    carteEnAttente = carte;
+    // Le sens annoncé est celui de la manche qui commence — il vient du dos de
+    // la carte SUIVANTE, pas de celle qu'on retourne. Montrer la flèche de la
+    // carte révélée dirait le contraire de ce qui va se jouer.
+    const fleche = moteur.cfg.sansPoints ? (moteur.sens > 0 ? '↻' : '↺') : null;
+    panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
+      h('div.carte-annonce',
+        h('div.mini.muted', `Manche ${manche}`),
+        h('h2', { style: { margin: '6px 0 10px' } }, carte.nom),
+        h('div.texte-carte-grand', carte.texte),
+        carte.combo
+          ? h('div', { style: { marginTop: '14px' } },
+              h('div.mini.muted', { style: { marginBottom: '6px' } }, 'Combinaison de la carte'),
+              h('div.rangee.rangee--serree', { style: { justifyContent: 'center' } },
+                suiteSymboles(requisCarte(moteur.cfg, carte.combo), 34)))
+          : h('div.mini.muted', { style: { marginTop: '14px' } },
+              'Aucune combinaison — la carte agit d’elle-même.'),
+        fleche
+          ? h('div.rangee.rangee--serree', {
+              style: { justifyContent: 'center', marginTop: '14px' },
+            },
+              h('span.fleche-sens', fleche),
+              h('span.mini.muted',
+                `Manche jouée en sens ${moteur.sens > 0 ? 'horaire' : 'antihoraire'}`))
+          : null,
+        h('div.mini.muted', { style: { marginTop: '16px' } }, 'Espace ou clic pour continuer'),
+      ),
+    );
+    racine.appendChild(panneauCarte);
+    // Personne pour appuyer — une table d'IA, un écran qu'on regarde de loin :
+    // la carte se retire d'elle-même plutôt que de bloquer la partie.
+    minuterieCarte = setTimeout(fermerCarte, Math.max(1200, 5200 / vitesse));
+  }
 
   function desVides() {
     return Array.from({ length: Math.min(4, moteur.cfg.desParLot) }, () => ({ sym: null }));
@@ -566,7 +635,7 @@ export function vueTable() {
   let actif = true;
   function boucle() {
     if (!actif || moteur !== maPartie) return;
-    if (!enPause && !moteur.termine) {
+    if (!enPause && !carteEnAttente && !moteur.termine) {
       const cible = moteur.now + (performance.now() - ancrage) * vitesse;
       ancrage = performance.now();
       moteur.avancerJusqua(cible);
@@ -581,6 +650,15 @@ export function vueTable() {
   function auClavier(ev) {
     if (!actif || moteur !== maPartie || moteur.termine) return;
     if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
+    // La carte du tour passe avant tout : sans cela l'espace lancerait les dés
+    // derrière le voile, sur une manche qu'on n'a pas encore vue commencer.
+    if (carteEnAttente) {
+      if (ev.code === 'Space' || ev.code === 'Enter' || ev.code === 'Escape') {
+        fermerCarte();
+        ev.preventDefault();
+      }
+      return;
+    }
     if (moteur.duel) {
       // Un réflexe, une touche : pendant l'attrape on est toucheur ou cible,
       // jamais les deux — la même touche sert donc aux deux gestes.
@@ -604,11 +682,16 @@ export function vueTable() {
     }
   }
 
+  // La première manche est ouverte par le constructeur, avant que le crochet ne
+  // soit posé : sa carte se montre donc ici, à la main.
+  montrerCarte(moteur.carte, moteur.manche);
+
   window.addEventListener('keydown', auClavier);
 
   const surveillant = new MutationObserver(() => {
     if (!document.body.contains(racine)) {
       actif = false;
+    fermerCarte();
       window.removeEventListener('keydown', auClavier);
       window.removeEventListener('resize', placerSieges);
       suiviTaille.disconnect();
@@ -700,21 +783,29 @@ export function vueTable() {
             h('div.texte-carte', moteur.carte.texte),
             moteur.carte.combo
               ? h('div.rangee.rangee--serree', { style: { marginTop: '7px' } },
-                  suiteSymboles(moteur.carte.combo.requis, 21))
+                  suiteSymboles(requisCarte(moteur.cfg, moteur.carte.combo), 21))
               : null,
           )
         : null
     ));
 
     const reste = Math.max(0, moteur.pioche.length - 1);
-    siChange(elPioche, `pioche-${reste}`, () => h('div.pioche',
+    // Le dos de la carte du dessus porte la flèche : c'est elle qui donne le
+    // sens de la manche en cours. On la montre donc sur la pioche, à sa place.
+    const sensPioche = moteur.sens > 0 ? '↻' : '↺';
+    siChange(elPioche, `pioche-${reste}-${moteur.sens}`, () => h('div.pioche',
       h('div.pioche-pile',
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
           h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
+        reste
+          ? h('div.dos-fleche', {
+              title: moteur.sens > 0 ? 'Manche en cours : sens horaire' : 'Manche en cours : sens antihoraire',
+            }, sensPioche)
+          : null,
         reste ? h('div.pioche-nb', reste) : h('div.pioche-nb.pioche-nb--vide', '0'),
       ),
       h('div.mini.muted', { style: { marginTop: '8px', textAlign: 'center' } },
-        reste > 1 ? `${reste} journées restantes` : reste === 1 ? '1 journée restante' : 'pile épuisée'),
+        reste > 1 ? `${reste} tornades restantes` : reste === 1 ? '1 tornade restante' : 'pile épuisée'),
     ));
 
     const jetons = Object.values(moteur.equipes)
