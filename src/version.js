@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.40';
+export const VERSION = '1.41';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.41',
+    date: '18/08/2026',
+    notes: [
+      'La durée moyenne d’une manche rejoint le bandeau de chiffres clés du Laboratoire, à côté de celle de la partie, avec sa médiane. C’est l’unité qu’on règle vraiment — la partie n’en est que la somme, et voir bouger l’une sans l’autre dit tout de suite si un changement raccourcit les manches ou en ajoute. Elle n’était donnée qu’en note sous l’histogramme des durées.',
+      'La note sous l’histogramme ne répète donc plus la moyenne : elle donne la manche du décile haut, une manche sur dix la dépasse. Et l’export CSV emporte la médiane et ce décile en plus de la moyenne.',
+      'Le bandeau s’ajuste au nombre de tuiles au lieu d’en imposer quatre : cinq chiffres tiennent sur une ligne à partir d’environ 940 pixels, deux par ligne sur téléphone.',
+      'Mesuré sur 200 parties à six joueurs avec jetons : partie moyenne 7 min 59 s, manche moyenne 1 min 29 s, médiane 1 min 23 s, et une manche sur dix au-delà de 2 min 17 s.',
+    ],
+  },
   {
     version: '1.40',
     date: '18/08/2026',

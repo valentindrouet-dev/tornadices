@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.40';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.40';
-import { nomSymbole } from './apparence.js?v=1.40';
-import { store } from './store.js?v=1.40';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.40';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.41';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.41';
+import { nomSymbole } from './apparence.js?v=1.41';
+import { store } from './store.js?v=1.41';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.41';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,11 +13,11 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.40';
-import { tableauCombos } from './combos.js?v=1.40';
+} from '../core/config.js?v=1.41';
+import { tableauCombos } from './combos.js?v=1.41';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.40';
+} from '../core/proba.js?v=1.41';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -381,12 +381,17 @@ function resultats(r) {
   }
   const total = r.nbParties;
   const equipes = Object.entries(r.victoires).sort((a, b) => b[1] - a[1]);
+  const dm = r.dureeManche || {};
 
   return h('div', { style: { display: 'grid', gap: '16px' } },
-    h('div.grille.grille--4',
+    h('div.grille.grille--stats',
       stat(String(total), 'parties', `calculées en ${r.calculMs} ms`),
-      stat(dureeLongue(r.duree.moyenneMs), 'durée moyenne',
+      stat(dureeLongue(r.duree.moyenneMs), 'durée moyenne d’une partie',
         `médiane ${dureeLongue(r.duree.medianeMs)}`),
+      // La manche est l'unité qu'on règle : c'est elle qu'on raccourcit ou
+      // qu'on allonge, la partie n'en est que la somme.
+      stat(dureeLongue(dm.moyenneMs), 'durée moyenne d’une manche',
+        `médiane ${dureeLongue(dm.medianeMs)}`),
       stat(nombre(r.manches.moyenne, 1), 'manches par partie',
         `de ${r.manches.min} à ${r.manches.max}`),
       stat(nombre(r.collisions.parPartie, 1), 'contacts tentés par partie',
@@ -416,7 +421,7 @@ function resultats(r) {
         histogramme(r.duree.histogramme.map((c) => ({ n: c.n, min: c.min, max: c.max })), 1),
         h('p.mini.muted',
           `10 % des parties sous ${dureeLongue(r.duree.p10Ms)}, 10 % au-delà de ${dureeLongue(r.duree.p90Ms)}. `
-          + `Manche moyenne : ${dureeLongue(r.dureeManche.moyenneMs)}.`),
+          + `Une manche sur dix dépasse ${dureeLongue(dm.p90Ms)}.`),
       ),
       h('div.carte',
         h('div.titre-section', 'Nombre de manches'),
@@ -604,6 +609,8 @@ function campagneCSV(r) {
   l.push(`duree_mediane_s;${Math.round(r.duree.medianeMs / 1000)}`);
   l.push(`manches_moyennes;${r.manches.moyenne.toFixed(2)}`);
   l.push(`duree_manche_moyenne_s;${Math.round(r.dureeManche.moyenneMs / 1000)}`);
+  l.push(`duree_manche_mediane_s;${Math.round(r.dureeManche.medianeMs / 1000)}`);
+  l.push(`duree_manche_p90_s;${Math.round(r.dureeManche.p90Ms / 1000)}`);
   l.push(`collisions_par_partie;${r.collisions.parPartie.toFixed(2)}`);
   l.push(`collisions_taux_reussite;${r.collisions.taux.toFixed(3)}`);
   l.push(`lancers_par_partie;${r.totaux.lancersParPartie.toFixed(1)}`);

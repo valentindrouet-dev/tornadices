@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.40';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.40';
-import { store } from './store.js?v=1.40';
-import { aller } from './app.js?v=1.40';
-import { lancerPartie } from './table.js?v=1.40';
+import { h, remplacer } from './dom.js?v=1.41';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.41';
+import { store } from './store.js?v=1.41';
+import { aller } from './app.js?v=1.41';
+import { lancerPartie } from './table.js?v=1.41';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -17,16 +17,16 @@ import {
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.40';
-import { tableauCombos, editeurCases } from './combos.js?v=1.40';
+} from '../core/config.js?v=1.41';
+import { tableauCombos, editeurCases } from './combos.js?v=1.41';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.40';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.40';
-import { randomSeed } from '../core/rng.js?v=1.40';
-import { reglagesJoueurs } from './accueil.js?v=1.40';
+} from './apparence.js?v=1.41';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.41';
+import { randomSeed } from '../core/rng.js?v=1.41';
+import { reglagesJoueurs } from './accueil.js?v=1.41';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 

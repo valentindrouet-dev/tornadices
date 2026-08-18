@@ -156,6 +156,9 @@ a { color: var(--accent-fonce); }
 .grille--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grille--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grille--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Bandeau de chiffres clés : le nombre de tuiles change avec ce qu'on mesure,
+   la grille s'ajuste plutôt que d'imposer un compte fixe. */
+.grille--stats { grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); }
 .grille--cartes { gap: 12px; align-items: start; }
 /* Une carte Journée telle qu'on la coche : son nom, sa combinaison et son effet
    au même endroit — l'infobulle ne montrait rien de tout cela. */
@@ -981,6 +984,9 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .liens { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 @media (max-width: 860px) {
+  /* Deux chiffres clés par ligne : le contenu est court, une pile d'une seule
+     colonne ferait défiler pour rien. */
+  .grille--stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* ── Barre du haut : une seule ligne, le reste derrière trois traits ─────── */
   .barre { flex-wrap: nowrap; gap: 8px; position: relative; }
   .barre .marque:first-child { flex: none; }
