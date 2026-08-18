@@ -12,12 +12,12 @@
 // Les combinaisons des cartes Tornade, elles, se règlent sur chaque carte : une
 // carte porte son dessin, son texte et son exigence au même endroit.
 
-import { h } from './dom.js?v=1.46';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.46';
-import { nomSymbole } from './apparence.js?v=1.46';
+import { h } from './dom.js?v=1.47';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.47';
+import { nomSymbole } from './apparence.js?v=1.47';
 import {
   ORDRE_SYMBOLES, COULEURS_EQUIPE, requisPourEquipe, faceSansReveil,
-} from '../core/config.js?v=1.46';
+} from '../core/config.js?v=1.47';
 
 /** { vache: 3 } → ['vache', 'vache', 'vache', ''] sur un lot de quatre dés. */
 export function requisEnCases(requis, nbDes) {

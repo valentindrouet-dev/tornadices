@@ -8,7 +8,7 @@
 // lui passe le contexte vivant ; une épreuve peut lui passer un contexte hors
 // ligne et mesurer ce qui en sort.
 
-import { store } from './store.js?v=1.46';
+import { store } from './store.js?v=1.47';
 
 export const SONS = ['reveil', 'endormi', 'vache', 'attrape'];
 

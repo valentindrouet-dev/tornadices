@@ -1,15 +1,16 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.46';
-import { SVG_LOGO } from './icons.js?v=1.46';
-import { VERSION } from '../version.js?v=1.46';
-import { vueAccueil } from './accueil.js?v=1.46';
-import { vueTable, partieEnCours } from './table.js?v=1.46';
-import { vueLabo } from './labo.js?v=1.46';
-import { vueVariables } from './variables.js?v=1.46';
-import { vueHistorique } from './historique.js?v=1.46';
-import { vueVersions } from './versions.js?v=1.46';
-import { vueRegles } from './regles.js?v=1.46';
+import { h, remplacer } from './dom.js?v=1.47';
+import { SVG_LOGO } from './icons.js?v=1.47';
+import { VERSION } from '../version.js?v=1.47';
+import { vueAccueil } from './accueil.js?v=1.47';
+import { vueTable, partieEnCours } from './table.js?v=1.47';
+import { vueLabo } from './labo.js?v=1.47';
+import { vueVariables } from './variables.js?v=1.47';
+import { vueHistorique } from './historique.js?v=1.47';
+import { vueVersions } from './versions.js?v=1.47';
+import { vueRegles } from './regles.js?v=1.47';
+import { vueResultats } from './resultats.js?v=1.47';
 
 const ROUTES = {
   '': vueAccueil,
@@ -22,6 +23,9 @@ const ROUTES = {
   '/historique': vueHistorique,
   '/versions': vueVersions,
   '/regles': vueRegles,
+  // La page de fin de partie. Elle s'ouvre seule au coup de sifflet final, et
+  // reste consultable ensuite : l'instantané vit dans le navigateur.
+  '/resultats': vueResultats,
 };
 
 function cheminCourant() {

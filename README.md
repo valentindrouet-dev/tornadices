@@ -127,6 +127,42 @@ rythme du navigateur ; le Laboratoire la déroule d’un trait, à quelque
 1,5 ms par partie. Les statistiques décrivent donc bien le jeu tel qu’il se joue,
 et non un modèle parallèle qui aurait dérivé.
 
+## La page de fin de partie
+
+Le moteur compte tout depuis toujours — lancers, combinaisons, attrapes tentées
+et subies, endormissements, jetons et leur origine, durée de chaque manche. Rien
+n'en était montré : la fin de partie tenait dans quatre colonnes sur un carton
+posé au milieu de la table. `src/ui/resultats.js` ouvre le carnet, et la page
+s'affiche d'elle-même au coup de sifflet final (`#/resultats`).
+
+Ce qu'elle donne :
+
+- **l'en-tête** : le vainqueur à ses couleurs et son emblème, manches, durée,
+  lancers, attrapes tentées et réussies, la graine pour rejouer la même partie ;
+- **le score des équipes** : cartes Tornade remportées, jetons restants, et
+  pourquoi la partie s'est arrêtée ;
+- **chaque joueur**, une ligne par siège : manches conclues, jetons, lancers,
+  combinaisons réalisées, attrapes réussies/tentées, attrapes subies, réveils,
+  endormissements, bourdes, et la part de la partie passée dés en main ;
+- **les faits marquants** : la manche la plus longue et la plus expédiée, le
+  meilleur attrapeur, le plus attrapé, le plus endormi, le plus gros lanceur, le
+  plus maladroit — avec les ex æquo nommés plutôt qu'un vainqueur arbitraire ;
+- **les combinaisons sorties**, avec l'exigence en miniatures de dés et leur part ;
+- **d'où viennent les jetons** (mode jetons) ;
+- **manche par manche** : durée, barre de durée relative, qui l'a conclue et
+  comment, la carte Tornade en jeu et le sens de rotation ;
+- un **export CSV** de toute la partie, joueurs et manches compris.
+
+La page ne lit pas le moteur mais un instantané figé à la fin de la partie
+(`dernierePartie`, versionné par `SCHEMA_PARTIE`). Elle survit donc à un
+rechargement, reste consultable depuis l'Historique, et ne se met pas à mentir
+si les réglages changent entre-temps — les libellés des combinaisons sont copiés
+dans l'instantané, pas relus après coup.
+
+Côté moteur, `statsManches` porte désormais qui a conclu la manche et par quoi
+(`joueur`, `nomJoueur`, `raison`, `cible`, `sens`) : sans cela on ne savait que
+l'équipe gagnante.
+
 ## Les réglages enregistrés
 
 Équilibrer, c’est comparer des versions entre elles. Un bandeau coiffe les

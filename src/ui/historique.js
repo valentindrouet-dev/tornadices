@@ -1,8 +1,10 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.46';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.46';
-import { COULEURS_EQUIPE } from '../core/config.js?v=1.46';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.47';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.47';
+import { COULEURS_EQUIPE } from '../core/config.js?v=1.47';
+import { aller } from './app.js?v=1.47';
+import { dernierePartie } from './resultats.js?v=1.47';
 
 export function vueHistorique() {
   const racine = h('div.page');
@@ -19,7 +21,15 @@ export function vueHistorique() {
     }
 
     remplacer(racine,
-      h('div.rangee', { style: { margin: '6px 0 18px' } }, h('h1', 'Historique des parties')),
+      h('div.rangee', { style: { margin: '6px 0 18px' } },
+        h('h1', 'Historique des parties'),
+        h('div.pousse'),
+        // Le compte rendu détaillé de la dernière partie reste à portée : il ne
+        // s'ouvre de lui-même qu'une fois, au coup de sifflet final.
+        dernierePartie()
+          ? h('button.btn.btn--petit', { onclick: () => aller('/resultats') },
+              'Compte rendu de la dernière partie')
+          : null),
 
       total === 0
         ? h('div.carte', { style: { textAlign: 'center', padding: '48px 20px' } },

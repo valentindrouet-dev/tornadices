@@ -10,13 +10,13 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.46';
+import { makeRng } from './rng.js?v=1.47';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
-} from './config.js?v=1.46';
+} from './config.js?v=1.47';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -1146,7 +1146,9 @@ export class Moteur {
     for (const e of Object.values(this.equipes)) {
       if (e.id === j.equipe) continue;
       e.retournes = Math.min(e.jetons, e.retournes + 1);
-      if (e.retournes >= e.jetons) { this._finManche(e.id, { raison: 'incident' }); return; }
+      // Personne n'a rien réussi : c'est la bourde d'en face qui a fini la
+      // manche. On garde le nom du fautif, la page de résultats le dit.
+      if (e.retournes >= e.jetons) { this._finManche(e.id, { raison: 'incident', cible: j }); return; }
     }
     this._log(`Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
@@ -1245,6 +1247,13 @@ export class Moteur {
       // manche où elle était en jeu : c'est de là que sort son taux de sortie.
       comboCarte: this._comboCarteManche,
       vainqueur: equipeId,
+      // Qui a conclu, et par quoi. La page de résultats en fait le récit de la
+      // partie manche par manche : sans cela on ne sait que l'équipe gagnante.
+      joueur: cause.joueur ? cause.joueur.id : null,
+      nomJoueur: cause.joueur ? cause.joueur.nom : null,
+      raison: cause.raison || null,
+      cible: cause.cible ? cause.cible.nom : null,
+      sens: this.sens,
       duree,
       compte,
     });

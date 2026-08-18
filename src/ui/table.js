@@ -4,24 +4,27 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.46';
+import { h, remplacer, duree, vider } from './dom.js?v=1.47';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.46';
-import { Moteur } from '../core/engine.js?v=1.46';
+} from './icons.js?v=1.47';
+import { Moteur } from '../core/engine.js?v=1.47';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-} from '../core/config.js?v=1.46';
-import { ajouterHistorique } from './store.js?v=1.46';
-import { aller } from './app.js?v=1.46';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.46';
+} from '../core/config.js?v=1.47';
+import { ajouterHistorique } from './store.js?v=1.47';
+import { enregistrerPartie } from './resultats.js?v=1.47';
+import { aller } from './app.js?v=1.47';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.47';
 
 let moteur = null;
 let vitesse = 1;
 let enPause = false;
 let ancrage = 0;
 let partieArchivee = false;
+// La page de résultats ne s'ouvre qu'une fois, même si la table se redessine.
+let finAnnoncee = false;
 
 export function partieEnCours() { return moteur && !moteur.termine ? moteur : null; }
 
@@ -998,6 +1001,10 @@ export function vueTable() {
     if (!partieArchivee) {
       partieArchivee = true;
       const r = moteur.resultat();
+      // Le compte rendu complet est figé ici, puis la page de résultats s'ouvre
+      // d'elle-même : c'est le moment où l'on veut savoir ce qui s'est passé,
+      // pas au terme d'un clic sur un carton de quatre colonnes.
+      enregistrerPartie(moteur);
       ajouterHistorique({
         date: new Date().toISOString().slice(0, 16).replace('T', ' '),
         joueurs: moteur.joueurs.length,
@@ -1012,6 +1019,9 @@ export function vueTable() {
         })),
       });
     }
+    // Le carton de fin de partie laisse la place à la page de résultats : elle
+    // s'ouvre d'elle-même, sur le coup de sifflet final. Un temps d'arrêt court
+    // pour lire le nom du vainqueur à la table, puis on tourne la page.
     siChange(couche, `fin-${moteur.vainqueur}`, () => {
       const eq = moteur.vainqueur ? COULEURS_EQUIPE[moteur.vainqueur] : null;
       return h('div.boite', { style: { borderColor: eq ? eq.hex : 'var(--bord)' } },
@@ -1019,22 +1029,20 @@ export function vueTable() {
           eq ? `${eq.nom} — victoire !` : 'Fin de partie'),
         h('p.petit.muted',
           `${moteur.manche} manches · ${duree(moteur.now)} de jeu · graine ${moteur.graine}`),
-        h('table.tbl', { style: { marginTop: '10px', textAlign: 'left' } },
-          h('thead', h('tr',
-            h('th', 'Joueur'), h('th.num', 'Jetons'), h('th.num', 'Lancers'), h('th.num', 'Touchés'))),
-          h('tbody', ...moteur.joueurs.map((j) => h('tr',
-            h('td', h('span.badge', { class: `badge--${j.equipe}` }, j.nom)),
-            h('td.num', j.stats.jetonsRetournes),
-            h('td.num', j.stats.lancers),
-            h('td.num', j.stats.collisionsReussies),
-          ))),
-        ),
+        h('p.petit.muted', 'Compte rendu de la partie…'),
         h('div.rangee', { style: { justifyContent: 'center', marginTop: '16px' } },
-          h('button.btn.btn--primaire', { onclick: () => { moteur = null; aller('/'); } }, 'Nouvelle partie'),
-          h('button.btn', { onclick: () => aller('/historique') }, 'Historique'),
+          h('button.btn.btn--primaire', { onclick: () => aller('/resultats') }, 'Voir les résultats'),
+          h('button.btn', { onclick: () => { moteur = null; aller('/'); } }, 'Nouvelle partie'),
         ),
       );
     });
+    if (!finAnnoncee) {
+      finAnnoncee = true;
+      // Hors du rendu : on ne change pas de page au milieu du dessin de celle
+      // qu'on quitte. Assez long pour lire le vainqueur, assez court pour ne
+      // pas donner l'impression d'un écran resté en plan.
+      setTimeout(() => { if (moteur && moteur.termine) aller('/resultats'); }, 1600);
+    }
   }
 
   peindre();

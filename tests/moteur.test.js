@@ -1255,6 +1255,46 @@ console.log('\nTornades du mode sans les points');
   }
 }
 
+// ── 3 septies bis ter. Le compte rendu d'une manche ─────────────────────────
+console.log('\nQui a conclu chaque manche');
+{
+  // La page de fin de partie raconte la partie manche par manche : il faut donc
+  // que chaque manche dise qui l'a emportée et par quoi, pas seulement l'équipe.
+  // « incident » est le seul cas sans auteur : la manche se termine sur la
+  // bourde d'un adversaire, aucun joueur de l'équipe gagnante n'a rien fait.
+  const RAISONS = new Set(['vache', 'jetons', 'attrape', 'carte', 'incident']);
+  let manches = 0, avecJoueur = 0, idZero = 0;
+  const parJoueur = new Map();
+  let formeOk = true, sensOk = true;
+  for (let g = 0; g < 40; g++) {
+    const cfg = configParDefaut(6, { sansPoints: g % 2 === 0 });
+    const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+    const r = new Moteur(cfg, spec, `compte-rendu-${g}`).jouerJusquAuBout();
+    for (const m of r.statsManches) {
+      manches++;
+      if (m.sens !== 1 && m.sens !== -1) sensOk = false;
+      if (!m.vainqueur) continue;
+      avecJoueur++;
+      // `!= null` : le premier joueur porte l'identifiant 0, et un simple test
+      // de vérité l'efface du compte.
+      if (!RAISONS.has(m.raison)) formeOk = false;
+      if (m.raison === 'incident') {
+        if (m.joueur != null || !m.cible) formeOk = false;
+        continue;
+      }
+      if (m.joueur == null || !m.nomJoueur) formeOk = false;
+      if (m.joueur === 0) idZero++;
+      parJoueur.set(m.joueur, (parJoueur.get(m.joueur) || 0) + 1);
+    }
+  }
+  verifier(`${manches} manches, toutes avec un sens de rotation`, sensOk);
+  verifier(`${avecJoueur} manches remportées portent leur joueur et leur raison`, formeOk);
+  verifier(`le joueur d'identifiant 0 en remporte aussi (${idZero})`, idZero > 0);
+  const somme = [...parJoueur.values()].reduce((a, b) => a + b, 0);
+  verifier(`le compte par joueur retombe sur le total (${somme} + ${avecJoueur - somme} sur bourde)`,
+    somme <= avecJoueur && somme > avecJoueur * 0.8);
+}
+
 // ── 3 septies bis quater. La case « Réveillé seulement » se décoche ──────────
 console.log('\n« Réveillé seulement » — la case se décoche');
 {

@@ -1289,3 +1289,24 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   box-shadow: 0 2px 8px rgba(30, 131, 204, .28);
 }
 .chip--profil.on:hover { filter: brightness(1.04); border-color: #14638f; }
+
+/* ── Page de fin de partie ────────────────────────────────────────────────────
+   Le compte rendu : le vainqueur en tête, puis les chiffres. */
+.carte--victoire {
+  background: linear-gradient(180deg, #ffffff, #f2f9ff);
+  border-color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 40%, var(--bord));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--couleur-eq, var(--accent)) 14%, transparent), var(--ombre);
+}
+.carte--victoire h1 { color: var(--couleur-eq, var(--encre)); }
+.carte--victoire .embleme { flex: none; color: var(--couleur-eq, var(--accent)); }
+.carte--victoire .rangee { gap: 18px; align-items: center; }
+/* Les faits marquants : une pile de petites fiches, une par superlatif. */
+.faits { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.fait {
+  background: var(--fond-doux); border: 1px solid var(--bord);
+  border-radius: var(--r-s); padding: 8px 11px;
+}
+.tbl--resultats th, .tbl--resultats td { padding: 7px 8px; }
+.tbl-defile .tbl--resultats { min-width: 640px; }
+.tbl-defile .tbl--manches { min-width: 620px; }
+.tbl--manches .barre-fond { margin: 0; }

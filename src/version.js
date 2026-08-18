@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.46';
+export const VERSION = '1.47';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.47',
+    date: '18/08/2026',
+    notes: [
+      'La fin de partie a sa page. Le carton de quatre colonnes posé au milieu de la table laisse la place à un vrai compte rendu, qui s’ouvre tout seul au coup de sifflet final. Le moteur comptait déjà tout : rien n’en était montré.',
+      'En tête, le vainqueur à ses couleurs, avec les manches jouées, la durée, les lancers de dés, les attrapes tentées et réussies, et la graine pour rejouer la même partie. Puis le score des équipes — cartes remportées, jetons restants — et pourquoi la partie s’est arrêtée.',
+      'Une ligne par joueur : manches conclues, jetons, lancers, combinaisons réalisées, attrapes réussies sur tentées, attrapes subies, réveils, endormissements, bourdes, et la part de la partie passée dés en main. De quoi voir d’un coup qui a porté son équipe et qui a subi la partie.',
+      'Les faits marquants : la manche la plus longue et la plus expédiée, le meilleur attrapeur, le plus attrapé, le plus endormi, le plus gros lanceur, le plus maladroit. Les ex æquo sont nommés, plutôt que d’élire arbitrairement l’un des trois.',
+      'Puis les combinaisons sorties avec leur exigence en dés et leur part, l’origine des jetons retournés, et le déroulé manche par manche : durée, barre de durée relative, qui l’a conclue et comment — l’Abri, le dernier jeton, une attrape et sa victime, la combinaison de la carte, ou la bourde d’un adversaire — avec la carte Tornade en jeu et le sens de rotation. Toute la partie s’exporte en CSV, joueurs et manches compris.',
+      'Le compte rendu tient dans le navigateur : il survit à un rechargement et reste consultable depuis l’Historique jusqu’à la partie suivante.',
+    ],
+  },
   {
     version: '1.46',
     date: '18/08/2026',
