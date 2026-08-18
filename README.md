@@ -59,6 +59,25 @@ contexte vivant, une épreuve lui passe un `OfflineAudioContext` et mesure ce qu
 en sort. Les navigateurs refusant d'ouvrir le son sans geste préalable, le
 contexte s'ouvre sur le bouton qui lance la partie.
 
+## Le nombre de dés, quel qu'il soit
+
+Un lot compte de 1 à 12 dés, et l'interface s'y ajuste sans jamais rien laisser
+dépasser :
+
+- **au siège**, le côté d'un dé est calculé par la table (`tailleDeSiege`) et posé
+  en variable CSS `--de-siege` : 36 px tant qu'il y a la place, puis les dés
+  rapetissent jusqu'à 26 px — en dessous la face n'est plus lisible — et la
+  rangée passe à la ligne. À douze dés : deux rangées de six. Sur téléphone le
+  plafond descend à 30 px, les sièges y étant plus étroits ;
+- **au Laboratoire**, la colonne de configuration ne s'élargit plus au gré des
+  dés : ses grilles sont bornées à `minmax(0, 1fr)` et les menus déroulants ont
+  `min-width: 0`. Sans cela « Joker éclair/ZzZ » imposait à lui seul une colonne
+  de 466 px dans une piste de 420, et la colonne passait sous les résultats, qui
+  la recouvraient.
+
+Contrôlé au navigateur à 4, 5, 6, 8 et 12 dés, sur la table, les Réglages et le
+Laboratoire, de 390 à 2000 px de large : aucun débordement, aucune zone masquée.
+
 ## Bureau et mobile
 
 Une seule feuille de style, deux dispositions. Tout ce qui est propre au

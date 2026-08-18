@@ -170,6 +170,10 @@ a { color: var(--accent-fonce); }
 }
 .carte-journee.hors-jeu { opacity: .5; }
 .grille--labo { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); align-items: start; }
+/* Une colonne de grille ne descend pas sous la largeur minimale de son contenu :
+   sans cela, la colonne de gauche du Laboratoire s'élargissait au gré du nombre
+   de dés et passait sous les résultats, qui la recouvraient. */
+.grille--labo > * { min-width: 0; }
 .grille--jeu { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rangee--serree { gap: 6px; }
@@ -284,6 +288,11 @@ label.champ {
   display: grid; gap: 5px; align-content: start;
   font-size: 12.5px; font-weight: 700; color: var(--encre-doux);
 }
+/* Un menu déroulant refuse par défaut de descendre sous la largeur de sa plus
+   longue option — « Joker éclair/ZzZ » élargissait à lui seul toute la colonne.
+   Il se serre comme le reste ; le texte est de toute façon lisible une fois
+   déplié. */
+.champ select, .champ input { min-width: 0; max-width: 100%; }
 /* Un segment dans un champ occupe sa colonne et la partage : à trois boutons
    dans une colonne étroite, le dernier sortait de la carte. */
 .champ .segment { width: 100%; box-sizing: border-box; }
@@ -410,7 +419,23 @@ label.champ {
 }
 .siege--eveille .entete { color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 60%, #08131c); }
 .siege--eveille .de { border-color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 40%, #fff); }
-.siege .des-mini { display: flex; gap: 4px; margin-top: 7px; min-height: 36px; align-items: center; }
+.siege .des-mini {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin-top: 7px; min-height: 36px; align-items: center;
+}
+/* Un lot peut compter jusqu'à douze dés. La rangée du siège les fait rétrécir
+   plutôt que de déborder de la carte : `flex: none` vaut pour le plateau du bas,
+   où les dés glissent d'un joueur à l'autre et doivent garder leur taille, mais
+   pas ici où la largeur est celle du siège. Le carré est tenu par l'aspect. */
+/* Le côté vient de la table, qui sait combien de dés compte un lot : à quatre
+   dés c'est la taille de toujours, au-delà les dés rapetissent puis la rangée
+   passe à la ligne. Calculé plutôt que laissé au flex, dont l'aspect dépend de
+   la taille intrinsèque du dessin. */
+.siege .des-mini .de {
+  width: var(--de-siege, 36px);
+  height: var(--de-siege, 36px);
+  border-radius: calc(var(--de-siege, 36px) * .28);
+}
 .siege .profil-siege {
   font-size: 10.5px; font-weight: 600; color: var(--gris); white-space: nowrap;
   flex: none;
@@ -475,9 +500,16 @@ label.champ {
   background: linear-gradient(180deg, #f2f8fd, #e9f3fb);
   box-shadow: inset 0 1px 3px rgba(20, 60, 110, .10);
 }
-.des-panneau { display: flex; gap: 6px; }
+/* Le plateau du bas : même chose, les dés cèdent avant le cadre. Ils ne
+   descendent pas sous 34 px — en dessous on ne lit plus la face, mieux vaut
+   alors laisser la rangée défiler. */
+.des-panneau {
+  display: flex; gap: 6px;
+  max-width: 100%; overflow-x: auto; overflow-y: hidden;
+}
+.des-panneau .de { flex: 0 1 auto; min-width: 34px; height: auto; aspect-ratio: 1; }
 .des-panneau--fantome {
-  position: absolute; top: 19px; left: 23px;
+  position: absolute; top: 19px; left: 23px; right: 23px;
   pointer-events: none;
 }
 .zone-des--droite .des-panneau--fantome { animation: sortDroite .42s cubic-bezier(.4, 0, .8, .5) forwards; }
@@ -1074,7 +1106,13 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
     min-width: 0;
   }
   .siege .des-mini { gap: 3px; }
-  .siege .de--petit { width: 30px; height: 30px; border-radius: 8px; padding: 2px; }
+  /* Sièges plus étroits sur téléphone : le dé ne dépasse pas 30 px, quel que
+     soit ce qu'a calculé la table pour le bureau. */
+  .siege .des-mini .de {
+    width: min(var(--de-siege, 36px), 30px);
+    height: min(var(--de-siege, 36px), 30px);
+    border-radius: 8px; padding: 2px;
+  }
   /* Nombre impair de joueurs : le siège du bas de l'anneau prend la largeur. */
   .siege--large { flex: 1 1 100%; }
 

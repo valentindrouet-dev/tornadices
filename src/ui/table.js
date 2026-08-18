@@ -4,18 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.45';
+import { h, remplacer, duree, vider } from './dom.js?v=1.46';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.45';
-import { Moteur } from '../core/engine.js?v=1.45';
+} from './icons.js?v=1.46';
+import { Moteur } from '../core/engine.js?v=1.46';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-} from '../core/config.js?v=1.45';
-import { ajouterHistorique } from './store.js?v=1.45';
-import { aller } from './app.js?v=1.45';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.45';
+} from '../core/config.js?v=1.46';
+import { ajouterHistorique } from './store.js?v=1.46';
+import { aller } from './app.js?v=1.46';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.46';
 
 let moteur = null;
 let vitesse = 1;
@@ -48,6 +48,16 @@ const TOUCHES = [
 ];
 
 // Couleurs des éclats d'écran : la vache pour tous, l'échec et le sommeil pour soi.
+/** Le côté d'un dé de siège, en pixels, pour un lot de `n` dés. */
+function tailleDeSiege(n) {
+  const utile = 176;   // largeur intérieure d'un siège
+  const ecart = 4;     // l'espace entre deux dés
+  const mini = 26;     // en dessous, la face ne se lit plus
+  const nb = Math.max(1, Math.min(12, n || 4));
+  const colonnes = Math.min(nb, Math.max(1, Math.floor((utile + ecart) / (mini + ecart))));
+  return Math.min(36, Math.floor((utile - (colonnes - 1) * ecart) / colonnes));
+}
+
 const COULEUR_ECLAT = { vache: '#6cb800', echec: '#e2000f', endormi: '#8794a3' };
 
 /** Sous cette largeur, la table passe en disposition verticale. */
@@ -90,6 +100,11 @@ export function vueTable() {
   humains.forEach((j, i) => toucheDe.set(j.id, TOUCHES[i] || TOUCHES[TOUCHES.length - 1]));
 
   const racine = h('div.page.page--large');
+  // La taille des dés d'un siège se calcule, elle ne se devine pas : la carte
+  // fait 176 px utiles, et un lot peut en compter jusqu'à douze. On en met le
+  // plus possible par ligne sans descendre sous 26 px — en dessous la face n'est
+  // plus lisible — et la rangée passe à la ligne pour le reste.
+  racine.style.setProperty('--de-siege', `${tailleDeSiege(moteur.cfg.desParLot)}px`);
 
   // ── Entête : badges variables à gauche, contrôles fixes à droite ──────────
   const zoneBadges = h('div.rangee.rangee--serree.badges-jeu');

@@ -1,20 +1,20 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.45';
-import { store } from './store.js?v=1.45';
-import { aller } from './app.js?v=1.45';
-import { eveillerSons } from './sons.js?v=1.45';
-import { lancerPartie, partieEnCours } from './table.js?v=1.45';
-import { construireConfig, variables } from './variables.js?v=1.45';
+import { h, remplacer } from './dom.js?v=1.46';
+import { store } from './store.js?v=1.46';
+import { aller } from './app.js?v=1.46';
+import { eveillerSons } from './sons.js?v=1.46';
+import { lancerPartie, partieEnCours } from './table.js?v=1.46';
+import { construireConfig, variables } from './variables.js?v=1.46';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   OPTIONS_MANCHE, cartesDuMode, cartesEnJeu,
-} from '../core/config.js?v=1.45';
-import { nomSymbole } from './apparence.js?v=1.45';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.45';
-import { randomSeed } from '../core/rng.js?v=1.45';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.45';
+} from '../core/config.js?v=1.46';
+import { nomSymbole } from './apparence.js?v=1.46';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.46';
+import { randomSeed } from '../core/rng.js?v=1.46';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.46';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',

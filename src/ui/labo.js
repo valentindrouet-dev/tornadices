@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.45';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.45';
-import { nomSymbole } from './apparence.js?v=1.45';
-import { store } from './store.js?v=1.45';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.45';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.46';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.46';
+import { nomSymbole } from './apparence.js?v=1.46';
+import { store } from './store.js?v=1.46';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.46';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,13 +13,13 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.45';
-import { tableauCombos } from './combos.js?v=1.45';
-import { barreProfils, idActif } from './profils.js?v=1.45';
-import { construireConfig } from './variables.js?v=1.45';
+} from '../core/config.js?v=1.46';
+import { tableauCombos } from './combos.js?v=1.46';
+import { barreProfils, idActif } from './profils.js?v=1.46';
+import { construireConfig } from './variables.js?v=1.46';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.45';
+} from '../core/proba.js?v=1.46';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -106,7 +106,7 @@ export function vueLabo() {
 // ── Onglet Simulation ────────────────────────────────────────────────────────
 function ongletSimulation(rafraichir) {
   return h('div.grille.grille--labo',
-    h('div', { style: { display: 'grid', gap: '16px' } },
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' } },
       // Le même bandeau qu'aux Réglages : changer de réglage enregistré remonte
       // la configuration de la campagne, sans toucher au nombre de joueurs ni à
       // la graine, qui appartiennent à la campagne et non au jeu.
@@ -171,7 +171,9 @@ function panneauConfig(rafraichir) {
   return h('div.carte',
     h('div.rangee', { style: { marginBottom: '16px' } },
       h('button.btn.btn--primaire.btn--grand', {
-        style: { flex: '1' }, onclick: lancer, disabled: etat.calcul,
+        // Une base de 200 px : la rangée passe à la ligne avant que le libellé
+        // ne se coupe en deux.
+        style: { flex: '1 1 200px' }, onclick: lancer, disabled: etat.calcul,
       }, 'Lancer la simulation'),
       h('button.btn.btn--petit', {
         onclick: () => {

@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.45';
+export const VERSION = '1.46';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.46',
+    date: '18/08/2026',
+    notes: [
+      'Les dés d’un joueur ne débordent plus de sa zone, quel que soit le nombre par lot. Au-delà de quatre dés ils rapetissent, et à partir du moment où ils descendraient sous 26 px — en dessous, la face ne se lit plus — la rangée passe à la ligne : à douze dés, deux rangées de six, bien à l’intérieur de la carte. Sur téléphone le plafond descend à 30 px, les sièges y étant plus étroits.',
+      'Au Laboratoire, la colonne de configuration ne passe plus sous les résultats. Elle s’élargissait au gré du nombre de dés — « Joker éclair/ZzZ » imposait à lui seul 466 px dans une piste qui en fait 420 — et le débordement était recouvert par la colonne de droite. Les menus déroulants se serrent maintenant comme le reste, et la colonne tient sa largeur.',
+      'Contrôlé au navigateur à 4, 5, 6, 8 et 12 dés, sur la table, les Réglages et le Laboratoire, de 390 à 2000 pixels de large : aucun débordement, aucune zone masquée.',
+    ],
+  },
   {
     version: '1.45',
     date: '18/08/2026',
