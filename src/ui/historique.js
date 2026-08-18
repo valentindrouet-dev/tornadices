@@ -1,8 +1,8 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.42';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.42';
-import { COULEURS_EQUIPE } from '../core/config.js?v=1.42';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.43';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.43';
+import { COULEURS_EQUIPE } from '../core/config.js?v=1.43';
 
 export function vueHistorique() {
   const racine = h('div.page');

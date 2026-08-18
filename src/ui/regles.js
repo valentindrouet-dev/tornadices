@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.42';
+import { h } from './dom.js?v=1.43';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.42';
+} from './icons.js?v=1.43';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.42';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.42';
+} from '../core/config.js?v=1.43';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.43';
 
 export function vueRegles() {
   return h('div.page',
@@ -75,12 +75,12 @@ export function vueRegles() {
       ),
       h('p.petit', { style: { marginTop: '12px' } },
         `Le dé officiel porte six faces : deux ${nomSymbole('tornade')}s, un X, `
-        + `une ${nomSymbole('vache')} et deux ZzZ. `
+        + `un ${nomSymbole('vache')} et deux ZzZ. `
         + 'L’éclair et le joker n’y sont plus — ils restent disponibles dans les Réglages, '
         + 'à poser soi-même sur une face pour les essayer.'),
       h('p.mini.muted',
-        `Les deux faces de couleur portent l’habillage officiel : le ${nomSymbole('tornade')} sur `
-        + `le bleu, la ${nomSymbole('vache')} sur le vert. Le moteur, lui, continue de parler de `
+        `Les deux faces de couleur portent l’habillage officiel : ${nomSymbole('tornade')} sur `
+        + `le bleu, ${nomSymbole('vache')} sur le vert. Le moteur, lui, continue de parler de `
         + `« ${nomAncien('tornade')} » et de « ${nomAncien('vache')} » — les pouvoirs et les `
         + 'combinaisons n’ont pas bougé, et les Réglages permettent de reprendre l’ancien dessin.'),
       h('div.encart', { style: { marginTop: '14px' } },
@@ -307,8 +307,8 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'L’apparence des faces'),
-      h('p.petit', `Le dé officiel porte le ${nomSymbole('tornade')} sur la face bleue et la `
-        + `${nomSymbole('vache')} sur la verte. Les deux se réhabillent quand on veut, dans les `
+      h('p.petit', `La face bleue du dé officiel porte ${nomSymbole('tornade')}, la face verte `
+        + `${nomSymbole('vache')} — une maison. Les deux se réhabillent quand on veut, dans les `
         + 'Réglages : reprenez l’ancien dessin, ou importez le vôtre, et changez le nom affiché '
         + 'dans la foulée.'),
       h('p.petit.muted', 'Le pouvoir ne bouge pas : même symbole pour le moteur, même '

@@ -3,7 +3,7 @@
 
 export const SYMBOLES = {
   tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
-  vache: { id: 'vache', nom: 'Abri', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
+  vache: { id: 'vache', nom: 'Vache', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
   // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.
@@ -141,7 +141,7 @@ export const AIDE_MANCHE = {
   jetons: 'Règle de base : chaque Abri retourne un jeton de votre équipe, et la manche revient '
     + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
   sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche l’Abri. Le '
-    + 'premier joueur qui la sort arrête la manche sur-le-champ — son équipe prend la carte '
+    + 'premier joueur qui le sort arrête la manche sur-le-champ — son équipe prend la carte '
     + 'Tornade, et la manche suivante commence. Une attrape réussie emporte la manche de la '
     + 'même façon. Plus aucun jeton n’est compté ; c’est le nombre de cartes qui fait le '
     + 'vainqueur, quatre en général.',

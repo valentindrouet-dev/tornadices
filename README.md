@@ -521,14 +521,14 @@ tableau des combinaisons ne contient plus que les combinaisons de la Tornade.
 
 ## L’apparence des faces
 
-Le dé officiel porte un **réveil** sur la face bleue et une **tornade verte** sur
-la face verte — c’est l’habillage par défaut du site, défini par
+Le dé officiel porte un **réveil** sur la face bleue et un **abri** — une maison
+— sur la face verte : c’est l’habillage par défaut du site, défini par
 `APPARENCE_OFFICIELLE` dans `src/ui/apparence.js` :
 
-| Symbole (moteur) | Nom affiché | Illustration | Ancien dessin |
+| Symbole (moteur) | Nom affiché | Illustration | Autres modèles |
 |---|---|---|---|
-| `tornade` | Réveil | `reveil` | Tornade bleue |
-| `vache` | Tornade | `tornadeVerte` | Abri (la vache d’avant) |
+| `tornade` | Réveil | `reveil` | `''` — la tornade bleue d’avant |
+| `vache` | Abri | `abri` | `tornadeVerte`, puis `''` — la vache d’avant |
 
 Les **identifiants de symbole ne changent pas** : le moteur continue de parler de
 `tornade` et de `vache`, et toute règle ou configuration enregistrée sous
@@ -542,7 +542,7 @@ Trois états par face :
   explicitement l’ancien dessin ;
 - **l’entrée effacée** (bouton « Face officielle ») → retour à l’officielle.
 
-L’illustration est soit un modèle fourni (`reveil`, `tornadeVerte`), soit une
+L’illustration est soit un modèle fourni (`reveil`, `abri`, `tornadeVerte`), soit une
 image importée, stockée en `data:` dans le navigateur — le site reste autonome,
 aucune requête vers l’extérieur. Limite : 400 ko par image.
 

@@ -14,21 +14,22 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.42';
-import { SYMBOLES } from '../core/config.js?v=1.42';
+import { store } from './store.js?v=1.43';
+import { SYMBOLES } from '../core/config.js?v=1.43';
 
 /** Les seules faces personnalisables : les deux que le jeu met en avant. */
 export const FACES_PERSONNALISABLES = ['tornade', 'vache'];
 
 /**
  * L'apparence officielle du jeu — ce que le site montre sans aucun réglage.
- * La face bleue est un réveil, la face verte une tornade. Les identifiants de
- * symbole, eux, ne changent pas : le moteur continue de parler de « tornade »
- * et de « vache », et toutes les règles enregistrées restent valables.
+ * La face bleue est un réveil, la face verte un abri — une maison. Les
+ * identifiants de symbole, eux, ne changent pas : le moteur continue de parler
+ * de « tornade » et de « vache », et toutes les règles enregistrées restent
+ * valables.
  */
 export const APPARENCE_OFFICIELLE = {
   tornade: { nom: 'Réveil', image: 'reveil' },
-  vache: { nom: 'Tornade', image: 'tornadeVerte' },
+  vache: { nom: 'Abri', image: 'abri' },
 };
 
 /**
@@ -42,14 +43,16 @@ export const MODELES_FACE = {
     ['', 'Tornade (ancien dessin)'],
   ],
   vache: [
-    ['tornadeVerte', 'Tornade verte (officielle)'],
-    ['', 'Abri (ancien dessin)'],
+    ['abri', 'Abri (officiel)'],
+    ['tornadeVerte', 'Tornade verte'],
+    ['', 'Vache (premier dessin)'],
   ],
 };
 
 /** Nom proposé avec chaque illustration : le dessin et le nom vont ensemble. */
 export const NOM_MODELE = {
   reveil: 'Réveil',
+  abri: 'Abri',
   tornadeVerte: 'Tornade',
   '': null, // le dessin d'avant reprend le nom du symbole
 };

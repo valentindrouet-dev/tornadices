@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.42';
+export const VERSION = '1.43';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.43',
+    date: '18/08/2026',
+    notes: [
+      'La face verte porte désormais une maison : c’est l’Abri, et c’est le nouveau dé officiel du site. Elle est là dès l’ouverture, sur les dés comme dans tous les menus, sans rien à régler. Le dessin est au trait noir, comme le réveil de la face bleue, pour que les deux faces se répondent.',
+      'La tornade verte, officielle depuis la 1.37, reste proposée dans « Apparence des faces » — comme la vache du tout premier dessin, et comme votre propre image importée. Le nom suit le dessin choisi, et « Face officielle » remet le dé d’aplomb.',
+      'Rien ne change sous le capot : le moteur parle toujours de « vache », avec la même combinaison et le même effet. Une partie, une campagne, un réglage enregistrés restent valables au mot près.',
+    ],
+  },
   {
     version: '1.42',
     date: '18/08/2026',
