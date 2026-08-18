@@ -128,8 +128,12 @@ lancement de partie passent tous par là sans changer d’un mot.
 - **+ Nouveau** copie les réglages en cours dans un réglage nommé et le
   sélectionne. Tout ce qu’on modifie ensuite s’y enregistre, aux Réglages comme
   au Laboratoire ;
-- renommer se fait dans le champ, supprimer demande un second clic. Un nom vide
-  devient « Sans titre », un doublon prend un numéro ;
+- **renommer et supprimer restent derrière « Éditer »**, à côté de « + Nouveau » :
+  des gestes rares n'ont pas à encombrer un bandeau qu'on ne vient lire que pour
+  changer de réglage. La suppression demande un second clic, un nom vide devient
+  « Sans titre », un doublon prend un numéro. Le mode se referme dès qu'on
+  sélectionne un autre réglage — on clique une puce pour s'en servir, pas pour la
+  renommer ;
 - le Laboratoire garde sa propre copie de configuration : elle est refaite quand
   le réglage sélectionné change, jamais autrement — ce qu’on y règle pour une
   campagne ne se perd pas en changeant de page.

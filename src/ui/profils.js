@@ -12,8 +12,8 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.44';
-import { store } from './store.js?v=1.44';
+import { h } from './dom.js?v=1.45';
+import { store } from './store.js?v=1.45';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -134,6 +134,11 @@ export function selectionnerProfil(id) {
 // Le même bandeau en haut des Réglages et du Laboratoire : les deux pages lisent
 // les mêmes réglages, elles doivent en changer au même endroit.
 
+// Renommer et supprimer sont des gestes rares : ils restent derrière « Éditer »
+// plutôt que d'encombrer un bandeau qu'on ne vient lire que pour changer de
+// réglage. L'état n'est pas enregistré — le mode se referme au rechargement.
+let edition = false;
+
 /**
  * @param {function} apres  appelée après toute modification. Elle redessine la
  *   page — et c'est à elle de reconstruire ce qui dépend des réglages : le
@@ -143,14 +148,19 @@ export function barreProfils(apres) {
   const liste = profils();
   const actif = idActif();
   const courant = profilActif();
+  // Rien à éditer sous « Par défaut » : il n'a ni nom propre ni existence à
+  // supprimer. Le bouton disparaît plutôt que de s'afficher sans effet.
+  const editable = !!courant;
 
   const puce = (id, nom) => h('button', {
     class: `chip chip--profil${(id || null) === actif ? ' on' : ''}`,
     title: id ? `Passer sur « ${nom} »` : 'Les réglages libres du site, ceux qu’on modifie hors de tout réglage nommé',
-    onclick: () => { selectionnerProfil(id); apres(); },
+    // On clique une puce pour se servir du réglage, pas pour le renommer : le
+    // mode édition se referme, il ne suit pas d'un réglage à l'autre.
+    onclick: () => { selectionnerProfil(id); edition = false; apres(); },
   }, nom);
 
-  const supprimer = (() => {
+  const supprimer = !editable ? null : (() => {
     const b = h('button.btn.btn--petit.btn--danger', 'Supprimer');
     let arme = false;
     const desarmer = () => { arme = false; b.textContent = 'Supprimer'; b.classList.remove('btn--arme'); };
@@ -163,6 +173,9 @@ export function barreProfils(apres) {
         return;
       }
       supprimerProfil(courant.id);
+      // Après une suppression on retombe sur « Par défaut », qui n'a rien à
+      // éditer : le mode se referme de lui-même.
+      edition = false;
       apres();
     };
     return b;
@@ -172,6 +185,14 @@ export function barreProfils(apres) {
     h('div.rangee',
       h('div.titre-section', { style: { margin: 0 } }, 'Réglages enregistrés'),
       h('div.pousse'),
+      editable
+        ? h('button.btn.btn--petit', {
+            title: edition
+              ? 'Refermer le renommage et la suppression'
+              : `Renommer ou supprimer « ${courant.nom} »`,
+            onclick: () => { edition = !edition; apres(); },
+          }, edition ? 'Terminé' : 'Éditer')
+        : null,
       h('button.btn.btn--petit', {
         title: 'Copier les réglages en cours dans un nouveau réglage, à nommer',
         onclick: () => { creerProfil(`Réglage ${profils().length + 1}`); apres(); },
@@ -181,7 +202,7 @@ export function barreProfils(apres) {
       puce(null, 'Par défaut'),
       ...liste.map((p) => puce(p.id, p.nom)),
     ),
-    courant
+    editable && edition
       ? h('div.rangee', { style: { marginTop: '10px' } },
           h('label.champ', { style: { flex: '1 1 220px' } }, 'Nom',
             h('input', {

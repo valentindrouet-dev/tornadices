@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.44';
+export const VERSION = '1.45';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.45',
+    date: '18/08/2026',
+    notes: [
+      'Le renommage et la suppression d’un réglage enregistré passent derrière un bouton « Éditer », à côté de « + Nouveau ». Le bandeau ne montre plus que ce qu’on vient y chercher : la liste des réglages et celui qui est en cours. « Terminé » referme, et le mode se referme aussi dès qu’on sélectionne un autre réglage — on clique une puce pour s’en servir, pas pour la renommer.',
+      'Le bouton n’apparaît pas sous « Par défaut » : il n’a ni nom propre ni existence à supprimer, un bouton sans effet n’avait rien à faire là.',
+    ],
+  },
   {
     version: '1.44',
     date: '18/08/2026',
