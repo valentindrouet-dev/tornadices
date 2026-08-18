@@ -7,7 +7,7 @@
 //     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
 //     nombre de X déjà figés.
 
-import { comboServie, remplacements } from './config.js?v=1.34';
+import { comboServie, remplacements } from './config.js?v=1.35';
 
 const facto = [1];
 function fact(n) {
@@ -80,7 +80,7 @@ export function loiBinomiale(faces, nbDes, symbole) {
  * @param {string}   opts.bloquant       symbole qui fige le dé (défaut « x »)
  * @param {number}   opts.seuilBloquant  nombre de symboles figés qui rendent le lot
  * @param {object[]} opts.arretsForces   autres combinaisons qui rendent le lot d'office
- * @param {boolean}  opts.prioritaire    combinaison de carte Journée : passe avant tout
+ * @param {boolean}  opts.prioritaire    combinaison de carte Tornade : passe avant tout
  * @param {boolean}  opts.estArretForce  la combinaison recherchée est elle-même obligatoire
  */
 export function courseCombinaison(faces, nbDes, requis, opts = {}) {

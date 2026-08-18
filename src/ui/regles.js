@@ -1,10 +1,13 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.34';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.34';
+import { h } from './dom.js?v=1.35';
 import {
-  COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.34';
+  pastilleSymbole, suiteSymboles, emblemeEquipe,
+  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
+} from './icons.js?v=1.35';
+import {
+  COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA, COULEURS_EQUIPE,
+} from '../core/config.js?v=1.35';
 
 export function vueRegles() {
   return h('div.page',
@@ -30,7 +33,7 @@ export function vueRegles() {
         + 'premier parti. Rien ne rebondit plus sur le voisin — c’est le joueur lent qui '
         + 'accumule, et il peut se retrouver avec toute la table sur les bras.'),
       h('p.petit.muted', 'Entre deux manches, les dés reviennent au centre de la table puis '
-        + 'repartent vers l’équipe qui vient de perdre, pendant que la carte Journée suivante '
+        + 'repartent vers l’équipe qui vient de perdre, pendant que la carte Tornade suivante '
         + 'recouvre la précédente.'),
     ),
 
@@ -42,10 +45,22 @@ export function vueRegles() {
         + 'combinaison… ou jusqu’à ce que deux X figent ses dés et lui fassent rendre le lot. '
         + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
       h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Vache. '
-        + 'La première à réunir le nombre requis de cartes Journée gagne la partie. '
+        + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
         + 'Le sens de circulation s’inverse à chaque manche.'),
       h('p.petit.muted', 'Les Réglages proposent une seconde façon de compter, « sans les '
         + 'points » : la première vache arrête la manche. Elle est décrite plus bas.'),
+      // Chaque équipe a son emblème : c'est ainsi qu'on les nomme à la table.
+      h('div.grille.grille--3', { style: { marginTop: '14px' } },
+        ...Object.values(COULEURS_EQUIPE).map((e) => h('div.stat',
+          h('div.rangee.rangee--serree',
+            emblemeEquipe(e.embleme, 30),
+            h('strong', { style: { color: e.hex } }, e.emblemeNom)),
+          h('div.sous', { style: { marginTop: '6px' } },
+            e.id === 'vert'
+              ? 'Le joueur Vert, seul contre les deux équipes.'
+              : `L’équipe ${e.nom.toLowerCase()}.`),
+        )),
+      ),
     ),
 
     h('div.carte',
@@ -179,10 +194,10 @@ export function vueRegles() {
     ),
 
     h('div.carte',
-      h('div.titre-section', 'Les cartes Journée'),
+      h('div.titre-section', 'Les cartes Tornade'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...CARTES_JOURNEE.map((c) => h('tr',
+        h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
           h('td', c.combo
             ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
@@ -217,11 +232,49 @@ export function vueRegles() {
     ),
 
     h('div.carte',
+      h('div.titre-section', 'Des combinaisons propres au Vert'),
+      h('p.petit', 'Le Vert joue seul contre deux équipes. Les Réglages permettent de lui donner '
+        + 'ses propres exigences : cochez « Combinaisons du Vert à part » et chaque ligne du '
+        + 'tableau se dédouble — celle des Bleus et des Jaunes, puis celle du Vert.'),
+      h('p.petit.muted', 'Deux vaches au lieu de trois pour se réveiller plus vite, quatre pour '
+        + 'l’alourdir : tout est réglable ligne par ligne, cartes comprises. Décochez la case et '
+        + 'la table redevient strictement symétrique — c’est la référence, et le réglage part '
+        + 'décoché.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Une ligne du Vert laissée identique à celle des deux équipes ne change rien : c’est '
+        + 'l’écart qui compte. Le Laboratoire mesure l’effet en une campagne.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'Réveillé seulement'),
+      h('p.petit', 'Le tableau des combinaisons porte une colonne « Réveillé ». Cochée, la '
+        + 'combinaison ne sort plus que Tornade éveillée — et la table le montre : les '
+        + 'combinaisons y sont rangées en deux listes, celles qu’on peut jouer en dormant et '
+        + 'celles qui demandent d’être réveillé.'),
+      h('p.petit.muted', 'Décochée, la combinaison reprend sa condition d’origine. Le Réveil '
+        + 'reste donc réservé au dormeur : sans quoi on ne pourrait plus jamais se réveiller.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'La table n’affiche que les combinaisons que le dé peut produire. Sans face joker, '
+        + '« Trois jokers » n’est pas une règle en sommeil : c’est une ligne morte, et elle '
+        + 'disparaît de la liste.'),
+    ),
+
+    h('div.carte',
+      h('div.titre-section', 'L’apparence des faces'),
+      h('p.petit', 'Deux faces se réhabillent quand on veut, dans les Réglages : la Tornade et '
+        + 'la Vache. On choisit un modèle fourni — un réveil, une tornade verte — ou l’on importe '
+        + 'son propre dessin, et l’on change le nom affiché dans la foulée.'),
+      h('p.petit.muted', 'Le pouvoir ne bouge pas : même symbole pour le moteur, même '
+        + 'combinaison, même effet. Seuls l’illustration et le nom changent, partout sur le '
+        + 'site — dans les menus, sur les dés, dans les listes de combinaisons.'),
+    ),
+
+    h('div.carte',
       h('div.titre-section', 'La version sans les points'),
       h('p.petit', 'Une seconde façon de jouer une manche, à choisir dans les Réglages. Les '
         + 'jetons sortent du jeu : on se réveille aux trois tornades, puis on cherche les trois '
         + 'vaches, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
-        + 'prend la carte Journée, et la manche suivante commence.'),
+        + 'prend la carte Tornade, et la manche suivante commence.'),
       h('p.petit.muted', 'Tout le reste tient : le dé, les combinaisons, l’attrape, le rythme, '
         + 'les X qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le '
         + 'vainqueur, quatre en général au lieu de trois.'),
@@ -231,7 +284,7 @@ export function vueRegles() {
         + 'deux mains, sortir la Vache ou attraper celui qui allait la sortir. Le réglage « Ce '
         + 'que rapporte l’attrape » démarre donc sur « Manche gagnée », et reste modifiable.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Certaines cartes Journée manipulent les jetons : dans ce mode, elles ne font rien de '
+        'Certaines cartes Tornade manipulent les jetons : dans ce mode, elles ne font rien de '
         + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '
         + 'Vert est seul contre tous — « Cartes du Vert » est là pour le remettre à niveau.'),
     ),

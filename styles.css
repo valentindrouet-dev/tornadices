@@ -1145,3 +1145,28 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
      La carte et la pioche aussi gardent leur place côte à côte. */
   .coin--scores .score-equipe { flex: 1 1 100%; }
 }
+
+/* ── Apparence des faces ──────────────────────────────────────────────────── */
+/* Le bloc qui réhabille une face : aperçu, nom, modèle, import. */
+.carte-face {
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  background: var(--fond-doux);
+  padding: 14px;
+}
+
+/* Emblème d'équipe : les vaches, les poules, le cowboy. */
+.embleme { display: inline-block; flex: none; line-height: 0; }
+.embleme svg { width: 100%; height: 100%; display: block; }
+
+/* La colonne « Réveillé » du tableau des combinaisons : une case, rien de plus. */
+.col-reveil { width: 74px; }
+.cellule-reveil { text-align: center; }
+.chip--case { padding: 4px 6px; gap: 0; }
+/* La ligne du Vert, sous celle des deux équipes, quand l'asymétrie est en jeu. */
+.ligne-vert > td { background: color-mix(in srgb, var(--vert, #46b25e) 8%, transparent); }
+/* Un champ chiffré posé dans un tableau d'aperçu : discret, mais éditable. */
+.champ-mini {
+  width: 68px; text-align: right; padding: 4px 8px;
+  font-size: 13px; font-weight: 700;
+}

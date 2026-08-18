@@ -10,14 +10,15 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.34';
+import { makeRng } from './rng.js?v=1.35';
 import {
-  CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
+  CARTES_TORNADE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
-} from './config.js?v=1.34';
+  requisPourEquipe, cartesEnJeu, requisCarte,
+} from './config.js?v=1.35';
 
-const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
+const CARTES_PAR_ID = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c]));
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -58,7 +59,11 @@ class FileEvenements {
 
 function statsVides() {
   return {
-    lancers: 0, passes: 0, combos: {}, collisionsTentees: 0, collisionsReussies: 0,
+    // `combos` compte tout ; `combosCartes` isole celles des cartes Tornade, qui
+    // ne se jouent qu'une manche sur douze et n'ont donc rien à voir avec les
+    // fréquences des combinaisons de base.
+    lancers: 0, passes: 0, combos: {}, combosCartes: {},
+    collisionsTentees: 0, collisionsReussies: 0,
     foisTouche: 0, foisEndormi: 0, jetonsRetournes: 0, erreurs: 0,
     tempsAvecLot: 0, reveils: 0, jetonsParSource: {},
   };
@@ -157,9 +162,8 @@ export class Moteur {
   }
 
   _initPioche() {
-    const ids = this.cfg.cartes && this.cfg.cartes.length
-      ? this.cfg.cartes.slice()
-      : CARTES_JOURNEE.map((c) => c.id);
+    // Le paquet dépend du mode : chaque mode a le sien, réglé à part.
+    const ids = cartesEnJeu(this.cfg).slice();
     const cartes = ids
       .map((id) => CARTES_PAR_ID[id])
       .filter(Boolean)
@@ -174,6 +178,7 @@ export class Moteur {
   // ── Manches ─────────────────────────────────────────────────────────────────
   _demarrerManche(premiere = false) {
     this.manche += 1;
+    this._comboCarteManche = 0;
     if (!premiere) this.sens = -this.sens;
     this.debutManche = this.now;
     this.carte = this.pioche[0] || null;
@@ -522,7 +527,9 @@ export class Moteur {
     const servie = (requis) => !exigenceVide(requis) && comboServie(c, requis);
 
     for (const combo of this.cfg.combos) {
-      if (!servie(combo.requis)) continue;
+      // Le Vert peut avoir ses propres exigences, quand l'asymétrie est en jeu.
+      const requis = requisPourEquipe(this.cfg, combo.id, combo.requis, j.equipe);
+      if (!servie(requis)) continue;
       if (combo.face === 'endormie' && j.eveille) continue;
       if (combo.face === 'active' && !j.eveille) continue;
       if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
@@ -533,11 +540,16 @@ export class Moteur {
       // le lot sans rien tenter.
       if (combo.id === 'collision' && this.cfg.attrapeSur === 'echec') continue;
       if (combo.id === 'collision' && !this._suivant(j).lots.length) continue;
-      out.push({ id: combo.id, source: 'tornade', combo, obligatoire: !!combo.obligatoire });
+      out.push({
+        id: combo.id, source: 'tornade',
+        combo: requis === combo.requis ? combo : { ...combo, requis },
+        obligatoire: !!combo.obligatoire,
+      });
     }
     if (this.carte && this.carte.combo) {
-      const requis = (this.cfg.combosCartes && this.cfg.combosCartes[this.carte.combo.id])
-        || this.carte.combo.requis;
+      const requis = requisPourEquipe(
+        this.cfg, this.carte.combo.id, requisCarte(this.cfg, this.carte.combo), j.equipe,
+      );
       if (servie(requis)) {
         out.push({
           id: this.carte.combo.id, source: 'journee',
@@ -766,6 +778,13 @@ export class Moteur {
     j.departEnAttente = null;
     j.fige = false;
     if (dispo) j.stats.combos[dispo.id] = (j.stats.combos[dispo.id] || 0) + 1;
+    // La combinaison de la carte se compte à part : c'est la seule façon de
+    // savoir à quelle fréquence une carte est réellement réalisée, sans la
+    // confondre avec les combinaisons de base qui sortent en même temps.
+    if (dispo && dispo.source === 'journee') {
+      this._comboCarteManche += 1;
+      j.stats.combosCartes[dispo.id] = (j.stats.combosCartes[dispo.id] || 0) + 1;
+    }
     const q = this._envoyerLot(j, lot, motif, dispo);
     if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
 
@@ -1060,7 +1079,7 @@ export class Moteur {
   _retournerJeton(j, n = 1, source = 'vache') {
     // Manche « sans les points » : rien ne se compte. La combinaison qui aurait
     // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
-    // carte Journée. L'attrape ne passe plus par ici — elle emporte la manche
+    // carte Tornade. L'attrape ne passe plus par ici — elle emporte la manche
     // depuis `_resoudreAttrape` — mais la garde reste : rien ne doit pouvoir
     // gagner une manche au nom d'un jeton qui n'existe pas.
     if (this.cfg.sansPoints) {
@@ -1122,6 +1141,9 @@ export class Moteur {
     this.statsManches.push({
       manche: this.manche,
       carte: carte ? carte.id : null,
+      // Combien de fois la combinaison de la carte a été réalisée pendant la
+      // manche où elle était en jeu : c'est de là que sort son taux de sortie.
+      comboCarte: this._comboCarteManche,
       vainqueur: equipeId,
       duree,
       compte,
@@ -1213,7 +1235,7 @@ export class Moteur {
     this.transits = [];
     this._log(
       equipeId
-        ? `Fin de partie — ${this._nomEquipe(equipeId)} l’emportent avec ${this.equipes[equipeId].cartes.length} cartes Journée.`
+        ? `Fin de partie — ${this._nomEquipe(equipeId)} l’emportent avec ${this.equipes[equipeId].cartes.length} cartes Tornade.`
         : 'Fin de partie sans vainqueur.',
       'fin',
     );

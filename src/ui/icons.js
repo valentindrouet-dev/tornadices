@@ -3,6 +3,8 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
+import { imageSymbole } from './apparence.js?v=1.35';
+
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
 
@@ -112,6 +114,41 @@ export const SVG_GLYPHE = {
   jokerDouble: FACE_JOKER_DOUBLE,
 };
 
+// ── Emblèmes d'équipe ────────────────────────────────────────────────────────
+// Les Bleus sont les vaches, les Jaunes les poules, le Vert est le cowboy.
+// Dessinés dans le même trait que les faces de dés, sans pastille : ils se
+// posent à côté d'un nom d'équipe, à la taille du texte.
+const GLYPHE_POULE = `<g fill="${NOIR}">
+    <path d="M50 20c-6 0-10.6 3.6-12.4 8.6-9.6 3.2-16.6 12-16.6 22.4 0 6.4 2.6 12.2 6.8 16.4L23 82h11l3.4-9.6c3.8 1.8 8 2.8 12.6 2.8 4.6 0 8.8-1 12.6-2.8L66 82h11l-4.8-14.6c4.2-4.2 6.8-10 6.8-16.4 0-10.4-7-19.2-16.6-22.4C60.6 23.6 56 20 50 20z"/>
+    <path d="M50 8c3 0 5 2.4 5 5.4 0 2-1 3.6-2.6 4.6 2.6.6 4.6 2 5.8 4-2.6-1-5.6-1.6-8.2-1.6s-5.6.6-8.2 1.6c1.2-2 3.2-3.4 5.8-4-1.6-1-2.6-2.6-2.6-4.6C45 10.4 47 8 50 8z" fill="#e2000f"/>
+    <circle cx="42" cy="42" r="3.6" fill="#fff"/>
+    <circle cx="58" cy="42" r="3.6" fill="#fff"/>
+    <circle cx="42" cy="42.6" r="2" />
+    <circle cx="58" cy="42.6" r="2" />
+    <path d="M44 52h12l-6 8z" fill="#f9b115"/>
+  </g>`;
+
+const GLYPHE_COWBOY = `<g fill="${NOIR}">
+    <path d="M50 16c-7.6 0-13.6 4.4-16 11-6.4 1-11 3.4-11 6.4 0 4.4 12.2 8 27 8s27-3.6 27-8c0-3-4.6-5.4-11-6.4-2.4-6.6-8.4-11-16-11z"/>
+    <path d="M34 44.5c1 10.4 7.6 18 16 18s15-7.6 16-18c-4.6 1.2-10.2 1.9-16 1.9s-11.4-.7-16-1.9z"/>
+    <path d="M50 66c-11 0-20 6.4-22 15.6-.5 2.4 1.4 4.4 3.9 4.4h36.2c2.5 0 4.4-2 3.9-4.4C70 72.4 61 66 50 66z"/>
+  </g>`;
+
+export const SVG_EMBLEME = {
+  vache: svg(GLYPHES.vache),
+  poule: svg(GLYPHE_POULE),
+  cowboy: svg(GLYPHE_COWBOY),
+};
+
+/** Emblème d'équipe, à poser à côté d'un nom. */
+export function emblemeEquipe(nom, taille = 20) {
+  const s = document.createElement('span');
+  s.className = 'embleme';
+  s.style.width = s.style.height = `${taille}px`;
+  s.innerHTML = SVG_EMBLEME[nom] || '';
+  return s;
+}
+
 export const SVG_TORNADE_EVEILLEE = svg(`
   <g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round">
     <ellipse cx="50" cy="27.5" rx="25" ry="9.5"/>
@@ -144,6 +181,52 @@ export const SVG_LOGO = `
     </g>
   </svg>`;
 
+// ── Faces personnalisables ───────────────────────────────────────────────────
+// Modèles d'illustration fournis pour la Tornade et la Vache. Même pastille,
+// même diamètre, même trait noir : seul le pictogramme change, pour que la face
+// reste lisible à côté des autres.
+
+// Un réveil, sur le bleu de la Tornade.
+const FACE_REVEIL = face(COULEUR_FACE.tornade, `
+  <g fill="none" stroke="${NOIR}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="50" cy="55" r="27"/>
+    <path d="M28 26c-5 2-8.5 7-9 12.5 4-4 9-6.5 14-7z" fill="${NOIR}"/>
+    <path d="M72 26c5 2 8.5 7 9 12.5-4-4-9-6.5-14-7z" fill="${NOIR}"/>
+    <path d="M50 22v6"/>
+    <path d="M31 79l-5 7"/>
+    <path d="M69 79l5 7"/>
+    <path d="M50 40v15l10 8"/>
+  </g>
+  <g fill="${NOIR}">
+    <circle cx="50" cy="33" r="2.6"/><circle cx="67" cy="40" r="2.6"/>
+    <circle cx="72" cy="55" r="2.6"/><circle cx="50" cy="77" r="2.6"/>
+    <circle cx="28" cy="55" r="2.6"/><circle cx="33" cy="40" r="2.6"/>
+  </g>`);
+
+// La tornade, sur le vert de la Vache.
+const FACE_TORNADE_VERTE = face(COULEUR_FACE.vache, GLYPHES.tornade);
+
+const MODELES_DESSIN = { reveil: FACE_REVEIL, tornadeVerte: FACE_TORNADE_VERTE };
+
+/**
+ * Le dessin d'une face, personnalisation comprise : un modèle fourni, une image
+ * importée, ou le dessin d'origine. Une image importée est posée dans un cercle
+ * découpé, pour qu'elle prenne la forme d'une face quelle que soit la photo.
+ */
+export function dessinFace(sym) {
+  const choix = imageSymbole(sym);
+  if (!choix) return SVG_SYMBOLE[sym] || '';
+  if (MODELES_DESSIN[choix]) return MODELES_DESSIN[choix];
+  // Une image importée : `data:` uniquement, jamais une adresse distante — le
+  // site doit rester entièrement autonome, sans requête vers l'extérieur.
+  if (!/^data:image\//.test(choix)) return SVG_SYMBOLE[sym] || '';
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs><clipPath id="c-${sym}"><circle cx="50" cy="50" r="43"/></clipPath></defs>
+      <image href="${choix}" x="7" y="7" width="86" height="86"
+        preserveAspectRatio="xMidYMid slice" clip-path="url(#c-${sym})"/>
+    </svg>`;
+}
+
 /** Un dé rendu comme une face de dé physique. */
 export function faceDe(symbole, options = {}) {
   const { verrou = false, taille = 'moyen', roule = false } = options;
@@ -158,7 +241,7 @@ export function faceDe(symbole, options = {}) {
     div.innerHTML = SVG_ROULANT;
     div.title = 'Le dé roule…';
   } else if (symbole) {
-    div.innerHTML = SVG_SYMBOLE[symbole] || '';
+    div.innerHTML = dessinFace(symbole);
     if (verrou) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
     else if (symbole === 'joker') div.title = 'Joker — il prend la face de votre choix, sauf le X';
     else if (symbole === 'jokerDouble') div.title = 'Joker limité à l’éclair et au ZzZ';
@@ -175,7 +258,7 @@ export function pastilleSymbole(symbole, taille = 22) {
   s.className = 'pastille-sym';
   s.dataset.sym = symbole;
   s.style.width = s.style.height = `${taille}px`;
-  s.innerHTML = SVG_SYMBOLE[symbole] || '';
+  s.innerHTML = dessinFace(symbole);
   return s;
 }
 

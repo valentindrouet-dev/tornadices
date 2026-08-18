@@ -1,4 +1,4 @@
-// Toute la matière réglable du jeu : symboles, dés, combinaisons, cartes Journée,
+// Toute la matière réglable du jeu : symboles, dés, combinaisons, cartes Tornade,
 // tableau de mise en place et profils de joueurs. Le moteur ne connaît rien d'autre.
 
 export const SYMBOLES = {
@@ -129,7 +129,7 @@ export const AIDE_DECLENCHEUR = {
 //
 // « sansPoints » — on ne compte plus rien : il faut se réveiller puis sortir la
 // combinaison Vache, et le premier qui y arrive arrête la manche sur-le-champ.
-// Son équipe prend la carte Journée, et l'on recommence. Une attrape réussie
+// Son équipe prend la carte Tornade, et l'on recommence. Une attrape réussie
 // emporte la manche de la même façon — sans jeton à prendre, elle n'aurait plus
 // rien à rapporter. C'est le nombre de cartes qui fait la partie.
 export const OPTIONS_MANCHE = [
@@ -142,7 +142,7 @@ export const AIDE_MANCHE = {
     + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
   sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche la Vache. Le '
     + 'premier joueur qui la sort arrête la manche sur-le-champ — son équipe prend la carte '
-    + 'Journée, et la manche suivante commence. Une attrape réussie emporte la manche de la '
+    + 'Tornade, et la manche suivante commence. Une attrape réussie emporte la manche de la '
     + 'même façon. Plus aucun jeton n’est compté ; c’est le nombre de cartes qui fait le '
     + 'vainqueur, quatre en général.',
 };
@@ -170,6 +170,58 @@ export function attrapeEmporteManche(cfg) {
   return cfg.attrapeGagneManche === 'touche';
 }
 
+/**
+ * L'exigence d'une combinaison pour une équipe donnée. Le Vert joue seul contre
+ * deux équipes : l'asymétrie permet de lui demander autre chose — plus, moins,
+ * ou d'autres faces — sans toucher aux Bleus ni aux Jaunes. Décochée, la table
+ * redevient strictement symétrique, ce qui reste la référence.
+ */
+export function requisPourEquipe(cfg, comboId, requisBase, equipe) {
+  if (equipe !== 'vert' || !cfg.combosAsymetriques) return requisBase;
+  const propre = cfg.combosVert && cfg.combosVert[comboId];
+  return propre && Object.keys(propre).length ? propre : requisBase;
+}
+
+/**
+ * Une combinaison ne peut sortir que si le dé porte les faces qu'elle demande —
+ * jokers compris. Sans face joker, « Trois jokers » n'est pas une règle, c'est
+ * une ligne morte : autant ne pas l'annoncer à la table.
+ */
+export function comboPossible(faces, requis) {
+  if (!requis || !Object.keys(requis).length) return false;
+  const dispo = new Set(faces || []);
+  const jokers = [...dispo].filter((f) => SYMBOLES[f] && SYMBOLES[f].joker);
+  return Object.keys(requis).every((sym) => dispo.has(sym)
+    || jokers.some((j) => (SYMBOLES[j].joker || []).includes(sym)));
+}
+
+// ── Cartes Tornade : une version par mode de jeu ─────────────────────────────
+// Le paquet et les exigences se règlent séparément pour « Retourner tous les
+// jetons » et pour « Sans les points » : une carte qui manipule les jetons n'a
+// pas le même sens dans les deux, et certaines n'y ont plus leur place.
+
+/** La clé de réglage du paquet, selon le mode en cours. */
+export function clePaquet(cfg) {
+  return cfg.sansPoints ? 'cartesSansPoints' : 'cartes';
+}
+
+/** La clé de réglage des exigences de cartes, selon le mode en cours. */
+export function cleCombosCartes(cfg) {
+  return cfg.sansPoints ? 'combosCartesSansPoints' : 'combosCartes';
+}
+
+/** Les cartes en jeu dans le mode en cours. */
+export function cartesEnJeu(cfg) {
+  const liste = cfg[clePaquet(cfg)];
+  return Array.isArray(liste) && liste.length ? liste : CARTES_TORNADE.map((c) => c.id);
+}
+
+/** L'exigence d'une combinaison de carte dans le mode en cours. */
+export function requisCarte(cfg, combo) {
+  const table = cfg[cleCombosCartes(cfg)];
+  return (table && table[combo.id]) || combo.requis;
+}
+
 // Qui prend les dés à la première manche. La règle du jeu dit les Jaunes ; les
 // deux autres entrées servent à voir ce que change le premier tour de table.
 export const EQUIPES_DEPART = ['jaune', 'bleu', 'vert'];
@@ -190,7 +242,7 @@ export const AIDE_EQUIPE_DEPART = {
 };
 
 /**
- * Ce que le mode de jeu fait — ou défait — à une carte Journée. Sans les points,
+ * Ce que le mode de jeu fait — ou défait — à une carte Tornade. Sans les points,
  * celles qui manipulent les jetons n'ont plus le même sens : autant le dire sur
  * la carte, dans les Réglages comme au Laboratoire, plutôt que de laisser
  * découvrir en partie qu'elle ne sert à rien.
@@ -271,11 +323,28 @@ export function assainirConfig(cfg) {
   // règle du jeu plutôt que de laisser la manche sans porteur.
   if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
   sortie.variance = Math.min(0.5, Math.max(0, Number(cfg.variance) || 0));
-  sortie.combos = (Array.isArray(cfg.combos) ? cfg.combos : base.combos)
-    .map((c) => ({ ...c, requis: assainirRequis(c.requis) }));
-  if (cfg.combosCartes && typeof cfg.combosCartes === 'object') {
-    sortie.combosCartes = Object.fromEntries(Object.entries(cfg.combosCartes)
-      .map(([id, requis]) => [id, assainirRequis(requis)]));
+  // On repart de la liste de référence et l'on y pose les seuils enregistrés :
+  // une combinaison apparue depuis — ou disparue d'une configuration ancienne,
+  // comme l'Attaque au Laboratoire — revient au lieu de manquer sans bruit.
+  const enregistrees = new Map(
+    (Array.isArray(cfg.combos) ? cfg.combos : []).map((c) => [c.id, c]),
+  );
+  sortie.combos = base.combos.map((c) => {
+    const garde = enregistrees.get(c.id);
+    return {
+      ...c,
+      requis: assainirRequis(garde ? garde.requis : c.requis),
+      // « Réveillé seulement » se règle à la main : on garde le choix enregistré.
+      face: garde && garde.face ? garde.face : c.face,
+    };
+  });
+  // Les trois tables d'exigences enregistrées — cartes par mode, et le Vert —
+  // passent par la même retraduction que les combinaisons de la Tornade.
+  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosVert']) {
+    if (cfg[cle] && typeof cfg[cle] === 'object') {
+      sortie[cle] = Object.fromEntries(Object.entries(cfg[cle])
+        .map(([id, requis]) => [id, assainirRequis(requis)]));
+    }
   }
   return sortie;
 }
@@ -303,17 +372,6 @@ export function facesPourDe(nbFaces, base = FACES_PAR_DEFAUT) {
   return Array.from({ length: nbFaces }, (_, i) => modele[i % modele.length]);
 }
 
-// Répartitions de rechange, proposées au Laboratoire seulement : les réglages
-// de partie s'en tiennent au dé officiel, face par face.
-export const PRESETS_FACES = [
-  { nom: 'Officiel', faces: FACES_PAR_DEFAUT },
-  { nom: 'Joker et éclair', faces: FACES_JOKER_ECLAIR },
-  { nom: 'Avec éclair', faces: ['tornade', 'tornade', 'x', 'vache', 'zzz', 'eclair'] },
-  { nom: 'Avec joker', faces: ['tornade', 'joker', 'x', 'vache', 'zzz', 'zzz'] },
-  { nom: 'Joker double', faces: ['tornade', 'joker', 'x', 'jokerDouble', 'vache', 'eclair'] },
-  { nom: 'Symétrique', faces: ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'] },
-  { nom: 'Orageux (2 X)', faces: ['tornade', 'tornade', 'x', 'x', 'vache', 'zzz'] },
-];
 
 // ── Combinaisons de la carte Tornade ──────────────────────────────────────────
 // `requis` : nombre de dés de chaque symbole. `face` : côté de la carte requis.
@@ -374,10 +432,10 @@ export const COMBOS_TORNADE = [
   },
 ];
 
-// ── Cartes Journée ────────────────────────────────────────────────────────────
+// ── Cartes Tornade ────────────────────────────────────────────────────────────
 // `combo` : combinaison supplémentaire ouverte pour la manche.
 // `effetPassif` : modificateur appliqué à tous les joueurs pendant la manche.
-export const CARTES_JOURNEE = [
+export const CARTES_TORNADE = [
   {
     id: 'chauffe',
     court: 'Jour de chauffe',
@@ -411,6 +469,9 @@ export const CARTES_JOURNEE = [
     texte: 'Replacez un jeton adverse face cachée',
     combo: { id: 'sansVent', requis: { vache: 2, zzz: 2 }, effet: 'cacherJetonAdverse' },
     effetPassif: null,
+    // Sans les points il n'y a plus de jeton à recacher : la carte ne ferait
+    // rien du tout. Elle sort du paquet de ce mode, réactivable à la main.
+    inerteSansPoints: true,
   },
   {
     id: 'maladresse',
@@ -589,10 +650,21 @@ export const PROFIL_HUMAIN = {
   reflexe: 800, ecartReflexe: 250, adresse: 0.55, esquive: 0.55, erreur: 0.04,
 };
 
+// Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes les
+// poules, et le Vert — seul contre les deux — est le cowboy.
 export const COULEURS_EQUIPE = {
-  bleu: { id: 'bleu', nom: 'Bleus', hex: '#3aa9f2', clair: '#e3f1fc' },
-  jaune: { id: 'jaune', nom: 'Jaunes', hex: '#e8b21f', clair: '#fdf3d8' },
-  vert: { id: 'vert', nom: 'Vert', hex: '#46b25e', clair: '#e4f5e9' },
+  bleu: {
+    id: 'bleu', nom: 'Bleus', hex: '#3aa9f2', clair: '#e3f1fc',
+    embleme: 'vache', emblemeNom: 'Vaches', emblemeUn: 'Vache',
+  },
+  jaune: {
+    id: 'jaune', nom: 'Jaunes', hex: '#e8b21f', clair: '#fdf3d8',
+    embleme: 'poule', emblemeNom: 'Poules', emblemeUn: 'Poule',
+  },
+  vert: {
+    id: 'vert', nom: 'Vert', hex: '#46b25e', clair: '#e4f5e9',
+    embleme: 'cowboy', emblemeNom: 'Cowboy', emblemeUn: 'Cowboy',
+  },
 };
 
 // ── Configuration complète par défaut ─────────────────────────────────────────
@@ -632,7 +704,17 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
       .map((c) => ({ ...c, requis: { ...c.requis } })),
-    cartes: CARTES_JOURNEE.map((c) => c.id),
+    // Le paquet et les exigences des cartes se règlent par mode : « Jour sans
+    // vent » n'a plus d'effet sans les points, autant ne pas l'y laisser.
+    cartes: CARTES_TORNADE.map((c) => c.id),
+    cartesSansPoints: CARTES_TORNADE
+      .filter((c) => !c.inerteSansPoints)
+      .map((c) => c.id),
+    combosCartesSansPoints: {},
+    // Le Vert joue seul contre deux équipes : on peut lui demander autre chose.
+    // Décochée, la table est strictement symétrique — c'est la référence.
+    combosAsymetriques: false,
+    combosVert: {},
     lots: mep.lots,
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,
@@ -678,7 +760,7 @@ export function symbolesPertinents(cfg) {
     for (const [s, n] of Object.entries(requis || {})) if (n > 0) vus.add(s);
   };
   for (const c of cfg.combos || []) ajouter(c.requis);
-  for (const carte of CARTES_JOURNEE) {
+  for (const carte of CARTES_TORNADE) {
     if (!carte.combo) continue;
     ajouter((cfg.combosCartes && cfg.combosCartes[carte.combo.id]) || carte.combo.requis);
   }

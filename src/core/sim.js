@@ -1,9 +1,9 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.34';
-import { CARTES_JOURNEE } from './config.js?v=1.34';
+import { Moteur } from './engine.js?v=1.35';
+import { CARTES_TORNADE } from './config.js?v=1.35';
 
-const NOM_CARTE = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c.nom]));
+const NOM_CARTE = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c.nom]));
 
 function quantile(tri, q) {
   if (!tri.length) return 0;
@@ -29,6 +29,8 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
   const parSiege = [];
   const parProfil = {};
   const combos = {};
+  const combosBase = {};
+  const combosCartes = {};
   const jetonsParSource = {};
   const parCarte = {};
   let collisionsTentees = 0, collisionsReussies = 0, lancersTotal = 0;
@@ -51,9 +53,17 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
     for (const sm of r.statsManches) {
       dureesManche.push(sm.duree);
       const c = sm.carte || 'aucune';
-      const e = parCarte[c] || (parCarte[c] = { id: c, nom: NOM_CARTE[c] || c, jouee: 0, dureeTotale: 0, vainqueurs: {} });
+      const e = parCarte[c] || (parCarte[c] = {
+        id: c, nom: NOM_CARTE[c] || c, jouee: 0, dureeTotale: 0, vainqueurs: {},
+        // Réalisations de la combinaison de la carte, et manches où elle est
+        // sortie au moins une fois : c'est le taux de sortie de la carte, à ne
+        // pas confondre avec la fréquence des combinaisons de base.
+        realisations: 0, manchesRealisee: 0,
+      });
       e.jouee++;
       e.dureeTotale += sm.duree;
+      e.realisations += sm.comboCarte || 0;
+      if (sm.comboCarte) e.manchesRealisee++;
       e.vainqueurs[sm.vainqueur || 'aucun'] = (e.vainqueurs[sm.vainqueur || 'aucun'] || 0) + 1;
     }
 
@@ -75,7 +85,15 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
       p.lancers += j.stats.lancers;
       p.touches += j.stats.collisionsReussies;
 
-      for (const [k, v] of Object.entries(j.stats.combos)) combos[k] = (combos[k] || 0) + v;
+      // Deux comptages séparés : les combinaisons de base, disponibles à chaque
+      // lancer, et celles des cartes, qui n'existent qu'une manche durant.
+      for (const [k, v] of Object.entries(j.stats.combosCartes)) {
+        combosCartes[k] = (combosCartes[k] || 0) + v;
+      }
+      for (const [k, v] of Object.entries(j.stats.combos)) {
+        combos[k] = (combos[k] || 0) + v;
+        if (!j.stats.combosCartes[k]) combosBase[k] = (combosBase[k] || 0) + v;
+      }
       for (const [k, v] of Object.entries(j.stats.jetonsParSource)) {
         jetonsParSource[k] = (jetonsParSource[k] || 0) + v;
       }
@@ -125,6 +143,8 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
     parSiege,
     parProfil: Object.values(parProfil),
     combos,
+    combosBase,
+    combosCartes,
     jetonsParSource,
     parCarte: Object.values(parCarte).sort((a, b) => b.jouee - a.jouee),
     collisions: {

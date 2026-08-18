@@ -1,21 +1,22 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.34';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.34';
-import { store } from './store.js?v=1.34';
-import { lancerCampagne } from '../core/sim.js?v=1.34';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.35';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.35';
+import { store } from './store.js?v=1.35';
+import { lancerCampagne } from '../core/sim.js?v=1.35';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
+  ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
+  cleCombosCartes, clePaquet, cartesEnJeu, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.34';
-import { tableauCombos } from './combos.js?v=1.34';
+} from '../core/config.js?v=1.35';
+import { tableauCombos } from './combos.js?v=1.35';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.34';
+} from '../core/proba.js?v=1.35';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -201,16 +202,6 @@ function panneauConfig(rafraichir) {
         }, ...ORDRE_SYMBOLES.map((s) => h('option', { value: s, selected: s === f }, NOM_SYM[s]))),
       )),
     ),
-    h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
-      h('span.mini.muted', 'Modèles :'),
-      ...PRESETS_FACES.map((p) => h('button.btn.btn--petit', {
-        onclick: () => { cfg.faces = facesPourDe(cfg.faces.length, p.faces); rafraichir(); },
-      }, p.nom)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '8px' } },
-      'Répartition de base : 1 tornade, 1 joker, 1 X, 1 ZzZ, 1 vache, 1 éclair. '
-      + 'Le joker remplace n’importe quel symbole sauf le X.'),
-
     h('div.rangee', { style: { marginTop: '18px', marginBottom: '10px' } },
       h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
       h('button', {
@@ -229,16 +220,26 @@ function panneauConfig(rafraichir) {
         },
       }, h('span.case', '✓'), 'Trois jokers = échec'),
     ),
-    tableauCombos(cfg,
-      (id, requis) => {
+    tableauCombos(cfg, {
+      ecrireCombo: (id, requis) => {
         const c = cfg.combos.find((x) => x.id === id);
         if (c) c.requis = requis;
       },
-      (id, requis) => {
-        if (!cfg.combosCartes) cfg.combosCartes = {};
-        cfg.combosCartes[id] = requis;
+      ecrireCarte: (id, requis) => {
+        const cle = cleCombosCartes(cfg);
+        if (!cfg[cle]) cfg[cle] = {};
+        cfg[cle][id] = requis;
       },
-      rafraichir),
+      ecrireVert: (id, requis) => {
+        if (!cfg.combosVert) cfg.combosVert = {};
+        cfg.combosVert[id] = requis;
+      },
+      ecrireFace: (id, face) => {
+        const c = cfg.combos.find((x) => x.id === id);
+        if (c) c.face = face;
+      },
+      rafraichir,
+    }),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Comment se joue une manche'),
     h('div.segment',
@@ -449,8 +450,11 @@ function resultats(r) {
 
     h('div.grille.grille--2',
       h('div.carte',
-        h('div.titre-section', 'Combinaisons jouées'),
-        tableauFrequences(r.combos, total, 'par partie'),
+        h('div.titre-section', 'Combinaisons de base'),
+        tableauFrequences(r.combosBase, total, 'par partie'),
+        h('p.mini.muted', 'Les combinaisons de la Tornade, disponibles à chaque lancer. Celles '
+          + 'des cartes sont comptées à part : elles n’existent qu’une manche durant, et les '
+          + 'mélanger écraserait leur fréquence réelle.'),
       ),
       h('div.carte',
         h('div.titre-section', 'Origine des jetons retournés'),
@@ -459,22 +463,41 @@ function resultats(r) {
       ),
     ),
 
+    // Le taux de sortie d'une carte n'a de sens que rapporté aux manches où
+    // elle était en jeu : c'est une combinaison sur une manche, pas sur la
+    // partie. D'où une colonne « réalisée » à côté de « jouée ».
     h('div.carte',
-      h('div.titre-section', 'Cartes Journée'),
+      h('div.titre-section', 'Cartes Tornade — sortie de leur combinaison'),
       h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Manches jouées'),
+        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'),
+          h('th.num', 'Manches jouées'), h('th.num', 'Manches où elle sort'),
+          h('th.num', 'Taux de sortie'), h('th.num', 'Réalisations'),
           h('th.num', 'Durée moyenne'), h('th', 'Vainqueurs'))),
-        h('tbody', ...r.parCarte.map((c) => h('tr',
-          h('td', c.nom),
-          h('td.num', c.jouee),
-          h('td.num', dureeLongue(c.dureeTotale / Math.max(1, c.jouee))),
-          h('td', Object.entries(c.vainqueurs)
-            .sort((a, b) => b[1] - a[1])
-            .map(([id, n]) => h('span.badge', {
-              class: `badge--${id}`, style: { marginRight: '4px' },
-            }, `${(COULEURS_EQUIPE[id] || {}).nom || 'aucun'} ${n}`))),
-        ))),
+        h('tbody', ...r.parCarte.map((c) => {
+          const carte = CARTES_TORNADE.find((x) => x.id === c.id);
+          const combo = carte && carte.combo;
+          return h('tr',
+            h('td', c.nom),
+            h('td', combo
+              ? h('div.rangee.rangee--serree', suiteSymboles(combo.requis, 16))
+              : h('span.mini.muted', 'aucune')),
+            h('td.num', c.jouee),
+            h('td.num', combo ? c.manchesRealisee : '—'),
+            h('td.num', combo ? pourcent(c.manchesRealisee / Math.max(1, c.jouee), 0) : '—'),
+            h('td.num', combo ? nombre(c.realisations / Math.max(1, c.jouee), 2) : '—'),
+            h('td.num', dureeLongue(c.dureeTotale / Math.max(1, c.jouee))),
+            h('td', Object.entries(c.vainqueurs)
+              .sort((a, b) => b[1] - a[1])
+              .map(([id, n]) => h('span.badge', {
+                class: `badge--${id}`, style: { marginRight: '4px' },
+              }, `${(COULEURS_EQUIPE[id] || {}).nom || 'aucun'} ${n}`))),
+          );
+        })),
       ),
+      h('p.mini.muted', { style: { marginTop: '8px' } },
+        '« Taux de sortie » : la part des manches où la carte était en jeu et où sa combinaison '
+        + 'est effectivement tombée. « Réalisations » : combien de fois par manche jouée. Un taux '
+        + 'à 0 % signale une combinaison que le dé ne peut pas produire — vérifiez ses faces.'),
     ),
 
     h('div.carte',
@@ -605,7 +628,7 @@ function ongletProbas(rafraichir) {
     ...cfg.combos.filter((c) => c.id !== 'blocage').map((c) => ({
       nom: c.nom, requis: c.requis, source: 'tornade', estArretForce: !!c.obligatoire,
     })),
-    ...CARTES_JOURNEE.filter((c) => c.combo).map((c) => ({
+    ...CARTES_TORNADE.filter((c) => c.combo).map((c) => ({
       nom: c.court,
       requis: (cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis,
       source: 'journee',
@@ -694,7 +717,7 @@ function ongletProbas(rafraichir) {
         + '« en gardant les dés » estime par tirages la vraie façon de jouer, en conservant les dés '
         + 'utiles d’un jet à l’autre. L’écart entre les deux mesure ce que rapporte la relance choisie.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
-        'Les combinaisons de cartes Journée l’emportent sur les combinaisons obligatoires au même '
+        'Les combinaisons de cartes Tornade l’emportent sur les combinaisons obligatoires au même '
         + 'lancer : c’est ce qui rend « Journée de la chance » (quatre éclairs) atteignable.'),
     ),
 
@@ -741,10 +764,10 @@ function ongletRegles() {
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section', 'Cartes Journée'),
+      h('div.titre-section', 'Cartes Tornade'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...CARTES_JOURNEE.map((c) => h('tr',
+        h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
           h('td', c.combo
             ? h('div.rangee.rangee--serree',

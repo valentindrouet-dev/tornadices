@@ -4,17 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.34';
+import { h, remplacer, duree, vider } from './dom.js?v=1.35';
 import {
-  faceDe, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.34';
-import { Moteur } from '../core/engine.js?v=1.34';
+  faceDe, suiteSymboles, emblemeEquipe,
+  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
+} from './icons.js?v=1.35';
+import { Moteur } from '../core/engine.js?v=1.35';
 import {
-  COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide,
-} from '../core/config.js?v=1.34';
-import { ajouterHistorique } from './store.js?v=1.34';
-import { aller } from './app.js?v=1.34';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.34';
+  COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible,
+} from '../core/config.js?v=1.35';
+import { ajouterHistorique } from './store.js?v=1.35';
+import { aller } from './app.js?v=1.35';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.35';
 
 let moteur = null;
 let vitesse = 1;
@@ -321,34 +322,43 @@ export function vueTable() {
   const zonePanneaux = h('div.zone-panneaux', { style: { display: 'grid', gap: '10px', marginTop: '10px' } });
   const zoneJournal = h('div.journal');
 
+  // Une ligne de la liste : les dés demandés, le nom, et ce qu'il faut savoir.
+  const ligneCombo = (c) => h('div.rangee.rangee--serree',
+    h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
+      suiteSymboles(c.requis, 20)),
+    h('div.mini', { style: { flex: '1' } }, c.nom,
+      // Le rappel dit laquelle des deux combinaisons porte le contact —
+      // et que l'autre, en mode « Échecs », ne se joue plus.
+      moteur.cfg.attrapeSur === 'echec' && c.id === 'blocage'
+        ? h('span.muted', ' · tente l’attrape')
+        : null,
+      moteur.cfg.attrapeSur === 'echec' && c.id === 'collision'
+        ? h('span.muted', ' · hors jeu dans ce mode')
+        : null),
+  );
+
+  // Une combinaison que le dé ne peut pas produire n'est pas une règle, c'est
+  // une ligne morte : sans face joker, « Trois jokers » n'a rien à faire là.
+  const jouables = moteur.cfg.combos.filter((c) => comboPossible(moteur.cfg.faces, c.requis));
+  const listeCombos = (titre, etat) => {
+    const dedans = jouables.filter((c) => c.face === 'toutes' || c.face === etat);
+    if (!dedans.length) return null;
+    return h('div.carte',
+      h('div.titre-section', titre),
+      h('div', { style: { display: 'grid', gap: '8px' } }, ...dedans.map(ligneCombo)),
+    );
+  };
+
   const zoneCote = h('div.colonne-cote',
+    // Deux listes plutôt qu'une : ce qu'on peut faire en dormant, et ce qu'on
+    // peut faire réveillé. À la table, c'est la question qu'on se pose.
+    listeCombos('Combinaisons (Endormi)', 'endormie'),
+    listeCombos('Combinaisons (Réveillé)', 'active'),
     h('div.carte',
-      h('div.titre-section', 'Combinaisons'),
-      h('div', { style: { display: 'grid', gap: '8px' } },
-        ...moteur.cfg.combos.map((c) => h('div.rangee.rangee--serree',
-          h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
-            suiteSymboles(c.requis, 20)),
-          h('div.mini', { style: { flex: '1' } }, c.nom,
-            c.face !== 'toutes'
-              ? h('span.muted', ` · carte ${c.face === 'active' ? 'éveillée' : 'endormie'}`)
-              : null,
-            // Le rappel dit laquelle des deux combinaisons porte le contact —
-            // et que l'autre, en mode « Échecs », ne se joue plus.
-            moteur.cfg.attrapeSur === 'echec' && c.id === 'blocage'
-              ? h('span.muted', ' · tente l’attrape')
-              : null,
-            moteur.cfg.attrapeSur === 'echec' && c.id === 'collision'
-              ? h('span.muted', ' · hors jeu dans ce mode')
-              : null),
-        )),
-        moteur.carte && moteur.carte.combo
-          ? h('div.rangee.rangee--serree',
-              h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
-                suiteSymboles(moteur.carte.combo.requis, 20)),
-              h('div.mini', { style: { flex: '1' } }, moteur.carte.court,
-                h('span.muted', ' · carte du jour')))
-          : null,
-      ),
+      h('div.titre-section', 'Carte du jour'),
+      moteur.carte && moteur.carte.combo
+        ? ligneCombo({ ...moteur.carte.combo, nom: moteur.carte.court })
+        : h('div.mini.muted', 'Cette carte n’ouvre aucune combinaison.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Dès qu’une combinaison sort, elle est jouée : le lot part et l’effet s’applique.'),
     ),
@@ -713,8 +723,11 @@ export function vueTable() {
       const c = COULEURS_EQUIPE[e.id];
       const acquis = jetonsAffiches(e);
       return h('div.score-equipe', { class: `equipe-${e.id}` },
-        h('span.score-nom', { style: { color: c.hex } }, c.nom),
-        h('span.score-cartes', { title: 'cartes Journée gagnées' },
+        // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes
+        // les poules, le Vert est le cowboy.
+        h('span.score-nom', { style: { color: c.hex } },
+          emblemeEquipe(c.embleme, 18), ' ', c.nom),
+        h('span.score-cartes', { title: 'cartes Tornade gagnées' },
           `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
         // Sans les points, il n'y a plus de jetons à suivre : la ligne de
         // pastilles disparaît, seules les cartes font le score.

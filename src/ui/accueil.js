@@ -1,20 +1,33 @@
-// Écran d'accueil : qui joue, et rien d'autre. Tout le reste est dans Réglages.
+// Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
+// le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.34';
-import { store } from './store.js?v=1.34';
-import { aller } from './app.js?v=1.34';
-import { eveillerSons } from './sons.js?v=1.34';
-import { lancerPartie, partieEnCours } from './table.js?v=1.34';
-import { construireConfig, variables } from './variables.js?v=1.34';
+import { h, remplacer } from './dom.js?v=1.35';
+import { store } from './store.js?v=1.35';
+import { aller } from './app.js?v=1.35';
+import { eveillerSons } from './sons.js?v=1.35';
+import { lancerPartie, partieEnCours } from './table.js?v=1.35';
+import { construireConfig, variables } from './variables.js?v=1.35';
 import {
-  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, SYMBOLES,
-} from '../core/config.js?v=1.34';
-import { pastilleSymbole } from './icons.js?v=1.34';
-import { randomSeed } from '../core/rng.js?v=1.34';
+  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
+  OPTIONS_MANCHE, CARTES_TORNADE, cartesEnJeu,
+} from '../core/config.js?v=1.35';
+import { nomSymbole } from './apparence.js?v=1.35';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.35';
+import { randomSeed } from '../core/rng.js?v=1.35';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
 ];
+
+/** Les valeurs qui décrochent du tableau officiel dès qu'on y touche. */
+const CHAMPS_TABLEAU = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
+
+/** Écrit un réglage de partie, comme le ferait la page Réglages. */
+function ecrireReglage(cle, valeur) {
+  const v = store.get('variables', {});
+  v[cle] = valeur;
+  store.set('variables', v);
+}
 
 // Les couleurs du titre sont celles des équipes : bleu et jaune en alternance,
 // et les deux lettres du centre en vert, comme le joueur solo au milieu de la table.
@@ -126,7 +139,7 @@ export function vueAccueil() {
       h('div.encart', { style: { marginTop: '16px' } },
         `Mise en place à ${nb} : ${mep.lots} lots · `
         + `${mep.jetons} jetons par équipe${nb % 2 ? ` (Vert : ${mep.jetonsVert})` : ''} · `
-        + `${mep.cartes} cartes Journée pour gagner.`
+        + `${mep.cartes} cartes Tornade pour gagner.`
         + (mep.extrapole ? ' — valeurs extrapolées, le tableau officiel s’arrête à 8 joueurs.' : '')),
     );
   }
@@ -158,38 +171,80 @@ export function vueAccueil() {
           value: p.id, selected: j.type === 'ia' && j.profil === p.id,
         }, `IA ${p.nom}`)),
       ),
-      h('span.badge', { class: `badge--${j.equipe}` }, eq.nom),
+      // L'emblème de l'équipe : les vaches, les poules, le cowboy.
+      h('span.badge', { class: `badge--${j.equipe}` },
+        emblemeEquipe(eq.embleme, 14), ' ', eq.emblemeNom),
     );
   }
 
-  /** Aperçu en lecture seule de ce qui est réglé dans Réglages. */
+  /**
+   * Les réglages de la partie, modifiables ici même. Ce qui décide de la forme
+   * d'une partie — le mode, les lots, les cartes — n'a pas à faire changer de
+   * page : on le règle, on lance. La page Réglages garde le reste.
+   */
   function carteApercu() {
     const cfg = construireConfig(nb);
     const compte = {};
     for (const f of cfg.faces) compte[f] = (compte[f] || 0) + 1;
 
+    const champ = (libelle, valeur, cle, opts = {}) => h('tr',
+      h('td.petit', libelle),
+      h('td.num', h('input.champ-mini', {
+        type: 'number', value: valeur,
+        min: opts.min ?? 1, max: opts.max ?? 99, step: 1,
+        onchange: (e) => {
+          let x = Number(e.target.value);
+          if (!isFinite(x)) return;
+          x = Math.min(opts.max ?? 99, Math.max(opts.min ?? 1, x));
+          ecrireReglage(cle, x);
+          // Toucher une valeur de mise en place, c'est quitter le tableau
+          // officiel — comme dans les Réglages, sans case à décocher d'abord.
+          if (CHAMPS_TABLEAU.includes(cle)) ecrireReglage('suivreTableau', false);
+          dessiner();
+        },
+      })),
+    );
+
     return h('div.carte.carte-apercu',
       h('div.rangee', { style: { marginBottom: '14px' } },
         h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Réglages de la partie'),
-        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/reglages'); } }, 'Modifier'),
+        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/reglages'); } },
+          'Tous les réglages'),
       ),
+
+      // Le mode de jeu se change ici : c'est le réglage qui change le plus la
+      // partie, et le plus souvent essayé d'une partie à l'autre.
+      h('div.segment', { style: { marginBottom: '14px', width: '100%' } },
+        ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
+          class: (cfg.sansPoints ? 'sansPoints' : 'jetons') === id ? 'on' : '',
+          style: { flex: '1 1 0', minWidth: '0', fontSize: '12.5px' },
+          onclick: () => { ecrireReglage('sansPoints', id === 'sansPoints'); dessiner(); },
+        }, lib)),
+      ),
+
       h('div.rangee.rangee--serree', { style: { marginBottom: '12px' } },
         ...cfg.faces.map((f) => pastilleSymbole(f, 34)),
       ),
       h('div.petit.muted', { style: { marginBottom: '14px' } },
         Object.entries(compte)
-          .map(([sym, n]) => `${n} ${SYMBOLES[sym]?.nom || sym}`)
+          .map(([sym, n]) => `${n} ${nomSymbole(sym)}`)
           .join(' · ')
         + ` — ${cfg.desParLot} dés par lot`),
       h('table.tbl',
         h('tbody',
+          champ('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
+          champ('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9 }),
+          cfg.sansPoints
+            ? null
+            : champ('Jetons par équipe', cfg.jetons, 'jetons', { min: 1, max: 12 }),
+          nb % 2 && !cfg.sansPoints
+            ? champ('Jetons du Vert', cfg.jetonsVert, 'jetonsVert', { min: 1, max: 12 })
+            : null,
+          champ('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner', { min: 1, max: 12 }),
+          ligneApercu('Cartes Tornade en jeu',
+            `${cartesEnJeu(cfg).length} sur ${CARTES_TORNADE.length}`),
           ligneApercu('Lancer / constat / passage',
             `${cfg.dureeLancer} · ${cfg.dureeConstat} · ${cfg.dureePassage} ms`),
-          ligneApercu('Lots en jeu', cfg.lots),
-          ligneApercu('Jetons par équipe',
-            `${cfg.jetons}${nb % 2 ? ` (Vert ${cfg.jetonsVert})` : ''}`),
-          ligneApercu('Cartes pour gagner', cfg.cartesPourGagner),
-          ligneApercu('Cartes Journée en jeu', `${cfg.cartes.length} sur 12`),
         ),
       ),
     );

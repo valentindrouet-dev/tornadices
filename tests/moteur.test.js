@@ -5,7 +5,9 @@ import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
   // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
-  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace, attrapeEmporteManche,
+  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
+  attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
+  clePaquet, cleCombosCartes, CARTES_TORNADE, COULEURS_EQUIPE,
 } from '../src/core/config.js';
 import { lancerCampagne } from '../src/core/sim.js';
 import {
@@ -991,6 +993,175 @@ console.log('\nManche sans les points');
       r.raisons.manchesMax === undefined
       && r.dureeManche.medianeMs < base.dureeManche.medianeMs);
   }
+}
+
+// ── 3 septies bis bis. Le Vert peut avoir ses propres combinaisons ───────────
+console.log('\nCombinaisons propres au Vert');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  verifier('sans réglage, la table est symétrique',
+    configParDefaut(5).combosAsymetriques === false
+    && Object.keys(configParDefaut(5).combosVert).length === 0);
+
+  const base = { tornade: 3 };
+  const propre = { tornade: 2 };
+  verifier('asymétrie décochée : le Vert joue les mêmes exigences',
+    requisPourEquipe({ combosAsymetriques: false, combosVert: { reveil: propre } },
+      'reveil', base, 'vert') === base);
+  verifier('asymétrie cochée : le Vert a la sienne',
+    requisPourEquipe({ combosAsymetriques: true, combosVert: { reveil: propre } },
+      'reveil', base, 'vert') === propre);
+  verifier('les Bleus et les Jaunes ne sont jamais concernés',
+    requisPourEquipe({ combosAsymetriques: true, combosVert: { reveil: propre } },
+      'reveil', base, 'bleu') === base);
+  verifier('une exigence vide pour le Vert retombe sur celle de la table',
+    requisPourEquipe({ combosAsymetriques: true, combosVert: { reveil: {} } },
+      'reveil', base, 'vert') === base);
+
+  // Ce que l'asymétrie change réellement, mesuré : un Réveil et une Vache à deux
+  // dés au lieu de trois doivent faire nettement remonter le Vert.
+  {
+    const cfg = configParDefaut(5);
+    const allege = configParDefaut(5);
+    allege.combosAsymetriques = true;
+    allege.combosVert = { reveil: { tornade: 2 }, vache: { vache: 2 } };
+    const part = (c, graine) => (lancerCampagne(c, spec(5), graine, 150).victoires.vert || 0) / 150;
+    const avant = part(cfg, 'asym');
+    const apres = part(allege, 'asym');
+    verifier(`allégé à deux dés, le Vert passe de ${Math.round(avant * 100)} % `
+      + `à ${Math.round(apres * 100)} % de victoires`, apres > avant);
+
+    const dur = configParDefaut(5);
+    dur.combosAsymetriques = true;
+    dur.combosVert = { reveil: { tornade: 4 }, vache: { vache: 4 } };
+    const pDur = part(dur, 'asym');
+    verifier(`alourdi à quatre dés, il retombe à ${Math.round(pDur * 100)} %`, pDur < avant);
+    verifier('les parties vont toujours au bout dans les trois cas',
+      lancerCampagne(dur, spec(5), 'asym-fin', 60).raisons.cartes === 60);
+  }
+}
+
+// ── 3 septies bis ter. Une combinaison que le dé ne peut pas produire ────────
+console.log('\nCombinaisons possibles sur le dé');
+{
+  const officiel = FACES_PAR_DEFAUT;
+  verifier('sur le dé officiel, trois tornades sont possibles',
+    comboPossible(officiel, { tornade: 3 }));
+  verifier('sans face éclair, l’Attaque ne peut pas sortir',
+    !comboPossible(officiel, { eclair: 3 }));
+  verifier('sans face joker, « trois jokers » non plus',
+    !comboPossible(officiel, { joker: 3 }));
+  verifier('sur le dé à joker, l’éclair redevient possible — le joker le remplace',
+    comboPossible(FACES_JOKER_ECLAIR, { eclair: 3 })
+    && comboPossible(['tornade', 'joker', 'x', 'vache', 'zzz', 'zzz'], { eclair: 2 }));
+  verifier('une exigence vide n’est jamais « possible »', !comboPossible(officiel, {}));
+  // Le joker double ne remplace que l'éclair et le ZzZ : il ne sauve pas la vache.
+  verifier('un joker limité ne couvre que ce qu’il peut prendre',
+    comboPossible(['jokerDouble', 'x', 'tornade'], { eclair: 1 })
+    && !comboPossible(['jokerDouble', 'x', 'tornade'], { vache: 1 }));
+}
+
+// ── 3 septies bis quater. Un paquet de cartes par mode de jeu ────────────────
+console.log('\nCartes Tornade — un paquet par mode');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const avec = configParDefaut(6);
+  const sans = configParDefaut(6, { sansPoints: true });
+
+  verifier('le mode « jetons » garde les douze cartes',
+    cartesEnJeu(avec).length === CARTES_TORNADE.length);
+  verifier('« Jour sans vent » quitte le paquet sans les points — elle n’y ferait rien',
+    !cartesEnJeu(sans).includes('sansVent')
+    && cartesEnJeu(sans).length === CARTES_TORNADE.length - 1);
+  verifier('les deux paquets se règlent par des clés distinctes',
+    clePaquet(avec) === 'cartes' && clePaquet(sans) === 'cartesSansPoints'
+    && cleCombosCartes(avec) === 'combosCartes'
+    && cleCombosCartes(sans) === 'combosCartesSansPoints');
+
+  // Chaque mode a aussi ses exigences : régler l'une ne touche pas l'autre.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    cfg.combosCartes = { troupeau: { vache: 2 } };
+    cfg.combosCartesSansPoints = { troupeau: { vache: 5 } };
+    const combo = { id: 'troupeau', requis: { vache: 4 } };
+    verifier('sans les points, c’est la table du mode qui décide',
+      requisCarte(cfg, combo).vache === 5);
+    verifier('et le mode jetons garde la sienne',
+      requisCarte({ ...cfg, sansPoints: false }, combo).vache === 2);
+  }
+
+  // Le paquet du mode arrive bien jusqu'à la pioche du moteur.
+  {
+    const m = new Moteur(sans, spec(6), 'paquet-sp');
+    m.jouerJusquAuBout();
+    verifier('« Jour sans vent » ne sort jamais dans une partie sans les points',
+      !m.statsManches.some((s) => s.carte === 'sansVent'));
+    const avecVent = new Moteur(avec, spec(6), 'paquet-sp');
+    avecVent.jouerJusquAuBout();
+    verifier('elle sort normalement en mode jetons',
+      avecVent.statsManches.some((s) => s.carte === 'sansVent'));
+  }
+}
+
+// ── 3 septies bis quinquies. Ce qu'une configuration ancienne retrouve ───────
+console.log('\nUne combinaison disparue revient');
+{
+  // Le Laboratoire enregistre sa configuration entière : une combinaison ajoutée
+  // depuis — ou perdue en route, comme l'Attaque — manquait sans un bruit.
+  const ampute = configParDefaut(6);
+  ampute.combos = ampute.combos.filter((c) => c.id !== 'collision');
+  const repare = assainirConfig(ampute);
+  verifier('l’Attaque revient dans une configuration qui l’avait perdue',
+    repare.combos.some((c) => c.id === 'collision'));
+  verifier('les seuils déjà réglés sont conservés',
+    (() => {
+      const cfg = configParDefaut(6);
+      cfg.combos = cfg.combos
+        .filter((c) => c.id !== 'collision')
+        .map((c) => (c.id === 'vache' ? { ...c, requis: { vache: 5 } } : c));
+      const r = assainirConfig(cfg);
+      return r.combos.find((c) => c.id === 'vache').requis.vache === 5
+        && r.combos.some((c) => c.id === 'collision');
+    })());
+  verifier('« Réveillé seulement » survit à l’enregistrement',
+    (() => {
+      const cfg = configParDefaut(6);
+      cfg.combos = cfg.combos.map((c) => (c.id === 'blocage' ? { ...c, face: 'active' } : c));
+      return assainirConfig(cfg).combos.find((c) => c.id === 'blocage').face === 'active';
+    })());
+}
+
+// ── 3 septies bis sexies. Cartes et combinaisons de base, comptées à part ────
+console.log('\nStatistiques décorrélées');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const r = lancerCampagne(configParDefaut(6), spec, 'stats-split', 100);
+
+  const idsCartes = new Set(CARTES_TORNADE.filter((c) => c.combo).map((c) => c.combo.id));
+  verifier('les combinaisons de base ne contiennent aucune combinaison de carte',
+    Object.keys(r.combosBase).every((id) => !idsCartes.has(id))
+    && Object.keys(r.combosBase).length > 0);
+  verifier('et les combinaisons de cartes ne contiennent qu’elles',
+    Object.keys(r.combosCartes).every((id) => idsCartes.has(id))
+    && Object.keys(r.combosCartes).length > 0);
+  verifier('les deux comptages réunis redonnent le total',
+    Object.entries(r.combos).every(([id, n]) =>
+      (r.combosBase[id] || 0) + (r.combosCartes[id] || 0) === n));
+
+  // Le taux de sortie d'une carte se rapporte aux manches où elle était en jeu.
+  const avecCombo = r.parCarte.filter((c) => idsCartes.has(c.id));
+  verifier(`${avecCombo.length} cartes à combinaison suivies, taux entre 0 et 100 %`,
+    avecCombo.length > 0
+    && avecCombo.every((c) => c.manchesRealisee <= c.jouee && c.realisations >= c.manchesRealisee));
+  // Sur le dé officiel, « Journée de la chance » demande quatre éclairs : elle ne
+  // peut pas sortir, et le tableau doit le montrer plutôt que de rester muet.
+  const chance = r.parCarte.find((c) => c.id === 'chance');
+  verifier('une carte que le dé ne peut pas produire affiche un taux nul',
+    chance && chance.jouee > 0 && chance.manchesRealisee === 0);
+  const troupeau = r.parCarte.find((c) => c.id === 'troupeau');
+  verifier(`« Troupeau » sort dans ${troupeau.manchesRealisee}/${troupeau.jouee} de ses manches`,
+    troupeau && troupeau.manchesRealisee > 0);
 }
 
 // ── 3 septies ter. Qui prend les dés à la première manche ────────────────────

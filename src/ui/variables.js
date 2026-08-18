@@ -3,23 +3,28 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.34';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.34';
-import { store } from './store.js?v=1.34';
-import { aller } from './app.js?v=1.34';
-import { lancerPartie } from './table.js?v=1.34';
+import { h, remplacer } from './dom.js?v=1.35';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.35';
+import { store } from './store.js?v=1.35';
+import { aller } from './app.js?v=1.35';
+import { lancerPartie } from './table.js?v=1.35';
 import {
-  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
+  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
+  cleCombosCartes, clePaquet, cartesEnJeu, requisCarte, comboPossible, COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.34';
-import { tableauCombos } from './combos.js?v=1.34';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.34';
-import { randomSeed } from '../core/rng.js?v=1.34';
-import { reglagesJoueurs } from './accueil.js?v=1.34';
+} from '../core/config.js?v=1.35';
+import { tableauCombos } from './combos.js?v=1.35';
+import {
+  FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE,
+  nomSymbole, imageSymbole, faceModifiee, reglerApparence, reinitialiserApparences,
+} from './apparence.js?v=1.35';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.35';
+import { randomSeed } from '../core/rng.js?v=1.35';
+import { reglagesJoueurs } from './accueil.js?v=1.35';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -51,15 +56,21 @@ export function construireConfig(nbJoueurs) {
   // encore « cloche » et « étoile » : on les retraduit plutôt que de laisser au
   // dé des symboles que plus rien ne reconnaît.
   cfg.faces = assainirFaces(cfg.faces);
-  if (v.combos) {
+  if (v.combos || v.combosFaces) {
     cfg.combos = cfg.combos.map((c) => ({
       ...c,
-      requis: assainirRequis(v.combos[c.id] || c.requis),
+      requis: assainirRequis((v.combos && v.combos[c.id]) || c.requis),
+      // « Réveillé seulement » : réglé combinaison par combinaison dans le
+      // tableau, il se range à part des exigences.
+      face: (v.combosFaces && v.combosFaces[c.id]) || c.face,
     }));
   }
-  if (cfg.combosCartes) {
-    cfg.combosCartes = Object.fromEntries(Object.entries(cfg.combosCartes)
-      .map(([id, requis]) => [id, assainirRequis(requis)]));
+  // Les trois tables d'exigences enregistrées passent par la même retraduction.
+  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosVert']) {
+    if (cfg[cle]) {
+      cfg[cle] = Object.fromEntries(Object.entries(cfg[cle])
+        .map(([id, requis]) => [id, assainirRequis(requis)]));
+    }
   }
   return cfg;
 }
@@ -98,6 +109,86 @@ function ecrire(cle, valeur) {
   const v = variables();
   v[cle] = valeur;
   store.set('variables', v);
+}
+
+/** Limite de l'image importée : au-delà, le stockage du navigateur déborde. */
+const POIDS_MAX_IMAGE = 400 * 1024;
+
+/**
+ * Le bloc qui réhabille une face : l'aperçu, le nom, le modèle, et le bouton
+ * d'import. Tout est réversible — « Face d'origine » remet le dessin du jeu.
+ */
+function carteApparence(sym, rafraichir) {
+  const nomOrigine = SYMBOLES[sym].nom;
+  const choix = imageSymbole(sym);
+  const message = h('div.mini.muted', { style: { marginTop: '6px' } },
+    faceModifiee(sym) ? `Face d’origine : ${nomOrigine}.` : 'Face d’origine.');
+
+  const fichier = h('input', {
+    type: 'file', accept: 'image/png,image/jpeg,image/svg+xml,image/webp',
+    style: { display: 'none' },
+    onchange: (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      if (f.size > POIDS_MAX_IMAGE) {
+        message.textContent = `Image trop lourde (${Math.round(f.size / 1024)} ko) — `
+          + `${Math.round(POIDS_MAX_IMAGE / 1024)} ko au maximum.`;
+        return;
+      }
+      const lecteur = new FileReader();
+      lecteur.onload = () => {
+        reglerApparence(sym, { image: String(lecteur.result) });
+        rafraichir();
+      };
+      lecteur.onerror = () => { message.textContent = 'Lecture impossible : essayez un autre fichier.'; };
+      // En `data:` : la page reste autonome, sans requête vers l'extérieur.
+      lecteur.readAsDataURL(f);
+    },
+  });
+
+  return h('div.carte-face',
+    h('div.rangee',
+      pastilleSymbole(sym, 54),
+      h('div', { style: { flex: '1', minWidth: '0' } },
+        h('div.titre-section', { style: { margin: '0 0 6px' } }, nomSymbole(sym)),
+        h('div.mini.muted', `Symbole « ${sym} » — pouvoir inchangé`),
+      ),
+    ),
+    h('label.champ', { style: { marginTop: '10px' } }, 'Nom affiché',
+      h('input', {
+        type: 'text', value: nomSymbole(sym), placeholder: nomOrigine,
+        onchange: (e) => { reglerApparence(sym, { nom: e.target.value }); rafraichir(); },
+      }),
+    ),
+    h('label.champ', { style: { marginTop: '10px' } }, 'Illustration',
+      h('select', {
+        onchange: (e) => {
+          const val = e.target.value;
+          // Changer de modèle propose son nom : un réveil qui s'appelle encore
+          // « Tornade » n'aide personne.
+          const suggere = NOM_MODELE[val];
+          reglerApparence(sym, suggere ? { image: val, nom: suggere } : { image: val });
+          rafraichir();
+        },
+      },
+        ...MODELES_FACE[sym].map(([id, lib]) => h('option', {
+          value: id, selected: id === choix,
+        }, lib)),
+        // Une image importée n'est pas dans la liste : on lui donne sa ligne.
+        /^data:/.test(choix) ? h('option', { value: choix, selected: true }, 'Image importée') : null,
+      ),
+    ),
+    h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
+      fichier,
+      h('button.btn.btn--petit', { onclick: () => fichier.click() }, 'Importer une image…'),
+      faceModifiee(sym)
+        ? h('button.btn.btn--petit', {
+            onclick: () => { reglerApparence(sym, { nom: '', image: '' }); rafraichir(); },
+          }, 'Face d’origine')
+        : null,
+    ),
+    message,
+  );
 }
 
 export function vueVariables() {
@@ -150,7 +241,7 @@ export function vueVariables() {
           cfg.sansPoints
             ? 'Deux façons de prendre la manche, donc : sortir la Vache, ou attraper son voisin. '
               + 'Le reste des réglages tient — les dés, les combinaisons, le rythme. Seuls les '
-              + 'jetons sortent du jeu, avec les cartes Journée qui les manipulent.'
+              + 'jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
             : '',
         ]),
         h('div.rangee.rangee--serree',
@@ -218,19 +309,41 @@ export function vueVariables() {
               + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. C’est le '
               + 'seul revers du joker — décochez la règle pour jouer sans.'
             : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.',
-          'Les lignes bleues sont les combinaisons des cartes Journée : elles ne valent que le '
-          + 'temps de la manche où la carte est en jeu.',
+          'Les lignes bleues sont les combinaisons des cartes Tornade : elles ne valent que le '
+          + 'temps de la manche où la carte est en jeu, et le paquet affiché est celui du mode '
+          + 'de jeu en cours.',
+          'La colonne « Réveillé » réserve une combinaison à la Tornade éveillée. Décochée, elle '
+          + 'reprend sa condition d’origine — le Réveil reste réservé au dormeur, sans quoi on ne '
+          + 'pourrait plus jamais se réveiller.',
+          cfg.combosAsymetriques
+            ? 'Asymétrie en jeu : chaque combinaison a deux lignes, celle des Bleus et des Jaunes '
+              + 'et celle du Vert. Laissez la ligne du Vert identique pour qu’il joue les mêmes '
+              + 'règles ; décochez l’asymétrie pour revenir à une table strictement symétrique.'
+            : 'Le Vert joue exactement les mêmes combinaisons que les deux équipes. Cochez '
+              + '« Combinaisons du Vert à part » pour lui en donner d’autres.',
         ],
+          h('button', {
+            class: `chip${cfg.combosAsymetriques ? ' on' : ''}`,
+            title: 'Donner au joueur Vert ses propres exigences',
+            onclick: () => { ecrire('combosAsymetriques', !cfg.combosAsymetriques); dessiner(); },
+          }, h('span.case', '✓'), 'Combinaisons du Vert à part'),
           h('button', {
             class: `chip${cfg.echecJokers !== false ? ' on' : ''}`,
             title: 'Trois jokers d’un coup font partir le lot, comme deux X',
             onclick: () => { ecrire('echecJokers', cfg.echecJokers === false); dessiner(); },
           }, h('span.case', '✓'), 'Trois jokers = échec'),
         ),
-        tableauCombos(cfg,
-          (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
-          (id, requis) => ecrire('combosCartes', { ...(v.combosCartes || {}), [id]: requis }),
-          dessiner),
+        tableauCombos(cfg, {
+          ecrireCombo: (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
+          // Les exigences de cartes se rangent par mode : chacun a les siennes.
+          ecrireCarte: (id, requis) => {
+            const cle = cleCombosCartes(cfg);
+            ecrire(cle, { ...(v[cle] || {}), [id]: requis });
+          },
+          ecrireVert: (id, requis) => ecrire('combosVert', { ...(v.combosVert || {}), [id]: requis }),
+          ecrireFace: (id, face) => ecrire('combosFaces', { ...(v.combosFaces || {}), [id]: face }),
+          rafraichir: dessiner,
+        }),
 
         titreAide('Ce qui déclenche l’attrape', [
           AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
@@ -441,11 +554,16 @@ export function vueVariables() {
         ),
       ),
 
-      // ── Cartes Journée ────────────────────────────────────────────────────
+      // ── Cartes Tornade ────────────────────────────────────────────────────
+      // Un paquet par mode de jeu : ce qu'on coche ici ne vaut que pour le mode
+      // en cours, et l'autre garde le sien intact.
       h('div.carte',
-        titreAide('Cartes Journée en jeu', [
+        titreAide(`Cartes Tornade en jeu — ${cfg.sansPoints ? 'sans les points' : 'avec les jetons'}`, [
           'Une carte par manche, dans l’ordre de la pile. Décochez celles que vous ne voulez pas '
           + 'voir sortir.',
+          'Chaque mode de jeu a son propre paquet : ce que vous cochez ici ne vaut que pour '
+          + `« ${cfg.sansPoints ? 'Sans les points' : 'Retourner tous les jetons'} ». Changez de `
+          + 'mode en haut de la page et vous retrouverez l’autre paquet, intact.',
           'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.',
         ],
           h('button', {
@@ -457,20 +575,17 @@ export function vueVariables() {
         // carte était caché dans une infobulle, et sa combinaison nulle part.
         // Chaque carte porte désormais les deux, sous les yeux.
         h('div.grille.grille--3.grille--cartes',
-          ...CARTES_JOURNEE.map((c) => {
-            const dedans = cfg.cartes.includes(c.id);
-            const requis = c.combo
-              ? (cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis
-              : null;
+          ...CARTES_TORNADE.map((c) => {
+            const paquet = cartesEnJeu(cfg);
+            const dedans = paquet.includes(c.id);
+            const requis = c.combo ? requisCarte(cfg, c.combo) : null;
             const note = noteCarteMode(c, cfg);
             return h('div.carte-journee', { class: dedans ? '' : 'hors-jeu' },
               h('button', {
                 class: `chip${dedans ? ' on' : ''}`,
                 onclick: () => {
-                  const liste = dedans
-                    ? cfg.cartes.filter((x) => x !== c.id)
-                    : [...cfg.cartes, c.id];
-                  ecrire('cartes', liste);
+                  const liste = dedans ? paquet.filter((x) => x !== c.id) : [...paquet, c.id];
+                  ecrire(clePaquet(cfg), liste);
                   dessiner();
                 },
               }, h('span.case', '✓'), c.court),
@@ -480,8 +595,36 @@ export function vueVariables() {
                 : h('div.mini.muted', { style: { marginTop: '8px' } }, 'Effet permanent'),
               h('div.petit', { style: { marginTop: '6px' } }, c.texte),
               note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,
+              // Une combinaison dont le dé ne porte pas les faces ne sortira
+              // jamais : autant le dire ici plutôt qu'après trois campagnes.
+              requis && !comboPossible(cfg.faces, requis)
+                ? h('div.mini.muted', { style: { marginTop: '6px' } },
+                    'Le dé ne porte pas les faces demandées : cette combinaison ne peut pas sortir.')
+                : null,
             );
           }),
+        ),
+      ),
+
+      // ── Apparence des faces ───────────────────────────────────────────────
+      // Le pouvoir ne bouge pas : c'est le même symbole pour le moteur, avec la
+      // même combinaison et le même effet. Seuls le dessin et le nom changent.
+      h('div.carte',
+        titreAide('Apparence des faces', [
+          'Deux faces se réhabillent quand vous voulez : la Tornade et la Vache. Choisissez un '
+          + 'modèle fourni, ou importez votre propre image — elle est découpée en rond, comme une '
+          + 'face de dé.',
+          'Le pouvoir ne change pas d’un iota : même symbole pour le moteur, même combinaison, '
+          + 'même effet. Seuls le dessin et le nom affiché changent, partout sur le site.',
+          'L’image est enregistrée dans ce navigateur, en clair dans la page : pas de fichier à '
+          + 'héberger, rien qui parte vers l’extérieur. Un PNG carré de 256 px suffit largement.',
+        ],
+          h('button.btn.btn--petit', {
+            onclick: () => { reinitialiserApparences(); dessiner(); },
+          }, 'Faces d’origine'),
+        ),
+        h('div.grille.grille--2', { style: { gap: '14px' } },
+          ...FACES_PERSONNALISABLES.map((sym) => carteApparence(sym, dessiner)),
         ),
       ),
 

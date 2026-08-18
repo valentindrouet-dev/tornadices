@@ -1,9 +1,27 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.34';
+export const VERSION = '1.35';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.35',
+    date: '18/08/2026',
+    notes: [
+      'Les cartes Journée s’appellent désormais cartes Tornade, partout : les Réglages, la table, les Règles, le Laboratoire, le code. Les noms propres des cartes ne bougent pas — « Journée de la fatigue » reste « Journée de la fatigue ».',
+      'Les équipes ont leur emblème : les Bleus sont les vaches, les Jaunes les poules, et le joueur Vert est le cowboy. Les trois pictogrammes sont dessinés au même trait que les faces de dés et accompagnent le nom de l’équipe sur l’accueil, à la table et dans les Règles.',
+      'Le Vert peut avoir ses propres combinaisons. Cochez « Combinaisons du Vert à part » dans les Réglages et chaque ligne du tableau se dédouble : celle des Bleus et des Jaunes, celle du Vert. C’est le levier d’équilibrage le plus direct qu’il ait — sur 150 parties à 5 joueurs, un Réveil et une Vache à deux dés au lieu de trois le font passer de 41 % à 96 % de victoires ; à quatre dés, il retombe à 5 %. Décochée, la table redevient strictement symétrique, et c’est ainsi qu’elle part.',
+      'Chaque mode de jeu a maintenant son propre paquet de cartes et ses propres exigences : ce que vous cochez dans « Cartes Tornade en jeu » ne vaut que pour le mode affiché, et l’autre garde le sien intact. « Jour sans vent » — qui recache un jeton adverse — quitte le paquet « sans les points » par défaut, puisqu’elle n’y ferait rien du tout.',
+      'Nouvelle colonne « Réveillé » dans le tableau des combinaisons : cochée, la combinaison ne sort plus que Tornade éveillée. Décochée, elle reprend sa condition d’origine — le Réveil reste réservé au dormeur, sans quoi on ne pourrait plus jamais se réveiller.',
+      'En partie, les combinaisons sont rangées en deux listes plutôt qu’une : « Combinaisons (Endormi) » et « Combinaisons (Réveillé) ». C’est la question qu’on se pose à la table, elle a désormais sa réponse sous les yeux.',
+      'Et la table n’affiche plus les combinaisons que le dé ne peut pas produire. Sans face joker, « Trois jokers » n’était pas une règle en sommeil mais une ligne morte ; sans éclair, l’Attaque de même. Les Réglages signalent la même chose sous les cartes concernées.',
+      'Deux faces se réhabillent quand vous voulez, dans les Réglages : la Tornade et la Vache. Un modèle fourni — un réveil sur fond bleu, une tornade sur fond vert — ou votre propre image, importée d’un clic et découpée en rond. Le nom affiché se change dans la foulée. Le pouvoir, lui, ne bouge pas d’un iota : même symbole pour le moteur, même combinaison, même effet.',
+      'Les statistiques du Laboratoire séparent enfin les combinaisons de base de celles des cartes : les premières sont disponibles à chaque lancer, les secondes une manche sur douze, et les mélanger écrasait la fréquence réelle des deux. Le tableau des cartes gagne un taux de sortie — la part des manches où la carte était en jeu et où sa combinaison est effectivement tombée. Un taux à 0 % désigne une combinaison que le dé ne peut pas produire : sur le dé officiel, « Journée de la chance » demande quatre éclairs qui n’existent pas.',
+      'L’accueil se suffit à lui-même pour lancer une partie : le mode de jeu s’y change d’un bouton, et les dés par lot, les lots en jeu, les jetons et les cartes pour gagner s’y modifient directement. La page Réglages garde tout le reste.',
+      'Correction : au Laboratoire, la combinaison Attaque avait disparu du tableau des configurations enregistrées de longue date, sans le moindre signe. Une configuration repart désormais de la liste de référence et y repose les seuils réglés : une combinaison ajoutée depuis — ou perdue en route — revient à sa place.',
+      'Les boutons « Modèles » de répartition des faces quittent le Laboratoire, avec la phrase de rappel qui les suivait. Le dé se règle face par face, c’est plus clair que sept modèles dont un seul servait.',
+    ],
+  },
   {
     version: '1.34',
     date: '17/08/2026',

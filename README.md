@@ -42,7 +42,7 @@ si l'écran est en retard.
 | Page | Contenu |
 |---|---|
 | **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
-| **Réglages** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Journée, graine. |
+| **Réglages** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Tornade, graine. |
 | **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. Le siège d'un joueur réveillé prend la couleur de son équipe, celui d'un dormeur reste gris. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
 | **Historique** | Parties jouées, statistiques cumulées, export CSV. |
@@ -92,7 +92,7 @@ Pour refaire les PNG après une retouche du SVG, les rendre à 180, 192 et 512 p
 ```
 src/core/     moteur, sans aucune dépendance à l'affichage
   rng.js        générateur pseudo-aléatoire déterministe (graine reproductible)
-  config.js     symboles, faces, combinaisons, cartes Journée, mise en place, profils d'IA
+  config.js     symboles, faces, combinaisons, cartes Tornade, mise en place, profils d'IA
   engine.js     moteur de jeu à événements datés
   proba.js      probabilités exactes (multinomiale + chaîne de Markov absorbante)
   sim.js        campagnes de parties et agrégation
@@ -115,18 +115,24 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   base) ou la version **sans les points** ;
 - nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
   face** — depuis les options de partie comme depuis le Laboratoire ;
-- nombre de dés requis pour chaque combinaison, y compris celles des cartes Journée ;
+- nombre de dés requis pour chaque combinaison, y compris celles des cartes Tornade ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
 - laquelle des deux combinaisons porte l'attrape — l'Attaque ou l'Échec — et,
   pour l'Échec, s'il faut être réveillé pour tenter le contact ;
 - ce que rapporte l'attrape : un jeton, ou la manche si le contact réussit ;
 - ce qui arrive quand deux lots se rencontrent : le lot en cours est poussé, ou
   les lots s'empilent dans la même main ;
-- lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour
+- lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Tornade pour
   gagner — et, à nombre impair, un objectif distinct pour le Vert (`cartesVert`),
   qui joue seul contre deux équipes ;
 - **qui prend les dés à la première manche** (`equipeDepart`) : les Jaunes selon
   la règle, les Bleus, ou le Vert seul ;
+- **des combinaisons propres au Vert** (`combosAsymetriques`, `combosVert`) :
+  chaque ligne du tableau se dédouble, celle des deux équipes et celle du Vert ;
+- **« Réveillé seulement »** par combinaison : cochée, elle ne sort plus que
+  Tornade éveillée ;
+- **un paquet de cartes par mode de jeu**, avec ses propres exigences ;
+- **l'illustration et le nom** de la Tornade et de la Vache ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe, et **irrégularité du rythme** de 0 à 50 % ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
@@ -142,8 +148,8 @@ deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas
 
 | Mode | La manche se gagne | Ce qui fait la partie |
 |---|---|---|
-| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Vache | 3 cartes Journée |
-| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé — ou attrape son voisin | 4 cartes Journée |
+| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Vache | 3 cartes Tornade |
+| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé — ou attrape son voisin | 4 cartes Tornade |
 
 Sans les points, on se réveille aux trois tornades, puis on cherche les trois
 vaches ; le premier qui les sort arrête la manche sur-le-champ et son équipe
@@ -160,7 +166,7 @@ la course se gagne des deux mains.
 Tout le reste tient — le dé, les combinaisons, les X qui figent, le rythme. Deux
 effets de bord assumés :
 
-- **les cartes Journée qui manipulent les jetons** changent de sens : « Jour sans
+- **les cartes Tornade qui manipulent les jetons** changent de sens : « Jour sans
   vent » (`cacherJetonAdverse`) ne fait plus rien, tandis que « Élevage
   intensif » et « Troupeau » (`jeton1`, `jeton2`) emportent la manche comme la
   Vache. Chaque carte le dit sur elle-même dans les Réglages ;
@@ -409,6 +415,84 @@ Pénible ≈ Équilibré > Très pénible > Agressif > Très agressif ≈ Idiot 
 La diagonale à ~50 % vérifie que rien ne penche du côté des Bleus : deux équipes
 du même caractère font jeu égal.
 
+## Les emblèmes d’équipe
+
+Les Bleus sont les **vaches**, les Jaunes les **poules**, le joueur Vert est le
+**cowboy**. Les emblèmes sont dessinés en SVG dans `src/ui/icons.js`, au même
+trait que les faces de dés, et accompagnent le nom de l’équipe partout où il
+apparaît : accueil, table, règles.
+
+## Des combinaisons propres au Vert
+
+Le Vert joue seul contre deux équipes. `combosAsymetriques` ouvre une seconde
+exigence par combinaison, rangée dans `combosVert` — cartes comprises. Le tableau
+des Réglages se dédouble alors : une ligne « Bleus · Jaunes », une ligne « Vert ».
+`requisPourEquipe(cfg, id, requisBase, equipe)` est le seul juge, moteur et
+menus ; une ligne du Vert laissée vide retombe sur celle de la table.
+
+**Décochée, la table est strictement symétrique** — c’est la référence, et le
+réglage part décoché. L’effet est massif, mesuré sur 150 parties à 5 joueurs :
+
+| Exigences du Vert | Victoires du Vert |
+|---|---|
+| identiques (défaut) | 41 % |
+| Réveil et Vache à 2 dés | 96 % |
+| Réveil et Vache à 4 dés | 5 % |
+
+C’est donc le levier d’équilibrage du Vert le plus direct — bien plus que
+`cartesVert`, qui ne change que la ligne d’arrivée.
+
+## Réveillé seulement
+
+Chaque combinaison porte une condition : `face` vaut `'endormie'`, `'active'`
+(réveillé) ou `'toutes'`. La colonne « Réveillé » du tableau la bascule entre
+`'active'` et la valeur d’origine de `COMBOS_TORNADE` — décocher ne transforme
+donc pas le Réveil en combinaison universelle, il retrouve `'endormie'`.
+
+La table range les combinaisons en deux listes, **Endormi** et **Réveillé**, et
+n’affiche que celles que le dé peut produire : `comboPossible(faces, requis)`
+tient compte des jokers. Sans face joker, « Trois jokers » n’est pas une règle en
+sommeil, c’est une ligne morte — elle disparaît.
+
+## Un paquet de cartes par mode
+
+Chaque mode a son paquet et ses exigences : `cartes`/`combosCartes` pour le mode
+jetons, `cartesSansPoints`/`combosCartesSansPoints` sans les points.
+`clePaquet(cfg)`, `cleCombosCartes(cfg)`, `cartesEnJeu(cfg)` et
+`requisCarte(cfg, combo)` choisissent la bonne table ; le moteur ne lit rien
+d’autre. Une carte marquée `inerteSansPoints` — aujourd’hui « Jour sans vent »,
+qui recache un jeton — sort du paquet « sans les points » par défaut, et se
+recoche à la main si on y tient.
+
+## L’apparence des faces
+
+`src/ui/apparence.js` retient, par symbole, un nom et une illustration ;
+`icons.js` les résout en dessin (`dessinFace`). Deux faces sont
+personnalisables : la Tornade et la Vache. L’illustration est soit un modèle
+fourni (`reveil`, `tornadeVerte`), soit une image importée, stockée en `data:`
+dans le navigateur — le site reste autonome, aucune requête vers l’extérieur.
+Limite : 400 ko par image.
+
+**Le pouvoir ne change pas** : c’est le même symbole pour le moteur, la même
+combinaison, le même effet. `core/` ignore complètement ce module.
+
+## Les statistiques, décorrélées
+
+Les combinaisons de base et celles des cartes ne se comparent pas : les premières
+sont disponibles à chaque lancer, les secondes une manche sur douze. La campagne
+les compte séparément — `combosBase`, `combosCartes` — et suit, par carte, le
+nombre de manches où sa combinaison est **effectivement sortie** :
+
+| Colonne | Ce qu’elle dit |
+|---|---|
+| Manches jouées | manches où la carte était en jeu |
+| Manches où elle sort | manches où sa combinaison est tombée au moins une fois |
+| Taux de sortie | le rapport des deux |
+| Réalisations | combien de fois par manche jouée |
+
+Un taux à 0 % désigne une combinaison que le dé ne peut pas produire — sur le dé
+officiel, « Journée de la chance » demande quatre éclairs et n’en a aucun.
+
 ## Qui prend les dés en premier
 
 `equipeDepart` désigne qui ouvre la **première** manche : `'jaune'` (la règle du
@@ -464,8 +548,8 @@ des valeurs par défaut explicites, toutes modifiables :
    X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
    serait injouable.
 5. **Quand plusieurs combinaisons sortent au même jet**, un joueur humain
-   choisit — sauf si la carte Journée est de la partie, elle est alors jouée
-   d’office, sans hésitation possible ; à défaut de réponse, et pour les IA, la carte Journée passe avant
+   choisit — sauf si la carte Tornade est de la partie, elle est alors jouée
+   d’office, sans hésitation possible ; à défaut de réponse, et pour les IA, la carte Tornade passe avant
    tout, puis l’attrape, puis les combinaisons de gain, et l’Échec en
    dernier — sans cette priorité, « Journée de la chance » (quatre éclairs)
    serait inatteignable.
