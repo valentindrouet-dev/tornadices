@@ -4,18 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.43';
+import { h, remplacer, duree, vider } from './dom.js?v=1.44';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.43';
-import { Moteur } from '../core/engine.js?v=1.43';
+} from './icons.js?v=1.44';
+import { Moteur } from '../core/engine.js?v=1.44';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-} from '../core/config.js?v=1.43';
-import { ajouterHistorique } from './store.js?v=1.43';
-import { aller } from './app.js?v=1.43';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.43';
+} from '../core/config.js?v=1.44';
+import { ajouterHistorique } from './store.js?v=1.44';
+import { aller } from './app.js?v=1.44';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.44';
 
 let moteur = null;
 let vitesse = 1;
@@ -48,7 +48,7 @@ const TOUCHES = [
 ];
 
 // Couleurs des éclats d'écran : la vache pour tous, l'échec et le sommeil pour soi.
-const COULEUR_ECLAT = { vache: '#52a72e', echec: '#e2000f', endormi: '#8794a3' };
+const COULEUR_ECLAT = { vache: '#6cb800', echec: '#e2000f', endormi: '#8794a3' };
 
 /** Sous cette largeur, la table passe en disposition verticale. */
 const surMobile = () => window.innerWidth <= 860;

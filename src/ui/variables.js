@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.43';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.43';
-import { store } from './store.js?v=1.43';
-import { aller } from './app.js?v=1.43';
-import { lancerPartie } from './table.js?v=1.43';
+import { h, remplacer } from './dom.js?v=1.44';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.44';
+import { store } from './store.js?v=1.44';
+import { aller } from './app.js?v=1.44';
+import { lancerPartie } from './table.js?v=1.44';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -17,21 +17,24 @@ import {
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.43';
-import { tableauCombos, editeurCases } from './combos.js?v=1.43';
+} from '../core/config.js?v=1.44';
+import { tableauCombos, editeurCases } from './combos.js?v=1.44';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.43';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.43';
-import { randomSeed } from '../core/rng.js?v=1.43';
-import { reglagesJoueurs } from './accueil.js?v=1.43';
+} from './apparence.js?v=1.44';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.44';
+import { randomSeed } from '../core/rng.js?v=1.44';
+import { reglagesJoueurs } from './accueil.js?v=1.44';
+import {
+  barreProfils, reglagesCourants, enregistrerReglages,
+} from './profils.js?v=1.44';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
 export function variables() {
-  return store.get('variables', {});
+  return reglagesCourants();
 }
 
 /** Configuration complète d'une partie : défauts du nombre de joueurs + réglages. */
@@ -110,7 +113,7 @@ function titreAide(titre, texte, ...suite) {
 function ecrire(cle, valeur) {
   const v = variables();
   v[cle] = valeur;
-  store.set('variables', v);
+  enregistrerReglages(v);
 }
 
 /** Limite de l'image importée : au-delà, le stockage du navigateur déborde. */
@@ -196,6 +199,18 @@ function carteApparence(sym, rafraichir) {
   );
 }
 
+/**
+ * Le Laboratoire garde sa propre copie de configuration, complète et modifiable
+ * à part. Changer de réglage enregistré doit donc la refaire, sans quoi les deux
+ * pages parleraient de deux jeux de règles différents. Le nombre de joueurs de
+ * la campagne, lui, ne bouge pas : c'est un choix de campagne, pas un réglage.
+ */
+export function reporterAuLabo() {
+  const ancienne = store.get('cfgLabo', null);
+  const n = (ancienne && ancienne.nbJoueurs) || store.get('nbJoueurs', 6);
+  store.set('cfgLabo', construireConfig(n));
+}
+
 export function vueVariables() {
   const racine = h('div.page');
   const nb = store.get('nbJoueurs', 6);
@@ -229,13 +244,17 @@ export function vueVariables() {
         h('h1', 'Réglages de la partie'),
         h('div', { style: { flex: '1' } }),
         h('button.btn.btn--petit', {
-          onclick: () => { store.set('variables', {}); dessiner(); },
+          onclick: () => { enregistrerReglages({}); dessiner(); },
         }, 'Tout réinitialiser'),
         h('button.btn.btn--petit', { onclick: () => aller('/') }, '← Accueil'),
       ),
       h('p.petit.muted', { style: { marginBottom: '20px' } },
         `Tout ce qui suit s’applique à la prochaine partie, à ${nb} joueurs. `
         + 'Le Laboratoire dispose des mêmes réglages pour ses campagnes simulées.'),
+
+      // Au-dessus de tout le reste : de quels réglages parle la page. Changer
+      // de réglage enregistré change tout d'un coup, ici et au Laboratoire.
+      barreProfils(() => { reporterAuLabo(); dessiner(); }),
 
       // ── Mode de jeu ───────────────────────────────────────────────────────
       // Le premier réglage de la page, parce qu'il change la forme d'une manche

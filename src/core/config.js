@@ -3,7 +3,7 @@
 
 export const SYMBOLES = {
   tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
-  vache: { id: 'vache', nom: 'Vache', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
+  vache: { id: 'vache', nom: 'Vache', couleur: '#82dc0a', desc: 'Retourne un jeton de votre équipe' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
   // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.

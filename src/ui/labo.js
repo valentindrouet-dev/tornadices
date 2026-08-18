@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.43';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.43';
-import { nomSymbole } from './apparence.js?v=1.43';
-import { store } from './store.js?v=1.43';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.43';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.44';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.44';
+import { nomSymbole } from './apparence.js?v=1.44';
+import { store } from './store.js?v=1.44';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.44';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,11 +13,13 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.43';
-import { tableauCombos } from './combos.js?v=1.43';
+} from '../core/config.js?v=1.44';
+import { tableauCombos } from './combos.js?v=1.44';
+import { barreProfils, idActif } from './profils.js?v=1.44';
+import { construireConfig } from './variables.js?v=1.44';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.43';
+} from '../core/proba.js?v=1.44';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -50,6 +52,9 @@ function cfgLabo() {
 
 let etat = {
   onglet: 'simulation',
+  // Le réglage enregistré dont vient `cfg`. La page garde son état d'une visite
+  // à l'autre — il faut donc savoir quand la configuration n'est plus la bonne.
+  profil: idActif(),
   cfg: cfgLabo(),
   profils: store.get('profilsLabo', null) || Array.from({ length: 9 }, () => 'equilibre'),
   nbParties: store.get('nbPartiesLabo', 200),
@@ -66,6 +71,14 @@ function sauver() {
 }
 
 export function vueLabo() {
+  // Un réglage enregistré a pu être choisi depuis les Réglages pendant qu'on
+  // était ailleurs : la configuration de campagne le suit, sinon les deux pages
+  // parleraient de deux jeux de règles différents. Tant que le réglage ne change
+  // pas, ce qu'on a modifié ici reste en place.
+  if (etat.profil !== idActif()) {
+    etat.profil = idActif();
+    etat.cfg = cfgLabo();
+  }
   const racine = h('div.page.page--large');
 
   function dessiner() {
@@ -93,7 +106,18 @@ export function vueLabo() {
 // ── Onglet Simulation ────────────────────────────────────────────────────────
 function ongletSimulation(rafraichir) {
   return h('div.grille.grille--labo',
-    panneauConfig(rafraichir),
+    h('div', { style: { display: 'grid', gap: '16px' } },
+      // Le même bandeau qu'aux Réglages : changer de réglage enregistré remonte
+      // la configuration de la campagne, sans toucher au nombre de joueurs ni à
+      // la graine, qui appartiennent à la campagne et non au jeu.
+      barreProfils(() => {
+        etat.profil = idActif();
+        etat.cfg = construireConfig(etat.cfg.nbJoueurs);
+        store.set('cfgLabo', etat.cfg);
+        rafraichir();
+      }),
+      panneauConfig(rafraichir),
+    ),
     etat.calcul
       ? h('div.carte', { style: { textAlign: 'center', padding: '60px 20px' } },
           h('h3', 'Campagne en cours…'),

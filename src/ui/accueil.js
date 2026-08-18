@@ -1,19 +1,20 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.43';
-import { store } from './store.js?v=1.43';
-import { aller } from './app.js?v=1.43';
-import { eveillerSons } from './sons.js?v=1.43';
-import { lancerPartie, partieEnCours } from './table.js?v=1.43';
-import { construireConfig, variables } from './variables.js?v=1.43';
+import { h, remplacer } from './dom.js?v=1.44';
+import { store } from './store.js?v=1.44';
+import { aller } from './app.js?v=1.44';
+import { eveillerSons } from './sons.js?v=1.44';
+import { lancerPartie, partieEnCours } from './table.js?v=1.44';
+import { construireConfig, variables } from './variables.js?v=1.44';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   OPTIONS_MANCHE, cartesDuMode, cartesEnJeu,
-} from '../core/config.js?v=1.43';
-import { nomSymbole } from './apparence.js?v=1.43';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.43';
-import { randomSeed } from '../core/rng.js?v=1.43';
+} from '../core/config.js?v=1.44';
+import { nomSymbole } from './apparence.js?v=1.44';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.44';
+import { randomSeed } from '../core/rng.js?v=1.44';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.44';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -24,9 +25,9 @@ const CHAMPS_TABLEAU = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
 /** Écrit un réglage de partie, comme le ferait la page Réglages. */
 function ecrireReglage(cle, valeur) {
-  const v = store.get('variables', {});
+  const v = { ...reglagesCourants() };
   v[cle] = valeur;
-  store.set('variables', v);
+  enregistrerReglages(v);
 }
 
 // Les couleurs du titre sont celles des équipes : bleu et jaune en alternance,

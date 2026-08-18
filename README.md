@@ -97,6 +97,7 @@ src/core/     moteur, sans aucune dépendance à l'affichage
   proba.js      probabilités exactes (multinomiale + chaîne de Markov absorbante)
   sim.js        campagnes de parties et agrégation
 src/ui/       interface
+  profils.js    réglages enregistrés : la liste, la sélection, le bandeau
 src/version.js  numéro de version et journal des modifications
 ```
 
@@ -106,6 +107,32 @@ daté dans une file de priorité. La table de jeu fait avancer cette horloge au
 rythme du navigateur ; le Laboratoire la déroule d’un trait, à quelque
 1,5 ms par partie. Les statistiques décrivent donc bien le jeu tel qu’il se joue,
 et non un modèle parallèle qui aurait dérivé.
+
+## Les réglages enregistrés
+
+Équilibrer, c’est comparer des versions entre elles. Un bandeau coiffe les
+Réglages **et** le Laboratoire : « Par défaut », puis autant de réglages nommés
+qu’on veut. Un clic sur l’un d’eux change **tous** les paramètres d’un coup, dans
+les deux pages — et la partie suivante part avec.
+
+`src/ui/profils.js` tient la liste (`profilsReglages`) et la sélection
+(`profilActif`). Le point clé : **une seule lecture et une seule écriture**,
+`reglagesCourants()` / `enregistrerReglages()`. Selon la sélection elles portent
+sur le réglage enregistré ou sur la clé historique `variables`, et le reste du
+site n’a pas à savoir lequel des deux — la page Réglages, l’accueil et le
+lancement de partie passent tous par là sans changer d’un mot.
+
+- **« Par défaut » n’est pas un enregistrement** mais son absence : les réglages
+  libres du site, sous leur clé d’origine. Le sélectionner les retrouve tels
+  qu’on les avait laissés, il n’efface rien ;
+- **+ Nouveau** copie les réglages en cours dans un réglage nommé et le
+  sélectionne. Tout ce qu’on modifie ensuite s’y enregistre, aux Réglages comme
+  au Laboratoire ;
+- renommer se fait dans le champ, supprimer demande un second clic. Un nom vide
+  devient « Sans titre », un doublon prend un numéro ;
+- le Laboratoire garde sa propre copie de configuration : elle est refaite quand
+  le réglage sélectionné change, jamais autrement — ce qu’on y règle pour une
+  campagne ne se perd pas en changeant de page.
 
 ## Ce qui est réglable
 

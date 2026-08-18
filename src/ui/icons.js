@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole } from './apparence.js?v=1.43';
+import { imageSymbole } from './apparence.js?v=1.44';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -54,7 +54,7 @@ const GLYPHES = {
 
 export const COULEUR_FACE = {
   tornade: '#a8dcf2',
-  vache: '#52a72e',
+  vache: '#82dc0a',
   zzz: '#c28ef2',
   eclair: '#f9b115',
   joker: '#f4a11c',

@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.43';
+export const VERSION = '1.44';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.44',
+    date: '18/08/2026',
+    notes: [
+      'Les réglages s’enregistrent sous un nom, autant qu’on veut. Un bandeau coiffe désormais la page Réglages et le Laboratoire : « Par défaut », puis vos réglages nommés. Un clic sur l’un d’eux change tous les paramètres d’un coup — dans les Réglages, dans le Laboratoire, et pour la partie suivante. Comparer deux équilibrages ne demande plus de tout remodifier à la main puis de tout remettre.',
+      '« + Nouveau » copie les réglages en cours dans un réglage nommé et s’y installe : tout ce que vous modifiez ensuite s’y enregistre, et les autres ne bougent pas. Le nom se change dans son champ, la suppression demande un second clic, et « Par défaut » n’est jamais effacé — ce ne sont pas des enregistrements mais les réglages libres du site, retrouvés tels qu’on les avait laissés.',
+      'Le Laboratoire garde sa propre configuration de campagne, modifiable à part : elle est refaite au moment où le réglage sélectionné change, jamais autrement. Ce que vous y ajustez pour une campagne ne se perd pas en changeant de page.',
+      'La face verte prend un vert bien plus clair et vif, celui de l’Abri. L’ancien vert forêt venait de la vache et sonnait terne sous une maison au trait noir.',
+    ],
+  },
   {
     version: '1.43',
     date: '18/08/2026',

@@ -1239,3 +1239,15 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   .dos-fleche { width: 42px; height: 42px; font-size: 26px; }
   .annonce--manche { font-size: 17px; padding: 12px 18px; }
 }
+
+/* ── Réglages enregistrés ─────────────────────────────────────────────────────
+   Le bandeau qui coiffe les Réglages et le Laboratoire : de quels réglages
+   parle la page, et de quoi en changer d'un clic. */
+.carte--profils { background: linear-gradient(180deg, #ffffff, #f0f7fd); }
+.chip--profil { font-weight: 700; }
+.chip--profil.on {
+  background: linear-gradient(180deg, #4aa5e2, #1e83cc);
+  border-color: #1873b5; color: #fff;
+  box-shadow: 0 2px 8px rgba(30, 131, 204, .28);
+}
+.chip--profil.on:hover { filter: brightness(1.04); border-color: #14638f; }
