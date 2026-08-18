@@ -156,18 +156,38 @@ export const OPTIONS_ATTRAPE = [
 
 export const AIDE_ATTRAPE = {
   non: 'Règle de base : un contact réussi interrompt le voisin et retourne un jeton de votre équipe.',
-  touche: 'Trois éclairs, vous passez le lot et tentez le contact — s’il réussit, votre équipe '
-    + 'remporte la manche sur-le-champ. Les jetons ne servent plus qu’à la course parallèle.',
+  touche: 'Vous passez le lot et tentez le contact — s’il réussit, votre équipe remporte la '
+    + 'manche sur-le-champ. Sans les points, c’est le réglage de départ : il n’y a plus de jeton '
+    + 'à prendre, et l’attrape devient l’autre moyen de prendre une manche, avec la Vache.',
 };
 
 /**
- * Ce que vaut un contact réussi. Sans les points, il n'y a plus de jeton à
- * prendre : l'attrape emporte la manche, sans quoi elle ne vaudrait plus rien.
- * Le réglage ne se pose donc que dans le mode de base.
+ * Ce que vaut un contact réussi. Un seul juge, moteur et menus : sans les points
+ * le réglage vaut « touche » par défaut, mais il reste réglable — c'est là que
+ * se décide si la manche se gagne aussi à l'attrape.
  */
 export function attrapeEmporteManche(cfg) {
-  return !!cfg.sansPoints || cfg.attrapeGagneManche === 'touche';
+  return cfg.attrapeGagneManche === 'touche';
 }
+
+// Qui prend les dés à la première manche. La règle du jeu dit les Jaunes ; les
+// deux autres entrées servent à voir ce que change le premier tour de table.
+export const EQUIPES_DEPART = ['jaune', 'bleu', 'vert'];
+
+export const OPTIONS_EQUIPE_DEPART = [
+  ['jaune', 'Les Jaunes'],
+  ['bleu', 'Les Bleus'],
+  ['vert', 'Le Vert'],
+];
+
+export const AIDE_EQUIPE_DEPART = {
+  jaune: 'Règle du jeu : les Jaunes prennent les lots à la première manche, et le Vert avec eux. '
+    + 'Aux manches suivantes, ce sont toujours les perdants de la précédente qui reçoivent les dés.',
+  bleu: 'Les Bleus ouvrent la première manche, le Vert avec eux. Rien d’autre ne change : les '
+    + 'manches suivantes reviennent aux perdants de la précédente.',
+  vert: 'Le Vert ouvre seul la première manche. S’il reste des lots à placer — il ne peut en tenir '
+    + 'qu’un —, ils vont aux joueurs suivants autour de la table.',
+};
 
 /**
  * Ce que le mode de jeu fait — ou défait — à une carte Journée. Sans les points,
@@ -247,6 +267,9 @@ export function assainirConfig(cfg) {
   // qui la porte encore retombe sur la variante voisine, celle où il faut
   // toucher pour emporter la manche.
   if (cfg.attrapeGagneManche === 'combo') sortie.attrapeGagneManche = 'touche';
+  // Une équipe de départ inconnue — ou aucune, avant la v1.34 — retombe sur la
+  // règle du jeu plutôt que de laisser la manche sans porteur.
+  if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
   sortie.variance = Math.min(0.5, Math.max(0, Number(cfg.variance) || 0));
   sortie.combos = (Array.isArray(cfg.combos) ? cfg.combos : base.combos)
     .map((c) => ({ ...c, requis: assainirRequis(c.requis) }));
@@ -596,10 +619,16 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.
     lotsCumules: !!opts.lotsCumules,
-    // Variante d'attrape : 'non' (un jeton retourné, la règle de base),
-    // 'touche' (le contact réussi emporte la manche) ou 'combo' (les trois
-    // éclairs l'emportent sans même tenter le contact).
-    attrapeGagneManche: 'non',
+    // Ce que vaut un contact réussi : 'non' (un jeton retourné, la règle de
+    // base) ou 'touche' (le contact emporte la manche). Sans les points, il n'y
+    // a plus de jeton à prendre : c'est « touche » qui vaut par défaut — l'un
+    // des deux moyens de prendre une manche, avec la Vache. Réglable dans les
+    // deux modes.
+    attrapeGagneManche: opts.sansPoints ? 'touche' : 'non',
+    // Qui prend les dés à la première manche : les Jaunes (la règle), les Bleus,
+    // ou le Vert seul. Le Vert accompagne l'équipe désignée dans les deux
+    // premiers cas, comme au jeu.
+    equipeDepart: EQUIPES_DEPART.includes(opts.equipeDepart) ? opts.equipeDepart : 'jaune',
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
       .map((c) => ({ ...c, requis: { ...c.requis } })),

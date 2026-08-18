@@ -10,12 +10,12 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.33';
+import { makeRng } from './rng.js?v=1.34';
 import {
   CARTES_JOURNEE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
-} from './config.js?v=1.33';
+} from './config.js?v=1.34';
 
 const CARTES_PAR_ID = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c]));
 
@@ -213,7 +213,9 @@ export class Moteur {
     });
   }
 
-  // Manche 1 : les Jaunes (et le Vert s'il existe) prennent les lots.
+  // Manche 1 : l'équipe de départ prend les lots — les Jaunes selon la règle,
+  // et le Vert avec elle. Le réglage « Qui commence » permet d'ouvrir sur les
+  // Bleus, ou sur le Vert seul.
   // Manches suivantes : les perdants de la manche précédente — ou les gagnants
   // si la « Journée de la triche » était en jeu.
   _porteursDeDepart() {
@@ -223,8 +225,11 @@ export class Moteur {
       candidats = this._prochainsPorteurs;
       this._prochainsPorteurs = null;
     } else {
+      const depart = this.cfg.equipeDepart || 'jaune';
       candidats = this.joueurs
-        .filter((j) => j.equipe === 'jaune' || j.equipe === 'vert')
+        // Le Vert n'a pas d'équipe à qui succéder : il ouvre avec celle qui
+        // commence, sauf quand c'est lui qu'on a désigné — il est seul alors.
+        .filter((j) => j.equipe === depart || (depart !== 'vert' && j.equipe === 'vert'))
         .map((j) => j.id);
     }
     if (!candidats.length) candidats = this.joueurs.map((j) => j.id);

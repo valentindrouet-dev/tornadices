@@ -1,10 +1,10 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.33';
-import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.33';
+import { h } from './dom.js?v=1.34';
+import { pastilleSymbole, suiteSymboles, SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE } from './icons.js?v=1.34';
 import {
   COMBOS_TORNADE, CARTES_JOURNEE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA,
-} from '../core/config.js?v=1.33';
+} from '../core/config.js?v=1.34';
 
 export function vueRegles() {
   return h('div.page',
@@ -206,6 +206,14 @@ export function vueRegles() {
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
         '* Ligne extrapolée : le tableau officiel V4.5 s’arrête à 8 joueurs.'),
+      h('p.petit', { style: { marginTop: '12px' } },
+        'À la première manche, ce sont les Jaunes qui prennent les lots, et le Vert avec eux. '
+        + 'Ensuite, les dés reviennent toujours aux perdants de la manche précédente — sauf sous '
+        + '« Journée de la triche », où ce sont les gagnants qui repartent avec.'),
+      h('p.mini.muted', 'Les Réglages permettent d’ouvrir sur les Bleus, ou sur le Vert seul : '
+        + 'utile pour voir ce que change le premier tour de table. Sur 300 parties simulées, '
+        + 'aucun écart mesurable sur les victoires — c’est un réglage de confort, pas '
+        + 'd’équilibrage.'),
     ),
 
     h('div.carte',
@@ -219,9 +227,9 @@ export function vueRegles() {
         + 'vainqueur, quatre en général au lieu de trois.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'L’attrape emporte la manche elle aussi : il n’y a plus de jeton à prendre, un contact '
-        + 'réussi vaut donc la manche entière. La course se gagne des deux mains — sortir la '
-        + 'Vache, ou attraper celui qui allait la sortir. Le réglage « Ce que rapporte '
-        + 'l’attrape » est figé dans ce mode, il n’a plus de second terme à proposer.'),
+        + 'réussi vaut donc la manche entière. C’est la base du mode — la course se gagne des '
+        + 'deux mains, sortir la Vache ou attraper celui qui allait la sortir. Le réglage « Ce '
+        + 'que rapporte l’attrape » démarre donc sur « Manche gagnée », et reste modifiable.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Certaines cartes Journée manipulent les jetons : dans ce mode, elles ne font rien de '
         + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '

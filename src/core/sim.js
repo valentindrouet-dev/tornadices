@@ -1,7 +1,7 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.33';
-import { CARTES_JOURNEE } from './config.js?v=1.33';
+import { Moteur } from './engine.js?v=1.34';
+import { CARTES_JOURNEE } from './config.js?v=1.34';
 
 const NOM_CARTE = Object.fromEntries(CARTES_JOURNEE.map((c) => [c.id, c.nom]));
 

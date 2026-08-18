@@ -125,6 +125,8 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - lots en jeu, jetons par équipe, jetons du joueur Vert, cartes Journée pour
   gagner — et, à nombre impair, un objectif distinct pour le Vert (`cartesVert`),
   qui joue seul contre deux équipes ;
+- **qui prend les dés à la première manche** (`equipeDepart`) : les Jaunes selon
+  la règle, les Bleus, ou le Vert seul ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe, et **irrégularité du rythme** de 0 à 50 % ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
@@ -146,11 +148,14 @@ deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas
 Sans les points, on se réveille aux trois tornades, puis on cherche les trois
 vaches ; le premier qui les sort arrête la manche sur-le-champ et son équipe
 prend la carte. **Une attrape réussie emporte la manche de la même façon** : il
-n’y a plus de jeton à prendre, un contact vaut donc la manche entière —
-`attrapeEmporteManche(cfg)` en est l’unique juge, et le réglage
-`attrapeGagneManche` n’a plus de second terme à proposer, il est figé dans les
-deux menus. Sur 60 parties à six joueurs, **105 manches sont prises à l’attrape
-contre 310 à la Vache** : la course se gagne des deux mains.
+n’y a plus de jeton à prendre, un contact vaut donc la manche entière. C’est la
+base du mode, donc sa valeur de départ — `attrapeGagneManche` vaut `'touche'`
+dès que `sansPoints` est activé, et `attrapeEmporteManche(cfg)` en est l’unique
+juge, moteur et menus. Le réglage reste modifiable dans les deux modes ; le
+remettre sur `'non'` sans les points fait de l’attrape une simple interruption,
+et les menus le signalent. Sur 60 parties à six joueurs, **105 manches sont
+prises à l’attrape contre 310 à la Vache**, et la partie gagne 35 à 50 secondes :
+la course se gagne des deux mains.
 
 Tout le reste tient — le dé, les combinaisons, les X qui figent, le rythme. Deux
 effets de bord assumés :
@@ -403,6 +408,30 @@ Pénible ≈ Équilibré > Très pénible > Agressif > Très agressif ≈ Idiot 
 
 La diagonale à ~50 % vérifie que rien ne penche du côté des Bleus : deux équipes
 du même caractère font jeu égal.
+
+## Qui prend les dés en premier
+
+`equipeDepart` désigne qui ouvre la **première** manche : `'jaune'` (la règle du
+jeu, défaut), `'bleu'` ou `'vert'`. Le Vert accompagne l’équipe désignée dans les
+deux premiers cas — il n’a pas d’équipe à qui succéder ; désigné seul, il ouvre
+seul et les lots restants vont aux joueurs suivants autour de la table, un
+joueur ne pouvant en tenir qu’un. Les manches suivantes ne sont pas concernées :
+elles reviennent toujours aux perdants de la précédente, ou aux gagnants sous
+« Journée de la triche ».
+
+**Le premier tour de table ne décide rien.** Sur 300 parties d’IA équilibrées par
+ligne, les victoires ne bougent pas au-delà du bruit d’échantillonnage (±3 pts) :
+
+| Joueurs | Mode | Départ Jaunes | Départ Bleus | Départ Vert |
+|---|---|---|---|---|
+| 4 | jetons | bleu 53 % | bleu 53 % | — |
+| 6 | jetons | jaune 54 % | jaune 52 % | — |
+| 5 | jetons | vert 40 % | vert 44 % | vert 41 % |
+| 9 | jetons | vert 73 % | vert 78 % | vert 75 % |
+| 5 | sans points | vert 8 % | vert 9 % | vert 9 % |
+
+C’est donc un réglage de confort — ouvrir la partie du bon côté de la table —
+pas un levier d’équilibrage.
 
 ## Le rythme d’un lot
 

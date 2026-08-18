@@ -3,22 +3,23 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.33';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.33';
-import { store } from './store.js?v=1.33';
-import { aller } from './app.js?v=1.33';
-import { lancerPartie } from './table.js?v=1.33';
+import { h, remplacer } from './dom.js?v=1.34';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.34';
+import { store } from './store.js?v=1.34';
+import { aller } from './app.js?v=1.34';
+import { lancerPartie } from './table.js?v=1.34';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_JOURNEE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
+  OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.33';
-import { tableauCombos } from './combos.js?v=1.33';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.33';
-import { randomSeed } from '../core/rng.js?v=1.33';
-import { reglagesJoueurs } from './accueil.js?v=1.33';
+} from '../core/config.js?v=1.34';
+import { tableauCombos } from './combos.js?v=1.34';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.34';
+import { randomSeed } from '../core/rng.js?v=1.34';
+import { reglagesJoueurs } from './accueil.js?v=1.34';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -260,20 +261,21 @@ export function vueVariables() {
           }, h('span.case', '✓'), 'Il faut être réveillé'),
         ),
 
-        // Sans les points, il n'y a plus de jeton à prendre : le contact réussi
-        // emporte la manche, et le réglage n'a plus de second terme à proposer.
+        // Réglable dans les deux modes. Sans les points, « touche » est la
+        // valeur de départ : c'est la base du mode, l'attrape y étant le second
+        // moyen de prendre une manche.
         titreAide('Ce que rapporte l’attrape', [
-          cfg.sansPoints
-            ? 'Sans les points, un contact réussi emporte la manche : il n’y a plus de jeton à '
-              + 'prendre, et l’attrape serait sans objet autrement. Le réglage est donc figé — '
-              + 'revenez au mode « Retourner tous les jetons » pour le rouvrir.'
-            : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
+          AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
+          cfg.sansPoints && cfg.attrapeGagneManche !== 'touche'
+            ? 'Attention : sans les points, « Un jeton » ne rapporte rien — il n’y a plus de jeton '
+              + 'à retourner. Le contact interrompt son voisin, et c’est tout. Reprenez « Manche '
+              + 'gagnée si le contact réussit » pour rendre l’attrape payante.'
+            : '',
         ]),
         h('div.rangee.rangee--serree',
-          h('div.segment', { class: cfg.sansPoints ? 'segment--fige' : '' },
+          h('div.segment',
             ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-              class: (cfg.sansPoints ? 'touche' : cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
-              disabled: cfg.sansPoints,
+              class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
               onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
             }, lib)),
           ),
@@ -402,6 +404,22 @@ export function vueVariables() {
                 { min: 1, max: 12 })
             : null,
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
+        ),
+
+        // Qui ouvre la partie. Seule la première manche est concernée : les
+        // suivantes reviennent toujours aux perdants de la précédente.
+        titreAide('Qui commence', AIDE_EQUIPE_DEPART[cfg.equipeDepart || 'jaune']),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_EQUIPE_DEPART
+              // Le Vert n'existe qu'à nombre impair : ailleurs, l'entrée
+              // désignerait une équipe vide.
+              .filter(([id]) => id !== 'vert' || nb % 2)
+              .map(([id, lib]) => h('button', {
+                class: (cfg.equipeDepart || 'jaune') === id ? 'on' : '',
+                onclick: () => { ecrire('equipeDepart', id); dessiner(); },
+              }, lib)),
+          ),
         ),
       ),
 

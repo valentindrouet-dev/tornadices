@@ -1,20 +1,21 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.33';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.33';
-import { store } from './store.js?v=1.33';
-import { lancerCampagne } from '../core/sim.js?v=1.33';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.34';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.34';
+import { store } from './store.js?v=1.34';
+import { lancerCampagne } from '../core/sim.js?v=1.34';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, PRESETS_FACES, CARTES_JOURNEE, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
+  OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.33';
-import { tableauCombos } from './combos.js?v=1.33';
+} from '../core/config.js?v=1.34';
+import { tableauCombos } from './combos.js?v=1.34';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.33';
+} from '../core/proba.js?v=1.34';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
 
@@ -246,10 +247,11 @@ function panneauConfig(rafraichir) {
         style: { fontSize: '12.5px' },
         onclick: () => {
           cfg.sansPoints = id === 'sansPoints';
-          // Les deux modes ne se jouent pas au même nombre de cartes : on suit
-          // la valeur de référence tant que la campagne n'y a pas touché.
-          cfg.cartesPourGagner = configParDefaut(cfg.nbJoueurs, { sansPoints: cfg.sansPoints })
-            .cartesPourGagner;
+          // Les deux modes n'ont ni le même nombre de cartes ni la même valeur
+          // d'attrape : on repart de leurs références, quitte à les rerégler.
+          const base = configParDefaut(cfg.nbJoueurs, { sansPoints: cfg.sansPoints });
+          cfg.cartesPourGagner = base.cartesPourGagner;
+          cfg.attrapeGagneManche = base.attrapeGagneManche;
           rafraichir();
         },
       }, lib)),
@@ -277,19 +279,17 @@ function panneauConfig(rafraichir) {
     h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
-    h('div.segment', { class: cfg.sansPoints ? 'segment--fige' : '' },
+    h('div.segment',
       ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-        // Sans les points, le contact emporte la manche : plus rien à choisir.
-        class: (cfg.sansPoints ? 'touche' : cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+        class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
         style: { fontSize: '12.5px' },
-        disabled: cfg.sansPoints,
         onclick: () => { cfg.attrapeGagneManche = id; rafraichir(); },
       }, lib)),
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
-      cfg.sansPoints
-        ? 'Sans les points, un contact réussi emporte la manche : il n’y a plus de jeton à '
-          + 'prendre. Le réglage est figé dans ce mode.'
+      cfg.sansPoints && cfg.attrapeGagneManche !== 'touche'
+        ? 'Sans les points, « Un jeton » ne rapporte rien : le contact interrompt le voisin, sans '
+          + 'plus. C’est « Manche gagnée » qui fait de l’attrape le second moyen de prendre une manche.'
         : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Quand deux lots se rencontrent'),
@@ -322,6 +322,19 @@ function panneauConfig(rafraichir) {
       `Référence officielle à ${cfg.nbJoueurs} joueurs : ${mep.lots} lots · ${mep.jetons} jetons `
       + `(Vert ${mep.jetonsVert}) · ${mep.cartes} cartes.`
       + (mep.extrapole ? ' Valeurs extrapolées au-delà de 8 joueurs.' : '')),
+
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Qui commence'),
+    h('div.segment',
+      ...OPTIONS_EQUIPE_DEPART
+        .filter(([id]) => id !== 'vert' || cfg.nbJoueurs % 2)
+        .map(([id, lib]) => h('button', {
+          class: (cfg.equipeDepart || 'jaune') === id ? 'on' : '',
+          style: { fontSize: '12.5px' },
+          onclick: () => { cfg.equipeDepart = id; rafraichir(); },
+        }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      AIDE_EQUIPE_DEPART[cfg.equipeDepart || 'jaune']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Rythme et adresse'),
     h('div.grille.grille--3', { style: { gap: '10px' } },

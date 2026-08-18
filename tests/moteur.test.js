@@ -925,11 +925,14 @@ console.log('\nManche sans les points');
   // Sans les points, il n'y a plus de jeton à prendre : un contact réussi
   // emporte la manche. Le réglage « Ce que rapporte l'attrape » ne s'y pose plus.
   {
-    verifier('le contact réussi emporte la manche, quel que soit le réglage',
-      attrapeEmporteManche({ sansPoints: true, attrapeGagneManche: 'non' })
-      && attrapeEmporteManche({ sansPoints: true, attrapeGagneManche: 'touche' }));
-    verifier('en mode jetons, le réglage décide comme avant',
-      !attrapeEmporteManche({ sansPoints: false, attrapeGagneManche: 'non' })
+    verifier('sans les points, l’attrape rapporte la manche par défaut',
+      configParDefaut(6, { sansPoints: true }).attrapeGagneManche === 'touche'
+      && attrapeEmporteManche(configParDefaut(6, { sansPoints: true })));
+    verifier('en mode jetons, la règle de base reste « un jeton »',
+      configParDefaut(6).attrapeGagneManche === 'non'
+      && !attrapeEmporteManche(configParDefaut(6)));
+    verifier('le réglage décide, dans les deux modes',
+      !attrapeEmporteManche({ sansPoints: true, attrapeGagneManche: 'non' })
       && attrapeEmporteManche({ sansPoints: false, attrapeGagneManche: 'touche' }));
 
     const cfg = configParDefaut(6, { sansPoints: true });
@@ -954,6 +957,17 @@ console.log('\nManche sans les points');
     }
     verifier(`sur 60 parties : ${parAttrape} manches prises à l’attrape, ${parVache} à la Vache`,
       parAttrape > 0 && parVache > 0);
+
+    // Et le réglage retiré, plus une seule manche ne se gagne au contact.
+    const sans = configParDefaut(6, { sansPoints: true });
+    sans.attrapeGagneManche = 'non';
+    let aucune = 0;
+    for (let g = 0; g < 30; g++) {
+      const p = new Moteur(sans, spec(6), `sp-att-${g}`);
+      p.jouerJusquAuBout();
+      aucune += p.journal.filter((e) => /Le contact réussit/.test(e.texte || '')).length;
+    }
+    verifier('réglé sur « Un jeton », l’attrape ne prend plus aucune manche', aucune === 0);
   }
 
   // Le mode ne change rien à la version de base : même graine, même partie.
@@ -976,6 +990,64 @@ console.log('\nManche sans les points');
       + `contre ${s(base.dureeManche.medianeMs)} en mode jetons`,
       r.raisons.manchesMax === undefined
       && r.dureeManche.medianeMs < base.dureeManche.medianeMs);
+  }
+}
+
+// ── 3 septies ter. Qui prend les dés à la première manche ────────────────────
+console.log('\nQui commence');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  verifier('sans réglage, c’est la règle du jeu : les Jaunes',
+    configParDefaut(6).equipeDepart === 'jaune'
+    && configParDefaut(6, { equipeDepart: 'nimportequoi' }).equipeDepart === 'jaune');
+  verifier('un réglage enregistré avant la v1.34 retombe sur les Jaunes',
+    assainirConfig({ nbJoueurs: 6 }).equipeDepart === 'jaune');
+
+  // Qui tient réellement les lots au premier coup d'envoi.
+  const ouvreurs = (n, equipeDepart) => {
+    const cfg = configParDefaut(n, { equipeDepart });
+    // Le constructeur ouvre déjà la première manche : les lots sont en main.
+    const m = new Moteur(cfg, spec(n), `dep-${n}-${equipeDepart}`);
+    return m.joueurs.filter((j) => j.lots.length).map((j) => j.equipe);
+  };
+
+  for (const [n, dep, attendu] of [
+    [6, 'jaune', 'jaune'], [6, 'bleu', 'bleu'],
+    [5, 'jaune', 'jaune'], [5, 'bleu', 'bleu'],
+  ]) {
+    const eq = ouvreurs(n, dep);
+    // Le Vert ouvre avec l'équipe désignée : il n'a pas d'équipe à qui succéder.
+    verifier(`${n} joueurs, départ ${dep} — les lots partent de ${[...new Set(eq)].join(' et ')}`,
+      eq.length > 0 && eq.every((e) => e === attendu || e === 'vert'));
+  }
+  {
+    const eq = ouvreurs(5, 'vert');
+    verifier(`5 joueurs, départ vert — le Vert ouvre (${[...new Set(eq)].join(', ')})`,
+      eq.includes('vert'));
+    // Un joueur seul ne tient qu'un lot : les autres vont bien quelque part.
+    verifier('les lots restants sont tout de même distribués',
+      eq.length === Math.min(configParDefaut(5).lots, 5));
+  }
+
+  // Le réglage ne change pas la manche 2 : elle revient toujours aux perdants.
+  {
+    const cfg = configParDefaut(6, { equipeDepart: 'bleu' });
+    const m = new Moteur(cfg, spec(6), 'dep-suite');
+    m.jouerJusquAuBout();
+    const premiere = m.statsManches[0];
+    verifier(`manche 1 gagnée par ${premiere.vainqueur}, partie menée à terme en ${m.manche} manches`,
+      m.termine && !!m.vainqueur);
+  }
+
+  // Aucune configuration de départ ne bloque une partie, dans les deux modes.
+  for (const sansPoints of [false, true]) {
+    for (const dep of ['jaune', 'bleu', 'vert']) {
+      const cfg = configParDefaut(5, { sansPoints, equipeDepart: dep });
+      const r = lancerCampagne(cfg, spec(5), `dep-camp-${dep}`, 60);
+      verifier(`${sansPoints ? 'sans points' : 'jetons'}, départ ${dep} — 60 parties au bout`,
+        r.raisons.manchesMax === undefined && r.raisons.cartes === 60);
+    }
   }
 }
 

@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.33';
-export const BUILD_DATE = '2026-08-17';
+export const VERSION = '1.34';
+export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.34',
+    date: '17/08/2026',
+    notes: [
+      'Sans les points, « Ce que rapporte l’attrape » redevient un vrai réglage : il démarre sur « Manche gagnée si le contact réussit », parce que c’est la base du mode, mais il se modifie comme n’importe quel autre. Il était figé depuis la 1.32 — la case grisée se lisait comme un réglage inactif alors qu’elle était forcée.',
+      'Ce que ça change à la table : sur 200 parties à six joueurs, 1,5 manche par partie est prise au contact, et la partie gagne près d’une minute (3:37 contre 4:10). Remis sur « Un jeton », l’attrape sans les points ne fait plus qu’interrompre le voisin — les menus le disent en toutes lettres au lieu de vous laisser le découvrir en jouant.',
+      'Nouveau réglage, dans « Mise en place » : « Qui commence ». On choisit qui prend les dés à la première manche — les Jaunes selon la règle, les Bleus, ou le Vert seul. Le Vert accompagne l’équipe désignée dans les deux premiers cas ; désigné seul, il ouvre seul et les lots restants vont aux joueurs suivants. Les manches suivantes ne bougent pas : elles reviennent toujours aux perdants de la précédente.',
+      'Mesuré avant de le livrer : le premier tour de table ne décide rien. Sur 300 parties par ligne, de 4 à 9 joueurs, dans les deux modes, les taux de victoire ne bougent pas au-delà du bruit d’échantillonnage. C’est un réglage de confort — ouvrir la partie du bon côté de la table — pas un levier d’équilibrage, et les Règles le disent.',
+      'Le réglage est aussi au Laboratoire, avec le reste. Une configuration enregistrée avant cette version ouvre sur les Jaunes, comme avant.',
+    ],
+  },
   {
     version: '1.33',
     date: '17/08/2026',
