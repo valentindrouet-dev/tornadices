@@ -3,7 +3,7 @@
 
 export const SYMBOLES = {
   tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
-  vache: { id: 'vache', nom: 'Vache', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
+  vache: { id: 'vache', nom: 'Abri', couleur: '#52a72e', desc: 'Retourne un jeton de votre équipe' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
   // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.
@@ -124,11 +124,11 @@ export const AIDE_DECLENCHEUR = {
 
 // Deux façons de jouer une manche.
 //
-// « jetons » — la règle de base : chaque équipe retourne ses jetons Vache un à
+// « jetons » — la règle de base : chaque équipe retourne ses jetons Abri un à
 // un, et la manche revient à celle qui les a tous retournés.
 //
 // « sansPoints » — on ne compte plus rien : il faut se réveiller puis sortir la
-// combinaison Vache, et le premier qui y arrive arrête la manche sur-le-champ.
+// combinaison Abri, et le premier qui y arrive arrête la manche sur-le-champ.
 // Son équipe prend la carte Tornade, et l'on recommence. Une attrape réussie
 // emporte la manche de la même façon — sans jeton à prendre, elle n'aurait plus
 // rien à rapporter. C'est le nombre de cartes qui fait la partie.
@@ -138,9 +138,9 @@ export const OPTIONS_MANCHE = [
 ];
 
 export const AIDE_MANCHE = {
-  jetons: 'Règle de base : chaque Vache retourne un jeton de votre équipe, et la manche revient '
+  jetons: 'Règle de base : chaque Abri retourne un jeton de votre équipe, et la manche revient '
     + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
-  sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche la Vache. Le '
+  sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche l’Abri. Le '
     + 'premier joueur qui la sort arrête la manche sur-le-champ — son équipe prend la carte '
     + 'Tornade, et la manche suivante commence. Une attrape réussie emporte la manche de la '
     + 'même façon. Plus aucun jeton n’est compté ; c’est le nombre de cartes qui fait le '
@@ -158,7 +158,7 @@ export const AIDE_ATTRAPE = {
   non: 'Règle de base : un contact réussi interrompt le voisin et retourne un jeton de votre équipe.',
   touche: 'Vous passez le lot et tentez le contact — s’il réussit, votre équipe remporte la '
     + 'manche sur-le-champ. Sans les points, c’est le réglage de départ : il n’y a plus de jeton '
-    + 'à prendre, et l’attrape devient l’autre moyen de prendre une manche, avec la Vache.',
+    + 'à prendre, et l’attrape devient l’autre moyen de prendre une manche, avec l’Abri.',
 };
 
 /**
@@ -262,18 +262,18 @@ export function noteCarteMode(carte, cfg) {
   switch (carte.combo.effet) {
     case 'jeton1':
     case 'jeton2':
-      return 'Sans les points : cette combinaison emporte la manche, comme la Vache.';
+      return 'Sans les points : cette combinaison emporte la manche, comme l’Abri.';
     case 'cacherJetonAdverse':
       return 'Sans les points : sans effet, il n’y a plus de jeton à recacher.';
     case 'auChoix':
-      return 'Sans les points : le choix se réduit au réveil ou à la Vache, qui emporte la manche.';
+      return 'Sans les points : le choix se réduit au réveil ou à l’Abri, qui emporte la manche.';
     default:
       return '';
   }
 }
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Le dé officiel : 2 tornades, 1 X, 1 vache, 2 ZzZ. Ni joker ni éclair — les
+// Le dé officiel : 2 tornades, 1 X, 1 abri, 2 ZzZ. Ni joker ni éclair — les
 // deux faces restent disponibles dans les menus, à poser soi-même.
 // Modifiable face par face dans les réglages de partie et dans le Laboratoire.
 export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz'];
@@ -396,8 +396,8 @@ export const COMBOS_TORNADE = [
   },
   {
     id: 'vache',
-    nom: 'Vache',
-    libelle: 'Retournez un jeton Vache de votre équipe',
+    nom: 'Abri',
+    libelle: 'Retournez un jeton Abri de votre équipe',
     requis: { vache: 3 },
     face: 'active',
     obligatoire: false,
@@ -407,7 +407,7 @@ export const COMBOS_TORNADE = [
     nom: 'Endormi',
     libelle: 'Endormez un de vos voisins',
     requis: { zzz: 3 },
-    // Comme la vache : il faut être réveillé pour endormir quelqu'un d'autre.
+    // Comme l'Abri : il faut être réveillé pour endormir quelqu'un d'autre.
     face: 'active',
     obligatoire: false,
   },
@@ -441,6 +441,20 @@ export const COMBOS_TORNADE = [
     optionnelle: 'echecJokers',
   },
 ];
+
+/**
+ * Ce que « Réveillé seulement » rend quand on la décoche.
+ *
+ * Décocher doit lever la condition — sinon la case ne se décoche pas. C'était
+ * le cas de l'Abri et de l'Endormi, dont la condition d'origine est justement
+ * « active » : on leur réécrivait la valeur qu'ils avaient déjà. Le repli est
+ * donc « les deux états », sauf pour le Réveil, réservé au dormeur : sans lui,
+ * un joueur endormi ne pourrait plus jamais se réveiller.
+ */
+export function faceSansReveil(comboId) {
+  const ref = COMBOS_TORNADE.find((c) => c.id === comboId);
+  return ref && ref.face === 'endormie' ? 'endormie' : 'toutes';
+}
 
 // ── Cartes Tornade ────────────────────────────────────────────────────────────
 // `combo` : combinaison supplémentaire ouverte pour la manche.
@@ -717,14 +731,14 @@ export const PROFILS_IA = {
     vise: { endormi: { tornade: 1 }, eveille: { vache: 1 } },
     lancersAvantPasse: 7, ecartLancers: 2, peur: 0.55,
     reflexe: 780, ecartReflexe: 200, adresse: 0.52, esquive: 0.58, erreur: 0.02,
-    desc: 'Joue pour gagner : d’abord les tornades pour se réveiller, ensuite les vaches.',
+    desc: 'Joue pour gagner : d’abord les tornades pour se réveiller, ensuite les abris.',
   },
   agressif: {
     id: 'agressif', nom: 'Agressif',
     vise: { endormi: { eclair: 3, tornade: 1 }, eveille: { eclair: 3, vache: 1 } },
     lancersAvantPasse: 9, ecartLancers: 3, peur: 0.3,
     reflexe: 690, ecartReflexe: 180, adresse: 0.68, esquive: 0.55, erreur: 0.04,
-    desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
+    desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et court à l’abri le reste du temps.',
   },
   tresAgressif: {
     id: 'tresAgressif', nom: 'Très agressif', court: 'T. agressif',
@@ -739,7 +753,7 @@ export const PROFILS_IA = {
     vise: { endormi: { tornade: 1 }, eveille: { zzz: 3, vache: 1 } },
     lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.45,
     reflexe: 760, ecartReflexe: 200, adresse: 0.5, esquive: 0.6, erreur: 0.03,
-    desc: 'Endort ses voisins trois lots sur quatre ; se réveille et fait la vache le reste du temps.',
+    desc: 'Endort ses voisins trois lots sur quatre ; se réveille et court à l’abri le reste du temps.',
   },
   tresPenible: {
     id: 'tresPenible', nom: 'Très pénible', court: 'T. pénible',
@@ -760,7 +774,7 @@ export const PROFILS_IA = {
   idiot: {
     id: 'idiot', nom: 'Idiot',
     // Vise n'importe lequel des quatre symboles, y compris celui qui ne lui sert
-    // à rien — la vache en dormant, la tornade une fois réveillé.
+    // à rien — l'abri en dormant, la tornade une fois réveillé.
     vise: {
       endormi: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
       eveille: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
@@ -832,7 +846,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // Ce que vaut un contact réussi : 'non' (un jeton retourné, la règle de
     // base) ou 'touche' (le contact emporte la manche). Sans les points, il n'y
     // a plus de jeton à prendre : c'est « touche » qui vaut par défaut — l'un
-    // des deux moyens de prendre une manche, avec la Vache. Réglable dans les
+    // des deux moyens de prendre une manche, avec l'Abri. Réglable dans les
     // deux modes.
     attrapeGagneManche: opts.sansPoints ? 'touche' : 'non',
     // Qui prend les dés à la première manche : les Jaunes (la règle), les Bleus,
@@ -857,7 +871,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // « Sans les points » se joue en général en quatre cartes : les manches y
     // sont bien plus courtes, il en faut davantage pour faire une partie.
     cartesPourGagner: opts.sansPoints ? 4 : mep.cartes,
-    // Manche « sans les points » : la première Vache arrête tout.
+    // Manche « sans les points » : le premier Abri arrête tout.
     sansPoints: !!opts.sansPoints,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.
     // `null` = même exigence que les Bleus et les Jaunes.

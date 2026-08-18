@@ -111,7 +111,7 @@ et non un modèle parallèle qui aurait dérivé.
 
 Tout passe par l’objet de configuration, entièrement exposé dans le Laboratoire :
 
-- **la façon de jouer une manche** : retourner tous ses jetons Vache (la règle de
+- **la façon de jouer une manche** : retourner tous ses jetons Abri (la règle de
   base) ou la version **sans les points** ;
 - nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
   face** — depuis les options de partie comme depuis le Laboratoire ;
@@ -132,7 +132,7 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 - **« Réveillé seulement »** par combinaison : cochée, elle ne sort plus que
   Tornade éveillée ;
 - **un paquet de cartes par mode de jeu**, avec ses propres exigences ;
-- **l'illustration et le nom** de la Tornade et de la Vache ;
+- **l'illustration et le nom** de la Tornade et de l'Abri ;
 - durée du lancer, du constat, du choix de combinaison, du passage, réflexion des
   IA, fenêtre de réflexe, et **irrégularité du rythme** de 0 à 50 % ;
 - adresse de base, taux d’erreur, sanction des erreurs ;
@@ -148,11 +148,11 @@ deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas
 
 | Mode | La manche se gagne | Ce qui fait la partie |
 |---|---|---|
-| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Vache | 3 cartes Tornade |
-| `sansPoints` | dès qu’un joueur sort **une** vache, réveillé — ou attrape son voisin | 4 cartes Tornade |
+| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Abri | 3 cartes Tornade |
+| `sansPoints` | dès qu’un joueur sort **un** abri, réveillé — ou attrape son voisin | 4 cartes Tornade |
 
 Sans les points, on se réveille aux trois tornades, puis on cherche les trois
-vaches ; le premier qui les sort arrête la manche sur-le-champ et son équipe
+abris ; le premier qui les sort arrête la manche sur-le-champ et son équipe
 prend la carte. **Une attrape réussie emporte la manche de la même façon** : il
 n’y a plus de jeton à prendre, un contact vaut donc la manche entière. C’est la
 base du mode, donc sa valeur de départ — `attrapeGagneManche` vaut `'touche'`
@@ -160,7 +160,7 @@ dès que `sansPoints` est activé, et `attrapeEmporteManche(cfg)` en est l’uni
 juge, moteur et menus. Le réglage reste modifiable dans les deux modes ; le
 remettre sur `'non'` sans les points fait de l’attrape une simple interruption,
 et les menus le signalent. Sur 60 parties à six joueurs, **105 manches sont
-prises à l’attrape contre 310 à la Vache**, et la partie gagne 35 à 50 secondes :
+prises à l’attrape contre 310 à l’Abri**, et la partie gagne 35 à 50 secondes :
 la course se gagne des deux mains.
 
 Tout le reste tient — le dé, les combinaisons, les X qui figent, le rythme. Deux
@@ -168,8 +168,8 @@ effets de bord assumés :
 
 - **les cartes Tornade qui manipulent les jetons** changent de sens : « Jour sans
   vent » (`cacherJetonAdverse`) ne fait plus rien, tandis que « Élevage
-  intensif » et « Troupeau » (`jeton1`, `jeton2`) emportent la manche comme la
-  Vache. Chaque carte le dit sur elle-même dans les Réglages ;
+  intensif » et « Troupeau » (`jeton1`, `jeton2`) emportent la manche comme
+  l’Abri. Chaque carte le dit sur elle-même dans les Réglages ;
 - une bourde punie (`penaliteErreurAdverse`) ne donne rien aux adversaires.
 
 La manche est trois fois plus courte, la partie deux fois — sur 200 parties
@@ -205,7 +205,7 @@ l’éclair jusqu’à épuisement — et retombe sur le coup utile du moment.
 | Symbole | Combinaison | Effet | Possible quand | Alerte |
 |---|---|---|---|---|
 | Tornade | 3 | Réveille votre Tornade | Tornade **endormie** | bleu |
-| Vache | 3 | Retourne un jeton de votre équipe | Tornade **éveillée** | vert |
+| Abri | 3 | Retourne un jeton de votre équipe | Tornade **éveillée** | vert |
 | ZzZ | 3 | Endort un voisin | Tornade **éveillée** | violet |
 | Éclair | 3 | Passe le lot et tente d’attraper le suivant | le suivant tient un lot | jaune clignotant orange |
 | Joker | 3 | Échec : le lot part sans rien tenter (règle décochable) | toujours | rouge |
@@ -288,7 +288,7 @@ Ce que le joker change, calculé sur le dé courant (4 dés, relance de tout) :
 | | Sans joker (2 tornades) | Avec joker |
 |---|---|---|
 | 3 tornades | 22,6 % | 16,2 % |
-| 3 vaches / 3 ZzZ / 3 éclairs | 3,7 % | 16,2 % |
+| 3 abris / 3 ZzZ / 3 éclairs | 3,7 % | 16,2 % |
 | 3 jokers (échec) | — | 3,3 % |
 
 Les quatre symboles passent à égalité ; le réveil, seul à profiter de la seconde
@@ -343,8 +343,8 @@ permet, et l’échec cesse d’être une pure perte. Sur 200 parties à 6 joueu
 | Équilibré | 5:25, 9,2 contacts | 3:34, 6,3 contacts |
 | Agressif | 5:56, 15,4 contacts | 3:42, 8,0 contacts |
 
-La partie raccourcit d’une bonne minute partout : la seconde vache double les
-chances de retourner un jeton, et c’est la course aux vaches qui décide la
+La partie raccourcit d’une bonne minute partout : le second abri double les
+chances de retourner un jeton, et c’est la course aux abris qui décide la
 manche. Le Logique attrape autant qu’avant — il ne visait déjà pas l’éclair —
 tandis que l’Agressif, privé de sa cible, retombe à moitié moins de contacts.
 
@@ -358,7 +358,7 @@ caractère, et repris quand la Tornade change d’état.
 
 | Caractère | Ce qu’il vise |
 |---|---|
-| **Logique** | tornades tant qu’il dort, vaches une fois réveillé. Rien d’autre. |
+| **Logique** | tornades tant qu’il dort, abris une fois réveillé. Rien d’autre. |
 | **Agressif** | éclairs trois lots sur quatre, sinon le coup logique |
 | **Très agressif** | éclairs, uniquement — en dormant s’il le faut, l’attrape ne demande rien |
 | **Pénible** | la tornade pour se réveiller, puis ZzZ trois lots sur quatre |
@@ -369,7 +369,7 @@ caractère, et repris quand la Tornade change d’état.
 Ce que chacun produit, six exemplaires du même caractère autour de la table,
 200 parties à 6 joueurs :
 
-| Caractère | Durée | Réveils | Vaches | ZzZ | Attrapes |
+| Caractère | Durée | Réveils | Abris | ZzZ | Attrapes |
 |---|---|---|---|---|---|
 | Logique | 4,6 min | 30 | **24** | 7 | 24 |
 | Agressif | 7,0 min | 27 | 17 | 8 | 76 |
@@ -386,8 +386,8 @@ visait que ça, sur le coup utile du moment. Sur 300 parties à 6 joueurs :
 
 | Caractère | Avant | Après |
 |---|---|---|
-| Agressif | 5:41 · 14,5 contacts · 14,6 vaches | 4:21 · 7,8 contacts · 20,6 vaches |
-| Très agressif | 6:11 · 20,5 contacts · 9,6 vaches | 4:34 · 9,3 contacts · 19,7 vaches |
+| Agressif | 5:41 · 14,5 contacts · 14,6 abris | 4:21 · 7,8 contacts · 20,6 abris |
+| Très agressif | 6:11 · 20,5 contacts · 9,6 abris | 4:34 · 9,3 contacts · 19,7 abris |
 | Équilibré | 5:31 · 8,9 contacts | 4:50 · 7,1 contacts |
 
 Les agressifs cessent de s'entêter sur un voisin désarmé : ils se réveillent et
@@ -436,8 +436,8 @@ réglage part décoché. L’effet est massif, mesuré sur 150 parties à 5 joue
 | Exigences du Vert | Victoires du Vert |
 |---|---|
 | identiques (défaut) | 41 % |
-| Réveil et Vache à 2 dés | 96 % |
-| Réveil et Vache à 4 dés | 5 % |
+| Réveil et Abri à 2 dés | 96 % |
+| Réveil et Abri à 4 dés | 5 % |
 
 C’est donc le levier d’équilibrage du Vert le plus direct — bien plus que
 `cartesVert`, qui ne change que la ligne d’arrivée.
@@ -515,8 +515,8 @@ tableau des combinaisons ne contient plus que les combinaisons de la Tornade.
 - **la pioche porte la flèche du sens en cours**, lue au dos de sa carte du
   dessus ;
 - **la fin de manche s’annonce au centre**, aux couleurs de l’équipe :
-  « Louise fait gagner Jaunes en sortant la Vache ». La raison est explicite —
-  la Vache, le dernier jeton, l’attrape (avec le nom de la victime), ou la
+  « Louise fait gagner Jaunes en sortant l’Abri ». La raison est explicite —
+  l’Abri, le dernier jeton, l’attrape (avec le nom de la victime), ou la
   combinaison de la carte.
 
 ## L’apparence des faces
@@ -528,7 +528,7 @@ la face verte — c’est l’habillage par défaut du site, défini par
 | Symbole (moteur) | Nom affiché | Illustration | Ancien dessin |
 |---|---|---|---|
 | `tornade` | Réveil | `reveil` | Tornade bleue |
-| `vache` | Tornade | `tornadeVerte` | Vache verte |
+| `vache` | Tornade | `tornadeVerte` | Abri (la vache d’avant) |
 
 Les **identifiants de symbole ne changent pas** : le moteur continue de parler de
 `tornade` et de `vache`, et toute règle ou configuration enregistrée sous

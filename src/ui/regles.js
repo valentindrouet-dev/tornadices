@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.41';
+import { h } from './dom.js?v=1.42';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.41';
+} from './icons.js?v=1.42';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.41';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.41';
+} from '../core/config.js?v=1.42';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.42';
 
 export function vueRegles() {
   return h('div.page',
@@ -46,11 +46,11 @@ export function vueRegles() {
         + 'qui tient un lot le relance aussi vite et aussi souvent qu’il veut, jusqu’à sortir une '
         + 'combinaison… ou jusqu’à ce que deux X figent ses dés et lui fassent rendre le lot. '
         + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
-      h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Vache. '
+      h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Abri. '
         + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
         + 'Le sens de circulation s’inverse à chaque manche.'),
       h('p.petit.muted', 'Les Réglages proposent une seconde façon de compter, « sans les '
-        + 'points » : la première vache arrête la manche. Elle est décrite plus bas.'),
+        + 'points » : le premier Abri arrête la manche. Elle est décrite plus bas.'),
       // Chaque équipe a son emblème : c'est ainsi qu'on les nomme à la table.
       h('div.grille.grille--3', { style: { marginTop: '14px' } },
         ...Object.values(COULEURS_EQUIPE).map((e) => h('div.stat',
@@ -102,7 +102,7 @@ export function vueRegles() {
       h('div.rangee', { style: { marginBottom: '12px' } },
         pastilleSymbole('joker', 46),
         h('p.petit', { style: { flex: '1', margin: 0 } },
-          'Le joker prend la face de n’importe quel symbole — tornade, vache, ZzZ ou éclair — '
+          'Le joker prend la face de n’importe quel symbole — tornade, abri, ZzZ ou éclair — '
           + 'jamais celle du X. Il valide donc n’importe quelle combinaison, et se garde d’un '
           + 'lancer à l’autre comme n’importe quel dé utile.'),
       ),
@@ -138,11 +138,11 @@ export function vueRegles() {
       h('div.rangee', { style: { marginTop: '14px' } },
         h('span', { html: SVG_TORNADE_ENDORMIE, style: { width: '30px', color: 'var(--gris-clair)' } }),
         h('span.petit', 'Chaque manche commence Tornade endormie : il faut d’abord se réveiller '
-          + 'aux tornades avant de pouvoir retourner un jeton aux vaches.'),
+          + 'aux tornades avant de pouvoir retourner un jeton aux abris.'),
         h('span', { html: SVG_TORNADE_EVEILLEE, style: { width: '30px', color: 'var(--bleu)' } }),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
-        'Il faut être réveillé pour agir : les vaches comme les ZzZ ne comptent que Tornade '
+        'Il faut être réveillé pour agir : les abris comme les ZzZ ne comptent que Tornade '
         + 'éveillée, et les tornades ne comptent que si l’on dort encore. Seuls l’attrape et '
         + 'les deux échecs valent dans les deux états.'),
       h('div.encart', { style: { marginTop: '10px' } },
@@ -156,13 +156,13 @@ export function vueRegles() {
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
         ...[['rouge', 'Échec — deux X ou trois jokers, le lot part'], ['jaune', 'Trois éclairs — attrape'],
-          ['bleu', 'Trois tornades — réveil'], ['vert', 'Trois vaches — jeton'],
+          ['bleu', 'Trois tornades — réveil'], ['vert', 'Trois abris — jeton'],
           ['violet', 'Trois ZzZ — endormi']].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),
       ),
       h('p.petit', { style: { marginTop: '14px' } },
         'Les moments qui comptent s’annoncent en toutes lettres au centre de la table : '
-        + 'un réveil, un endormissement, une vache retournée, une attrape réussie. '
+        + 'un réveil, un endormissement, un Abri retourné, une attrape réussie. '
         + 'Et le journal garde la combinaison finale de chaque tour, avec son issue.'),
     ),
 
@@ -180,7 +180,7 @@ export function vueRegles() {
         + 'résout à l’adresse et à l’esquive de chacun.'),
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
         'Variante réglable dans les Réglages : un contact réussi peut emporter la manche '
-        + 'entière. Elle devient alors une course à l’attrape plutôt qu’une course aux vaches — '
+        + 'entière. Elle devient alors une course à l’attrape plutôt qu’une course aux abris — '
         + 'mais il faut toujours toucher, les trois éclairs seuls ne suffisent jamais.'),
     ),
 
@@ -282,8 +282,8 @@ export function vueRegles() {
       h('p.petit', 'Le Vert joue seul contre deux équipes. Les Réglages permettent de lui donner '
         + 'ses propres exigences : cochez « Combinaisons du Vert à part » et chaque ligne du '
         + 'tableau se dédouble — celle des Bleus et des Jaunes, puis celle du Vert.'),
-      h('p.petit.muted', 'Deux vaches au lieu de trois pour se réveiller plus vite, quatre pour '
-        + 'l’alourdir : tout est réglable ligne par ligne, cartes comprises. Décochez la case et '
+      h('p.petit.muted', 'Deux tornades au lieu de trois pour se réveiller plus vite, deux abris '
+        + 'au lieu de trois pour prendre la manche plus tôt, quatre pour l’alourdir : tout est réglable ligne par ligne, cartes comprises. Décochez la case et '
         + 'la table redevient strictement symétrique — c’est la référence, et le réglage part '
         + 'décoché.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
@@ -321,7 +321,7 @@ export function vueRegles() {
       h('div.titre-section', 'La version sans les points'),
       h('p.petit', 'Une seconde façon de jouer une manche, à choisir dans les Réglages. Les '
         + 'jetons sortent du jeu : on se réveille aux trois tornades, puis on cherche les trois '
-        + 'vaches, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
+        + 'abris, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
         + 'prend la carte Tornade, et la manche suivante commence.'),
       h('p.petit.muted', 'Tout le reste tient : le dé, les combinaisons, l’attrape, le rythme, '
         + 'les X qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le '
@@ -329,7 +329,7 @@ export function vueRegles() {
       h('div.encart', { style: { marginTop: '10px' } },
         'L’attrape emporte la manche elle aussi : il n’y a plus de jeton à prendre, un contact '
         + 'réussi vaut donc la manche entière. C’est la base du mode — la course se gagne des '
-        + 'deux mains, sortir la Vache ou attraper celui qui allait la sortir. Le réglage « Ce '
+        + 'deux mains, sortir l’Abri ou attraper celui qui allait le sortir. Le réglage « Ce '
         + 'que rapporte l’attrape » démarre donc sur « Manche gagnée », et reste modifiable.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Certaines cartes Tornade manipulent les jetons : dans ce mode, elles ne font rien de '
@@ -344,7 +344,7 @@ export function vueRegles() {
         + 'une combinaison servie reste jouée d’office, même par un joueur qui ne la visait pas.'),
       h('div.encart', { style: { marginBottom: '14px' } },
         'Aucune IA ne vise l’attrape dans le vide : tant que le joueur suivant a les mains '
-        + 'libres, même l’Agressif joue le coup utile — la tornade s’il dort, la vache s’il est '
+        + 'libres, même l’Agressif joue le coup utile — la tornade s’il dort, l’abri s’il est '
         + 'réveillé. L’envie d’attraper revient dès que le voisin reprend un lot.'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Caractère'), h('th', 'Ce qu’il cherche'))),
@@ -358,8 +358,8 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Les sons de la table'),
       h('p.petit', 'Quatre sons ponctuent la partie : la sonnerie quand vous vous réveillez, '
-        + 'le ronflement quand on vous rendort, le meuglement d’une vache retournée — la vôtre '
-        + 'ou celle d’un autre — et l’alarme dès qu’une attrape est tentée, où que ce soit.'),
+        + 'le ronflement quand on vous rendort, le meuglement d’un Abri retourné — le vôtre '
+        + 'ou celui d’un autre — et l’alarme dès qu’une attrape est tentée, où que ce soit.'),
       h('p.petit.muted', 'Le réveil et le ronflement ne sonnent que pour vous : à six autour de '
         + 'la table, ils sonneraient sans arrêt. Le bouton 🔊 de l’en-tête les coupe en cours de '
         + 'manche ; les Réglages en donnent le volume et permettent de les écouter un par un.'),

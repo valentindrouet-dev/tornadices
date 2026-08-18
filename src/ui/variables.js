@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.41';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.41';
-import { store } from './store.js?v=1.41';
-import { aller } from './app.js?v=1.41';
-import { lancerPartie } from './table.js?v=1.41';
+import { h, remplacer } from './dom.js?v=1.42';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.42';
+import { store } from './store.js?v=1.42';
+import { aller } from './app.js?v=1.42';
+import { lancerPartie } from './table.js?v=1.42';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -17,16 +17,16 @@ import {
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.41';
-import { tableauCombos, editeurCases } from './combos.js?v=1.41';
+} from '../core/config.js?v=1.42';
+import { tableauCombos, editeurCases } from './combos.js?v=1.42';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.41';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.41';
-import { randomSeed } from '../core/rng.js?v=1.41';
-import { reglagesJoueurs } from './accueil.js?v=1.41';
+} from './apparence.js?v=1.42';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.42';
+import { randomSeed } from '../core/rng.js?v=1.42';
+import { reglagesJoueurs } from './accueil.js?v=1.42';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -244,7 +244,7 @@ export function vueVariables() {
         titreAide('Comment se joue une manche', [
           AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons'],
           cfg.sansPoints
-            ? 'Deux façons de prendre la manche, donc : sortir la Vache, ou attraper son voisin. '
+            ? 'Deux façons de prendre la manche, donc : sortir l’Abri, ou attraper son voisin. '
               + 'Le reste des réglages tient — les dés, les combinaisons, le rythme. Seuls les '
               + 'jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
             : '',
@@ -264,7 +264,7 @@ export function vueVariables() {
         titreAide('Dés', [
           `Le lot compte ${cfg.desParLot} dés, et ${cfg.lots} lots tournent autour de la table`
           + `${suivreTableau ? ` — le tableau officiel en prévoit ${mep.lots} à ${nb} joueurs` : ''}.`,
-          'Le d6 est le dé du jeu : 2 tornades, 1 X, 1 vache, 2 ZzZ. Le X fige son dé — il ne se '
+          'Le d6 est le dé du jeu : 2 tornades, 1 X, 1 abri, 2 ZzZ. Le X fige son dé — il ne se '
           + 'relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et chaque '
           + 'face se change une à une dans les menus ci-dessous.',
           'Ni joker ni éclair au départ : posez-les vous-même sur une face pour les essayer. Le '
@@ -658,9 +658,9 @@ export function vueVariables() {
       h('div.carte',
         titreAide('Sons', [
           'Quatre sons ponctuent la partie : la sonnerie du réveil, le ronflement de '
-          + 'l’endormissement, le meuglement d’une vache retournée et l’alarme d’une attrape.',
+          + 'l’endormissement, le meuglement d’un Abri retourné et l’alarme d’une attrape.',
           'Le réveil et le ronflement ne sonnent que pour vous — à six autour de la table, ils '
-          + 'sonneraient sans arrêt. La vache se fête pour tout le monde, et l’alarme prévient la '
+          + 'sonneraient sans arrêt. L’Abri se fête pour tout le monde, et l’alarme prévient la '
           + 'table entière.',
           'Aucun fichier n’est téléchargé : les sons sont fabriqués par le navigateur au moment '
           + 'de les jouer. Le bouton 🔊 de la table les coupe sans quitter la partie.',

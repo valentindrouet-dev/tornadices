@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.41';
+export const VERSION = '1.42';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.42',
+    date: '18/08/2026',
+    notes: [
+      'La face verte s’appelle désormais l’Abri : la combinaison, le jeton qu’elle retourne, l’annonce à la table, les Règles, les profils d’IA et le Laboratoire suivent. Restent des vaches là où ce sont vraiment des vaches : les Bleus gardent leur emblème et leur « Tornade de Vaches ».',
+      'Le dessin et le nom affiché de la face ne bougent pas — elle reste la Tornade verte du dé officiel, et l’ancien dessin de vache est toujours à un clic dans « Apparence des faces ». L’identifiant interne ne change pas non plus : toute partie, toute campagne et tout réglage enregistrés restent valables au mot près.',
+      'Correction : les cases « Réveillé » de l’Abri et de l’Endormi ne se décochaient pas. Leur condition d’origine est justement « Tornade éveillée », et décocher réécrivait cette même valeur — la case revenait cochée aussitôt, sans qu’on puisse rendre ces deux combinaisons disponibles en dormant. Décocher lève désormais la condition ; seul le Réveil retombe sur « endormi », faute de quoi on ne pourrait plus jamais se réveiller.',
+      'Une vérification garde la porte fermée : pour chaque combinaison, décocher doit changer la condition, et le moteur doit bien proposer un Abri décoché à un joueur endormi.',
+    ],
+  },
   {
     version: '1.41',
     date: '18/08/2026',

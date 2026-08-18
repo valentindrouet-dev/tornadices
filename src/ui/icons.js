@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole } from './apparence.js?v=1.41';
+import { imageSymbole } from './apparence.js?v=1.42';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -25,7 +25,7 @@ const GLYPHES = {
       <path d="M40 73.5c2 6.2 7.4 9.8 13.5 7.6"/>
       <path d="M44 86c3.2 4.2 9 4.4 12.5.8"/>
     </g>`,
-  // Vache — retournez un jeton de votre équipe
+  // Abri — retournez un jeton de votre équipe
   vache: `<g fill="${NOIR}">
       <path d="M30.5 24.5c-3.4-1-6 .6-7 4-1.1 3.9.6 8.4 4 11.8-1.6 2.6-2.6 5.5-2.9 8.6-3.3-1.6-6.6-1.5-9 .6-3 2.6-3 7 .2 10.3 2.6 2.7 6.3 3.8 9.6 3.1 3.5 8.5 12.9 14.4 24.6 14.4s21.1-5.9 24.6-14.4c3.3.7 7-.4 9.6-3.1 3.2-3.3 3.2-7.7.2-10.3-2.4-2.1-5.7-2.2-9-.6-.3-3.1-1.3-6-2.9-8.6 3.4-3.4 5.1-7.9 4-11.8-1-3.4-3.6-5-7-4-3.3 1-6.2 4-8 8.2-3.4-1.5-7.3-2.3-11.5-2.3s-8.1.8-11.5 2.3c-1.8-4.2-4.7-7.2-8-8.2z"/>
       <ellipse cx="38.5" cy="50" rx="4.4" ry="5.6" fill="#fff"/>
@@ -182,7 +182,7 @@ export const SVG_LOGO = `
   </svg>`;
 
 // ── Faces personnalisables ───────────────────────────────────────────────────
-// Modèles d'illustration fournis pour la Tornade et la Vache. Même pastille,
+// Modèles d'illustration fournis pour la Tornade et l'Abri. Même pastille,
 // même diamètre, même trait noir : seul le pictogramme change, pour que la face
 // reste lisible à côté des autres.
 
@@ -203,7 +203,7 @@ const FACE_REVEIL = face(COULEUR_FACE.tornade, `
     <circle cx="28" cy="55" r="2.6"/><circle cx="33" cy="40" r="2.6"/>
   </g>`);
 
-// La tornade, sur le vert de la Vache.
+// La tornade, sur le vert de l'Abri.
 const FACE_TORNADE_VERTE = face(COULEUR_FACE.vache, GLYPHES.tornade);
 
 const MODELES_DESSIN = { reveil: FACE_REVEIL, tornadeVerte: FACE_TORNADE_VERTE };

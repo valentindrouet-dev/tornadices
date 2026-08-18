@@ -10,13 +10,13 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.41';
+import { makeRng } from './rng.js?v=1.42';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
-} from './config.js?v=1.41';
+} from './config.js?v=1.42';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -1107,9 +1107,9 @@ export class Moteur {
     // gagner une manche au nom d'un jeton qui n'existe pas.
     if (this.cfg.sansPoints) {
       if (source === 'collision') return;
-      this._annoncer(`Vache ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
+      this._annoncer(`Abri ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
       if (this.onJeton) this.onJeton(j.id, j.equipe, 1, source);
-      this._log(`${j.nom} sort la Vache — ${this._nomEquipe(j.equipe)} remportent la manche.`,
+      this._log(`${j.nom} sort l’Abri — ${this._nomEquipe(j.equipe)} remportent la manche.`,
         'jeton', j.id);
       j.stats.jetonsRetournes += 1;
       j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + 1;
@@ -1131,7 +1131,7 @@ export class Moteur {
         'jeton', j.id,
       );
       this._annoncer(
-        `${gagnes > 1 ? gagnes + ' vaches' : 'Vache'} ! `
+        `${gagnes > 1 ? gagnes + ' abris' : 'Abri'} ! `
         + `${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}`,
         'vert', j.id,
       );
@@ -1189,11 +1189,11 @@ export class Moteur {
     }
   }
 
-  /** « en sortant la Vache », « en attrapant Jade »… — la raison, en clair. */
+  /** « en sortant l’Abri », « en attrapant Jade »… — la raison, en clair. */
   _motifVictoire(cause) {
     switch (cause.raison) {
       case 'vache':
-        return 'en sortant la Vache';
+        return 'en sortant l’Abri';
       case 'jetons':
         return 'en retournant le dernier jeton';
       case 'attrape':

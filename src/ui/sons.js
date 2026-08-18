@@ -8,14 +8,14 @@
 // lui passe le contexte vivant ; une épreuve peut lui passer un contexte hors
 // ligne et mesurer ce qui en sort.
 
-import { store } from './store.js?v=1.41';
+import { store } from './store.js?v=1.42';
 
 export const SONS = ['reveil', 'endormi', 'vache', 'attrape'];
 
 export const NOMS_SONS = {
   reveil: 'Réveil — la sonnerie',
   endormi: 'Endormissement — le ronflement',
-  vache: 'Vache — le meuglement',
+  vache: 'Abri — le meuglement',
   attrape: 'Attrape — l’alarme',
 };
 

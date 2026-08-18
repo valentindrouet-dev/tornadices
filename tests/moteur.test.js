@@ -8,7 +8,7 @@ import {
   TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
-  COULEURS_EQUIPE,
+  COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -128,7 +128,7 @@ console.log('\nProbabilités exactes');
 
   for (const [nom, requis, opts] of [
     ['3 tornades', { tornade: 3 }, {}],
-    ['3 vaches', { vache: 3 }, {}],
+    ['3 abris', { vache: 3 }, {}],
     ['3 éclairs (obligatoire)', { eclair: 3 }, { estArretForce: true }],
     ['1 de chaque (carte)', { tornade: 1, vache: 1, zzz: 1, eclair: 1 }, { prioritaire: true }],
   ]) {
@@ -244,7 +244,7 @@ console.log('\nJokers');
 
   for (const [nom, requis, estArretForce] of [
     ['3 tornades (avec joker)', { tornade: 3 }, false],
-    ['3 vaches (avec joker)', { vache: 3 }, false],
+    ['3 abris (avec joker)', { vache: 3 }, false],
     ['3 jokers — l’échec', { joker: 3 }, true],
   ]) {
     const e = courseCombinaison(FACES_J, D, requis, {
@@ -278,7 +278,7 @@ console.log('\nJokers');
   const reveilAvant = p(FACES_SANS, { tornade: 3 }, OPTS_SANS);
   const reveilApres = p(FACES_J, { tornade: 3 }, OPTS_J);
   verifier(
-    `trois vaches passent de ${(vacheAvant * 100).toFixed(1)} % à ${(vacheApres * 100).toFixed(1)} %, `
+    `trois abris passent de ${(vacheAvant * 100).toFixed(1)} % à ${(vacheApres * 100).toFixed(1)} %, `
     + `le réveil de ${(reveilAvant * 100).toFixed(1)} % à ${(reveilApres * 100).toFixed(1)} %`,
     vacheApres > vacheAvant * 3 && reveilApres < reveilAvant,
   );
@@ -315,7 +315,7 @@ console.log('\nJokers');
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
     const cfg = configParDefaut(6);
-    // « Journée intensive » : 2 tornades + 2 vaches, servies par deux jokers.
+    // « Journée intensive » : 2 tornades + 2 abris, servies par deux jokers.
     cfg.cartes = ['intensive'];
     cfg.melangerCartes = false;
     const m = new Moteur(cfg, humains, 'carte-office');
@@ -653,10 +653,10 @@ console.log('\nCaractères des IA');
     };
   }
   const dit = (id) => `${PROFILS_IA[id].nom} : ${par[id].reveil.toFixed(0)} réveils, `
-    + `${par[id].vache.toFixed(0)} vaches, ${par[id].zzz.toFixed(0)} ZzZ, ${par[id].attrape.toFixed(0)} attrapes`;
+    + `${par[id].vache.toFixed(0)} abris, ${par[id].zzz.toFixed(0)} ZzZ, ${par[id].attrape.toFixed(0)} attrapes`;
 
   const maxSur = (cle) => Object.keys(par).reduce((a, b) => (par[b][cle] > par[a][cle] ? b : a));
-  verifier(`le Logique retourne le plus de vaches — ${dit('logique')}`,
+  verifier(`le Logique retourne le plus d’abris — ${dit('logique')}`,
     maxSur('vache') === 'logique');
   // Depuis que l'attrape n'est visée qu'avec une cible en face, une partie des
   // attrapes est fortuite : elle revient à qui garde son lot le plus longtemps,
@@ -668,11 +668,11 @@ console.log('\nCaractères des IA');
     maxSur('zzz') === 'tresPenible');
   verifier(`l'Agressif attrape bien plus que le Logique — ${dit('agressif')}`,
     par.agressif.attrape > par.logique.attrape * 1.5);
-  verifier('… mais se réveille et fait la vache quand même',
+  verifier('… mais se réveille et court à l’abri quand même',
     par.agressif.reveil > 10 && par.agressif.vache > 5);
   verifier(`le Pénible endort trois fois plus que le Logique — ${dit('penible')}`,
     par.penible.zzz > par.logique.zzz * 2.5);
-  verifier('… mais se réveille et fait la vache quand même',
+  verifier('… mais se réveille et court à l’abri quand même',
     par.penible.reveil > 10 && par.penible.vache > 5);
   verifier(`l'Équilibré tient le milieu sur les deux axes — ${dit('equilibre')}`,
     par.equilibre.attrape > par.logique.attrape && par.equilibre.attrape < par.agressif.attrape
@@ -707,7 +707,7 @@ console.log('\nRéglages enregistrés d’une ancienne version');
     faces: ['cloche', 'cloche', 'vache', 'zzz', 'zzz', 'etoile'],
     combos: [
       { id: 'reveil', nom: 'Réveil', requis: { cloche: 3 }, face: 'endormie' },
-      { id: 'vache', nom: 'Vache', requis: { vache: 3 }, face: 'active' },
+      { id: 'vache', nom: 'Abri', requis: { vache: 3 }, face: 'active' },
       { id: 'endormir', nom: 'Endormi', requis: { zzz: 3 }, face: 'active' },
       { id: 'collision', nom: 'Attrape', requis: { etoile: 2 }, face: 'toutes' },
     ],
@@ -764,7 +764,7 @@ console.log('\nType de dé');
   verifier('le d8 reprend la série depuis le début (2 tornades en plus)',
     facesPourDe(8).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade',
     facesPourDe(8).join(','));
-  verifier('le d10 y ajoute un X et une vache',
+  verifier('le d10 y ajoute un X et un abri',
     facesPourDe(10).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade,x,vache');
   verifier('un autre modèle s’étire pareil',
     facesPourDe(8, FACES_JOKER_ECLAIR).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker');
@@ -846,7 +846,7 @@ console.log('\nL’IA agressive vise une cible, pas le vide');
     verifier('endormi sans cible, le Très agressif vise la tornade',
       m._objectifIA(j, j.lots[0]) === 'tornade');
     j.eveille = true;
-    verifier('réveillé sans cible, il vise la vache',
+    verifier('réveillé sans cible, il vise l’abri',
       m._objectifIA(j, j.lots[0]) === 'vache');
   }
 
@@ -902,7 +902,7 @@ console.log('\nManche sans les points');
     OPTIONS_MANCHE.length === 2
     && OPTIONS_MANCHE.map(([id]) => id).join(',') === 'jetons,sansPoints');
 
-  // La règle du mode tient en une phrase : la première Vache arrête la manche.
+  // La règle du mode tient en une phrase : le premier Abri arrête la manche.
   // On la vérifie manche par manche plutôt que sur le résultat final.
   {
     const cfg = configParDefaut(6, { sansPoints: true });
@@ -913,10 +913,10 @@ console.log('\nManche sans les points');
     const gagnees = m.statsManches.filter((s) => s.vainqueur);
     verifier(`partie menée à terme en ${m.manche} manches, vainqueur ${m.vainqueur} (${m.raisonFin})`,
       m.termine && m.vainqueur && m.raisonFin === 'cartes');
-    verifier('aucune manche ne compte plus d’une Vache',
+    verifier('aucune manche ne compte plus d’un Abri',
       vaches.every((v) => v.n === 1)
       && gagnees.every((s) => vaches.filter((v) => v.manche === s.manche).length <= 1));
-    verifier('la Vache qui tombe emporte la manche pour son équipe',
+    verifier('l’Abri qui tombe emporte la manche pour son équipe',
       vaches.length > 0 && vaches.every((v) => {
         const s = m.statsManches.find((x) => x.manche === v.manche);
         return s && s.vainqueur === v.equipe;
@@ -955,10 +955,10 @@ console.log('\nManche sans les points');
       p.jouerJusquAuBout();
       for (const e of p.journal) {
         if (/Le contact réussit/.test(e.texte || '')) parAttrape++;
-        else if (/sort la Vache/.test(e.texte || '')) parVache++;
+        else if (/sort l’Abri/.test(e.texte || '')) parVache++;
       }
     }
-    verifier(`sur 60 parties : ${parAttrape} manches prises à l’attrape, ${parVache} à la Vache`,
+    verifier(`sur 60 parties : ${parAttrape} manches prises à l’attrape, ${parVache} à l’Abri`,
       parAttrape > 0 && parVache > 0);
 
     // Et le réglage retiré, plus une seule manche ne se gagne au contact.
@@ -1020,7 +1020,7 @@ console.log('\nCombinaisons propres au Vert');
     requisPourEquipe({ combosAsymetriques: true, combosVert: { reveil: {} } },
       'reveil', base, 'vert') === base);
 
-  // Ce que l'asymétrie change réellement, mesuré : un Réveil et une Vache à deux
+  // Ce que l'asymétrie change réellement, mesuré : un Réveil et un Abri à deux
   // dés au lieu de trois doivent faire nettement remonter le Vert.
   {
     const cfg = configParDefaut(5);
@@ -1255,6 +1255,35 @@ console.log('\nTornades du mode sans les points');
   }
 }
 
+// ── 3 septies bis quater. La case « Réveillé seulement » se décoche ──────────
+console.log('\n« Réveillé seulement » — la case se décoche');
+{
+  // La case écrivait la condition d'origine en se décochant. Pour l'Abri et
+  // l'Endormi, cette origine est justement « active » : on leur réécrivait ce
+  // qu'ils avaient déjà, et la case restait cochée quoi qu'on clique.
+  for (const c of COMBOS_TORNADE) {
+    verifier(`${c.nom} : décocher change bien la condition (${c.face} → ${faceSansReveil(c.id)})`,
+      faceSansReveil(c.id) !== 'active');
+  }
+  verifier('le Réveil reste réservé au dormeur', faceSansReveil('reveil') === 'endormie');
+  verifier('l’Abri décoché vaut dans les deux états', faceSansReveil('vache') === 'toutes');
+
+  // Et le moteur suit : décochée, la combinaison sort aussi en dormant.
+  const cfg = configParDefaut(6);
+  cfg.combos = cfg.combos.map((c) => (c.id === 'vache' ? { ...c, face: faceSansReveil(c.id) } : c));
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const m = new Moteur(cfg, spec, 'abri-endormi');
+  let vueEnDormant = false;
+  const original = m.combosDisponibles.bind(m);
+  m.combosDisponibles = (j) => {
+    const dispo = original(j);
+    if (!j.eveille && dispo.some((c) => c.id === 'vache')) vueEnDormant = true;
+    return dispo;
+  };
+  m.jouerJusquAuBout();
+  verifier('décochée, l’Abri est proposé à un joueur endormi', vueEnDormant);
+}
+
 // ── 3 septies bis quinquies. Ce qu'une configuration ancienne retrouve ───────
 console.log('\nUne combinaison disparue revient');
 {
@@ -1444,7 +1473,7 @@ console.log('\nCampagne du Laboratoire');
   verifier('toutes les parties ont un vainqueur comptabilisé', totalVictoires === 120);
   verifier('aucune partie interrompue par une limite', !r.raisons.limite && !r.raisons.manchesMax);
   verifier('des collisions ont été tentées', r.collisions.tentees > 0);
-  verifier('des jetons viennent des vaches et des collisions',
+  verifier('des jetons viennent des abris et des collisions',
     r.jetonsParSource.vache > 0 && r.jetonsParSource.collision > 0);
   verifier('la durée médiane est plausible (10 s – 30 min)',
     r.duree.medianeMs > 10000 && r.duree.medianeMs < 1800000,

@@ -12,14 +12,12 @@
 // Les combinaisons des cartes Tornade, elles, se règlent sur chaque carte : une
 // carte porte son dessin, son texte et son exigence au même endroit.
 
-import { h } from './dom.js?v=1.41';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.41';
-import { nomSymbole } from './apparence.js?v=1.41';
+import { h } from './dom.js?v=1.42';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.42';
+import { nomSymbole } from './apparence.js?v=1.42';
 import {
-  ORDRE_SYMBOLES, COMBOS_TORNADE, COULEURS_EQUIPE, requisPourEquipe,
-} from '../core/config.js?v=1.41';
-
-const FACE_REFERENCE = Object.fromEntries(COMBOS_TORNADE.map((c) => [c.id, c.face]));
+  ORDRE_SYMBOLES, COULEURS_EQUIPE, requisPourEquipe, faceSansReveil,
+} from '../core/config.js?v=1.42';
 
 /** { vache: 3 } → ['vache', 'vache', 'vache', ''] sur un lot de quatre dés. */
 export function requisEnCases(requis, nbDes) {
@@ -98,18 +96,20 @@ export function tableauCombos(cfg, api) {
   };
 
   // La case « Réveillé » : cochée, la combinaison ne sort que Tornade éveillée.
-  // Décochée, elle reprend sa condition d'origine — le Réveil reste réservé au
-  // dormeur, sans quoi on ne pourrait plus jamais se réveiller.
+  // Décochée, elle lève la condition — `faceSansReveil` dit sur quoi elle
+  // retombe, et ce n'est jamais « active », sans quoi la case ne se décocherait
+  // pas.
   const caseReveille = (combo) => {
     const actif = combo.face === 'active';
+    const repli = faceSansReveil(combo.id);
     return h('td.cellule-reveil',
       h('button', {
         class: `chip chip--case${actif ? ' on' : ''}`,
         title: actif
-          ? 'Ne sort que Tornade éveillée — décochez pour revenir à la condition d’origine'
+          ? `Ne sort que Tornade éveillée — décochez pour ${repli === 'endormie' ? 'la réserver au dormeur' : 'la rendre disponible dans les deux états'}`
           : `Condition actuelle : ${combo.face === 'endormie' ? 'Tornade endormie' : 'les deux états'}`,
         onclick: () => {
-          ecrireFace(combo.id, actif ? (FACE_REFERENCE[combo.id] || 'toutes') : 'active');
+          ecrireFace(combo.id, actif ? repli : 'active');
           rafraichir();
         },
       }, h('span.case', '✓')),

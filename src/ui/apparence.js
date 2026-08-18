@@ -1,7 +1,7 @@
 // Apparence des faces : illustration et nom, changeables à tout moment.
 //
-// Deux faces se personnalisent — la Tornade bleue, qui porte le Réveil, et la
-// Vache verte. Le pouvoir ne bouge pas : c'est le même symbole pour le moteur,
+// Deux faces se personnalisent — la Tornade bleue, qui porte le Réveil, et
+// l'Abri vert. Le pouvoir ne bouge pas : c'est le même symbole pour le moteur,
 // avec la même combinaison et le même effet. Seuls le dessin et le nom affiché
 // changent, pour essayer une autre direction artistique sans toucher aux règles.
 //
@@ -14,8 +14,8 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.41';
-import { SYMBOLES } from '../core/config.js?v=1.41';
+import { store } from './store.js?v=1.42';
+import { SYMBOLES } from '../core/config.js?v=1.42';
 
 /** Les seules faces personnalisables : les deux que le jeu met en avant. */
 export const FACES_PERSONNALISABLES = ['tornade', 'vache'];
@@ -43,7 +43,7 @@ export const MODELES_FACE = {
   ],
   vache: [
     ['tornadeVerte', 'Tornade verte (officielle)'],
-    ['', 'Vache (ancien dessin)'],
+    ['', 'Abri (ancien dessin)'],
   ],
 };
 
