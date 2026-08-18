@@ -1,19 +1,19 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.37';
-import { store } from './store.js?v=1.37';
-import { aller } from './app.js?v=1.37';
-import { eveillerSons } from './sons.js?v=1.37';
-import { lancerPartie, partieEnCours } from './table.js?v=1.37';
-import { construireConfig, variables } from './variables.js?v=1.37';
+import { h, remplacer } from './dom.js?v=1.38';
+import { store } from './store.js?v=1.38';
+import { aller } from './app.js?v=1.38';
+import { eveillerSons } from './sons.js?v=1.38';
+import { lancerPartie, partieEnCours } from './table.js?v=1.38';
+import { construireConfig, variables } from './variables.js?v=1.38';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
-  OPTIONS_MANCHE, CARTES_TORNADE, cartesEnJeu,
-} from '../core/config.js?v=1.37';
-import { nomSymbole } from './apparence.js?v=1.37';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.37';
-import { randomSeed } from '../core/rng.js?v=1.37';
+  OPTIONS_MANCHE, cartesDuMode, cartesEnJeu,
+} from '../core/config.js?v=1.38';
+import { nomSymbole } from './apparence.js?v=1.38';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.38';
+import { randomSeed } from '../core/rng.js?v=1.38';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -242,7 +242,7 @@ export function vueAccueil() {
             : null,
           champ('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner', { min: 1, max: 12 }),
           ligneApercu('Cartes Tornade en jeu',
-            `${cartesEnJeu(cfg).length} sur ${CARTES_TORNADE.length}`),
+            `${cartesEnJeu(cfg).length} sur ${cartesDuMode(cfg).length}`),
           ligneApercu('Lancer / constat / passage',
             `${cfg.dureeLancer} · ${cfg.dureeConstat} · ${cfg.dureePassage} ms`),
         ),

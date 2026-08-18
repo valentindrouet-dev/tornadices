@@ -1,9 +1,22 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.37';
+export const VERSION = '1.38';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.38',
+    date: '18/08/2026',
+    notes: [
+      'Le mode « sans les points » a son propre paquet de onze Tornades, sans rien de commun avec les cartes Journée : Tornade de Vaches, de Poules, de Cow-boy, du Siècle, de Sommeil, électrique, orageuse, furieuse, Mega-Tornade, de feuille et F5. Le mode avec les jetons garde ses douze cartes Journée, intactes.',
+      'Sans jeton à retourner, une carte ne joue plus que sur les cartes elles-mêmes. Les trois premières doublent la mise d’une équipe donnée si elle remporte la manche ; quatre l’emportent à la combinaison ; la Tornade du Siècle l’emporte et vaut deux cartes ; l’électrique paie double une manche prise en attrapant ; la F5 vole sa carte à une autre équipe ; la Tornade de feuille est la manche de chauffe, elle ne rapporte rien.',
+      'Deux cartes d’un coup se paient sur la pioche, comme à la table : l’équipe prend la carte en cours et celle du dessus, gardée face cachée dans sa pile. Rien ne s’invente — une vérification contrôle qu’aucune partie ne distribue plus de cartes que le paquet n’en contient.',
+      'Le sens de rotation ne s’inverse plus d’une manche à l’autre. Chaque Tornade porte une flèche au dos, et la manche se joue dans le sens qu’annonce la prochaine carte, encore face cachée sur la pioche : deux manches de suite peuvent donc tourner dans le même sens. Les flèches sont montrées sur chaque carte, dans les Réglages comme dans les Règles.',
+      'Les combinaisons des cartes se règlent désormais sur la carte elle-même, sous « Cartes Tornade en jeu » : chaque carte porte son texte, sa flèche et ses cases de dés au même endroit. Le tableau des combinaisons ne garde que les combinaisons de la Tornade, et renvoie vers les cartes.',
+      'La Tornade de Cow-boy désigne le joueur Vert : à nombre pair de joueurs elle ne désignerait personne, elle sort donc du paquet toute seule.',
+      'Mesuré sur 300 parties d’IA équilibrées à six joueurs : partie médiane 2:36 en six manches. Taux de sortie des combinaisons de cartes — Tornade furieuse 51 %, Mega-Tornade 48 %, du Siècle 40 %, orageuse 39 %, de Sommeil 26 %. Les exigences de départ sont à ajuster carte par carte, c’est à cela que sert le tableau.',
+    ],
+  },
   {
     version: '1.37',
     date: '18/08/2026',

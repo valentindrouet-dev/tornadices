@@ -1,14 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.37';
+import { h } from './dom.js?v=1.38';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.37';
+} from './icons.js?v=1.38';
 import {
-  COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.37';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.37';
+  COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
+  PROFILS_IA, COULEURS_EQUIPE,
+} from '../core/config.js?v=1.38';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.38';
 
 export function vueRegles() {
   return h('div.page',
@@ -201,7 +202,7 @@ export function vueRegles() {
     ),
 
     h('div.carte',
-      h('div.titre-section', 'Les cartes Tornade'),
+      h('div.titre-section', 'Les cartes Tornade — avec les jetons'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
@@ -212,6 +213,41 @@ export function vueRegles() {
           h('td.petit', c.texte),
         ))),
       ),
+    ),
+
+    // Le mode « sans les points » a son propre paquet, de bout en bout : sans
+    // jeton à retourner, une carte ne joue plus que sur les cartes elles-mêmes.
+    h('div.carte',
+      h('div.titre-section', 'Les cartes Tornade — sans les points'),
+      h('p.petit', 'Un paquet entièrement différent : plus de jeton à manipuler, les cartes '
+        + 'jouent sur les cartes. Certaines doublent la mise pour une équipe, d’autres emportent '
+        + 'la manche à la combinaison, une dernière vole son point à un adversaire.'),
+      h('table.tbl',
+        h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
+          h('th', 'Combinaison'), h('th', 'Effet'))),
+        h('tbody', ...CARTES_SANS_POINTS.map((c) => h('tr',
+          h('td', { style: { fontWeight: '700' } }, c.nom),
+          h('td.num', h('span.fleche-sens', {
+            title: c.sens > 0 ? 'Sens horaire' : 'Sens antihoraire',
+          }, c.sens > 0 ? '↻' : '↺')),
+          h('td', c.combo
+            ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
+            : h('span.mini.muted', '—')),
+          h('td.petit', c.texte),
+        ))),
+      ),
+      h('div.encart', { style: { marginTop: '12px' } },
+        'On révèle une Tornade et on la joue. Une équipe qui doit gagner deux cartes prend celle '
+        + 'en cours et la première du dessus de la pioche, qu’elle garde face cachée dans sa '
+        + 'pile : deux points d’un coup.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Le sens de rotation ne s’inverse plus d’une manche à l’autre : chaque Tornade porte une '
+        + 'flèche au dos, et l’on joue la manche dans le sens qu’annonce la prochaine carte, '
+        + 'encore face cachée sur la pioche. Deux manches de suite peuvent tourner dans le même '
+        + 'sens.'),
+      h('p.mini.muted', { style: { marginTop: '10px' } },
+        'Les combinaisons se règlent carte par carte dans les Réglages, sous « Cartes Tornade en '
+        + 'jeu » — plus dans le tableau des combinaisons.'),
     ),
 
     h('div.carte',

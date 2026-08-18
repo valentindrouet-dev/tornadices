@@ -1,9 +1,12 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.37';
-import { CARTES_TORNADE } from './config.js?v=1.37';
+import { Moteur } from './engine.js?v=1.38';
+import { CARTES_PAR_ID } from './config.js?v=1.38';
 
-const NOM_CARTE = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c.nom]));
+// Les deux paquets réunis : une campagne peut porter sur l'un ou sur l'autre.
+const NOM_CARTE = Object.fromEntries(
+  Object.values(CARTES_PAR_ID).map((c) => [c.id, c.nom]),
+);
 
 /**
  * Format de l'agrégat renvoyé. À incrémenter dès qu'un champ apparaît ou change

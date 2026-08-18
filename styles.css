@@ -1170,3 +1170,12 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   width: 68px; text-align: right; padding: 4px 8px;
   font-size: 13px; font-weight: 700;
 }
+/* La flèche du verso d'une carte Tornade : le sens de rotation qu'elle annonce. */
+.fleche-sens {
+  font-size: 19px; line-height: 1; color: var(--accent-fonce);
+  background: var(--accent-clair); border-radius: 999px;
+  padding: 2px 8px; font-weight: 800;
+}
+/* Les cases d'une combinaison de carte, posées sous son texte. */
+.cases-carte .face-case { width: 46px; }
+.cases-carte .face-case select { font-size: 11px; padding: 3px 2px; }

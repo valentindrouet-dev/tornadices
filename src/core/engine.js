@@ -10,15 +10,13 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.37';
+import { makeRng } from './rng.js?v=1.38';
 import {
-  CARTES_TORNADE, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
+  CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
-  requisPourEquipe, cartesEnJeu, requisCarte,
-} from './config.js?v=1.37';
-
-const CARTES_PAR_ID = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c]));
+  requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
+} from './config.js?v=1.38';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -164,22 +162,38 @@ export class Moteur {
   _initPioche() {
     // Le paquet dépend du mode : chaque mode a le sien, réglé à part.
     const ids = cartesEnJeu(this.cfg).slice();
+    const equipes = new Set(placement(this.cfg.nbJoueurs));
     const cartes = ids
       .map((id) => CARTES_PAR_ID[id])
       .filter(Boolean)
-      .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs);
+      .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs)
+      // Une carte qui désigne une équipe absente ne désignerait personne : la
+      // Tornade de Cow-boy sort du paquet quand il n'y a pas de Vert.
+      .filter((c) => !c.equipeRequise || equipes.has(c.equipeRequise));
     const chauffe = cartes.filter((c) => c.toujoursPremiere);
     let reste = cartes.filter((c) => !c.toujoursPremiere);
     if (this.cfg.melangerCartes !== false) reste = this.rng.shuffle(reste);
     this.pioche = [...chauffe, ...reste];
-    if (!this.pioche.length) this.pioche = [CARTES_PAR_ID.chauffe];
+    if (!this.pioche.length) this.pioche = [cartesDuMode(this.cfg)[0]];
   }
 
   // ── Manches ─────────────────────────────────────────────────────────────────
   _demarrerManche(premiere = false) {
     this.manche += 1;
     this._comboCarteManche = 0;
-    if (!premiere) this.sens = -this.sens;
+    // Ce que la manche vaudra en cartes, et comment elle a été prise : deux
+    // choses que les cartes Tornade savent modifier.
+    this._bonusCartes = 0;
+    this._mancheParAttrape = false;
+    if (this.cfg.sansPoints) {
+      // Le sens se lit au dos de la prochaine carte, celle qui reste face
+      // cachée sur la pioche pendant qu'on joue celle du dessus. Ce n'est donc
+      // pas un sens puis l'autre : c'est la pile qui l'annonce.
+      const suivante = this.pioche[1];
+      if (suivante && suivante.sens) this.sens = suivante.sens;
+    } else if (!premiere) {
+      this.sens = -this.sens;
+    }
     this.debutManche = this.now;
     this.carte = this.pioche[0] || null;
     this.passif = (this.carte && this.carte.effetPassif) || {};
@@ -964,6 +978,9 @@ export class Moteur {
         this._annoncer(
           `Attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
         );
+        // La Tornade électrique paie double une manche prise au contact : il
+        // faut donc savoir comment celle-ci a été gagnée.
+        this._mancheParAttrape = true;
         this._finManche(j.equipe);
         return;
       }
@@ -1031,6 +1048,13 @@ export class Moteur {
         }
         break;
       }
+      // La Tornade du Siècle : la manche est prise, et elle vaut double.
+      case 'gagnerManche2':
+        this._bonusCartes = Math.max(this._bonusCartes, 1);
+        this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée, et elle vaut deux cartes !`, 'combo', j.id);
+        this._annoncer(`${this.carte ? this.carte.court : 'Carte'} ! Deux cartes d’un coup`, 'jaune', j.id);
+        this._finManche(j.equipe);
+        return;
       case 'gagnerManche':
         this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée sur-le-champ !`, 'combo', j.id);
         this._finManche(j.equipe);
@@ -1128,6 +1152,54 @@ export class Moteur {
     this._log(`Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
 
+  /**
+   * Les cartes que la Tornade en jeu ajoute au vainqueur, prises sur le dessus
+   * de la pioche et gardées face cachée dans sa pile. Une équipe qui en gagne
+   * deux d'un coup se rapproche d'autant de la victoire.
+   *
+   * S'y ajoute le vol de la Tornade F5 : le vainqueur prend une carte à une
+   * autre équipe au lieu d'en piocher une — un point pour lui, un de moins pour
+   * elle, ce qui compte double au classement.
+   */
+  _cartesEnPlus(equipeId) {
+    const p = this.passif || {};
+    const eq = this.equipes[equipeId];
+    let bonus = this._bonusCartes;
+    if (p.doubleSi && p.doubleSi === equipeId) bonus = Math.max(bonus, 1);
+    if (p.doubleSiAttrape && this._mancheParAttrape) bonus = Math.max(bonus, 1);
+
+    for (let k = 0; k < bonus && this.pioche.length; k++) {
+      const prise = this.pioche.shift();
+      eq.cartes.push(prise.id);
+      this._log(
+        `${this._nomEquipe(equipeId)} prennent une seconde carte, face cachée.`, 'manche',
+      );
+    }
+
+    if (p.volerCarte) {
+      const victime = this._plusRicheAutreQue(equipeId);
+      if (victime) {
+        eq.cartes.push(victime.cartes.pop());
+        this._log(
+          `Tornade F5 : ${this._nomEquipe(equipeId)} volent une carte aux `
+          + `${this._nomEquipe(victime.id)}.`, 'manche',
+        );
+      } else {
+        this._log('Tornade F5 : aucune carte à voler.', 'manche');
+      }
+    }
+  }
+
+  /** L'équipe adverse la mieux fournie en cartes, s'il y en a une. */
+  _plusRicheAutreQue(equipeId) {
+    let best = null;
+    for (const e of Object.values(this.equipes)) {
+      if (e.id === equipeId || !e.cartes.length) continue;
+      if (!best || e.cartes.length > best.cartes.length) best = e;
+    }
+    return best;
+  }
+
   // ── Fin de manche / de partie ───────────────────────────────────────────────
   _finManche(equipeId) {
     if (this.termine) return;
@@ -1157,6 +1229,9 @@ export class Moteur {
     }
 
     if (this.pioche.length) this.pioche.shift();
+    // La carte jouée quittée, les Tornades qui donnent davantage se servent sur
+    // le dessus de la pioche — face cachée, comme à la table.
+    if (compte) this._cartesEnPlus(equipeId);
 
     if (equipeId) {
       const eq = this.equipes[equipeId];

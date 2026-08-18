@@ -3,29 +3,30 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.37';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.37';
-import { store } from './store.js?v=1.37';
-import { aller } from './app.js?v=1.37';
-import { lancerPartie } from './table.js?v=1.37';
+import { h, remplacer } from './dom.js?v=1.38';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.38';
+import { store } from './store.js?v=1.38';
+import { aller } from './app.js?v=1.38';
+import { lancerPartie } from './table.js?v=1.38';
 import {
-  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE,
+  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cartesEnJeu, requisCarte, comboPossible, COULEURS_EQUIPE,
+  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
+  COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.37';
-import { tableauCombos } from './combos.js?v=1.37';
+} from '../core/config.js?v=1.38';
+import { tableauCombos, editeurCases } from './combos.js?v=1.38';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.37';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.37';
-import { randomSeed } from '../core/rng.js?v=1.37';
-import { reglagesJoueurs } from './accueil.js?v=1.37';
+} from './apparence.js?v=1.38';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.38';
+import { randomSeed } from '../core/rng.js?v=1.38';
+import { reglagesJoueurs } from './accueil.js?v=1.38';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -339,11 +340,6 @@ export function vueVariables() {
         ),
         tableauCombos(cfg, {
           ecrireCombo: (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
-          // Les exigences de cartes se rangent par mode : chacun a les siennes.
-          ecrireCarte: (id, requis) => {
-            const cle = cleCombosCartes(cfg);
-            ecrire(cle, { ...(v[cle] || {}), [id]: requis });
-          },
           ecrireVert: (id, requis) => ecrire('combosVert', { ...(v.combosVert || {}), [id]: requis }),
           ecrireFace: (id, face) => ecrire('combosFaces', { ...(v.combosFaces || {}), [id]: face }),
           rafraichir: dessiner,
@@ -568,37 +564,63 @@ export function vueVariables() {
           'Chaque mode de jeu a son propre paquet : ce que vous cochez ici ne vaut que pour '
           + `« ${cfg.sansPoints ? 'Sans les points' : 'Retourner tous les jetons'} ». Changez de `
           + 'mode en haut de la page et vous retrouverez l’autre paquet, intact.',
-          'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.',
+          cfg.sansPoints
+            ? 'La pile démarre par « Tornade de feuille » — la manche de chauffe — puis le reste '
+              + 'suit. On révèle une Tornade, on la joue ; le dos de la suivante, encore face '
+              + 'cachée, donne le sens de rotation de la manche en cours.'
+            : 'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.',
+          cfg.sansPoints
+            ? 'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
+              + 'cours et celle du dessus, gardée face cachée dans sa pile.'
+            : '',
         ],
           h('button', {
             class: `chip${cfg.melangerCartes !== false ? ' on' : ''}`,
             onclick: () => { ecrire('melangerCartes', cfg.melangerCartes === false); dessiner(); },
           }, h('span.case', '✓'), 'Mélanger la pile'),
         ),
-        // Les pastilles seules ne disaient pas ce qu'on cochait : l'effet de la
-        // carte était caché dans une infobulle, et sa combinaison nulle part.
-        // Chaque carte porte désormais les deux, sous les yeux.
+        // Une carte porte tout ce qui la concerne : son effet, son sens de
+        // rotation, et sa combinaison — qui se règle ici plutôt que dans le
+        // tableau des combinaisons, où on la cherchait loin de son texte.
         h('div.grille.grille--3.grille--cartes',
-          ...CARTES_TORNADE.map((c) => {
+          ...cartesDuMode(cfg).map((c) => {
             const paquet = cartesEnJeu(cfg);
             const dedans = paquet.includes(c.id);
             const requis = c.combo ? requisCarte(cfg, c.combo) : null;
             const note = noteCarteMode(c, cfg);
             return h('div.carte-journee', { class: dedans ? '' : 'hors-jeu' },
-              h('button', {
-                class: `chip${dedans ? ' on' : ''}`,
-                onclick: () => {
-                  const liste = dedans ? paquet.filter((x) => x !== c.id) : [...paquet, c.id];
-                  ecrire(clePaquet(cfg), liste);
-                  dessiner();
-                },
-              }, h('span.case', '✓'), c.court),
-              requis
-                ? h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
-                    suiteSymboles(requis, 20))
-                : h('div.mini.muted', { style: { marginTop: '8px' } }, 'Effet permanent'),
-              h('div.petit', { style: { marginTop: '6px' } }, c.texte),
+              h('div.rangee.rangee--serree',
+                h('button', {
+                  class: `chip${dedans ? ' on' : ''}`,
+                  onclick: () => {
+                    const liste = dedans ? paquet.filter((x) => x !== c.id) : [...paquet, c.id];
+                    ecrire(clePaquet(cfg), liste);
+                    dessiner();
+                  },
+                }, h('span.case', '✓'), c.court),
+                h('div.pousse'),
+                // La flèche du verso : c'est elle qui donne le sens de la manche
+                // précédente, quand la carte est encore sur la pioche.
+                c.sens
+                  ? h('span.fleche-sens', {
+                      title: c.sens > 0 ? 'Verso : sens horaire' : 'Verso : sens antihoraire',
+                    }, c.sens > 0 ? '↻' : '↺')
+                  : null,
+              ),
+              h('div.petit', { style: { marginTop: '8px' } }, c.texte),
               note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,
+              requis
+                ? h('div', { style: { marginTop: '10px' } },
+                    h('div.mini.muted', { style: { marginBottom: '4px' } }, 'Combinaison'),
+                    editeurCases(requis, Math.max(1, Math.min(12, cfg.desParLot || 4)),
+                      (r) => {
+                        const cle = cleCombosCartes(cfg);
+                        ecrire(cle, { ...(v[cle] || {}), [c.combo.id]: r });
+                        dessiner();
+                      }),
+                  )
+                : h('div.mini.muted', { style: { marginTop: '10px' } },
+                    'Aucune combinaison — la carte agit d’elle-même.'),
               // Une combinaison dont le dé ne porte pas les faces ne sortira
               // jamais : autant le dire ici plutôt qu'après trois campagnes.
               requis && !comboPossible(cfg.faces, requis)

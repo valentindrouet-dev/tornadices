@@ -212,8 +212,13 @@ export function cleCombosCartes(cfg) {
 
 /** Les cartes en jeu dans le mode en cours. */
 export function cartesEnJeu(cfg) {
+  const paquet = cartesDuMode(cfg);
+  const connues = new Set(paquet.map((c) => c.id));
   const liste = cfg[clePaquet(cfg)];
-  return Array.isArray(liste) && liste.length ? liste : CARTES_TORNADE.map((c) => c.id);
+  // Un paquet enregistré peut porter des cartes de l'autre mode — un réglage
+  // d'avant la séparation des paquets : elles ne comptent pas ici.
+  const retenues = Array.isArray(liste) ? liste.filter((id) => connues.has(id)) : [];
+  return retenues.length ? retenues : paquet.map((c) => c.id);
 }
 
 /** L'exigence d'une combinaison de carte dans le mode en cours. */
@@ -544,6 +549,133 @@ export const CARTES_TORNADE = [
   },
 ];
 
+// ── Cartes Tornade du mode « sans les points » ────────────────────────────────
+//
+// Un paquet entièrement à part : sans jeton à retourner, une carte ne peut plus
+// jouer sur les jetons, elle joue sur les cartes elles-mêmes. Trois façons :
+//   · `doubleSi` — l'équipe désignée gagne deux cartes si elle prend la manche ;
+//   · `gagnerManche2` — la combinaison emporte la manche et vaut deux cartes ;
+//   · `volerCarte` — le vainqueur prend une carte à une autre équipe.
+//
+// `sens` est la flèche imprimée au dos : +1 horaire, -1 antihoraire. C'est le
+// dos de la PROCHAINE carte, encore face cachée sur la pioche, qui donne le sens
+// de la manche en cours — ce n'est donc pas un sens puis l'autre.
+export const CARTES_SANS_POINTS = [
+  {
+    id: 'spFeuille',
+    court: 'Tornade de feuille',
+    nom: 'Tornade de feuille',
+    texte: 'Vous ne gagnez pas de carte Tornade à cette manche — c’est la manche de chauffe.',
+    combo: null,
+    effetPassif: null,
+    neCompted: true,
+    toujoursPremiere: true,
+    sens: 1,
+  },
+  {
+    id: 'spVaches',
+    court: 'Tornade de Vaches',
+    nom: 'Tornade de Vaches',
+    texte: 'Les Vaches (Bleus) gagnent 2 cartes Tornade si elles remportent cette manche.',
+    combo: null,
+    effetPassif: { doubleSi: 'bleu' },
+    sens: -1,
+  },
+  {
+    id: 'spPoules',
+    court: 'Tornade de Poules',
+    nom: 'Tornade de Poules',
+    texte: 'Les Poules (Jaunes) gagnent 2 cartes Tornade si elles remportent cette manche.',
+    combo: null,
+    effetPassif: { doubleSi: 'jaune' },
+    sens: -1,
+  },
+  {
+    id: 'spCowboy',
+    court: 'Tornade de Cow-boy',
+    nom: 'Tornade de Cow-boy',
+    texte: 'Le Cow-boy (Vert) gagne 2 cartes Tornade s’il remporte cette manche.',
+    combo: null,
+    effetPassif: { doubleSi: 'vert' },
+    // Sans joueur Vert, la carte ne désignerait personne : elle sort du paquet.
+    equipeRequise: 'vert',
+    sens: 1,
+  },
+  {
+    id: 'spSiecle',
+    court: 'Tornade du Siècle',
+    nom: 'Tornade du Siècle',
+    texte: 'Vous gagnez 2 cartes Tornade.',
+    combo: { id: 'spSiecle', requis: { tornade: 2, vache: 2 }, effet: 'gagnerManche2' },
+    effetPassif: null,
+    sens: 1,
+  },
+  {
+    id: 'spSommeil',
+    court: 'Tornade de Sommeil',
+    nom: 'Tornade de Sommeil',
+    texte: 'Vous gagnez la manche.',
+    combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: -1,
+  },
+  {
+    id: 'spElectrique',
+    court: 'Tornade électrique',
+    nom: 'Tornade électrique',
+    texte: 'Vous gagnez 2 cartes Tornade si vous remportez cette manche en attrapant.',
+    combo: null,
+    effetPassif: { doubleSiAttrape: true },
+    sens: 1,
+  },
+  {
+    id: 'spOrageuse',
+    court: 'Tornade orageuse',
+    nom: 'Tornade orageuse',
+    texte: 'Vous gagnez la manche.',
+    combo: { id: 'spOrageuse', requis: { zzz: 2, vache: 2 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: 1,
+  },
+  {
+    id: 'spFurieuse',
+    court: 'Tornade furieuse',
+    nom: 'Tornade furieuse',
+    texte: 'Vous gagnez la manche.',
+    combo: { id: 'spFurieuse', requis: { tornade: 3, vache: 1 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: -1,
+  },
+  {
+    id: 'spMega',
+    court: 'Mega-Tornade',
+    nom: 'Mega-Tornade',
+    texte: 'Vous gagnez la manche.',
+    combo: { id: 'spMega', requis: { tornade: 4 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: -1,
+  },
+  {
+    id: 'spF5',
+    court: 'Tornade F5',
+    nom: 'Tornade F5',
+    texte: 'Vous volez la carte Tornade d’une autre équipe à cette manche.',
+    combo: null,
+    effetPassif: { volerCarte: true },
+    sens: 1,
+  },
+];
+
+/** Le paquet du mode en cours : chaque mode a le sien, de bout en bout. */
+export function cartesDuMode(cfg) {
+  return cfg && cfg.sansPoints ? CARTES_SANS_POINTS : CARTES_TORNADE;
+}
+
+/** Toutes les cartes des deux modes, par identifiant. */
+export const CARTES_PAR_ID = Object.fromEntries(
+  [...CARTES_TORNADE, ...CARTES_SANS_POINTS].map((c) => [c.id, c]),
+);
+
 // ── Tableau de mise en place (règles V4.5) ────────────────────────────────────
 // 9 joueurs : extrapolé, le tableau officiel s'arrête à 8.
 export const MISE_EN_PLACE = {
@@ -704,12 +836,10 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     combos: COMBOS_TORNADE
       .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
       .map((c) => ({ ...c, requis: { ...c.requis } })),
-    // Le paquet et les exigences des cartes se règlent par mode : « Jour sans
-    // vent » n'a plus d'effet sans les points, autant ne pas l'y laisser.
+    // Chaque mode a son paquet, et ce sont deux paquets différents : les cartes
+    // Journée d'un côté, les Tornades de l'autre. Rien de commun entre les deux.
     cartes: CARTES_TORNADE.map((c) => c.id),
-    cartesSansPoints: CARTES_TORNADE
-      .filter((c) => !c.inerteSansPoints)
-      .map((c) => c.id),
+    cartesSansPoints: CARTES_SANS_POINTS.map((c) => c.id),
     combosCartesSansPoints: {},
     // Le Vert joue seul contre deux équipes : on peut lui demander autre chose.
     // Décochée, la table est strictement symétrique — c'est la référence.

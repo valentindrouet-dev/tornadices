@@ -9,15 +9,15 @@
 //   · l'exigence de chaque combinaison, dé par dé ;
 //   · « Réveillé » — la combinaison ne sort que Tornade éveillée ;
 //   · l'asymétrie du Vert, qui lui donne ses propres exigences.
-// Les cartes affichées sont celles du mode en cours : chaque mode a son paquet.
+// Les combinaisons des cartes Tornade, elles, se règlent sur chaque carte : une
+// carte porte son dessin, son texte et son exigence au même endroit.
 
-import { h } from './dom.js?v=1.37';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.37';
-import { nomSymbole } from './apparence.js?v=1.37';
+import { h } from './dom.js?v=1.38';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.38';
+import { nomSymbole } from './apparence.js?v=1.38';
 import {
-  ORDRE_SYMBOLES, CARTES_TORNADE, COMBOS_TORNADE, COULEURS_EQUIPE,
-  cartesEnJeu, requisCarte, requisPourEquipe,
-} from '../core/config.js?v=1.37';
+  ORDRE_SYMBOLES, COMBOS_TORNADE, COULEURS_EQUIPE, requisPourEquipe,
+} from '../core/config.js?v=1.38';
 
 const FACE_REFERENCE = Object.fromEntries(COMBOS_TORNADE.map((c) => [c.id, c.face]));
 
@@ -41,6 +41,22 @@ export function casesEnRequis(cases) {
   return requis;
 }
 
+/**
+ * Une exigence à éditer, hors tableau : la même suite de cases, posée en ligne.
+ * C'est ce qui sert aux cartes Tornade, dont la combinaison se règle sur la
+ * carte elle-même plutôt que dans le tableau des combinaisons.
+ */
+export function editeurCases(requis, nbDes, ecrire) {
+  const suite = requisEnCases(requis, nbDes);
+  return h('div.rangee.rangee--serree.cases-carte',
+    ...suite.map((sym, i) => caseDe(sym, (val) => {
+      const copie = suite.slice();
+      copie[i] = val;
+      ecrire(casesEnRequis(copie));
+    })),
+  );
+}
+
 /** Une case : la face en miniature, et le menu qui la choisit. */
 function caseDe(sym, onchange) {
   return h('div.face-case',
@@ -61,16 +77,14 @@ function caseDe(sym, onchange) {
  * @param {object} cfg  configuration en cours (dés par lot, combos, cartes)
  * @param {object} api  les écritures et le rafraîchissement :
  *   ecrireCombo(id, requis)  une combinaison de la Tornade
- *   ecrireCarte(id, requis)  une combinaison de carte, dans le mode en cours
  *   ecrireVert(id, requis)   l'exigence propre au Vert
  *   ecrireFace(id, face)     « active » (réveillé seulement) ou la face d'origine
  *   rafraichir()             après chaque changement
  */
 export function tableauCombos(cfg, api) {
-  const { ecrireCombo, ecrireCarte, ecrireVert, ecrireFace, rafraichir } = api;
+  const { ecrireCombo, ecrireVert, ecrireFace, rafraichir } = api;
   const nbDes = Math.max(1, Math.min(12, cfg.desParLot || 4));
   const asym = !!cfg.combosAsymetriques;
-  const enJeu = new Set(cartesEnJeu(cfg));
 
   // Une rangée de cases, quelle que soit la combinaison qu'elle sert.
   const cases = (requis, ecrire) => {
@@ -124,15 +138,7 @@ export function tableauCombos(cfg, api) {
     return lignes;
   };
 
-  const ligneCarte = (carte) => h('tr.ligne-carte',
-    h('td.cellule-nom', h('div.nom-combo', carte.court),
-      h('span.badge.badge--carte', 'Tornade')),
-    h('td.cellule-reveil', h('span.mini.muted', '·')),
-    ...cases(requisCarte(cfg, carte.combo), (r) => ecrireCarte(carte.combo.id, r)),
-  );
-
   const colonnes = nbDes + 2;
-  const cartes = CARTES_TORNADE.filter((c) => c.combo && enJeu.has(c.id));
   // Sur téléphone, une colonne par dé ne tient pas : le tableau défile dans son
   // propre cadre plutôt que d'écraser les menus jusqu'à l'illisible.
   return h('div.tbl-defile', h('table.tbl.tbl--combos', { style: { tableLayout: 'fixed' } },
@@ -146,14 +152,12 @@ export function tableauCombos(cfg, api) {
     h('tbody',
       h('tr.ligne-titre', h('td', { colspan: colonnes }, 'Toujours en jeu')),
       ...cfg.combos.flatMap(ligneCombo),
+      // Les combinaisons de cartes ne sont plus ici : chacune se règle sur sa
+      // carte, dans « Cartes Tornade en jeu ». On garde le renvoi, sans quoi on
+      // les chercherait dans ce tableau.
       h('tr.ligne-titre.ligne-titre--carte',
         h('td', { colspan: colonnes },
-          'Cartes Tornade — seulement pendant la manche où la carte est en jeu'
-          + (cfg.sansPoints ? ' · paquet « sans les points »' : ''))),
-      ...(cartes.length
-        ? cartes.map(ligneCarte)
-        : [h('tr', h('td.mini.muted', { colspan: colonnes },
-            'Aucune carte à combinaison dans le paquet de ce mode.'))]),
+          'Les combinaisons des cartes Tornade se règlent sur chaque carte, plus bas.')),
     ),
   ));
 }

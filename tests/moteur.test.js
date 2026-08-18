@@ -7,7 +7,8 @@ import {
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
   TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
-  clePaquet, cleCombosCartes, CARTES_TORNADE, COULEURS_EQUIPE,
+  clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode,
+  COULEURS_EQUIPE,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -1069,22 +1070,33 @@ console.log('\nCartes Tornade — un paquet par mode');
   const avec = configParDefaut(6);
   const sans = configParDefaut(6, { sansPoints: true });
 
-  verifier('le mode « jetons » garde les douze cartes',
-    cartesEnJeu(avec).length === CARTES_TORNADE.length);
-  verifier('« Jour sans vent » quitte le paquet sans les points — elle n’y ferait rien',
-    !cartesEnJeu(sans).includes('sansVent')
-    && cartesEnJeu(sans).length === CARTES_TORNADE.length - 1);
+  verifier('le mode « jetons » garde ses douze cartes Journée',
+    cartesEnJeu(avec).length === CARTES_TORNADE.length
+    && cartesDuMode(avec) === CARTES_TORNADE);
+  verifier(`« sans les points » a son propre paquet (${CARTES_SANS_POINTS.length} Tornades)`,
+    cartesDuMode(sans) === CARTES_SANS_POINTS
+    && cartesEnJeu(sans).length === CARTES_SANS_POINTS.length);
+  // Deux paquets sans le moindre identifiant en commun : aucune carte de l'un
+  // ne peut se glisser dans l'autre.
+  {
+    const a = new Set(CARTES_TORNADE.map((c) => c.id));
+    verifier('les deux paquets n’ont aucune carte en commun',
+      CARTES_SANS_POINTS.every((c) => !a.has(c.id)));
+  }
   verifier('les deux paquets se règlent par des clés distinctes',
     clePaquet(avec) === 'cartes' && clePaquet(sans) === 'cartesSansPoints'
     && cleCombosCartes(avec) === 'combosCartes'
     && cleCombosCartes(sans) === 'combosCartesSansPoints');
+  verifier('un paquet enregistré pour l’autre mode est ignoré',
+    cartesEnJeu({ ...sans, cartesSansPoints: ['fatigue', 'troupeau'] }).length
+      === CARTES_SANS_POINTS.length);
 
   // Chaque mode a aussi ses exigences : régler l'une ne touche pas l'autre.
   {
     const cfg = configParDefaut(6, { sansPoints: true });
-    cfg.combosCartes = { troupeau: { vache: 2 } };
-    cfg.combosCartesSansPoints = { troupeau: { vache: 5 } };
-    const combo = { id: 'troupeau', requis: { vache: 4 } };
+    cfg.combosCartes = { spMega: { vache: 2 } };
+    cfg.combosCartesSansPoints = { spMega: { vache: 5 } };
+    const combo = { id: 'spMega', requis: { tornade: 4 } };
     verifier('sans les points, c’est la table du mode qui décide',
       requisCarte(cfg, combo).vache === 5);
     verifier('et le mode jetons garde la sienne',
@@ -1095,12 +1107,123 @@ console.log('\nCartes Tornade — un paquet par mode');
   {
     const m = new Moteur(sans, spec(6), 'paquet-sp');
     m.jouerJusquAuBout();
-    verifier('« Jour sans vent » ne sort jamais dans une partie sans les points',
-      !m.statsManches.some((s) => s.carte === 'sansVent'));
-    const avecVent = new Moteur(avec, spec(6), 'paquet-sp');
-    avecVent.jouerJusquAuBout();
-    verifier('elle sort normalement en mode jetons',
-      avecVent.statsManches.some((s) => s.carte === 'sansVent'));
+    const sorties = new Set(m.statsManches.map((s) => s.carte));
+    verifier('une partie sans les points ne tire que des Tornades',
+      [...sorties].every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)));
+    verifier('elle ouvre sur la Tornade de feuille — la manche de chauffe',
+      m.statsManches[0].carte === 'spFeuille' && m.statsManches[0].compte === false);
+
+    const avecJetons = new Moteur(avec, spec(6), 'paquet-sp');
+    avecJetons.jouerJusquAuBout();
+    verifier('et une partie avec les jetons ne tire que des cartes Journée',
+      avecJetons.statsManches.every((s) => CARTES_TORNADE.some((c) => c.id === s.carte)));
+  }
+
+  // Sans joueur Vert, la Tornade de Cow-boy ne désigne personne.
+  {
+    const m6 = new Moteur(configParDefaut(6, { sansPoints: true }), spec(6), 'cowboy-6');
+    m6.jouerJusquAuBout();
+    verifier('à nombre pair, la Tornade de Cow-boy reste hors du paquet',
+      !m6.statsManches.some((s) => s.carte === 'spCowboy'));
+    const m5 = new Moteur(configParDefaut(5, { sansPoints: true }), spec(5), 'cowboy-5');
+    verifier('à nombre impair, elle est bien dans la pioche',
+      m5.pioche.some((c) => c.id === 'spCowboy'));
+  }
+}
+
+// ── 3 septies bis quater bis. Ce que font les Tornades sans les points ───────
+console.log('\nTornades du mode sans les points');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  // Le sens de la manche se lit au dos de la carte suivante, pas en alternant.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    cfg.melangerCartes = false;
+    // On contrôle la règle elle-même, manche après manche : au coup d'envoi, le
+    // sens doit être celui du dos de la carte encore face cachée. Un attendu
+    // figé ne tiendrait pas — une carte qui vaut double avance la pioche de
+    // deux crans, et la suite des dos n'est donc pas celle du paquet.
+    let controles = 0, fautes = 0;
+    const releve = (moteur) => {
+      const suivante = moteur.pioche[1];
+      if (!suivante || !suivante.sens) return;
+      controles++;
+      if (moteur.sens !== suivante.sens) fautes++;
+    };
+    for (let g = 0; g < 30; g++) {
+      const partie = new Moteur(configParDefaut(6, { sansPoints: true }), spec(6), `sens-${g}`);
+      partie.onDebutManche = () => releve(partie);
+      releve(partie);
+      partie.jouerJusquAuBout();
+    }
+    verifier(`${controles} manches contrôlées — le sens est toujours celui du dos suivant`,
+      controles > 50 && fautes === 0, `${fautes} écart(s)`);
+
+    // Et le mode de base, lui, continue d'alterner sans se soucier des cartes.
+    const base = new Moteur(configParDefaut(6), spec(6), 'sens-base');
+    const sensBase = [base.sens];
+    base.onDebutManche = () => sensBase.push(base.sens);
+    base.jouerJusquAuBout();
+    verifier('avec les jetons, le sens s’inverse toujours d’une manche à l’autre',
+      sensBase.slice(2).every((s, i) => s === -sensBase[i + 1]));
+    // Des flèches qui alterneraient parfaitement rendraient la règle
+    // indiscernable de l'ancienne : le paquet doit porter des séries.
+    const suite = CARTES_SANS_POINTS.map((c) => c.sens);
+    const repetitions = suite.filter((s, i) => i > 0 && suite[i - 1] === s).length;
+    verifier(`le paquet ne se contente pas d’alterner (${repetitions} répétitions sur `
+      + `${suite.length - 1} passages)`, repetitions > 0);
+  }
+
+  // Une carte qui vaut double se paie sur la pioche.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    let doubles = 0, manches = 0;
+    for (let g = 0; g < 120; g++) {
+      const m = new Moteur(cfg, spec(6), `double-${g}`);
+      m.jouerJusquAuBout();
+      doubles += m.journal.filter((e) => /seconde carte/.test(e.texte || '')).length;
+      manches += m.manche;
+    }
+    verifier(`sur 120 parties : ${doubles} secondes cartes prises sur la pioche`, doubles > 0);
+    verifier(`et ${manches} manches jouées, toutes menées à terme`, manches > 0);
+  }
+
+  // La Tornade F5 déplace une carte d'une équipe à l'autre.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    let vols = 0, aVide = 0;
+    for (let g = 0; g < 120; g++) {
+      const m = new Moteur(cfg, spec(6), `vol-${g}`);
+      m.jouerJusquAuBout();
+      vols += m.journal.filter((e) => /volent une carte/.test(e.texte || '')).length;
+      aVide += m.journal.filter((e) => /aucune carte à voler/.test(e.texte || '')).length;
+    }
+    verifier(`sur 120 parties : ${vols} vols réussis, ${aVide} sans cible`, vols > 0);
+  }
+
+  // Le total des cartes ne sort jamais de nulle part : une carte volée change
+  // de pile, elle ne se duplique pas.
+  {
+    const cfg = configParDefaut(6, { sansPoints: true });
+    let fautes = 0;
+    for (let g = 0; g < 60; g++) {
+      const m = new Moteur(cfg, spec(6), `total-${g}`);
+      m.jouerJusquAuBout();
+      const enMain = Object.values(m.equipes).reduce((a, e) => a + e.cartes.length, 0);
+      // Le paquet de départ moins la pioche restante doit couvrir ce qui est en
+      // main : rien ne s'invente, une carte volée vient d'une autre pile.
+      if (enMain > CARTES_SANS_POINTS.length) fautes++;
+    }
+    verifier('aucune partie ne distribue plus de cartes que le paquet n’en contient',
+      fautes === 0);
+  }
+
+  // Toutes les parties vont au bout, de 3 à 9 joueurs.
+  for (const n of [3, 4, 6, 9]) {
+    const r = lancerCampagne(configParDefaut(n, { sansPoints: true }), spec(n), `sp-t-${n}`, 80);
+    verifier(`${n} joueurs — 80 parties au bout (${JSON.stringify(r.raisons)})`,
+      r.raisons.manchesMax === undefined);
   }
 }
 

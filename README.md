@@ -456,13 +456,51 @@ sommeil, c’est une ligne morte — elle disparaît.
 
 ## Un paquet de cartes par mode
 
-Chaque mode a son paquet et ses exigences : `cartes`/`combosCartes` pour le mode
-jetons, `cartesSansPoints`/`combosCartesSansPoints` sans les points.
-`clePaquet(cfg)`, `cleCombosCartes(cfg)`, `cartesEnJeu(cfg)` et
-`requisCarte(cfg, combo)` choisissent la bonne table ; le moteur ne lit rien
-d’autre. Une carte marquée `inerteSansPoints` — aujourd’hui « Jour sans vent »,
-qui recache un jeton — sort du paquet « sans les points » par défaut, et se
-recoche à la main si on y tient.
+Les deux modes n’ont **aucune carte en commun** : `CARTES_TORNADE` (les douze
+Journées, mode jetons) et `CARTES_SANS_POINTS` (les onze Tornades). `cartesDuMode(cfg)`
+choisit la liste, `clePaquet(cfg)` et `cleCombosCartes(cfg)` les clés de réglage
+(`cartes`/`combosCartes` d’un côté, `cartesSansPoints`/`combosCartesSansPoints`
+de l’autre), `cartesEnJeu(cfg)` et `requisCarte(cfg, combo)` font le reste. Le
+moteur ne lit rien d’autre, et une carte enregistrée pour l’autre mode est
+ignorée.
+
+### Les Tornades du mode sans les points
+
+Sans jeton à retourner, une carte ne joue plus que sur les cartes elles-mêmes.
+Trois leviers, plus la manche de chauffe :
+
+| Carte | Verso | Combinaison | Effet |
+|---|---|---|---|
+| Tornade de feuille | ↻ | — | manche de chauffe, aucune carte gagnée |
+| Tornade de Vaches | ↺ | — | les Bleus gagnent 2 cartes s’ils prennent la manche |
+| Tornade de Poules | ↺ | — | idem pour les Jaunes |
+| Tornade de Cow-boy | ↻ | — | idem pour le Vert (hors paquet à nombre pair) |
+| Tornade du Siècle | ↻ | 2 tornades + 2 vaches | emporte la manche, et elle vaut 2 cartes |
+| Tornade de Sommeil | ↺ | 4 ZzZ | emporte la manche |
+| Tornade électrique | ↻ | — | 2 cartes si la manche est prise **en attrapant** |
+| Tornade orageuse | ↻ | 2 ZzZ + 2 vaches | emporte la manche |
+| Tornade furieuse | ↺ | 3 tornades + 1 vache | emporte la manche |
+| Mega-Tornade | ↺ | 4 tornades | emporte la manche |
+| Tornade F5 | ↻ | — | le vainqueur vole une carte à une autre équipe |
+
+**Deux cartes d’un coup** se paient sur la pioche : l’équipe prend la carte en
+cours et celle du dessus, gardée face cachée. Le total distribué ne peut donc
+pas dépasser le paquet — une vérification le contrôle.
+
+**Le sens de rotation ne s’inverse plus.** Chaque Tornade porte une flèche au
+dos (`sens`), et la manche se joue dans le sens qu’annonce la **prochaine**
+carte, encore face cachée sur la pioche. Les flèches par défaut ne se contentent
+pas d’alterner — sans quoi la règle serait indiscernable de l’ancienne : elles
+comptent 4 répétitions sur 10 passages. L’invariant `sens === pioche[1].sens` est
+contrôlé à chaque coup d’envoi, sur 178 manches.
+
+Mesuré sur 300 parties d’IA équilibrées : partie médiane 2:36 à six joueurs,
+6 manches. Taux de sortie des combinaisons de cartes — Mega-Tornade 48 %,
+furieuse 51 %, du Siècle 40 %, orageuse 39 %, de Sommeil 26 %.
+
+**Les exigences se règlent carte par carte**, dans « Cartes Tornade en jeu » :
+chaque carte porte son texte, sa flèche et ses cases de dés au même endroit. Le
+tableau des combinaisons ne contient plus que les combinaisons de la Tornade.
 
 ## L’apparence des faces
 

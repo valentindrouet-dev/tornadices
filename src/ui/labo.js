@@ -1,23 +1,23 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.37';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.37';
-import { nomSymbole } from './apparence.js?v=1.37';
-import { store } from './store.js?v=1.37';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.37';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.38';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.38';
+import { nomSymbole } from './apparence.js?v=1.38';
+import { store } from './store.js?v=1.38';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.38';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE, profilIA,
+  ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cartesEnJeu, comboPossible,
+  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.37';
-import { tableauCombos } from './combos.js?v=1.37';
+} from '../core/config.js?v=1.38';
+import { tableauCombos } from './combos.js?v=1.38';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.37';
+} from '../core/proba.js?v=1.38';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -241,11 +241,6 @@ function panneauConfig(rafraichir) {
       ecrireCombo: (id, requis) => {
         const c = cfg.combos.find((x) => x.id === id);
         if (c) c.requis = requis;
-      },
-      ecrireCarte: (id, requis) => {
-        const cle = cleCombosCartes(cfg);
-        if (!cfg[cle]) cfg[cle] = {};
-        cfg[cle][id] = requis;
       },
       ecrireVert: (id, requis) => {
         if (!cfg.combosVert) cfg.combosVert = {};
@@ -491,7 +486,7 @@ function resultats(r) {
           h('th.num', 'Taux de sortie'), h('th.num', 'Réalisations'),
           h('th.num', 'Durée moyenne'), h('th', 'Vainqueurs'))),
         h('tbody', ...r.parCarte.map((c) => {
-          const carte = CARTES_TORNADE.find((x) => x.id === c.id);
+          const carte = CARTES_PAR_ID[c.id];
           const combo = carte && carte.combo;
           return h('tr',
             h('td', c.nom),
@@ -647,9 +642,10 @@ function ongletProbas(rafraichir) {
     ...cfg.combos.filter((c) => c.id !== 'blocage').map((c) => ({
       nom: c.nom, requis: c.requis, source: 'tornade', estArretForce: !!c.obligatoire,
     })),
-    ...CARTES_TORNADE.filter((c) => c.combo).map((c) => ({
+    // Les cartes du mode en cours : chaque mode a son paquet et ses exigences.
+    ...cartesDuMode(cfg).filter((c) => c.combo).map((c) => ({
       nom: c.court,
-      requis: (cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis,
+      requis: requisCarte(cfg, c.combo),
       source: 'journee',
     })),
   ].map((l) => {
@@ -783,19 +779,29 @@ function ongletRegles() {
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section', 'Cartes Tornade'),
+      h('div.titre-section',
+        `Cartes Tornade — ${cfg.sansPoints ? 'sans les points' : 'avec les jetons'}`),
       h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
+        h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
+          h('th', 'Combinaison'), h('th', 'Effet'))),
+        h('tbody', ...cartesDuMode(cfg).map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
+          // Le sens que la carte annonce depuis la pioche, encore face cachée.
+          h('td.num', c.sens
+            ? h('span.fleche-sens', {
+                title: c.sens > 0 ? 'Sens horaire' : 'Sens antihoraire',
+              }, c.sens > 0 ? '↻' : '↺')
+            : h('span.mini.muted', '—')),
           h('td', c.combo
-            ? h('div.rangee.rangee--serree',
-                suiteSymboles((cfg.combosCartes && cfg.combosCartes[c.combo.id]) || c.combo.requis, 18))
+            ? h('div.rangee.rangee--serree', suiteSymboles(requisCarte(cfg, c.combo), 18))
             : h('span.mini.muted', 'effet permanent')),
           h('td.petit', c.texte,
             noteCarteMode(c, cfg) ? h('div.mini.muted', noteCarteMode(c, cfg)) : null),
         ))),
       ),
+      h('p.mini.muted', { style: { marginTop: '8px' } },
+        'Le paquet dépend du mode de jeu, et les exigences se règlent carte par carte dans les '
+        + 'Réglages. Sans les points, le sens de chaque manche se lit au dos de la carte suivante.'),
     ),
   );
 }
