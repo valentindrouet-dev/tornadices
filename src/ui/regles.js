@@ -1,13 +1,14 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.36';
+import { h } from './dom.js?v=1.37';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.36';
+} from './icons.js?v=1.37';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE, PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.36';
+} from '../core/config.js?v=1.37';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.37';
 
 export function vueRegles() {
   return h('div.page',
@@ -68,13 +69,19 @@ export function vueRegles() {
       h('div.grille.grille--3',
         ...['tornade', 'vache', 'zzz', 'x', 'eclair', 'joker'].map((s) => h('div.stat',
           h('div.rangee.rangee--serree', pastilleSymbole(s, 30),
-            h('strong', SYMBOLES[s].nom)),
+            h('strong', nomSymbole(s))),
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
       h('p.petit', { style: { marginTop: '12px' } },
-        'Le dé officiel porte six faces : deux tornades, un X, une vache et deux ZzZ. '
+        `Le dé officiel porte six faces : deux ${nomSymbole('tornade')}s, un X, `
+        + `une ${nomSymbole('vache')} et deux ZzZ. `
         + 'L’éclair et le joker n’y sont plus — ils restent disponibles dans les Réglages, '
         + 'à poser soi-même sur une face pour les essayer.'),
+      h('p.mini.muted',
+        `Les deux faces de couleur portent l’habillage officiel : le ${nomSymbole('tornade')} sur `
+        + `le bleu, la ${nomSymbole('vache')} sur le vert. Le moteur, lui, continue de parler de `
+        + `« ${nomAncien('tornade')} » et de « ${nomAncien('vache')} » — les pouvoirs et les `
+        + 'combinaisons n’ont pas bougé, et les Réglages permettent de reprendre l’ancien dessin.'),
       h('div.encart', { style: { marginTop: '14px' } },
         'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
         + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
@@ -108,7 +115,7 @@ export function vueRegles() {
       h('div.rangee', { style: { marginTop: '14px' } },
         pastilleSymbole('jokerDouble', 40),
         h('p.petit', { style: { flex: '1', margin: 0 } },
-          h('strong', SYMBOLES.jokerDouble.nom), ' — un joker limité à l’éclair et au ZzZ. '
+          h('strong', nomSymbole('jokerDouble')), ' — un joker limité à l’éclair et au ZzZ. '
           + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Réglages '
           + 'pour l’essayer. Il ne compte pas dans les trois jokers de l’échec.'),
       ),
@@ -261,12 +268,14 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'L’apparence des faces'),
-      h('p.petit', 'Deux faces se réhabillent quand on veut, dans les Réglages : la Tornade et '
-        + 'la Vache. On choisit un modèle fourni — un réveil, une tornade verte — ou l’on importe '
-        + 'son propre dessin, et l’on change le nom affiché dans la foulée.'),
+      h('p.petit', `Le dé officiel porte le ${nomSymbole('tornade')} sur la face bleue et la `
+        + `${nomSymbole('vache')} sur la verte. Les deux se réhabillent quand on veut, dans les `
+        + 'Réglages : reprenez l’ancien dessin, ou importez le vôtre, et changez le nom affiché '
+        + 'dans la foulée.'),
       h('p.petit.muted', 'Le pouvoir ne bouge pas : même symbole pour le moteur, même '
         + 'combinaison, même effet. Seuls l’illustration et le nom changent, partout sur le '
-        + 'site — dans les menus, sur les dés, dans les listes de combinaisons.'),
+        + 'site — dans les menus, sur les dés, dans les listes de combinaisons. Une règle '
+        + 'enregistrée sous l’ancien nom reste donc valable.'),
     ),
 
     h('div.carte',

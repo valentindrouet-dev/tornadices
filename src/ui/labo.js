@@ -1,9 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.36';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.36';
-import { store } from './store.js?v=1.36';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.36';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.37';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.37';
+import { nomSymbole } from './apparence.js?v=1.37';
+import { store } from './store.js?v=1.37';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.37';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE, profilIA,
@@ -12,13 +13,15 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.36';
-import { tableauCombos } from './combos.js?v=1.36';
+} from '../core/config.js?v=1.37';
+import { tableauCombos } from './combos.js?v=1.37';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.36';
+} from '../core/proba.js?v=1.37';
 
-const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
+// Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
+// « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
+const NOM_SYM = new Proxy({}, { get: (_, id) => nomSymbole(String(id)) });
 
 /**
  * Le dernier résultat de campagne, s'il est encore lisible. Un résultat produit

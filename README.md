@@ -466,15 +466,30 @@ recoche à la main si on y tient.
 
 ## L’apparence des faces
 
-`src/ui/apparence.js` retient, par symbole, un nom et une illustration ;
-`icons.js` les résout en dessin (`dessinFace`). Deux faces sont
-personnalisables : la Tornade et la Vache. L’illustration est soit un modèle
-fourni (`reveil`, `tornadeVerte`), soit une image importée, stockée en `data:`
-dans le navigateur — le site reste autonome, aucune requête vers l’extérieur.
-Limite : 400 ko par image.
+Le dé officiel porte un **réveil** sur la face bleue et une **tornade verte** sur
+la face verte — c’est l’habillage par défaut du site, défini par
+`APPARENCE_OFFICIELLE` dans `src/ui/apparence.js` :
 
-**Le pouvoir ne change pas** : c’est le même symbole pour le moteur, la même
-combinaison, le même effet. `core/` ignore complètement ce module.
+| Symbole (moteur) | Nom affiché | Illustration | Ancien dessin |
+|---|---|---|---|
+| `tornade` | Réveil | `reveil` | Tornade bleue |
+| `vache` | Tornade | `tornadeVerte` | Vache verte |
+
+Les **identifiants de symbole ne changent pas** : le moteur continue de parler de
+`tornade` et de `vache`, et toute règle ou configuration enregistrée sous
+l’ancien nom reste valable. `core/` ignore complètement ce module.
+
+`apparence.js` retient le choix, `icons.js` le résout en dessin (`dessinFace`).
+Trois états par face :
+
+- **rien d’enregistré** → l’apparence officielle ;
+- **une entrée enregistrée** → ce qu’elle dit, `image: ''` redemandant
+  explicitement l’ancien dessin ;
+- **l’entrée effacée** (bouton « Face officielle ») → retour à l’officielle.
+
+L’illustration est soit un modèle fourni (`reveil`, `tornadeVerte`), soit une
+image importée, stockée en `data:` dans le navigateur — le site reste autonome,
+aucune requête vers l’extérieur. Limite : 400 ko par image.
 
 ## Les statistiques, décorrélées
 

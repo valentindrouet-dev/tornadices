@@ -1,7 +1,7 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.36';
-import { CARTES_TORNADE } from './config.js?v=1.36';
+import { Moteur } from './engine.js?v=1.37';
+import { CARTES_TORNADE } from './config.js?v=1.37';
 
 const NOM_CARTE = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c.nom]));
 

@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.36';
+export const VERSION = '1.37';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.37',
+    date: '18/08/2026',
+    notes: [
+      'Nouveau dé officiel : la face bleue porte le Réveil, la face verte porte la Tornade. C’est désormais l’habillage par défaut du site — inutile de le régler, il est là dès l’ouverture, sur les dés comme dans tous les menus et les Règles.',
+      'Rien ne change sous le capot : le moteur continue de parler de « tornade » et de « vache », avec les mêmes combinaisons et les mêmes pouvoirs. Une configuration enregistrée, une règle réglée, une campagne du Laboratoire — tout reste valable au mot près.',
+      'L’ancien dessin reste à portée de clic. Dans « Apparence des faces », chaque face propose son illustration officielle, l’ancienne, ou la vôtre importée ; le nom suit le dessin choisi, et « Face officielle » remet tout d’aplomb.',
+    ],
+  },
   {
     version: '1.36',
     date: '18/08/2026',

@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.36';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.36';
-import { store } from './store.js?v=1.36';
-import { aller } from './app.js?v=1.36';
-import { lancerPartie } from './table.js?v=1.36';
+import { h, remplacer } from './dom.js?v=1.37';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.37';
+import { store } from './store.js?v=1.37';
+import { aller } from './app.js?v=1.37';
+import { lancerPartie } from './table.js?v=1.37';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -16,15 +16,16 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, requisCarte, comboPossible, COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.36';
-import { tableauCombos } from './combos.js?v=1.36';
+} from '../core/config.js?v=1.37';
+import { tableauCombos } from './combos.js?v=1.37';
 import {
-  FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE,
-  nomSymbole, imageSymbole, faceModifiee, reglerApparence, reinitialiserApparences,
-} from './apparence.js?v=1.36';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.36';
-import { randomSeed } from '../core/rng.js?v=1.36';
-import { reglagesJoueurs } from './accueil.js?v=1.36';
+  FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
+  nomSymbole, nomAncien, imageSymbole, faceModifiee,
+  reglerApparence, reinitialiserApparence, reinitialiserApparences,
+} from './apparence.js?v=1.37';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.37';
+import { randomSeed } from '../core/rng.js?v=1.37';
+import { reglagesJoueurs } from './accueil.js?v=1.37';
 
 const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
 
@@ -115,14 +116,17 @@ function ecrire(cle, valeur) {
 const POIDS_MAX_IMAGE = 400 * 1024;
 
 /**
- * Le bloc qui réhabille une face : l'aperçu, le nom, le modèle, et le bouton
- * d'import. Tout est réversible — « Face d'origine » remet le dessin du jeu.
+ * Le bloc qui réhabille une face : l'aperçu, le nom, l'illustration, et le
+ * bouton d'import. Tout est réversible — « Face officielle » remet le dé du jeu.
  */
 function carteApparence(sym, rafraichir) {
-  const nomOrigine = SYMBOLES[sym].nom;
+  const officielle = APPARENCE_OFFICIELLE[sym] || {};
+  const nomOfficiel = officielle.nom || nomAncien(sym);
   const choix = imageSymbole(sym);
   const message = h('div.mini.muted', { style: { marginTop: '6px' } },
-    faceModifiee(sym) ? `Face d’origine : ${nomOrigine}.` : 'Face d’origine.');
+    faceModifiee(sym)
+      ? `Face officielle : ${nomOfficiel}. Ancien dessin : ${nomAncien(sym)}.`
+      : `Face officielle — l’ancien dessin s’appelait « ${nomAncien(sym)} ».`);
 
   const fichier = h('input', {
     type: 'file', accept: 'image/png,image/jpeg,image/svg+xml,image/webp',
@@ -156,7 +160,7 @@ function carteApparence(sym, rafraichir) {
     ),
     h('label.champ', { style: { marginTop: '10px' } }, 'Nom affiché',
       h('input', {
-        type: 'text', value: nomSymbole(sym), placeholder: nomOrigine,
+        type: 'text', value: nomSymbole(sym), placeholder: nomOfficiel,
         onchange: (e) => { reglerApparence(sym, { nom: e.target.value }); rafraichir(); },
       }),
     ),
@@ -164,9 +168,9 @@ function carteApparence(sym, rafraichir) {
       h('select', {
         onchange: (e) => {
           const val = e.target.value;
-          // Changer de modèle propose son nom : un réveil qui s'appelle encore
-          // « Tornade » n'aide personne.
-          const suggere = NOM_MODELE[val];
+          // Le dessin choisi propose son nom : un réveil qui s'appelle encore
+          // « Tornade » n'aide personne, et l'ancien dessin reprend le sien.
+          const suggere = NOM_MODELE[val] || (val === '' ? nomAncien(sym) : null);
           reglerApparence(sym, suggere ? { image: val, nom: suggere } : { image: val });
           rafraichir();
         },
@@ -183,8 +187,8 @@ function carteApparence(sym, rafraichir) {
       h('button.btn.btn--petit', { onclick: () => fichier.click() }, 'Importer une image…'),
       faceModifiee(sym)
         ? h('button.btn.btn--petit', {
-            onclick: () => { reglerApparence(sym, { nom: '', image: '' }); rafraichir(); },
-          }, 'Face d’origine')
+            onclick: () => { reinitialiserApparence(sym); rafraichir(); },
+          }, 'Face officielle')
         : null,
     ),
     message,
@@ -611,9 +615,9 @@ export function vueVariables() {
       // même combinaison et le même effet. Seuls le dessin et le nom changent.
       h('div.carte',
         titreAide('Apparence des faces', [
-          'Deux faces se réhabillent quand vous voulez : la Tornade et la Vache. Choisissez un '
-          + 'modèle fourni, ou importez votre propre image — elle est découpée en rond, comme une '
-          + 'face de dé.',
+          'Le dé officiel porte un réveil sur la face bleue et une tornade sur la verte. Les deux '
+          + 'se réhabillent quand vous voulez : reprenez l’ancien dessin, ou importez votre propre '
+          + 'image — elle est découpée en rond, comme une face de dé.',
           'Le pouvoir ne change pas d’un iota : même symbole pour le moteur, même combinaison, '
           + 'même effet. Seuls le dessin et le nom affiché changent, partout sur le site.',
           'L’image est enregistrée dans ce navigateur, en clair dans la page : pas de fichier à '
@@ -621,7 +625,7 @@ export function vueVariables() {
         ],
           h('button.btn.btn--petit', {
             onclick: () => { reinitialiserApparences(); dessiner(); },
-          }, 'Faces d’origine'),
+          }, 'Faces officielles'),
         ),
         h('div.grille.grille--2', { style: { gap: '14px' } },
           ...FACES_PERSONNALISABLES.map((sym) => carteApparence(sym, dessiner)),
