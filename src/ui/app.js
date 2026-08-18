@@ -1,15 +1,15 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.35';
-import { SVG_LOGO } from './icons.js?v=1.35';
-import { VERSION } from '../version.js?v=1.35';
-import { vueAccueil } from './accueil.js?v=1.35';
-import { vueTable, partieEnCours } from './table.js?v=1.35';
-import { vueLabo } from './labo.js?v=1.35';
-import { vueVariables } from './variables.js?v=1.35';
-import { vueHistorique } from './historique.js?v=1.35';
-import { vueVersions } from './versions.js?v=1.35';
-import { vueRegles } from './regles.js?v=1.35';
+import { h, remplacer } from './dom.js?v=1.36';
+import { SVG_LOGO } from './icons.js?v=1.36';
+import { VERSION } from '../version.js?v=1.36';
+import { vueAccueil } from './accueil.js?v=1.36';
+import { vueTable, partieEnCours } from './table.js?v=1.36';
+import { vueLabo } from './labo.js?v=1.36';
+import { vueVariables } from './variables.js?v=1.36';
+import { vueHistorique } from './historique.js?v=1.36';
+import { vueVersions } from './versions.js?v=1.36';
+import { vueRegles } from './regles.js?v=1.36';
 
 const ROUTES = {
   '': vueAccueil,

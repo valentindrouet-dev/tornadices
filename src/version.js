@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.35';
+export const VERSION = '1.36';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.36',
+    date: '18/08/2026',
+    notes: [
+      'Correction : le Laboratoire ne s’ouvrait plus du tout depuis la 1.35 — écran blanc, en haut comme en bas. En cause, le dernier résultat de campagne gardé dans le navigateur : produit par une version antérieure, il n’avait pas les colonnes ajoutées en 1.35, et la première lecture d’un champ absent emportait la page entière. Les tests partaient d’un navigateur vierge et ne pouvaient pas le voir.',
+      'Chaque résultat de campagne porte désormais le numéro du format qui l’a produit. Un résultat d’une version antérieure est simplement écarté — le Laboratoire s’ouvre sur son panneau d’accueil, il suffit de relancer la campagne. Les colonnes qui manqueraient malgré tout affichent zéro au lieu de faire tomber l’écran.',
+      'Une vérification ajoutée à la suite de tests garde la porte fermée : elle contrôle que chaque campagne porte son format et que ce format couvre bien les champs que la page lit.',
+    ],
+  },
   {
     version: '1.35',
     date: '18/08/2026',

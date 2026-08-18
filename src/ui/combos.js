@@ -11,13 +11,13 @@
 //   · l'asymétrie du Vert, qui lui donne ses propres exigences.
 // Les cartes affichées sont celles du mode en cours : chaque mode a son paquet.
 
-import { h } from './dom.js?v=1.35';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.35';
-import { nomSymbole } from './apparence.js?v=1.35';
+import { h } from './dom.js?v=1.36';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.36';
+import { nomSymbole } from './apparence.js?v=1.36';
 import {
   ORDRE_SYMBOLES, CARTES_TORNADE, COMBOS_TORNADE, COULEURS_EQUIPE,
   cartesEnJeu, requisCarte, requisPourEquipe,
-} from '../core/config.js?v=1.35';
+} from '../core/config.js?v=1.36';
 
 const FACE_REFERENCE = Object.fromEntries(COMBOS_TORNADE.map((c) => [c.id, c.face]));
 

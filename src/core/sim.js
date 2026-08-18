@@ -1,9 +1,21 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.35';
-import { CARTES_TORNADE } from './config.js?v=1.35';
+import { Moteur } from './engine.js?v=1.36';
+import { CARTES_TORNADE } from './config.js?v=1.36';
 
 const NOM_CARTE = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c.nom]));
+
+/**
+ * Format de l'agrégat renvoyé. À incrémenter dès qu'un champ apparaît ou change
+ * de sens : le Laboratoire garde le dernier résultat dans le navigateur, et un
+ * résultat produit par une version antérieure n'a pas les champs que la page
+ * lit aujourd'hui. Sans ce numéro, il fallait que chaque lecture se défende
+ * toute seule — une seule oubliée, et la page entière restait blanche.
+ *
+ * 2 — v1.35 : `combosBase`, `combosCartes`, et par carte `realisations` et
+ *     `manchesRealisee`.
+ */
+export const SCHEMA_RESULTAT = 2;
 
 function quantile(tri, q) {
   if (!tri.length) return 0;
@@ -114,6 +126,11 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
   const moy = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 
   return {
+    // Un résultat est enregistré dans le navigateur d'une session à l'autre :
+    // il porte le numéro du format qui l'a produit. Quand une colonne apparaît,
+    // ce numéro change et le Laboratoire écarte les résultats d'avant plutôt
+    // que de lire des champs absents.
+    schema: SCHEMA_RESULTAT,
     nbParties,
     graine,
     calculMs: Date.now() - t0,

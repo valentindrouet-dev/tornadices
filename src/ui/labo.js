@@ -1,9 +1,9 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.35';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.35';
-import { store } from './store.js?v=1.35';
-import { lancerCampagne } from '../core/sim.js?v=1.35';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.36';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.36';
+import { store } from './store.js?v=1.36';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.36';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_TORNADE, profilIA,
@@ -12,13 +12,27 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, comboPossible,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.35';
-import { tableauCombos } from './combos.js?v=1.35';
+} from '../core/config.js?v=1.36';
+import { tableauCombos } from './combos.js?v=1.36';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.35';
+} from '../core/proba.js?v=1.36';
 
 const NOM_SYM = Object.fromEntries(Object.values(SYMBOLES).map((s) => [s.id, s.nom]));
+
+/**
+ * Le dernier résultat de campagne, s'il est encore lisible. Un résultat produit
+ * par une version antérieure n'a pas les colonnes d'aujourd'hui : on l'écarte
+ * plutôt que de laisser la page tomber sur un champ absent. Il suffit de
+ * relancer la campagne — c'est l'affaire d'une seconde.
+ */
+function resultatEnregistre() {
+  const r = store.get('dernierResultat', null);
+  if (!r || typeof r !== 'object') return null;
+  // Une erreur enregistrée n'a pas de format : elle reste affichable telle quelle.
+  if (r.erreur) return r;
+  return r.schema === SCHEMA_RESULTAT ? r : null;
+}
 
 function cfgLabo() {
   const enregistre = store.get('cfgLabo', null);
@@ -37,7 +51,7 @@ let etat = {
   profils: store.get('profilsLabo', null) || Array.from({ length: 9 }, () => 'equilibre'),
   nbParties: store.get('nbPartiesLabo', 200),
   graine: store.get('graineLabo', 'tornade-1000'),
-  resultat: store.get('dernierResultat', null),
+  resultat: resultatEnregistre(),
   calcul: false,
 };
 
@@ -482,9 +496,9 @@ function resultats(r) {
               ? h('div.rangee.rangee--serree', suiteSymboles(combo.requis, 16))
               : h('span.mini.muted', 'aucune')),
             h('td.num', c.jouee),
-            h('td.num', combo ? c.manchesRealisee : '—'),
-            h('td.num', combo ? pourcent(c.manchesRealisee / Math.max(1, c.jouee), 0) : '—'),
-            h('td.num', combo ? nombre(c.realisations / Math.max(1, c.jouee), 2) : '—'),
+            h('td.num', combo ? (c.manchesRealisee ?? 0) : '—'),
+            h('td.num', combo ? pourcent((c.manchesRealisee ?? 0) / Math.max(1, c.jouee), 0) : '—'),
+            h('td.num', combo ? nombre((c.realisations ?? 0) / Math.max(1, c.jouee), 2) : '—'),
             h('td.num', dureeLongue(c.dureeTotale / Math.max(1, c.jouee))),
             h('td', Object.entries(c.vainqueurs)
               .sort((a, b) => b[1] - a[1])
@@ -519,7 +533,9 @@ function resultats(r) {
 }
 
 function tableauFrequences(objet, total, unite) {
-  const lignes = Object.entries(objet).sort((a, b) => b[1] - a[1]);
+  // Un agrégat absent vaut « aucune occurrence » : une colonne qui manque ne
+  // doit jamais emporter la page entière.
+  const lignes = Object.entries(objet || {}).sort((a, b) => b[1] - a[1]);
   if (!lignes.length) return h('p.petit.muted', 'Aucune occurrence.');
   const max = lignes[0][1];
   return h('table.tbl',

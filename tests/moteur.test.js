@@ -9,7 +9,7 @@ import {
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, COULEURS_EQUIPE,
 } from '../src/core/config.js';
-import { lancerCampagne } from '../src/core/sim.js';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
 } from '../src/core/proba.js';
@@ -1162,6 +1162,24 @@ console.log('\nStatistiques décorrélées');
   const troupeau = r.parCarte.find((c) => c.id === 'troupeau');
   verifier(`« Troupeau » sort dans ${troupeau.manchesRealisee}/${troupeau.jouee} de ses manches`,
     troupeau && troupeau.manchesRealisee > 0);
+}
+
+// ── 3 septies bis septies. Un résultat enregistré porte son format ───────────
+console.log('\nFormat des résultats de campagne');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const r = lancerCampagne(configParDefaut(6), spec, 'schema', 20);
+
+  // Le Laboratoire garde le dernier résultat dans le navigateur. Sans numéro de
+  // format, un résultat d'avant l'ajout d'une colonne faisait tomber la page
+  // entière sur un champ absent — écran blanc, plus rien ne s'ouvrait.
+  verifier(`chaque campagne porte son format (schema ${r.schema})`,
+    typeof r.schema === 'number' && r.schema === SCHEMA_RESULTAT);
+  verifier('le format couvre bien les champs que la page lit',
+    ['combosBase', 'combosCartes', 'parCarte'].every((k) => r[k] !== undefined)
+    && r.parCarte.every((c) => c.realisations !== undefined && c.manchesRealisee !== undefined));
+  verifier('un résultat sans format est reconnu comme périmé',
+    ({ nbParties: 20, combos: {} }).schema !== SCHEMA_RESULTAT);
 }
 
 // ── 3 septies ter. Qui prend les dés à la première manche ────────────────────
