@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.39';
+export const VERSION = '1.40';
 export const BUILD_DATE = '2026-08-18';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.40',
+    date: '18/08/2026',
+    notes: [
+      'La flèche de rotation est deux fois plus grosse et posée en plein milieu de la pioche, sur les cartes elles-mêmes. Elle était en pastille de 26 pixels dans le coin haut-gauche, où elle se confondait avec un badge : c’est l’information qu’on cherche du regard au coup d’envoi d’une manche, elle occupe désormais le centre du dos de carte.',
+      'Sur téléphone elle reste centrée, à une taille adaptée à la pioche plus courte ; le message de fin de manche y passe aussi à une taille lisible sans déborder.',
+    ],
+  },
   {
     version: '1.39',
     date: '18/08/2026',

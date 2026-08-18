@@ -1206,14 +1206,17 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   to { opacity: 1; transform: none; }
 }
 .texte-carte-grand { font-size: 16px; line-height: 1.45; color: var(--encre-doux); }
-/* La flèche du dos, posée sur la pioche : le sens de la manche en cours. */
+/* La flèche du dos, en plein milieu de la pioche : le sens de la manche en cours.
+   Centrée sur les cartes, pas sur le bloc — la pastille du compte occupe 26px à droite. */
 .dos-fleche {
-  position: absolute; top: -8px; left: -8px;
-  background: #fff; color: var(--accent-fonce);
-  border: 1px solid var(--accent-bord); border-radius: 999px;
-  width: 26px; height: 26px; line-height: 24px; text-align: center;
-  font-size: 15px; font-weight: 800;
-  box-shadow: 0 1px 4px rgba(20, 55, 95, .18);
+  position: absolute; top: 50%; left: calc((100% - 26px) / 2);
+  transform: translate(-50%, -50%);
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, .95); color: var(--accent-fonce);
+  border: 2px solid var(--accent-bord); border-radius: 999px;
+  font-size: 32px; font-weight: 800; line-height: 1;
+  box-shadow: 0 2px 9px rgba(20, 55, 95, .28);
 }
 /* La victoire d'une manche : au centre, en grand, le temps de la lire. */
 .annonce--manche {
@@ -1222,4 +1225,11 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   font-weight: 800;
   box-shadow: var(--ombre-forte);
   z-index: 40;
+}
+
+/* Reprises mobiles des blocs définis après le grand @media : l'ordre de source
+   décide à égalité de spécificité, elles doivent donc rester en fin de feuille. */
+@media (max-width: 860px) {
+  .dos-fleche { width: 42px; height: 42px; font-size: 26px; }
+  .annonce--manche { font-size: 17px; padding: 12px 18px; }
 }
