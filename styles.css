@@ -1363,3 +1363,50 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   color: var(--couleur-eq, var(--gris));
 }
 .refuge-sous { margin-top: 9px; font-size: 11.5px; color: var(--gris); }
+
+/* ── Fiche de règles, à imprimer ──────────────────────────────────────────────
+   Un document, pas un écran : blanc, encre noire, marges franches. À l'écran il
+   garde la charpente du site ; à l'impression, tout le reste s'efface. */
+.fiche {
+  background: #fff;
+  border: 1px solid var(--bord);
+  border-radius: var(--r);
+  box-shadow: var(--ombre);
+  padding: 34px 38px 30px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+.fiche-entete { text-align: center; border-bottom: 2px solid var(--encre); padding-bottom: 14px; }
+.fiche-jeu { font-size: 34px; letter-spacing: .2em; margin: 0; }
+.fiche-sous { color: var(--encre-doux); font-size: 13.5px; margin: 6px 0 0; }
+.fiche-bloc { margin-top: 24px; break-inside: avoid; }
+.fiche-titre {
+  font-size: 15px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase;
+  margin: 0 0 10px; padding-bottom: 5px; border-bottom: 1px solid var(--bord-fort);
+}
+.fiche-bloc p { margin: 0 0 8px; font-size: 14px; line-height: 1.55; }
+.fiche-note { font-size: 12.5px; color: var(--encre-doux); }
+.fiche-liste { margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 1.55; }
+.fiche-liste li { margin-bottom: 5px; }
+.fiche-tbl { width: 100%; }
+.fiche-tbl td, .fiche-tbl th { vertical-align: top; }
+.fiche-combo-nom { font-weight: 800; white-space: nowrap; }
+.fiche-faces { display: flex; flex-wrap: wrap; gap: 18px; }
+.fiche-face { text-align: center; }
+.fiche-face-nom { font-size: 12.5px; font-weight: 700; margin-top: 4px; }
+.fiche-face-n { font-size: 12px; color: var(--gris); }
+.fiche-pied {
+  margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--bord);
+  font-size: 11.5px; color: var(--gris); text-align: center;
+}
+
+@media print {
+  /* Seule la fiche s'imprime : la barre, les boutons et le fond disparaissent. */
+  body::before, .barre, .fiche-commandes, .banniere-version { display: none !important; }
+  body { background: #fff; }
+  .page { padding: 0; max-width: none; }
+  .fiche { border: 0; box-shadow: none; padding: 0; max-width: none; }
+  .fiche-bloc { break-inside: avoid; }
+  .fiche-titre { break-after: avoid; }
+  a[href]::after { content: none !important; }
+}

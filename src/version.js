@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.50';
+export const VERSION = '1.51';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.51',
+    date: '19/08/2026',
+    notes: [
+      'Une fiche de règles, à imprimer ou à enregistrer en PDF : le bouton est en haut de la page Réglages. Elle écrit les règles de la partie que vous venez de régler — votre dé face par face, vos combinaisons avec leurs seuils, votre mise en place, vos cartes en jeu — et non les règles du jeu en général.',
+      'Elle est faite pour une vraie table : rien de ce qui concerne les IA ni la table virtuelle n’y figure. Ni caractères, ni durées, ni adresse, ni graine — ces réglages n’existent que pour la simulation.',
+      'Les textes ne sont pas recopiés de la référence, ils décrivent ce que la partie fera vraiment. L’Abri retourne un jeton, remporte la manche ou pose un jeton sur le Refuge selon le mode ; la combinaison qui porte l’attrape — l’Attaque ou l’Échec, selon votre réglage — annonce le contact et ce qu’il rapporte. Une combinaison que votre dé ne peut pas produire est signalée à part plutôt que listée comme jouable.',
+      'Aucune bibliothèque n’est chargée pour cela : la fiche est un document que le navigateur imprime, et c’est lui qui écrit le PDF. Le site reste statique, sans dépendance.',
+    ],
+  },
   {
     version: '1.50',
     date: '19/08/2026',

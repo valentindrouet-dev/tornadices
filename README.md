@@ -163,6 +163,27 @@ Côté moteur, `statsManches` porte désormais qui a conclu la manche et par quo
 (`joueur`, `nomJoueur`, `raison`, `cible`, `sens`) : sans cela on ne savait que
 l'équipe gagnante.
 
+## La fiche de règles, à imprimer
+
+`src/ui/fiche.js` (`#/fiche`, bouton en haut des Réglages) écrit les règles de
+**la partie réglée** — pas celles du jeu en général : le dé que vous avez
+composé, vos combinaisons et leurs seuils, votre mise en place, vos cartes en
+jeu. Elle est faite pour être posée sur une vraie table, donc **rien de ce qui
+concerne les IA ni la table virtuelle n'y figure** : ni caractères, ni durées, ni
+adresse, ni graine.
+
+Aucune bibliothèque n'est chargée pour fabriquer le PDF — le site reste statique
+et sans dépendance. La fiche est un document HTML propre ; `@media print` efface
+la barre et les boutons, et le navigateur écrit le PDF lui-même
+(« Enregistrer au format PDF » dans sa boîte d'impression).
+
+Les libellés ne sont pas recopiés de la référence : ils décrivent ce que la
+partie fera vraiment. `effetCombo()` réécrit l'Abri selon le mode — retourner un
+jeton, remporter la manche, poser un jeton sur le Refuge — et donne à la
+combinaison qui porte l'attrape (`comboDeclencheur`) le texte du contact et ce
+qu'il rapporte. Une fiche qui recopierait le texte d'origine décrirait une autre
+partie que celle qu'on va jouer.
+
 ## Les réglages enregistrés
 
 Équilibrer, c’est comparer des versions entre elles. Un bandeau coiffe les
