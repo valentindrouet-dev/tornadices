@@ -1,9 +1,10 @@
 // Apparence des faces : illustration et nom, changeables à tout moment.
 //
-// Deux faces se personnalisent — la Tornade bleue, qui porte le Réveil, et
-// l'Abri vert. Le pouvoir ne bouge pas : c'est le même symbole pour le moteur,
-// avec la même combinaison et le même effet. Seuls le dessin et le nom affiché
-// changent, pour essayer une autre direction artistique sans toucher aux règles.
+// Trois faces se personnalisent — la Tornade bleue, qui porte le Réveil, l'Abri
+// vert, et le ZzZ. Le pouvoir ne bouge pas : c'est le même symbole pour le
+// moteur, avec la même combinaison et le même effet. Seuls le dessin et le nom
+// affiché changent, pour essayer une autre direction artistique sans toucher
+// aux règles.
 //
 // Trois états possibles pour chaque face :
 //   · rien d'enregistré        → l'apparence officielle ci-dessous ;
@@ -14,11 +15,11 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.55';
-import { SYMBOLES } from '../core/config.js?v=1.55';
+import { store } from './store.js?v=1.56';
+import { SYMBOLES } from '../core/config.js?v=1.56';
 
-/** Les seules faces personnalisables : les deux que le jeu met en avant. */
-export const FACES_PERSONNALISABLES = ['tornade', 'vache'];
+/** Les faces personnalisables : celles que le jeu met en avant. */
+export const FACES_PERSONNALISABLES = ['tornade', 'vache', 'zzz'];
 
 /**
  * L'apparence officielle du jeu — ce que le site montre sans aucun réglage.
@@ -26,6 +27,10 @@ export const FACES_PERSONNALISABLES = ['tornade', 'vache'];
  * identifiants de symbole, eux, ne changent pas : le moteur continue de parler
  * de « tornade » et de « vache », et toutes les règles enregistrées restent
  * valables.
+ *
+ * Le ZzZ n'y figure pas : il n'a jamais été réhabillé, son dessin d'origine EST
+ * l'officiel. Une face absente d'ici garde donc son nom et son dessin de
+ * toujours — c'est ce que `apparenceDe` rend faute d'entrée.
  */
 export const APPARENCE_OFFICIELLE = {
   tornade: { nom: 'Réveil', image: 'reveil' },
@@ -47,6 +52,10 @@ export const MODELES_FACE = {
     ['tornadeVerte', 'Tornade verte'],
     ['', 'Vache (premier dessin)'],
   ],
+  zzz: [
+    ['', 'ZzZ violet (officiel)'],
+    ['zzzGris', 'ZzZ gris'],
+  ],
 };
 
 /** Nom proposé avec chaque illustration : le dessin et le nom vont ensemble. */
@@ -54,6 +63,9 @@ export const NOM_MODELE = {
   reveil: 'Réveil',
   abri: 'Abri',
   tornadeVerte: 'Tornade',
+  // Le ZzZ gris ne change que de pastille : il garde son nom, sans quoi le menu
+  // rebaptiserait une face qui n'a pas changé de sens.
+  zzzGris: 'ZzZ',
   '': null, // le dessin d'avant reprend le nom du symbole
 };
 
@@ -105,7 +117,7 @@ export function reinitialiserApparence(sym) {
   store.set(CLE, tout);
 }
 
-/** Remet les deux faces au dé officiel. */
+/** Remet toutes les faces au dé officiel. */
 export function reinitialiserApparences() {
   store.set(CLE, {});
 }

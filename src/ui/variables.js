@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.55';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.55';
-import { store } from './store.js?v=1.55';
-import { aller } from './app.js?v=1.55';
-import { lancerPartie } from './table.js?v=1.55';
+import { h, remplacer } from './dom.js?v=1.56';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.56';
+import { store } from './store.js?v=1.56';
+import { aller } from './app.js?v=1.56';
+import { lancerPartie } from './table.js?v=1.56';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,19 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.55';
-import { tableauCombos, editeurCases } from './combos.js?v=1.55';
+} from '../core/config.js?v=1.56';
+import { tableauCombos, editeurCases } from './combos.js?v=1.56';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.55';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.55';
-import { randomSeed } from '../core/rng.js?v=1.55';
-import { reglagesJoueurs } from './accueil.js?v=1.55';
+} from './apparence.js?v=1.56';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.56';
+import { randomSeed } from '../core/rng.js?v=1.56';
+import { reglagesJoueurs } from './accueil.js?v=1.56';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.55';
+} from './profils.js?v=1.56';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -241,10 +241,17 @@ function carteApparence(sym, rafraichir) {
   const officielle = APPARENCE_OFFICIELLE[sym] || {};
   const nomOfficiel = officielle.nom || nomAncien(sym);
   const choix = imageSymbole(sym);
+  // Une face jamais réhabillée n'a pas d'« ancien dessin » : son dessin
+  // d'origine est l'officiel, et le dire deux fois n'apprendrait rien.
+  const reskinnee = !!APPARENCE_OFFICIELLE[sym];
   const message = h('div.mini.muted', { style: { marginTop: '6px' } },
     faceModifiee(sym)
-      ? `Face officielle : ${nomOfficiel}. Ancien dessin : ${nomAncien(sym)}.`
-      : `Face officielle — l’ancien dessin s’appelait « ${nomAncien(sym)} ».`);
+      ? (reskinnee
+        ? `Face officielle : ${nomOfficiel}. Ancien dessin : ${nomAncien(sym)}.`
+        : `Face officielle : ${nomOfficiel}, le dessin d’origine du jeu.`)
+      : (reskinnee
+        ? `Face officielle — l’ancien dessin s’appelait « ${nomAncien(sym)} ».`
+        : 'Dessin d’origine du jeu — celui de la règle papier.'));
 
   const fichier = h('input', {
     type: 'file', accept: 'image/png,image/jpeg,image/svg+xml,image/webp',
@@ -957,9 +964,10 @@ export function vueVariables() {
       // même combinaison et le même effet. Seuls le dessin et le nom changent.
       h('div.carte',
         titreAide('Apparence des faces', [
-          'Le dé officiel porte un réveil sur la face bleue et une tornade sur la verte. Les deux '
-          + 'se réhabillent quand vous voulez : reprenez l’ancien dessin, ou importez votre propre '
-          + 'image — elle est découpée en rond, comme une face de dé.',
+          'Trois faces se réhabillent quand vous voulez : la bleue, qui porte le réveil, la verte, '
+          + 'qui porte l’abri, et le ZzZ. Reprenez un dessin d’avant, choisissez une autre '
+          + 'pastille, ou importez votre propre image — elle est découpée en rond, comme une face '
+          + 'de dé.',
           'Le pouvoir ne change pas d’un iota : même symbole pour le moteur, même combinaison, '
           + 'même effet. Seuls le dessin et le nom affiché changent, partout sur le site.',
           'L’image est enregistrée dans ce navigateur, en clair dans la page : pas de fichier à '

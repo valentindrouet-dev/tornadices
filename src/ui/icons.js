@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole } from './apparence.js?v=1.55';
+import { imageSymbole } from './apparence.js?v=1.56';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -218,10 +218,18 @@ const FACE_ABRI = face(COULEUR_FACE.vache, `
     <path d="M42 76V62a8 8 0 0 1 16 0v14"/>
   </g>`);
 
+// Le même ZzZ, sur un gris de sommeil plutôt que sur le violet. Les trois Z ne
+// bougent pas : c'est la pastille qui change, et c'est elle qu'on reconnaît de
+// l'autre bout de la table. Le gris est tenu à distance de celui de la face
+// « ? » — deux faces grises qu'on confondrait ne rendraient service à personne.
+const GRIS_SOMMEIL = '#bcbfc2';
+const FACE_ZZZ_GRIS = face(GRIS_SOMMEIL, GLYPHES.zzz);
+
 const MODELES_DESSIN = {
   reveil: FACE_REVEIL,
   tornadeVerte: FACE_TORNADE_VERTE,
   abri: FACE_ABRI,
+  zzzGris: FACE_ZZZ_GRIS,
 };
 
 /**

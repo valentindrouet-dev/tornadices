@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.55';
+export const VERSION = '1.56';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.56',
+    date: '19/08/2026',
+    notes: [
+      'Le ZzZ rejoint les faces personnalisables : « Apparence des faces » en compte trois au lieu de deux, et la face du sommeil se réhabille comme la bleue et la verte — un modèle fourni, ou votre propre image, découpée en rond.',
+      'Un modèle est proposé d’emblée : « ZzZ gris ». Mêmes trois Z, même trait noir, sur une pastille grise plutôt que violette. Le gris est tenu à distance de celui de la face « ? » — deux faces grises qu’on confondrait à la table ne rendraient service à personne.',
+      'Le violet reste l’officiel : c’est le dessin d’origine du jeu, et le bouton « Face officielle » y ramène. Comme pour les deux autres faces, le pouvoir ne bouge pas d’un iota — même symbole pour le moteur, mêmes combinaisons, même effet.',
+    ],
+  },
   {
     version: '1.55',
     date: '19/08/2026',
