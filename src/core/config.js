@@ -324,6 +324,9 @@ export function assainirConfig(cfg) {
   if (!cfg || typeof cfg !== 'object') return base;
 
   const sortie = { ...base, ...cfg };
+  // Le jeu se joue de trois à huit : une configuration enregistrée à neuf
+  // joueurs date d'avant la v1.49 et doit revenir dans les bornes.
+  sortie.nbJoueurs = bornerJoueurs(sortie.nbJoueurs);
   sortie.faces = assainirFaces(cfg.faces);
   // « Manche gagnée dès les 3 éclairs » n'existe pas dans le jeu : un réglage
   // qui la porte encore retombe sur la variante voisine, celle où il faut
@@ -697,7 +700,7 @@ export const CARTES_PAR_ID = Object.fromEntries(
 );
 
 // ── Tableau de mise en place (règles V4.5) ────────────────────────────────────
-// 9 joueurs : extrapolé, le tableau officiel s'arrête à 8.
+// Le tableau officiel V4.5, de trois à huit joueurs — huit est le maximum du jeu.
 export const MISE_EN_PLACE = {
   3: { lots: 2, jetons: 2, jetonsVert: 2, cartes: 3 },
   4: { lots: 2, jetons: 3, jetonsVert: 2, cartes: 3 },
@@ -705,11 +708,21 @@ export const MISE_EN_PLACE = {
   6: { lots: 3, jetons: 4, jetonsVert: 2, cartes: 3 },
   7: { lots: 4, jetons: 4, jetonsVert: 2, cartes: 3 },
   8: { lots: 4, jetons: 4, jetonsVert: 2, cartes: 3 },
-  9: { lots: 5, jetons: 5, jetonsVert: 2, cartes: 3, extrapole: true },
 };
 
 /** Les tables auxquelles le jeu se joue, du plus petit au plus grand. */
-export const NOMBRES_JOUEURS = [3, 4, 5, 6, 7, 8, 9];
+export const NOMBRES_JOUEURS = [3, 4, 5, 6, 7, 8];
+
+/** Les bornes du jeu : jamais moins de trois joueurs, jamais plus de huit. */
+export const JOUEURS_MIN = NOMBRES_JOUEURS[0];
+export const JOUEURS_MAX = NOMBRES_JOUEURS[NOMBRES_JOUEURS.length - 1];
+
+/** Ramène un nombre de joueurs dans les bornes — une valeur enregistree peut dater. */
+export function bornerJoueurs(n) {
+  const x = Math.round(Number(n));
+  if (!Number.isFinite(x)) return 6;
+  return Math.min(JOUEURS_MAX, Math.max(JOUEURS_MIN, x));
+}
 
 /**
  * Combien de lots tournent, à ce nombre de joueurs.
@@ -845,6 +858,7 @@ export const COULEURS_EQUIPE = {
 
 // ── Configuration complète par défaut ─────────────────────────────────────────
 export function configParDefaut(nbJoueurs = 6, opts = {}) {
+  nbJoueurs = bornerJoueurs(nbJoueurs);
   const mep = MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
   // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
   // disparaît purement et simplement du jeu.
@@ -942,7 +956,9 @@ export function symbolesPertinents(cfg) {
 }
 
 export function infosMiseEnPlace(nbJoueurs) {
-  return MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
+  // Hors bornes, on rend la ligne la plus proche plutôt qu'une ligne au hasard :
+  // une table de neuf enregistrée d'avant la v1.49 se lit comme une table de huit.
+  return MISE_EN_PLACE[bornerJoueurs(nbJoueurs)] || MISE_EN_PLACE[6];
 }
 
 // Répartition des équipes : effectifs égaux, un joueur Vert si le nombre est impair.

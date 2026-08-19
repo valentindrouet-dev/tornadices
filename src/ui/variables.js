@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.48';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.48';
-import { store } from './store.js?v=1.48';
-import { aller } from './app.js?v=1.48';
-import { lancerPartie } from './table.js?v=1.48';
+import { h, remplacer } from './dom.js?v=1.49';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.49';
+import { store } from './store.js?v=1.49';
+import { aller } from './app.js?v=1.49';
+import { lancerPartie } from './table.js?v=1.49';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -18,19 +18,19 @@ import {
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
-} from '../core/config.js?v=1.48';
-import { tableauCombos, editeurCases } from './combos.js?v=1.48';
+} from '../core/config.js?v=1.49';
+import { tableauCombos, editeurCases } from './combos.js?v=1.49';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.48';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.48';
-import { randomSeed } from '../core/rng.js?v=1.48';
-import { reglagesJoueurs } from './accueil.js?v=1.48';
+} from './apparence.js?v=1.49';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.49';
+import { randomSeed } from '../core/rng.js?v=1.49';
+import { reglagesJoueurs } from './accueil.js?v=1.49';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.48';
+} from './profils.js?v=1.49';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -594,9 +594,6 @@ export function vueVariables() {
             : '',
           'Toutes ces valeurs se règlent à la main : en modifier une décroche le tableau '
           + 'officiel. Recocher « Suivre le tableau officiel » les remet toutes d’aplomb.',
-          mep.extrapole
-            ? 'À 9 joueurs, le tableau officiel s’arrête : ces valeurs sont extrapolées.'
-            : '',
           nb % 2
             ? 'Le Vert joue seul contre deux équipes : « Cartes du Vert » règle son objectif à '
               + 'part, pour l’alléger ou l’alourdir sans toucher aux Bleus ni aux Jaunes. Laissez '

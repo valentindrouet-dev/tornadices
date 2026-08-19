@@ -12,8 +12,8 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.48';
-import { store } from './store.js?v=1.48';
+import { h } from './dom.js?v=1.49';
+import { store } from './store.js?v=1.49';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';

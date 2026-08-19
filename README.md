@@ -2,7 +2,7 @@
 
 Site statique, sans dépendance ni étape de compilation : du HTML, du CSS et des
 modules JavaScript natifs. Il implémente les règles V4.5 de TornaDice pour 3 à
-9 joueurs, chaque siège pouvant être tenu par un humain ou par une IA, et fournit
+8 joueurs, chaque siège pouvant être tenu par un humain ou par une IA, et fournit
 les outils d’analyse nécessaires à l’équilibrage.
 
 ## Lancer le site
@@ -41,7 +41,7 @@ si l'écran est en retard.
 
 | Page | Contenu |
 |---|---|
-| **Accueil** | Qui joue : 3 à 9 joueurs, siège par siège Humain ou IA. |
+| **Accueil** | Qui joue : 3 à 8 joueurs, siège par siège Humain ou IA. |
 | **Réglages** | Toutes les options d'une partie : faces des dés (jokers compris), combinaisons requises, règle des trois jokers, rythme de la table, mise en place, adresse, cartes Tornade, graine. |
 | **Table** | La partie en temps réel : table circulaire, dés qui roulent, lots qui traversent, fenêtres d'attrape, journal. Le siège d'un joueur réveillé prend la couleur de son équipe, celui d'un dormeur reste gris. |
 | **Laboratoire** | Campagnes de parties simulées, probabilités exactes des dés, règles chiffrées. |
@@ -702,35 +702,33 @@ des valeurs par défaut explicites, toutes modifiables :
    sans préciser la sanction. Le moteur fait partir le lot, sans tentative
    d’attrape : à deux X il ne reste que deux dés libres, aucune combinaison de
    trois n’est plus possible. Le seuil est réglable.
-2. **La ligne à 9 joueurs** du tableau de mise en place (le tableau officiel
-   s’arrête à 8) : 5 lots, 5 jetons par équipe, 2 pour le Vert, 3 cartes.
-3. **Les jetons repartent face cachée à chaque manche**, chaque manche étant une
+2. **Les jetons repartent face cachée à chaque manche**, chaque manche étant une
    course indépendante.
-4. **Un lot passé est relancé entièrement** par celui qui le reçoit : le verrou des
+3. **Un lot passé est relancé entièrement** par celui qui le reçoit : le verrou des
    X ne vaut que pour la possession en cours, sans quoi un lot arrivant bloqué
    serait injouable.
-5. **Quand plusieurs combinaisons sortent au même jet**, un joueur humain
+4. **Quand plusieurs combinaisons sortent au même jet**, un joueur humain
    choisit — sauf si la carte Tornade est de la partie, elle est alors jouée
    d’office, sans hésitation possible ; à défaut de réponse, et pour les IA, la carte Tornade passe avant
    tout, puis l’attrape, puis les combinaisons de gain, et l’Échec en
    dernier — sans cette priorité, « Journée de la chance » (quatre éclairs)
    serait inatteignable.
-6. **Trois jokers l’emportent sur tout le reste.** Les règles disent que trois
+5. **Trois jokers l’emportent sur tout le reste.** Les règles disent que trois
    jokers valent un échec, sans trancher le cas où ces mêmes jokers servent une
    combinaison. Le moteur fait passer l’échec devant : autrement la règle ne se
    déclencherait presque jamais, et le joker n’aurait aucun revers. Le seuil est
    réglable et la règle se décoche.
-7. **Le joker double ne compte pas dans les trois jokers** : c’est une autre
+6. **Le joker double ne compte pas dans les trois jokers** : c’est une autre
    face, qui ne remplace que l’éclair et le ZzZ.
-8. **Les réglages enregistrés sont traduits, jamais jetés.** Les faces ont été
+7. **Les réglages enregistrés sont traduits, jamais jetés.** Les faces ont été
    renommées en v1.3 (`cloche` → tornade, `etoile` → X) ; `assainirConfig`
    retraduit les anciens noms, complète les réglages apparus depuis et remplace
    par « vide » un symbole devenu introuvable. Sans cela, un Laboratoire ouvert
    de longue date simulait avec des faces que le moteur ne reconnaissait plus.
-6. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
+8. Les effets sans traduction mécanique (« Journée du silence », « Journée de la
    maladresse ») sont modélisés par un surcoût de temps et un taux d’erreur.
 
 ## Vérifications
 
-- `node tests/moteur.test.js` — parties menées à terme de 3 à 9 joueurs, et
+- `node tests/moteur.test.js` — parties menées à terme de 3 à 8 joueurs, et
   confrontation des probabilités exactes à un Monte-Carlo.

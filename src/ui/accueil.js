@@ -1,20 +1,20 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.48';
-import { store } from './store.js?v=1.48';
-import { aller } from './app.js?v=1.48';
-import { eveillerSons } from './sons.js?v=1.48';
-import { lancerPartie, partieEnCours } from './table.js?v=1.48';
-import { construireConfig, variables, ecrireLots } from './variables.js?v=1.48';
+import { h, remplacer } from './dom.js?v=1.49';
+import { store } from './store.js?v=1.49';
+import { aller } from './app.js?v=1.49';
+import { eveillerSons } from './sons.js?v=1.49';
+import { lancerPartie, partieEnCours } from './table.js?v=1.49';
+import { construireConfig, variables, ecrireLots } from './variables.js?v=1.49';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
-  OPTIONS_MANCHE, cartesDuMode, cartesEnJeu,
-} from '../core/config.js?v=1.48';
-import { nomSymbole } from './apparence.js?v=1.48';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.48';
-import { randomSeed } from '../core/rng.js?v=1.48';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.48';
+  OPTIONS_MANCHE, cartesDuMode, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
+} from '../core/config.js?v=1.49';
+import { nomSymbole } from './apparence.js?v=1.49';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.49';
+import { randomSeed } from '../core/rng.js?v=1.49';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.49';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -62,7 +62,9 @@ export function reglagesJoueurs(nb) {
 }
 
 export function vueAccueil() {
-  let nb = store.get('nbJoueurs', 6);
+  // Une table enregistree a neuf joueurs date d'avant la v1.49 : on la ramene
+  // dans les bornes plutot que de proposer un effectif qui n'existe plus.
+  let nb = bornerJoueurs(store.get('nbJoueurs', 6));
   let joueurs = reglagesJoueurs(nb);
 
   const racine = h('div.page.page-accueil');
@@ -128,7 +130,7 @@ export function vueAccueil() {
     return h('div.carte.carte-joueurs',
       h('div.titre-section', 'Joueurs'),
       h('div.rangee', { style: { marginBottom: '16px' } },
-        h('div.segment', ...[3, 4, 5, 6, 7, 8, 9].map((n) => h('button', {
+        h('div.segment', ...NOMBRES_JOUEURS.map((n) => h('button', {
           class: n === nb ? 'on' : '',
           onclick: () => { nb = n; joueurs = reglagesJoueurs(n); dessiner(); },
         }, String(n)))),
@@ -141,7 +143,7 @@ export function vueAccueil() {
         `Mise en place à ${nb} : ${mep.lots} lots · `
         + `${mep.jetons} jetons par équipe${nb % 2 ? ` (Vert : ${mep.jetonsVert})` : ''} · `
         + `${mep.cartes} cartes Tornade pour gagner.`
-        + (mep.extrapole ? ' — valeurs extrapolées, le tableau officiel s’arrête à 8 joueurs.' : '')),
+),
     );
   }
 

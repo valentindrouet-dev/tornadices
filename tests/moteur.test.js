@@ -9,6 +9,7 @@ import {
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
   COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
+  JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs, MISE_EN_PLACE,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -32,9 +33,9 @@ function verifier(nom, condition, detail = '') {
   else { echecs++; console.log(`  ÉCHEC ${nom}${detail ? ' — ' + detail : ''}`); }
 }
 
-// ── 1. Toute partie se termine, de 3 à 9 joueurs ─────────────────────────────
+// ── 1. Toute partie se termine, de 3 à 8 joueurs ─────────────────────────────
 console.log('\nParties menées à terme');
-for (const n of [3, 4, 5, 6, 7, 8, 9]) {
+for (const n of [3, 4, 5, 6, 7, 8]) {
   const cfg = configParDefaut(n);
   const spec = Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
   let parCartes = 0, manches = 0, duree = 0;
@@ -54,7 +55,7 @@ for (const n of [3, 4, 5, 6, 7, 8, 9]) {
 
 // ── 1 bis. Un joueur ne tient jamais deux lots ───────────────────────────────
 console.log('\nUn seul lot par joueur');
-for (const n of [3, 6, 9]) {
+for (const n of [3, 6, 7]) {
   const cfg = configParDefaut(n);
   const spec = Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'temeraire' }));
   let fautes = 0, controles = 0, poussees = 0;
@@ -984,7 +985,7 @@ console.log('\nManche sans les points');
   }
 
   // Les manches sont bien plus courtes : c'est tout l'intérêt du mode.
-  for (const n of [3, 4, 6, 9]) {
+  for (const n of [3, 4, 6, 7]) {
     const cfg = configParDefaut(n, { sansPoints: true });
     const r = lancerCampagne(cfg, spec(n), `sp-camp-${n}`, 100);
     const base = lancerCampagne(configParDefaut(n), spec(n), `sp-camp-${n}`, 100);
@@ -1247,12 +1248,28 @@ console.log('\nTornades du mode sans les points');
       fautes === 0);
   }
 
-  // Toutes les parties vont au bout, de 3 à 9 joueurs.
-  for (const n of [3, 4, 6, 9]) {
+  // Toutes les parties vont au bout, de 3 à 8 joueurs.
+  for (const n of [3, 4, 6, 7]) {
     const r = lancerCampagne(configParDefaut(n, { sansPoints: true }), spec(n), `sp-t-${n}`, 80);
     verifier(`${n} joueurs — 80 parties au bout (${JSON.stringify(r.raisons)})`,
       r.raisons.manchesMax === undefined);
   }
+}
+
+// ── 3 septies. De trois à huit joueurs, jamais plus ─────────────────────────
+console.log('\nLes bornes du jeu');
+{
+  verifier('le jeu se joue de 3 à 8', JOUEURS_MIN === 3 && JOUEURS_MAX === 8
+    && NOMBRES_JOUEURS.length === 6);
+  verifier('le tableau de mise en place couvre exactement ces tables',
+    NOMBRES_JOUEURS.every((n) => MISE_EN_PLACE[n]) && Object.keys(MISE_EN_PLACE).length === 6);
+  verifier('une table de neuf enregistrée d’avant revient à huit', bornerJoueurs(9) === 8);
+  verifier('une table de deux remonte à trois', bornerJoueurs(2) === 3);
+  verifier('une valeur absurde retombe sur six', bornerJoueurs('beaucoup') === 6);
+  verifier('configParDefaut borne son effectif', configParDefaut(9).nbJoueurs === 8);
+  verifier('assainirConfig borne le sien', assainirConfig({ nbJoueurs: 9 }).nbJoueurs === 8);
+  verifier('la mise en place hors bornes rend la ligne la plus proche',
+    infosMiseEnPlace(9) === MISE_EN_PLACE[8]);
 }
 
 // ── 3 septies bis bis. Les lots, une ligne par nombre de joueurs ────────────
@@ -1488,7 +1505,7 @@ console.log('\nUn seul lot par joueur, événement par événement');
     ['attrape = manche', { attrapeGagneManche: 'touche' }],
   ]) {
     for (const nbHumains of [0, 2]) {
-      for (const n of [3, 6, 9]) {
+      for (const n of [3, 6, 7]) {
         for (const profil of ['agressif', 'tresAgressif']) {
           const cfg = configParDefaut(n, opts);
           Object.assign(cfg, opts);

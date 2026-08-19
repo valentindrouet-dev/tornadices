@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.48';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.48';
-import { nomSymbole } from './apparence.js?v=1.48';
-import { store } from './store.js?v=1.48';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.48';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.49';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.49';
+import { nomSymbole } from './apparence.js?v=1.49';
+import { store } from './store.js?v=1.49';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.49';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -12,14 +12,15 @@ import {
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
+  NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.48';
-import { tableauCombos } from './combos.js?v=1.48';
-import { barreProfils, idActif } from './profils.js?v=1.48';
-import { construireConfig, tableLots } from './variables.js?v=1.48';
+} from '../core/config.js?v=1.49';
+import { tableauCombos } from './combos.js?v=1.49';
+import { barreProfils, idActif } from './profils.js?v=1.49';
+import { construireConfig, tableLots } from './variables.js?v=1.49';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.48';
+} from '../core/proba.js?v=1.49';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -56,7 +57,7 @@ let etat = {
   // à l'autre — il faut donc savoir quand la configuration n'est plus la bonne.
   profil: idActif(),
   cfg: cfgLabo(),
-  profils: store.get('profilsLabo', null) || Array.from({ length: 9 }, () => 'equilibre'),
+  profils: store.get('profilsLabo', null) || Array.from({ length: JOUEURS_MAX }, () => 'equilibre'),
   nbParties: store.get('nbPartiesLabo', 200),
   graine: store.get('graineLabo', 'tornade-1000'),
   resultat: resultatEnregistre(),
@@ -203,7 +204,7 @@ function panneauConfig(rafraichir) {
           });
           rafraichir();
         },
-      }, ...[3, 4, 5, 6, 7, 8, 9].map((n) => h('option', { value: n, selected: n === cfg.nbJoueurs }, n)))),
+      }, ...NOMBRES_JOUEURS.map((n) => h('option', { value: n, selected: n === cfg.nbJoueurs }, n)))),
       h('label.champ', 'Parties', h('select', {
         onchange: (e) => { etat.nbParties = Number(e.target.value); },
       }, ...[25, 50, 100, 200, 500, 1000, 2000].map((n) =>
@@ -361,8 +362,7 @@ function panneauConfig(rafraichir) {
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
       `Référence officielle à ${cfg.nbJoueurs} joueurs : ${mep.lots} lots · ${mep.jetons} jetons `
-      + `(Vert ${mep.jetonsVert}) · ${mep.cartes} cartes.`
-      + (mep.extrapole ? ' Valeurs extrapolées au-delà de 8 joueurs.' : '')),
+      + `(Vert ${mep.jetonsVert}) · ${mep.cartes} cartes.`),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Qui commence'),
     h('div.segment',
@@ -802,17 +802,17 @@ function ongletRegles() {
         h('thead', h('tr', h('th.num', 'Joueurs'), h('th.num', 'Lots de dés'),
           h('th.num', 'Jetons par équipe'), h('th.num', 'Jetons du Vert'),
           h('th.num', 'Cartes pour gagner'), h('th', ''))),
-        h('tbody', ...[3, 4, 5, 6, 7, 8, 9].map((n) => {
+        h('tbody', ...NOMBRES_JOUEURS.map((n) => {
           const m = infosMiseEnPlace(n);
           return h('tr',
             h('td.num', n), h('td.num', m.lots), h('td.num', m.jetons),
             h('td.num', n % 2 ? m.jetonsVert : '—'), h('td.num', m.cartes),
-            h('td.mini.muted', m.extrapole ? 'extrapolé' : ''));
+            h('td.mini.muted', ''));
         })),
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
-        'Le tableau des règles V4.5 s’arrête à 8 joueurs ; la ligne à 9 est une extrapolation, '
-        + 'modifiable dans l’onglet Simulation.'),
+        'Le tableau des règles V4.5, de trois à huit joueurs. Chaque ligne se modifie dans '
+        + 'l’onglet Simulation.'),
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },

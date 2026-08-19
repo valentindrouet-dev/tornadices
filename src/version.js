@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.48';
+export const VERSION = '1.49';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.49',
+    date: '19/08/2026',
+    notes: [
+      'TornaDice se joue désormais de trois à huit joueurs : la table de neuf disparaît partout — l’accueil, les Réglages, le Laboratoire, les Règles, le tableau des lots et celui de la mise en place. C’était la seule ligne extrapolée du jeu, le tableau officiel s’arrêtant à huit ; les mentions d’extrapolation s’en vont avec elle.',
+      'Une table de neuf joueurs enregistrée avant cette version revient à huit d’elle-même, à l’ouverture comme au Laboratoire : rien ne reste bloqué sur un effectif qui n’existe plus.',
+    ],
+  },
   {
     version: '1.48',
     date: '19/08/2026',
