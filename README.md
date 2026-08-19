@@ -232,26 +232,65 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
 
 Chaque campagne est reproductible : même graine, mêmes chiffres.
 
-## Deux façons de jouer une manche
+## Trois façons de jouer une manche
 
-Le réglage `sansPoints` (Réglages → « Comment se joue une manche ») choisit entre
-deux décomptes. **Il vaut `false` par défaut : la version de base ne bouge pas**
-— même graine, même partie, aux mêmes chiffres.
+Le réglage `modeManche` (Réglages → « Comment se joue une manche ») choisit entre
+trois décomptes. **Il vaut `'jeton'` par défaut : la version de base ne bouge
+pas** — même graine, même partie, aux mêmes chiffres.
 
 | Mode | La manche se gagne | Ce qui fait la partie |
 |---|---|---|
-| `jetons` (défaut) | quand une équipe a retourné **tous** ses jetons Abri | 3 cartes Tornade |
-| `sansPoints` | dès qu’un joueur sort **un** abri, réveillé — ou attrape son voisin | 4 cartes Tornade |
+| `jeton` (défaut) | quand une équipe a retourné **tous** ses jetons Abri | 3 cartes Tornade |
+| `immediat` | dès qu’un joueur sort **un** abri, réveillé — ou attrape son voisin | 4 cartes Tornade |
+| `compromis` | quand une équipe a mis à l’Abri **tous les jetons que la Tornade demande** (1 à 3) — ou sur une collision réussie | 5 cartes Tornade |
 
-Sans les points, on se réveille aux trois tornades, puis on cherche les trois
+Le réglage était un booléen `sansPoints` jusqu’à la v1.50. `modeManche(cfg)` lit
+l’un comme l’autre : un réglage, une campagne ou une partie enregistrés avant
+restent lisibles au mot près, et `sansPoints` continue d’être écrit à côté.
+
+### Compromis
+
+Un entre-deux : les jetons reviennent, mais ils ne se retournent plus — ils se
+posent. Une **carte Refuge** commune accueille les animaux mis à couvert, et la
+Tornade en cours dit combien il en faut : de un à trois, `refuge` sur la carte,
+réglable carte par carte (`refugeCartes`). Chaque combinaison Abri en pose un.
+
+Deux façons de prendre la manche, et deux seulement :
+
+- **poser le dernier jeton demandé** — la manche est emportée sur-le-champ ;
+- **réussir une collision** — un jeton adverse part dans la tornade, et la manche
+  est emportée de la même façon (`attrapeGagneManche` vaut `'touche'` par défaut).
+
+Une bourde adverse ne donne rien, contrairement au mode Jeton : les deux chemins
+ci-dessus sont les seuls. Mesuré sur 200 parties d’IA équilibrées à six joueurs :
+
+| Mode | Partie | Manches | Manche | Comment la manche se gagne |
+|---|---|---|---|---|
+| `jeton` | 8:03 | 5,3 | 91 s | jetons 88 %, bourde adverse 12 % |
+| `immediat` | 2:28 | 5,2 | 29 s | Abri 69 %, collision 20 %, carte 11 % |
+| `compromis` | 4:29 | 6,4 | 42 s | Abri 43 %, collision 40 %, carte 16 % |
+
+Compromis tombe bien entre les deux pour la durée. La collision y pèse deux fois
+plus que dans l’Immédiat : le chemin de l’Abri étant plus long, le raccourci vaut
+davantage. C’est le premier levier à surveiller — les exigences par carte le
+règlent directement.
+
+Les IA n’ont rien de particulier à apprendre : elles visent l’Abri une fois
+réveillées, exactement comme dans les deux autres modes, et le Refuge se remplit
+tout seul. Seul change ce qu’il faut en faire, et cela, c’est le moteur qui le
+compte.
+
+### Immédiat
+
+On se réveille aux trois tornades, puis on cherche les trois
 abris ; le premier qui les sort arrête la manche sur-le-champ et son équipe
 prend la carte. **Une attrape réussie emporte la manche de la même façon** : il
 n’y a plus de jeton à prendre, un contact vaut donc la manche entière. C’est la
 base du mode, donc sa valeur de départ — `attrapeGagneManche` vaut `'touche'`
-dès que `sansPoints` est activé, et `attrapeEmporteManche(cfg)` en est l’unique
-juge, moteur et menus. Le réglage reste modifiable dans les deux modes ; le
-remettre sur `'non'` sans les points fait de l’attrape une simple interruption,
-et les menus le signalent. Sur 60 parties à six joueurs, **105 manches sont
+hors du mode Jeton, et `attrapeEmporteManche(cfg)` en est l’unique juge, moteur
+et menus. Le réglage reste modifiable dans les trois modes ; le remettre sur
+`'non'` hors du mode Jeton fait de l’attrape une simple interruption, et les
+menus le signalent. Sur 60 parties à six joueurs, **105 manches sont
 prises à l’attrape contre 310 à l’Abri**, et la partie gagne 35 à 50 secondes :
 la course se gagne des deux mains.
 

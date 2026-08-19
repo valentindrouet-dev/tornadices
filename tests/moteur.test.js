@@ -10,6 +10,7 @@ import {
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
   COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs, MISE_EN_PLACE,
+  MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -899,9 +900,15 @@ console.log('\nManche sans les points');
   verifier('activé, la partie se joue en quatre cartes',
     configParDefaut(6, { sansPoints: true }).sansPoints === true
     && configParDefaut(6, { sansPoints: true }).cartesPourGagner === 4);
-  verifier('les deux modes sont proposés dans les réglages',
-    OPTIONS_MANCHE.length === 2
-    && OPTIONS_MANCHE.map(([id]) => id).join(',') === 'jetons,sansPoints');
+  verifier('les trois modes sont proposés dans les réglages',
+    OPTIONS_MANCHE.length === 3
+    && OPTIONS_MANCHE.map(([id]) => id).join(',') === 'jeton,immediat,compromis');
+  // Le mode était un booléen jusqu'à la v1.50 : un réglage enregistré alors n'a
+  // que lui, et doit se lire sans ambiguïté.
+  verifier('un réglage d’avant la v1.50 se relit', modeManche({ sansPoints: true }) === 'immediat'
+    && modeManche({ sansPoints: false }) === 'jeton'
+    && modeManche({}) === 'jeton'
+    && modeManche({ modeManche: 'compromis' }) === 'compromis');
 
   // La règle du mode tient en une phrase : le premier Abri arrête la manche.
   // On la vérifie manche par manche plutôt que sur le résultat final.
@@ -1101,7 +1108,7 @@ console.log('\nCartes Tornade — un paquet par mode');
     verifier('sans les points, c’est la table du mode qui décide',
       requisCarte(cfg, combo).vache === 5);
     verifier('et le mode jetons garde la sienne',
-      requisCarte({ ...cfg, sansPoints: false }, combo).vache === 2);
+      requisCarte({ ...cfg, modeManche: 'jeton', sansPoints: false }, combo).vache === 2);
   }
 
   // Le paquet du mode arrive bien jusqu'à la pioche du moteur.
@@ -1254,6 +1261,73 @@ console.log('\nTornades du mode sans les points');
     verifier(`${n} joueurs — 80 parties au bout (${JSON.stringify(r.raisons)})`,
       r.raisons.manchesMax === undefined);
   }
+}
+
+// ── 3 sexies ter. La manche « Compromis » ───────────────────────────────────
+console.log('\nManche « Compromis »');
+{
+  const cfg = configParDefaut(6, { modeManche: 'compromis' });
+  verifier('cinq cartes pour gagner, trois jetons à l’Abri',
+    cfg.cartesPourGagner === 5 && cfg.jetonsRefuge === 3);
+  verifier('la collision emporte la manche par défaut', cfg.attrapeGagneManche === 'touche');
+  verifier('chaque Tornade demande de un à trois jetons',
+    CARTES_SANS_POINTS.every((c) => refugePour(cfg, c) >= 1 && refugePour(cfg, c) <= 3));
+  verifier('le réglage d’une carte l’emporte sur son défaut',
+    refugePour({ ...cfg, refugeCartes: { spSiecle: 1 } }, CARTES_PAR_ID.spSiecle) === 1);
+  verifier('et reste borné par les jetons de l’équipe',
+    refugePour({ ...cfg, refugeCartes: { spSiecle: 9 } }, CARTES_PAR_ID.spSiecle) === 3);
+
+  // Une manche se gagne de deux façons, et de deux seulement.
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const RAISONS = new Set(['refuge', 'attrape', 'carte']);
+  let manches = 0, parRefuge = 0, parAttrape = 0, jamaisTrop = true, toutesFinies = true;
+  let poses = 0, posesHorsRequis = 0;
+  for (let g = 0; g < 60; g++) {
+    const m = new Moteur(cfg, spec, `compromis-${g}`);
+    const requisParManche = new Map();
+    m.onJeton = (pid, equipe, n) => {
+      poses += n;
+      const requis = m.refugeRequis;
+      requisParManche.set(m.manche, requis);
+      // Une équipe ne met jamais à l'Abri plus que ce que la Tornade demande.
+      if (m.equipes[equipe].refuge > requis) posesHorsRequis++;
+    };
+    const r = m.jouerJusquAuBout();
+    if (!r.vainqueur) toutesFinies = false;
+    for (const x of r.statsManches) {
+      manches++;
+      if (!RAISONS.has(x.raison)) jamaisTrop = false;
+      if (x.raison === 'refuge') parRefuge++;
+      if (x.raison === 'attrape') parAttrape++;
+    }
+    for (const e of Object.values(r.equipes)) {
+      if (e.cartes > cfg.cartesPourGagner + 1) jamaisTrop = false;
+    }
+  }
+  verifier('60 parties menées à terme', toutesFinies);
+  verifier(`${manches} manches, toutes prises par l’Abri, la collision ou une carte`, jamaisTrop);
+  verifier(`l’Abri en prend ${Math.round(parRefuge / manches * 100)} %`, parRefuge > 0);
+  verifier(`la collision en prend ${Math.round(parAttrape / manches * 100)} %`, parAttrape > 0);
+  verifier(`${poses} jetons posés, jamais au-delà de ce que la Tornade demande`, posesHorsRequis === 0);
+
+  // Le Refuge se vide à chaque manche : c'est une course neuve.
+  {
+    const m = new Moteur(cfg, spec, 'compromis-remise');
+    let toujoursVide = true;
+    const original = m._demarrerManche.bind(m);
+    m._demarrerManche = (premiere) => {
+      original(premiere);
+      for (const e of Object.values(m.equipes)) if (e.refuge !== 0) toujoursVide = false;
+    };
+    m.jouerJusquAuBout();
+    verifier('le Refuge se vide au début de chaque manche', toujoursVide);
+  }
+
+  // Et les trois modes restent bien trois jeux distincts.
+  const paquets = MODES_MANCHE.map((mode) => clePaquet({ modeManche: mode }));
+  verifier(`trois paquets distincts (${paquets.join(', ')})`, new Set(paquets).size === 3);
+  const tables = MODES_MANCHE.map((mode) => cleCombosCartes({ modeManche: mode }));
+  verifier(`trois tables d’exigences distinctes (${tables.join(', ')})`, new Set(tables).size === 3);
 }
 
 // ── 3 septies. De trois à huit joueurs, jamais plus ─────────────────────────

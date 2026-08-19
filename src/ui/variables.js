@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.49';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.49';
-import { store } from './store.js?v=1.49';
-import { aller } from './app.js?v=1.49';
-import { lancerPartie } from './table.js?v=1.49';
+import { h, remplacer } from './dom.js?v=1.50';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.50';
+import { store } from './store.js?v=1.50';
+import { aller } from './app.js?v=1.50';
+import { lancerPartie } from './table.js?v=1.50';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -18,19 +18,20 @@ import {
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
-} from '../core/config.js?v=1.49';
-import { tableauCombos, editeurCases } from './combos.js?v=1.49';
+  MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
+} from '../core/config.js?v=1.50';
+import { tableauCombos, editeurCases } from './combos.js?v=1.50';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.49';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.49';
-import { randomSeed } from '../core/rng.js?v=1.49';
-import { reglagesJoueurs } from './accueil.js?v=1.49';
+} from './apparence.js?v=1.50';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.50';
+import { randomSeed } from '../core/rng.js?v=1.50';
+import { reglagesJoueurs } from './accueil.js?v=1.50';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.49';
+} from './profils.js?v=1.50';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -84,7 +85,8 @@ export function construireConfig(nbJoueurs) {
     lotsCumules: v.lotsCumules,
     // Le mode change la mise en place par défaut (quatre cartes) : il doit être
     // connu avant que les valeurs du tableau officiel ne soient posées.
-    sansPoints: v.sansPoints,
+    // La façon de jouer une manche décide de plusieurs valeurs de départ.
+    modeManche: modeManche(v),
   });
   for (const [cle, val] of Object.entries(v)) {
     if (val === undefined || val === null) continue;
@@ -350,18 +352,24 @@ export function vueVariables() {
       // et donc la lecture de tous les autres.
       h('div.carte',
         titreAide('Comment se joue une manche', [
-          AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons'],
-          cfg.sansPoints
+          AIDE_MANCHE[modeManche(cfg)],
+          estImmediat(cfg)
             ? 'Deux façons de prendre la manche, donc : sortir l’Abri, ou attraper son voisin. '
               + 'Le reste des réglages tient — les dés, les combinaisons, le rythme. Seuls les '
               + 'jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
+            : '',
+          estCompromis(cfg)
+            ? 'Deux façons de prendre la manche, là aussi : mettre à l’Abri tous les jetons que '
+              + 'la Tornade du jour demande, ou envoyer un adversaire valser dans la tornade '
+              + 'd’une collision réussie. Le nombre de jetons demandés se règle carte par carte, '
+              + 'plus bas, dans « Cartes Tornade en jeu ».'
             : '',
         ]),
         h('div.rangee.rangee--serree',
           h('div.segment',
             ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
-              class: (cfg.sansPoints ? 'sansPoints' : 'jetons') === id ? 'on' : '',
-              onclick: () => { ecrire('sansPoints', id === 'sansPoints'); dessiner(); },
+              class: modeManche(cfg) === id ? 'on' : '',
+              onclick: () => { ecrire('modeManche', id); dessiner(); },
             }, lib)),
           ),
         ),
@@ -496,7 +504,7 @@ export function vueVariables() {
         // moyen de prendre une manche.
         titreAide('Ce que rapporte l’attrape', [
           AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
-          cfg.sansPoints && cfg.attrapeGagneManche !== 'touche'
+          !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
             ? 'Attention : sans les points, « Un jeton » ne rapporte rien — il n’y a plus de jeton '
               + 'à retourner. Le contact interrompt son voisin, et c’est tout. Reprenez « Manche '
               + 'gagnée si le contact réussit » pour rendre l’attrape payante.'
@@ -588,9 +596,14 @@ export function vueVariables() {
         titreAide('Mise en place', [
           `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
-          cfg.sansPoints
-            ? 'Sans les points, les jetons ne servent plus : leurs champs restent grisés. Une '
-              + 'manche vaut une carte, et l’on joue en quatre par défaut.'
+          estImmediat(cfg)
+            ? 'Immédiat : les jetons ne servent plus, leurs champs restent grisés. Une manche '
+              + 'vaut une carte, et l’on joue en quatre par défaut.'
+            : '',
+          estCompromis(cfg)
+            ? `Compromis : chaque équipe a ${cfg.jetonsRefuge || 3} jetons de sa couleur à mettre `
+              + 'à l’Abri. Les compteurs de jetons de la règle de base ne servent plus, leurs '
+              + 'champs restent grisés ; on joue en cinq cartes par défaut.'
             : '',
           'Toutes ces valeurs se règlent à la main : en modifier une décroche le tableau '
           + 'officiel. Recocher « Suivre le tableau officiel » les remet toutes d’aplomb.',
@@ -602,7 +615,7 @@ export function vueVariables() {
           // Sans les points, la manche est une course où chacun joue pour soi :
           // le Vert, seul contre deux équipes, la perd presque toujours. Mesuré
           // sur 300 parties d'IA équilibrées.
-          nb % 2 && cfg.sansPoints
+          nb % 2 && !estJeton(cfg)
             ? 'Sans les points, la manche est une course : à un contre tous, le Vert ne gagne '
               + `guère plus d’une partie sur dix à ${nb} joueurs. Deux cartes au lieu de quatre le `
               + 'ramènent dans la course.'
@@ -619,9 +632,14 @@ export function vueVariables() {
           // Sans les points, plus rien ne se retourne : les deux compteurs de
           // jetons n'ont plus d'effet, autant le montrer.
           num('Jetons Bleu / Jaune', cfg.jetons, 'jetons',
-            { min: 1, max: 12, disabled: cfg.sansPoints }),
+            { min: 1, max: 12, disabled: !estJeton(cfg) }),
           num('Jetons du Vert', cfg.jetonsVert, 'jetonsVert',
-            { min: 1, max: 12, disabled: cfg.sansPoints }),
+            { min: 1, max: 12, disabled: !estJeton(cfg) }),
+          // Compromis : les jetons de sa couleur qu'une équipe peut mettre à
+          // l'Abri — le plafond de ce qu'une Tornade peut demander.
+          estCompromis(cfg)
+            ? num('Jetons à l’Abri', cfg.jetonsRefuge, 'jetonsRefuge', { min: 1, max: 6 })
+            : null,
           num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
             { min: 1, max: 12 }),
           // Le Vert n'existe qu'à nombre impair : ailleurs, le champ n'aurait
@@ -672,20 +690,26 @@ export function vueVariables() {
       // Un paquet par mode de jeu : ce qu'on coche ici ne vaut que pour le mode
       // en cours, et l'autre garde le sien intact.
       h('div.carte',
-        titreAide(`Cartes Tornade en jeu — ${cfg.sansPoints ? 'sans les points' : 'avec les jetons'}`, [
+        titreAide(`Cartes Tornade en jeu — ${NOM_MODE[modeManche(cfg)]}`, [
           'Une carte par manche, dans l’ordre de la pile. Décochez celles que vous ne voulez pas '
           + 'voir sortir.',
           'Chaque mode de jeu a son propre paquet : ce que vous cochez ici ne vaut que pour '
-          + `« ${cfg.sansPoints ? 'Sans les points' : 'Retourner tous les jetons'} ». Changez de `
+          + `« ${NOM_MODE[modeManche(cfg)]} ». Changez de `
           + 'mode en haut de la page et vous retrouverez l’autre paquet, intact.',
-          cfg.sansPoints
-            ? 'La pile démarre par « Tornade de feuille » — la manche de chauffe — puis le reste '
+          estJeton(cfg)
+            ? 'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.'
+            : 'La pile démarre par « Tornade de feuille » — la manche de chauffe — puis le reste '
               + 'suit. On révèle une Tornade, on la joue ; le dos de la suivante, encore face '
-              + 'cachée, donne le sens de rotation de la manche en cours.'
-            : 'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.',
-          cfg.sansPoints
-            ? 'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
-              + 'cours et celle du dessus, gardée face cachée dans sa pile.'
+              + 'cachée, donne le sens de rotation de la manche en cours.',
+          estJeton(cfg)
+            ? ''
+            : 'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
+              + 'cours et celle du dessus, gardée face cachée dans sa pile.',
+          estCompromis(cfg)
+            ? 'Chaque carte porte en plus le nombre de jetons à mettre à l’Abri pour prendre la '
+              + 'manche sous elle — de un à trois. C’est le levier d’équilibrage propre à ce '
+              + 'mode : une Tornade exigeante fait une manche longue, une Tornade légère une '
+              + 'manche expédiée.'
             : '',
         ],
           h('button', {
@@ -723,6 +747,26 @@ export function vueVariables() {
               ),
               h('div.petit', { style: { marginTop: '8px' } }, c.texte),
               note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,
+              // Compromis : combien de jetons cette Tornade demande de mettre à
+              // l'Abri. C'est le réglage propre au mode, sur la carte elle-même.
+              estCompromis(cfg)
+                ? h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
+                    h('span.mini.muted', 'Jetons à l’Abri'),
+                    h('div.pousse'),
+                    h('input.champ-mini', {
+                      type: 'number', value: refugePour(cfg, c),
+                      min: 1, max: cfg.jetonsRefuge || 3, step: 1,
+                      title: `Sous « ${c.court} », il faut mettre ce nombre de jetons de sa `
+                        + 'couleur à l’Abri pour prendre la manche.',
+                      onchange: (e) => {
+                        ecrire('refugeCartes', {
+                          ...(v.refugeCartes || {}),
+                          [c.id]: Math.max(1, Math.round(Number(e.target.value) || 1)),
+                        });
+                        dessiner();
+                      },
+                    }))
+                : null,
               requis
                 ? h('div', { style: { marginTop: '10px' } },
                     h('div.mini.muted', { style: { marginBottom: '4px' } }, 'Combinaison'),

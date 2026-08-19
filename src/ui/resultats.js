@@ -12,18 +12,20 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.49';
-import { store } from './store.js?v=1.49';
-import { aller } from './app.js?v=1.49';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.49';
-import { COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES } from '../core/config.js?v=1.49';
+} from './dom.js?v=1.50';
+import { store } from './store.js?v=1.50';
+import { aller } from './app.js?v=1.50';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.50';
+import {
+  COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche,
+} from '../core/config.js?v=1.50';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
  * produit par une version antérieure est écarté plutôt que lu de travers — la
  * leçon de la v1.36, où un champ absent emportait une page entière.
  */
-export const SCHEMA_PARTIE = 1;
+export const SCHEMA_PARTIE = 2;
 
 const CLE = 'dernierePartie';
 
@@ -40,7 +42,8 @@ export function enregistrerPartie(moteur) {
     quand: new Date().toISOString().slice(0, 16).replace('T', ' '),
     resultat: r,
     contexte: {
-      sansPoints: !!cfg.sansPoints,
+      // La façon de jouer la manche : trois modes depuis la v1.50.
+      mode: modeManche(cfg),
       nbJoueurs: moteur.joueurs.length,
       cartesPourGagner: cfg.cartesPourGagner,
       jetons: cfg.jetons,
@@ -100,6 +103,7 @@ const RAISON_FIN = {
 
 const RAISON = {
   vache: 'en sortant l’Abri',
+  refuge: 'en mettant ses animaux à l’Abri',
   jetons: 'en retournant le dernier jeton',
   attrape: 'à l’attrape',
   carte: 'à la combinaison de la carte',
@@ -107,9 +111,16 @@ const RAISON = {
   incident: 'sur la bourde d’un adversaire',
 };
 
-function raisonManche(m) {
+function raisonManche(m, mode) {
   if (!m.raison) return '—';
-  if (m.raison === 'attrape' && m.cible) return `en attrapant ${m.cible}`;
+  if (m.raison === 'attrape') {
+    if (!m.cible) return 'à la collision';
+    // En Compromis, la collision envoie un jeton adverse dans la tornade : ce
+    // n'est pas une attrape parmi d'autres, c'est l'un des deux chemins.
+    return mode === 'compromis'
+      ? `en envoyant ${m.cible} dans la tornade`
+      : `en attrapant ${m.cible}`;
+  }
   if (m.raison === 'incident' && m.cible) return `sur la bourde de ${m.cible}`;
   return RAISON[m.raison] || '—';
 }
@@ -173,7 +184,7 @@ function enteteVictoire(r, ctx, eq, quand) {
         h('p.petit.muted', { style: { marginTop: '6px', marginBottom: 0 } },
           `${r.manches} manches · ${dureeLongue(r.duree)} de jeu · `
           + `${ctx.nbJoueurs || r.joueurs.length} joueurs · `
-          + `${ctx.sansPoints ? 'sans les points' : 'avec les jetons'} · ${quand}`),
+          + `mode ${NOM_MODE[ctx.mode] || ctx.mode || 'Jeton'} · ${quand}`),
         h('p.mini.muted', { style: { margin: 0 } }, `Graine ${r.graine}`),
       ),
       h('div.grille.grille--stats', { style: { flex: '2 1 420px' } },
@@ -200,7 +211,7 @@ function equipes(r, ctx) {
   if (!entrees.length) return null;
   const max = Math.max(1, ...entrees.map(([, e]) => e.cartes));
   return h('div.carte',
-    h('div.titre-section', ctx.sansPoints ? 'Cartes Tornade remportées' : 'Score des équipes'),
+    h('div.titre-section', ctx.mode === 'jeton' ? 'Score des équipes' : 'Cartes Tornade remportées'),
     ...entrees.map(([id, e]) => {
       const c = COULEURS_EQUIPE[id] || { nom: id, hex: '#b8b0a5', embleme: null };
       return h('div', { style: { marginBottom: '10px' } },
@@ -211,7 +222,7 @@ function equipes(r, ctx) {
             id === r.vainqueur ? h('span.badge', 'vainqueur') : null),
           h('span.petit.muted',
             `${e.cartes} carte${e.cartes > 1 ? 's' : ''}`
-            + (ctx.sansPoints ? '' : ` · ${e.jetons} jeton${e.jetons > 1 ? 's' : ''} restant${e.jetons > 1 ? 's' : ''}`))),
+            + (ctx.mode === 'jeton' ? ` · ${e.jetons} jeton${e.jetons > 1 ? 's' : ''} restant${e.jetons > 1 ? 's' : ''}` : ''))),
         h('div.barre-fond', h('div', {
           style: { width: `${(e.cartes / max) * 100}%`, background: c.hex },
         })));
@@ -225,7 +236,9 @@ function tableauJoueurs(joueurs, ctx, parJoueur, dureePartie) {
   const manchesDe = (j) => parJoueur[j.id] || 0;
   // Sans les points il n'y a plus de jeton à compter : la colonne disparaît
   // plutôt que d'aligner des zéros.
-  const avecJetons = !ctx.sansPoints;
+  // Compromis compte aussi ses jetons — ceux mis à l'Abri. Seul « Immédiat »
+  // n'en a aucun à montrer.
+  const avecJetons = ctx.mode !== 'immediat';
   const tri = joueurs.slice().sort((a, b) =>
     manchesDe(b) - manchesDe(a) || b.stats.jetonsRetournes - a.stats.jetonsRetournes);
   const combosDe = (j) => Object.values(j.stats.combos || {}).reduce((s, n) => s + n, 0);
@@ -235,7 +248,10 @@ function tableauJoueurs(joueurs, ctx, parJoueur, dureePartie) {
       h('thead', h('tr',
         h('th', 'Joueur'),
         h('th.num', { title: 'Manches conclues par ce joueur' }, 'Manches'),
-        avecJetons ? h('th.num', 'Jetons') : null,
+        avecJetons
+          ? h('th.num', { title: ctx.mode === 'compromis' ? 'Jetons mis à l’Abri' : 'Jetons retournés' },
+              ctx.mode === 'compromis' ? 'À l’Abri' : 'Jetons')
+          : null,
         h('th.num', 'Lancers'),
         h('th.num', { title: 'Combinaisons réalisées' }, 'Combis'),
         h('th.num', 'Attrapes'), h('th.num', 'Subies'),
@@ -288,7 +304,7 @@ function faitsMarquants(joueurs, manches, ctx) {
     (v) => `${v} fois`);
   ajouter('Le plus gros lanceur', meilleur(joueurs, (j) => j.stats.lancers),
     (v) => `${v} lancers`);
-  if (!ctx.sansPoints) {
+  if (ctx.mode !== 'immediat') {
     ajouter('Le plus de jetons', meilleur(joueurs, (j) => j.stats.jetonsRetournes),
       (v) => `${v} jeton${v > 1 ? 's' : ''}`);
   }
@@ -353,7 +369,7 @@ const NOM_SOURCE = {
 };
 
 function origineJetons(joueurs, ctx) {
-  if (ctx.sansPoints) return null;
+  if (ctx.mode === 'immediat') return null;
   const compte = {};
   for (const j of joueurs) {
     for (const [src, n] of Object.entries(j.stats.jetonsParSource || {})) {
@@ -397,7 +413,7 @@ function dérouléManches(manches, ctx) {
             ? h('span.rangee.rangee--serree',
                 h('span.badge', { class: `badge--${m.vainqueur}` }, m.nomJoueur))
             : h('span.mini.muted', eq ? eq.nom : '—')),
-          h('td.petit', raisonManche(m)),
+          h('td.petit', raisonManche(m, ctx.mode)),
           h('td.petit', carte
             ? h('span', carte.court || carte.nom, m.compte ? null : h('span.mini.muted', ' · défaussée'))
             : h('span.mini.muted', '—')),
@@ -406,9 +422,9 @@ function dérouléManches(manches, ctx) {
       }))),
     ),
     h('p.mini.muted', { style: { marginTop: '10px' } },
-      ctx.sansPoints
-        ? 'Sans les points, chaque manche vaut une carte Tornade — sauf celles défaussées.'
-        : 'La barre donne la durée relative de chaque manche.'),
+      ctx.mode === 'jeton'
+        ? 'La barre donne la durée relative de chaque manche.'
+        : 'Chaque manche vaut une carte Tornade — sauf celles défaussées.'),
   );
 }
 
@@ -429,7 +445,7 @@ function csv(r, ctx) {
   l.push(`vainqueur;${r.vainqueur || 'aucun'}`);
   l.push(`manches;${r.manches}`);
   l.push(`duree_s;${Math.round((r.duree || 0) / 1000)}`);
-  l.push(`mode;${ctx.sansPoints ? 'sansPoints' : 'jetons'}`);
+  l.push(`mode;${ctx.mode || 'jeton'}`);
   l.push('');
   l.push('joueur;equipe;siege;type;profil;jetons;lancers;combinaisons;attrapes_tentees;'
     + 'attrapes_reussies;subies;reveils;endormi;erreurs;temps_avec_lot_s');

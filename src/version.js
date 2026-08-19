@@ -1,9 +1,22 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.49';
+export const VERSION = '1.50';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.50',
+    date: '19/08/2026',
+    notes: [
+      'Une troisième façon de jouer une manche : « Compromis ». Les deux premières se renomment au passage — « Retourner tous les jetons » devient « Jeton », « Sans les points » devient « Immédiat ».',
+      'Compromis est un entre-deux : les jetons reviennent, mais ils ne se retournent plus, ils se posent. Une carte Refuge commune trône au milieu de la table, et la Tornade en cours dit combien de jetons de sa couleur il faut y mettre pour prendre la manche — de un à trois, indiqué sur la carte. Chaque combinaison Abri en pose un de plus.',
+      'Deux façons de prendre la manche, et deux seulement : poser le dernier jeton demandé — vos animaux sont à couvert, la manche est à vous sur-le-champ — ou réussir une collision, qui envoie valser un jeton adverse dans la tornade et emporte la manche de la même façon. La partie se gagne à cinq cartes Tornade.',
+      'Le nombre de jetons demandés se règle carte par carte, dans « Cartes Tornade en jeu » : c’est le levier d’équilibrage propre au mode. Une Tornade exigeante fait une manche longue, une Tornade légère une manche expédiée. Le paquet et les exigences de combinaisons sont eux aussi propres à ce mode : ce que vous réglez ici ne touche pas les deux autres.',
+      'Les IA y jouent sans rien apprendre de nouveau : elles visent l’Abri une fois réveillées, comme dans les deux autres modes, et le Refuge se remplit tout seul. Mesuré sur 200 parties d’IA équilibrées à six joueurs : partie de 4 min 29 s en 6,4 manches, soit exactement entre les 8 min du mode Jeton et les 2 min 28 s de l’Immédiat. L’Abri emporte 43 % des manches, la collision 40 %, les combinaisons de cartes le reste.',
+      'La collision y pèse deux fois plus que dans l’Immédiat : le chemin de l’Abri étant plus long, le raccourci vaut davantage. C’est le premier point à surveiller à l’essai, et les exigences par carte le règlent directement.',
+      'Sous le capot, le mode de jeu n’est plus un oui-ou-non mais un nom — il en fallait trois. Un réglage, une campagne ou une partie enregistrés avant cette version se relisent au mot près.',
+    ],
+  },
   {
     version: '1.49',
     date: '19/08/2026',

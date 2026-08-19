@@ -122,30 +122,84 @@ export const AIDE_DECLENCHEUR = {
     + 'départ, trois si vous le décidez dans le tableau. L’Attaque, elle, ne se joue plus.',
 };
 
-// Deux façons de jouer une manche.
+// Trois façons de jouer une manche.
 //
-// « jetons » — la règle de base : chaque équipe retourne ses jetons Abri un à
+// « jeton » — la règle de base : chaque équipe retourne ses jetons Abri un à
 // un, et la manche revient à celle qui les a tous retournés.
 //
-// « sansPoints » — on ne compte plus rien : il faut se réveiller puis sortir la
+// « immediat » — on ne compte plus rien : il faut se réveiller puis sortir la
 // combinaison Abri, et le premier qui y arrive arrête la manche sur-le-champ.
 // Son équipe prend la carte Tornade, et l'on recommence. Une attrape réussie
 // emporte la manche de la même façon — sans jeton à prendre, elle n'aurait plus
 // rien à rapporter. C'est le nombre de cartes qui fait la partie.
+//
+// « compromis » — entre les deux. Chaque équipe a ses jetons, et la carte
+// Tornade en cours dit combien il faut en mettre à l'Abri pour prendre la
+// manche : de un à trois, carte par carte. Poser le dernier demandé l'emporte
+// aussitôt — vos animaux sont à couvert. Une collision réussie l'emporte
+// également : vous envoyez valser un adversaire dans la tornade.
+export const MODES_MANCHE = ['jeton', 'immediat', 'compromis'];
+
 export const OPTIONS_MANCHE = [
-  ['jetons', 'Retourner tous les jetons'],
-  ['sansPoints', 'Sans les points'],
+  ['jeton', 'Jeton'],
+  ['immediat', 'Immédiat'],
+  ['compromis', 'Compromis'],
 ];
 
+/** Le nom d'un mode, pour l'écrire dans une phrase. */
+export const NOM_MODE = Object.fromEntries(OPTIONS_MANCHE);
+
 export const AIDE_MANCHE = {
-  jetons: 'Règle de base : chaque Abri retourne un jeton de votre équipe, et la manche revient '
+  jeton: 'Règle de base : chaque Abri retourne un jeton de votre équipe, et la manche revient '
     + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
-  sansPoints: 'Sans les points : on se réveille aux tornades, puis on cherche l’Abri. Le '
+  immediat: 'Immédiat : on se réveille aux tornades, puis on cherche l’Abri. Le '
     + 'premier joueur qui le sort arrête la manche sur-le-champ — son équipe prend la carte '
     + 'Tornade, et la manche suivante commence. Une attrape réussie emporte la manche de la '
     + 'même façon. Plus aucun jeton n’est compté ; c’est le nombre de cartes qui fait le '
     + 'vainqueur, quatre en général.',
+  compromis: 'Compromis : chaque équipe a trois jetons de sa couleur, et la carte Tornade en '
+    + 'cours dit combien il faut en mettre à l’Abri pour prendre la manche — de un à trois, '
+    + 'réglable carte par carte. Chaque combinaison Abri en pose un ; poser le dernier demandé '
+    + 'emporte la manche sur-le-champ. Une collision réussie l’emporte aussi : le jeton de '
+    + 'l’adversaire part dans la tornade, et la manche est à vous. Cinq cartes pour gagner.',
 };
+
+/**
+ * La façon de jouer une manche, en un seul mot.
+ *
+ * Le réglage a longtemps été un booléen `sansPoints`. À trois modes il lui faut
+ * un nom : `modeManche`. Un réglage enregistré avant la v1.50 n'a que l'ancien
+ * booléen — on le traduit ici, une fois pour toutes, plutôt que de laisser
+ * chaque page en décider.
+ */
+export function modeManche(cfg) {
+  const m = cfg && cfg.modeManche;
+  if (MODES_MANCHE.includes(m)) return m;
+  // Traduction de l'ancien booléen, et de son nom d'alors.
+  if (m === 'sansPoints') return 'immediat';
+  return cfg && cfg.sansPoints ? 'immediat' : 'jeton';
+}
+
+/** La manche se gagne d'un coup, sans compter les jetons. */
+export const estImmediat = (cfg) => modeManche(cfg) === 'immediat';
+
+/** La manche se gagne en mettant ses jetons à l'Abri. */
+export const estCompromis = (cfg) => modeManche(cfg) === 'compromis';
+
+/** La règle de base : retourner tous ses jetons. */
+export const estJeton = (cfg) => modeManche(cfg) === 'jeton';
+
+/**
+ * Combien de jetons il faut mettre à l'Abri pour prendre la manche, sous la
+ * carte Tornade en cours. Réglable carte par carte, de un à trois.
+ */
+export function refugePour(cfg, carte) {
+  if (!carte) return 1;
+  const regle = cfg && cfg.refugeCartes && Number(cfg.refugeCartes[carte.id]);
+  const brut = Number.isFinite(regle) && regle >= 1 ? regle : carte.refuge;
+  const max = (cfg && Number(cfg.jetonsRefuge)) || 3;
+  return Math.min(max, Math.max(1, Math.round(Number(brut) || 1)));
+}
 
 // Ce que rapporte l'attrape : la règle de base, ou l'une des deux variantes qui
 // en font l'enjeu de la manche.
@@ -202,12 +256,15 @@ export function comboPossible(faces, requis) {
 
 /** La clé de réglage du paquet, selon le mode en cours. */
 export function clePaquet(cfg) {
-  return cfg.sansPoints ? 'cartesSansPoints' : 'cartes';
+  const m = modeManche(cfg);
+  return m === 'immediat' ? 'cartesSansPoints' : m === 'compromis' ? 'cartesCompromis' : 'cartes';
 }
 
 /** La clé de réglage des exigences de cartes, selon le mode en cours. */
 export function cleCombosCartes(cfg) {
-  return cfg.sansPoints ? 'combosCartesSansPoints' : 'combosCartes';
+  const m = modeManche(cfg);
+  return m === 'immediat' ? 'combosCartesSansPoints'
+    : m === 'compromis' ? 'combosCartesCompromis' : 'combosCartes';
 }
 
 /** Les cartes en jeu dans le mode en cours. */
@@ -258,15 +315,16 @@ export function noteCarteMode(carte, cfg) {
   if (carte.equipeRequise && cfg.nbJoueurs % 2 === 0 && carte.equipeRequise === 'vert') {
     return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pile.';
   }
-  if (!cfg.sansPoints || !carte.combo) return '';
+  if (estJeton(cfg) || !carte.combo) return '';
+  const mode = estCompromis(cfg) ? 'Compromis' : 'Immédiat';
   switch (carte.combo.effet) {
     case 'jeton1':
     case 'jeton2':
-      return 'Sans les points : cette combinaison emporte la manche, comme l’Abri.';
+      return `${mode} : cette combinaison emporte la manche, comme l’Abri.`;
     case 'cacherJetonAdverse':
-      return 'Sans les points : sans effet, il n’y a plus de jeton à recacher.';
+      return `${mode} : sans effet, il n’y a plus de jeton à recacher.`;
     case 'auChoix':
-      return 'Sans les points : le choix se réduit au réveil ou à l’Abri, qui emporte la manche.';
+      return `${mode} : le choix se réduit au réveil ou à l’Abri.`;
     default:
       return '';
   }
@@ -336,6 +394,16 @@ export function assainirConfig(cfg) {
   // règle du jeu plutôt que de laisser la manche sans porteur.
   if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
   sortie.variance = Math.min(0.5, Math.max(0, Number(cfg.variance) || 0));
+  // La façon de jouer une manche : un mot depuis la v1.50, un booléen avant.
+  // Les deux restent écrits, `modeManche` faisant foi.
+  sortie.modeManche = modeManche(cfg);
+  sortie.sansPoints = sortie.modeManche === 'immediat';
+  // Compromis : de un à trois jetons demandés, jamais zéro ni davantage.
+  sortie.jetonsRefuge = Math.min(6, Math.max(1, Math.round(Number(cfg.jetonsRefuge) || 3)));
+  if (cfg.refugeCartes && typeof cfg.refugeCartes === 'object') {
+    sortie.refugeCartes = Object.fromEntries(Object.entries(cfg.refugeCartes)
+      .map(([id, n]) => [id, Math.min(sortie.jetonsRefuge, Math.max(1, Math.round(Number(n) || 1)))]));
+  }
   // On repart de la liste de référence et l'on y pose les seuils enregistrés :
   // une combinaison apparue depuis — ou disparue d'une configuration ancienne,
   // comme l'Attaque au Laboratoire — revient au lieu de manquer sans bruit.
@@ -353,7 +421,7 @@ export function assainirConfig(cfg) {
   });
   // Les trois tables d'exigences enregistrées — cartes par mode, et le Vert —
   // passent par la même retraduction que les combinaisons de la Tornade.
-  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosVert']) {
+  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosCartesCompromis', 'combosVert']) {
     if (cfg[cle] && typeof cfg[cle] === 'object') {
       sortie[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -582,9 +650,13 @@ export const CARTES_TORNADE = [
 // `sens` est la flèche imprimée au dos : +1 horaire, -1 antihoraire. C'est le
 // dos de la PROCHAINE carte, encore face cachée sur la pioche, qui donne le sens
 // de la manche en cours — ce n'est donc pas un sens puis l'autre.
+// `refuge` : en Compromis, combien de jetons de sa couleur il faut mettre à
+// l'Abri pour prendre la manche sous cette Tornade. De un à trois, réglable
+// carte par carte dans les Réglages. Sans effet dans les deux autres modes.
 export const CARTES_SANS_POINTS = [
   {
     id: 'spFeuille',
+    refuge: 1,
     court: 'Tornade de feuille',
     nom: 'Tornade de feuille',
     // La première Tornade n'a pas de pouvoir, mais elle se gagne comme les
@@ -597,6 +669,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spVaches',
+    refuge: 2,
     court: 'Tornade de Vaches',
     nom: 'Tornade de Vaches',
     texte: 'Les Vaches (Bleus) gagnent 2 cartes Tornade si elles remportent cette manche.',
@@ -606,6 +679,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spPoules',
+    refuge: 2,
     court: 'Tornade de Poules',
     nom: 'Tornade de Poules',
     texte: 'Les Poules (Jaunes) gagnent 2 cartes Tornade si elles remportent cette manche.',
@@ -615,6 +689,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spCowboy',
+    refuge: 2,
     court: 'Tornade de Cow-boy',
     nom: 'Tornade de Cow-boy',
     texte: 'Le Cow-boy (Vert) gagne 2 cartes Tornade s’il remporte cette manche.',
@@ -626,6 +701,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spSiecle',
+    refuge: 3,
     court: 'Tornade du Siècle',
     nom: 'Tornade du Siècle',
     texte: 'Vous gagnez 2 cartes Tornade.',
@@ -635,6 +711,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spSommeil',
+    refuge: 2,
     court: 'Tornade de Sommeil',
     nom: 'Tornade de Sommeil',
     texte: 'Vous gagnez la manche.',
@@ -644,6 +721,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spElectrique',
+    refuge: 2,
     court: 'Tornade électrique',
     nom: 'Tornade électrique',
     texte: 'Vous gagnez 2 cartes Tornade si vous remportez cette manche en attrapant.',
@@ -653,6 +731,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spOrageuse',
+    refuge: 2,
     court: 'Tornade orageuse',
     nom: 'Tornade orageuse',
     texte: 'Vous gagnez la manche.',
@@ -662,6 +741,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spFurieuse',
+    refuge: 3,
     court: 'Tornade furieuse',
     nom: 'Tornade furieuse',
     texte: 'Vous gagnez la manche.',
@@ -671,6 +751,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spMega',
+    refuge: 3,
     court: 'Mega-Tornade',
     nom: 'Mega-Tornade',
     texte: 'Vous gagnez la manche.',
@@ -680,6 +761,7 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spF5',
+    refuge: 2,
     court: 'Tornade F5',
     nom: 'Tornade F5',
     texte: 'Vous volez la carte Tornade d’une autre équipe à cette manche.',
@@ -691,7 +773,10 @@ export const CARTES_SANS_POINTS = [
 
 /** Le paquet du mode en cours : chaque mode a le sien, de bout en bout. */
 export function cartesDuMode(cfg) {
-  return cfg && cfg.sansPoints ? CARTES_SANS_POINTS : CARTES_TORNADE;
+  // « Compromis » joue les mêmes Tornades qu'« Immédiat » — ce sont les cartes
+  // qui portent le nombre de jetons à mettre à l'Abri — mais son paquet et ses
+  // exigences se règlent à part.
+  return cfg && modeManche(cfg) !== 'jeton' ? CARTES_SANS_POINTS : CARTES_TORNADE;
 }
 
 /** Toutes les cartes des deux modes, par identifiant. */
@@ -859,6 +944,9 @@ export const COULEURS_EQUIPE = {
 // ── Configuration complète par défaut ─────────────────────────────────────────
 export function configParDefaut(nbJoueurs = 6, opts = {}) {
   nbJoueurs = bornerJoueurs(nbJoueurs);
+  // La façon de jouer une manche décide de plusieurs valeurs de départ : elle
+  // se lit avant tout le reste.
+  const mode = modeManche(opts);
   const mep = MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
   // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
   // disparaît purement et simplement du jeu.
@@ -886,7 +974,9 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // a plus de jeton à prendre : c'est « touche » qui vaut par défaut — l'un
     // des deux moyens de prendre une manche, avec l'Abri. Réglable dans les
     // deux modes.
-    attrapeGagneManche: opts.sansPoints ? 'touche' : 'non',
+    // Immédiat et Compromis : le contact emporte la manche, c'est la base des
+    // deux modes. Avec les jetons, il en retourne un.
+    attrapeGagneManche: mode === 'jeton' ? 'non' : 'touche',
     // Qui prend les dés à la première manche : les Jaunes (la règle), les Bleus,
     // ou le Vert seul. Le Vert accompagne l'équipe désignée dans les deux
     // premiers cas, comme au jeu.
@@ -899,6 +989,11 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     cartes: CARTES_TORNADE.map((c) => c.id),
     cartesSansPoints: CARTES_SANS_POINTS.map((c) => c.id),
     combosCartesSansPoints: {},
+    // Compromis joue les mêmes Tornades qu'Immédiat, mais son paquet, ses
+    // exigences et le nombre de jetons demandés par carte se règlent à part.
+    cartesCompromis: CARTES_SANS_POINTS.map((c) => c.id),
+    combosCartesCompromis: {},
+    refugeCartes: {},
     // Le Vert joue seul contre deux équipes : on peut lui demander autre chose.
     // Décochée, la table est strictement symétrique — c'est la référence.
     combosAsymetriques: false,
@@ -906,11 +1001,17 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     lots: mep.lots,
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,
-    // « Sans les points » se joue en général en quatre cartes : les manches y
-    // sont bien plus courtes, il en faut davantage pour faire une partie.
-    cartesPourGagner: opts.sansPoints ? 4 : mep.cartes,
-    // Manche « sans les points » : le premier Abri arrête tout.
-    sansPoints: !!opts.sansPoints,
+    // Les manches sont bien plus courtes hors de la règle de base : il faut
+    // donc davantage de cartes pour faire une partie. Cinq en Compromis, où
+    // chaque manche demande de un à trois Abris.
+    cartesPourGagner: mode === 'immediat' ? 4 : mode === 'compromis' ? 5 : mep.cartes,
+    // La façon de jouer une manche. `sansPoints` reste écrit à côté pour les
+    // réglages et les parties enregistrés avant la v1.50 ; c'est `modeManche`
+    // qui fait foi, et `modeManche(cfg)` sait lire l'un comme l'autre.
+    modeManche: mode,
+    sansPoints: mode === 'immediat',
+    // Compromis : les jetons de sa couleur qu'une équipe peut mettre à l'Abri.
+    jetonsRefuge: 3,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.
     // `null` = même exigence que les Bleus et les Jaunes.
     cartesVert: null,

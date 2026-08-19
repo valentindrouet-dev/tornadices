@@ -4,19 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.49';
+import { h, remplacer, duree, vider } from './dom.js?v=1.50';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.49';
-import { Moteur } from '../core/engine.js?v=1.49';
+} from './icons.js?v=1.50';
+import { Moteur } from '../core/engine.js?v=1.50';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-} from '../core/config.js?v=1.49';
-import { ajouterHistorique } from './store.js?v=1.49';
-import { enregistrerPartie } from './resultats.js?v=1.49';
-import { aller } from './app.js?v=1.49';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.49';
+  estJeton, estCompromis,
+} from '../core/config.js?v=1.50';
+import { ajouterHistorique } from './store.js?v=1.50';
+import { enregistrerPartie } from './resultats.js?v=1.50';
+import { aller } from './app.js?v=1.50';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.50';
 
 let moteur = null;
 let vitesse = 1;
@@ -164,7 +165,11 @@ export function vueTable() {
   const elCarte = h('div.coin.coin--carte');
   const elPioche = h('div.coin.coin--pioche');
   const elScores = h('div.coin.coin--scores');
-  const zoneTable = h('div.table-zone', h('div.tapis'), elCarte, elPioche, elScores);
+  // Compromis : la carte Refuge, au centre du tapis. C'est là que chaque
+  // équipe met ses animaux à couvert, et c'est ce qu'on regarde pour savoir
+  // où en est la manche.
+  const elRefuge = h('div.refuge');
+  const zoneTable = h('div.table-zone', h('div.tapis'), elRefuge, elCarte, elPioche, elScores);
   const elSieges = moteur.joueurs.map((j) => {
     const el = h('div.siege', { class: `equipe-${j.equipe}${j.type === 'humain' ? ' siege--humain' : ''}` });
     zoneTable.appendChild(el);
@@ -578,7 +583,7 @@ export function vueTable() {
     // Le sens annoncé est celui de la manche qui commence — il vient du dos de
     // la carte SUIVANTE, pas de celle qu'on retourne. Montrer la flèche de la
     // carte révélée dirait le contraire de ce qui va se jouer.
-    const fleche = moteur.cfg.sansPoints ? (moteur.sens > 0 ? '↻' : '↺') : null;
+    const fleche = estJeton(moteur.cfg) ? null : (moteur.sens > 0 ? '↻' : '↺');
     panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
       h('div.carte-annonce',
         h('div.mini.muted', `Manche ${manche}`),
@@ -807,6 +812,8 @@ export function vueTable() {
         : null
     ));
 
+    peindreRefuge();
+
     const reste = Math.max(0, moteur.pioche.length - 1);
     // Le dos de la carte du dessus porte la flèche : c'est elle qui donne le
     // sens de la manche en cours. On la montre donc sur la pioche, à sa place.
@@ -838,16 +845,46 @@ export function vueTable() {
           emblemeEquipe(c.embleme, 18), ' ', c.nom),
         h('span.score-cartes', { title: 'cartes Tornade gagnées' },
           `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
-        // Sans les points, il n'y a plus de jetons à suivre : la ligne de
-        // pastilles disparaît, seules les cartes font le score.
-        moteur.cfg.sansPoints ? null : h('div.suivi-jetons',
+        // Hors de la règle de base, il n'y a plus de jetons à retourner : la
+        // ligne de pastilles disparaît, seules les cartes font le score. En
+        // Compromis, c'est l'Abri qui la remplace, au centre de la table.
+        estJeton(moteur.cfg) ? h('div.suivi-jetons',
           ...Array.from({ length: e.jetons }, (_, k) => h('div', {
             class: `jeton${k < acquis ? ' on' : ''}${k === acquis - 1 ? ' jeton--arrive' : ''}`,
             html: k < acquis ? SVG_SYMBOLE.vache : '',
           })),
-        ),
+        ) : null,
       );
     }))) placerSieges();
+  }
+
+  /**
+   * La carte Refuge : une colonne par équipe, un jeton par animal mis à couvert,
+   * et le compte de ce que la Tornade du jour demande. Elle ne s'affiche qu'en
+   * Compromis, seul mode où le Refuge existe.
+   */
+  function peindreRefuge() {
+    if (!estCompromis(moteur.cfg)) {
+      if (elRefuge.childNodes.length) vider(elRefuge);
+      return;
+    }
+    const requis = moteur.refugeRequis || 1;
+    const equipes = Object.values(moteur.equipes);
+    const sig = `refuge-${requis}-${equipes.map((e) => `${e.id}:${e.refuge}:${e.emportes || 0}`).join('|')}`;
+    siChange(elRefuge, sig, () => [
+      h('div.refuge-titre', 'Refuge'),
+      h('div.refuge-equipes', ...equipes.map((e) => {
+        const c = COULEURS_EQUIPE[e.id];
+        return h('div.refuge-equipe', { style: { '--couleur-eq': c.hex } },
+          h('div.refuge-jetons',
+            ...Array.from({ length: requis }, (_, k) => h('div', {
+              class: `refuge-jeton${k < e.refuge ? ' on' : ''}`,
+              html: k < e.refuge ? SVG_SYMBOLE.vache : '',
+            }))),
+          h('div.refuge-nom', c.emblemeNom));
+      })),
+      h('div.refuge-sous', `${requis} jeton${requis > 1 ? 's' : ''} à mettre à l’Abri`),
+    ]);
   }
 
   function peindreJournal() {

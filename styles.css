@@ -1088,6 +1088,8 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
     gap: 8px;
   }
   .tapis { display: none; }
+  /* Sur téléphone la table est une colonne : le Refuge y prend sa place, en flux. */
+  .refuge { position: static; transform: none; max-width: none; flex: 1 1 100%; }
   .coin { position: static; width: auto; }
   .coin--carte { flex: 1 1 58%; }
   .coin--pioche { flex: 1 1 30%; }
@@ -1319,3 +1321,45 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .tbl--lots .col-courante { background: var(--accent-clair); }
 .tbl--lots th.col-courante { color: var(--accent-fonce); }
 .tbl-defile .tbl--lots { min-width: 420px; }
+
+/* ── La carte Refuge (mode Compromis) ─────────────────────────────────────────
+   Au milieu du tapis, là où les joueurs posent leurs animaux à couvert : une
+   colonne par équipe, un jeton par animal, et ce que la Tornade du jour demande. */
+.refuge {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  background: #fff;
+  border: 2px solid var(--bord-fort);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: var(--ombre);
+  text-align: center;
+  max-width: 260px;
+}
+.refuge:empty { display: none; }
+.refuge-titre {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--gris); margin-bottom: 9px;
+}
+.refuge-equipes { display: flex; gap: 16px; justify-content: center; }
+.refuge-equipe { display: grid; gap: 5px; justify-items: center; }
+.refuge-jetons { display: flex; gap: 4px; }
+.refuge-jeton {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px dashed var(--bord-fort); background: #fbfdff;
+  display: grid; place-items: center;
+  transition: transform .18s, border-color .18s;
+}
+.refuge-jeton.on {
+  border-style: solid;
+  border-color: var(--couleur-eq, var(--accent));
+  background: #fff;
+  transform: scale(1.06);
+}
+.refuge-jeton svg { width: 100%; height: 100%; display: block; }
+.refuge-nom {
+  font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  color: var(--couleur-eq, var(--gris));
+}
+.refuge-sous { margin-top: 9px; font-size: 11.5px; color: var(--gris); }

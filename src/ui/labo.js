@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.49';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.49';
-import { nomSymbole } from './apparence.js?v=1.49';
-import { store } from './store.js?v=1.49';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.49';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.50';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.50';
+import { nomSymbole } from './apparence.js?v=1.50';
+import { store } from './store.js?v=1.50';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.50';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,14 +13,15 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
+  NOM_MODE, modeManche, estJeton, estCompromis, refugePour,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.49';
-import { tableauCombos } from './combos.js?v=1.49';
-import { barreProfils, idActif } from './profils.js?v=1.49';
-import { construireConfig, tableLots } from './variables.js?v=1.49';
+} from '../core/config.js?v=1.50';
+import { tableauCombos } from './combos.js?v=1.50';
+import { barreProfils, idActif } from './profils.js?v=1.50';
+import { construireConfig, tableLots } from './variables.js?v=1.50';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.49';
+} from '../core/proba.js?v=1.50';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -46,8 +47,11 @@ function cfgLabo() {
   // les retraduire, sinon les faces d'avant le renommage de la v1.3 restent au
   // dé sans que rien ne les reconnaisse.
   if (enregistre) return assainirConfig(enregistre);
-  const c = configParDefaut(6);
-  c.combosCartes = {};
+  // Première visite : on part des réglages en cours, pas des valeurs d'usine.
+  // Ouvrir le Laboratoire sur un autre mode de jeu que celui qu'on vient de
+  // choisir n'a aucun sens — c'est le réglage le plus structurant de tous.
+  const c = construireConfig(bornerJoueurs(store.get('nbJoueurs', 6)));
+  c.combosCartes = c.combosCartes || {};
   return c;
 }
 
@@ -56,7 +60,9 @@ let etat = {
   // Le réglage enregistré dont vient `cfg`. La page garde son état d'une visite
   // à l'autre — il faut donc savoir quand la configuration n'est plus la bonne.
   profil: idActif(),
-  cfg: cfgLabo(),
+  // Construite à la première ouverture, pas au chargement du module : elle
+  // dépend des réglages, dont le module n'est pas encore forcément évalué.
+  cfg: null,
   profils: store.get('profilsLabo', null) || Array.from({ length: JOUEURS_MAX }, () => 'equilibre'),
   nbParties: store.get('nbPartiesLabo', 200),
   graine: store.get('graineLabo', 'tornade-1000'),
@@ -76,7 +82,7 @@ export function vueLabo() {
   // était ailleurs : la configuration de campagne le suit, sinon les deux pages
   // parleraient de deux jeux de règles différents. Tant que le réglage ne change
   // pas, ce qu'on a modifié ici reste en place.
-  if (etat.profil !== idActif()) {
+  if (!etat.cfg || etat.profil !== idActif()) {
     etat.profil = idActif();
     etat.cfg = cfgLabo();
   }
@@ -195,7 +201,7 @@ function panneauConfig(rafraichir) {
           const n = Number(e.target.value);
           // Le mode reste celui de la campagne en cours : sans les points, la
           // référence est quatre cartes, pas celle du tableau officiel.
-          const base = configParDefaut(n, { sansPoints: cfg.sansPoints });
+          const base = configParDefaut(n, { modeManche: modeManche(cfg) });
           Object.assign(cfg, {
             // Les lots viennent du tableau réglé, pas du tableau officiel :
             // sans quoi le Laboratoire testerait autre chose que la table.
@@ -285,13 +291,14 @@ function panneauConfig(rafraichir) {
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Comment se joue une manche'),
     h('div.segment',
       ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
-        class: (cfg.sansPoints ? 'sansPoints' : 'jetons') === id ? 'on' : '',
+        class: modeManche(cfg) === id ? 'on' : '',
         style: { fontSize: '12.5px' },
         onclick: () => {
-          cfg.sansPoints = id === 'sansPoints';
+          cfg.modeManche = id;
+          cfg.sansPoints = id === 'immediat';
           // Les deux modes n'ont ni le même nombre de cartes ni la même valeur
           // d'attrape : on repart de leurs références, quitte à les rerégler.
-          const base = configParDefaut(cfg.nbJoueurs, { sansPoints: cfg.sansPoints });
+          const base = configParDefaut(cfg.nbJoueurs, { modeManche: id });
           cfg.cartesPourGagner = base.cartesPourGagner;
           cfg.attrapeGagneManche = base.attrapeGagneManche;
           rafraichir();
@@ -299,7 +306,7 @@ function panneauConfig(rafraichir) {
       }, lib)),
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
-      AIDE_MANCHE[cfg.sansPoints ? 'sansPoints' : 'jetons']),
+      AIDE_MANCHE[modeManche(cfg)]),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',
@@ -329,7 +336,7 @@ function panneauConfig(rafraichir) {
       }, lib)),
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
-      cfg.sansPoints && cfg.attrapeGagneManche !== 'touche'
+      !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
         ? 'Sans les points, « Un jeton » ne rapporte rien : le contact interrompt le voisin, sans '
           + 'plus. C’est « Manche gagnée » qui fait de l’attrape le second moyen de prendre une manche.'
         : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
@@ -350,9 +357,14 @@ function panneauConfig(rafraichir) {
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
     h('div.grille.grille--4', { style: { gap: '10px' } },
       num('Jetons Bleu/Jaune', cfg.jetons, (v) => { cfg.jetons = Math.max(1, v); },
-        { min: 1, max: 12, disabled: cfg.sansPoints }),
+        { min: 1, max: 12, disabled: !estJeton(cfg) }),
       num('Jetons Vert', cfg.jetonsVert, (v) => { cfg.jetonsVert = Math.max(1, v); },
-        { min: 1, max: 12, disabled: cfg.sansPoints }),
+        { min: 1, max: 12, disabled: !estJeton(cfg) }),
+      // Compromis : les jetons de sa couleur qu'une équipe met à l'Abri.
+      estCompromis(cfg)
+        ? num('Jetons à l’Abri', cfg.jetonsRefuge, (v) => { cfg.jetonsRefuge = Math.max(1, v); },
+            { min: 1, max: 6 })
+        : null,
       num('Cartes pour gagner', cfg.cartesPourGagner, (v) => { cfg.cartesPourGagner = Math.max(1, v); }, { min: 1, max: 12 }),
       cfg.nbJoueurs % 2
         ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner,
@@ -817,7 +829,7 @@ function ongletRegles() {
 
     h('div.carte', { style: { marginTop: '16px' } },
       h('div.titre-section',
-        `Cartes Tornade — ${cfg.sansPoints ? 'sans les points' : 'avec les jetons'}`),
+        `Cartes Tornade — ${NOM_MODE[modeManche(cfg)]}`),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
           h('th', 'Combinaison'), h('th', 'Effet'))),

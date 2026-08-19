@@ -10,13 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.49';
+import { makeRng } from './rng.js?v=1.50';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
-} from './config.js?v=1.49';
+  modeManche, estImmediat, estCompromis, estJeton, refugePour,
+} from './config.js?v=1.50';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -185,7 +186,7 @@ export class Moteur {
     // choses que les cartes Tornade savent modifier.
     this._bonusCartes = 0;
     this._mancheParAttrape = false;
-    if (this.cfg.sansPoints) {
+    if (!estJeton(this.cfg)) {
       // Le sens se lit au dos de la prochaine carte, celle qui reste face
       // cachée sur la pioche pendant qu'on joue celle du dessus. Ce n'est donc
       // pas un sens puis l'autre : c'est la pile qui l'annonce.
@@ -208,7 +209,12 @@ export class Moteur {
       j.departEnAttente = null;
       j.objectif = null;
     }
-    for (const e of Object.values(this.equipes)) e.retournes = 0;
+    // Les jetons repartent à zéro : chaque manche est une course neuve. En
+    // Compromis, c'est l'Abri qu'on vide — les jetons posés y sont repris.
+    for (const e of Object.values(this.equipes)) { e.retournes = 0; e.refuge = 0; e.emportes = 0; }
+    // Ce que la Tornade du jour demande de mettre à l'Abri, une fois pour la
+    // manche : la carte ne changera plus d'ici la fin.
+    this.refugeRequis = estCompromis(this.cfg) ? refugePour(this.cfg, this.carte) : 0;
 
     const porteurs = this._porteursDeDepart();
     for (const pid of porteurs) {
@@ -972,12 +978,28 @@ export class Moteur {
       // variante du mode de base, et la règle sans les points, où il n'y a
       // plus de jeton à prendre.
       if (attrapeEmporteManche(this.cfg)) {
-        this._log(
-          `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
-        );
-        this._annoncer(
-          `Attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
-        );
+        // Compromis : le contact envoie valser un jeton de l'adversaire dans la
+        // tornade. Le geste est ce qui emporte la manche — on le compte, la
+        // table le montre sur la carte Tornade.
+        if (estCompromis(this.cfg)) {
+          const cible = this.equipes[q.equipe];
+          if (cible) cible.emportes = (cible.emportes || 0) + 1;
+          this._log(
+            `${j.nom} envoie un jeton ${this._nomEquipe(q.equipe)} dans la tornade — `
+            + `${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
+          );
+          this._annoncer(
+            `${q.nom} part dans la tornade — ${this._nomEquipe(j.equipe)} gagnent la manche !`,
+            'jaune', j.id,
+          );
+        } else {
+          this._log(
+            `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
+          );
+          this._annoncer(
+            `Attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
+          );
+        }
         // La Tornade électrique paie double une manche prise au contact : il
         // faut donc savoir comment celle-ci a été gagnée.
         this._mancheParAttrape = true;
@@ -1100,12 +1122,16 @@ export class Moteur {
   }
 
   _retournerJeton(j, n = 1, source = 'vache') {
-    // Manche « sans les points » : rien ne se compte. La combinaison qui aurait
+    // Compromis : le jeton ne se retourne pas, il se pose à l'Abri. Quand
+    // l'équipe y a mis tout ce que la Tornade du jour demande, elle emporte la
+    // manche sur-le-champ — ses animaux sont à couvert.
+    if (estCompromis(this.cfg)) { this._poserAuRefuge(j, n, source); return; }
+    // Manche « immédiat » : rien ne se compte. La combinaison qui aurait
     // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
     // carte Tornade. L'attrape ne passe plus par ici — elle emporte la manche
     // depuis `_resoudreAttrape` — mais la garde reste : rien ne doit pouvoir
     // gagner une manche au nom d'un jeton qui n'existe pas.
-    if (this.cfg.sansPoints) {
+    if (estImmediat(this.cfg)) {
       if (source === 'collision') return;
       this._annoncer(`Abri ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
       if (this.onJeton) this.onJeton(j.id, j.equipe, 1, source);
@@ -1139,10 +1165,46 @@ export class Moteur {
     if (eq.retournes >= eq.jetons) this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
   }
 
+  /**
+   * Compromis : poser des jetons de sa couleur sur la carte Refuge.
+   *
+   * La Tornade du jour dit combien il en faut — de un à trois. Poser le dernier
+   * demandé emporte la manche sur-le-champ. Une équipe ne peut pas en poser plus
+   * qu'elle n'en a : trois, par défaut.
+   */
+  _poserAuRefuge(j, n = 1, source = 'vache') {
+    // Une collision réussie ne passe pas par ici : elle emporte la manche
+    // depuis `_resoudreAttrape`, en envoyant valser un jeton adverse. Réglée
+    // sur « un jeton », elle n'a simplement rien à poser.
+    if (source === 'collision') return;
+    const eq = this.equipes[j.equipe];
+    if (!eq) return;
+    const plafond = Math.min(this.refugeRequis, this.cfg.jetonsRefuge || 3);
+    const avant = eq.refuge;
+    eq.refuge = Math.min(plafond, eq.refuge + n);
+    const poses = eq.refuge - avant;
+    if (poses <= 0) return;
+    j.stats.jetonsRetournes += poses;
+    j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + poses;
+    if (this.onJeton) this.onJeton(j.id, j.equipe, poses, source);
+    this._log(
+      `${j.nom} met ${poses > 1 ? poses + ' jetons' : 'un jeton'} à l’Abri — `
+      + `${this._nomEquipe(j.equipe)} ${eq.refuge}/${plafond}.`,
+      'jeton', j.id,
+    );
+    this._annoncer(
+      `Abri ! ${this._nomEquipe(j.equipe)} ${eq.refuge}/${plafond}`,
+      'vert', j.id,
+    );
+    if (eq.refuge >= plafond) this._finManche(j.equipe, { joueur: j, raison: 'refuge' });
+  }
+
   _jetonAuxAdverses(j) {
-    // Sans les points, il n'y a pas de jeton à offrir : la bourde reste une
-    // bourde — le lot est parti — mais elle ne donne rien aux adversaires.
-    if (this.cfg.sansPoints) return;
+    // Hors de la règle de base, il n'y a pas de jeton à offrir : la bourde reste
+    // une bourde — le lot est parti — mais elle ne donne rien aux adversaires.
+    // En Compromis on n'y touche pas non plus : la manche se gagne de deux
+    // façons, l'Abri et la collision, et la bourde d'en face n'en est pas une.
+    if (!estJeton(this.cfg)) return;
     for (const e of Object.values(this.equipes)) {
       if (e.id === j.equipe) continue;
       e.retournes = Math.min(e.jetons, e.retournes + 1);
@@ -1196,10 +1258,15 @@ export class Moteur {
     switch (cause.raison) {
       case 'vache':
         return 'en sortant l’Abri';
+      case 'refuge':
+        return 'en mettant ses animaux à l’Abri';
       case 'jetons':
         return 'en retournant le dernier jeton';
       case 'attrape':
-        return cause.cible ? `en attrapant ${cause.cible.nom}` : 'à l’attrape';
+        if (!cause.cible) return 'à l’attrape';
+        return estCompromis(this.cfg)
+          ? `en envoyant ${cause.cible.nom} dans la tornade`
+          : `en attrapant ${cause.cible.nom}`;
       case 'carte':
         return this.carte
           ? `avec la combinaison de « ${this.carte.court} »`
@@ -1409,6 +1476,9 @@ export class Moteur {
   resultat() {
     return {
       graine: this.graine,
+      // La façon de jouer la manche : le compte rendu en a besoin pour lire les
+      // chiffres, et elle ne se devine pas d'après eux.
+      mode: modeManche(this.cfg),
       vainqueur: this.vainqueur,
       raison: this.raisonFin,
       manches: this.manche,

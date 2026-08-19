@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.49';
+import { h } from './dom.js?v=1.50';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.49';
+} from './icons.js?v=1.50';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.49';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.49';
+} from '../core/config.js?v=1.50';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.50';
 
 export function vueRegles() {
   return h('div.page',
@@ -318,8 +318,9 @@ export function vueRegles() {
     ),
 
     h('div.carte',
-      h('div.titre-section', 'La version sans les points'),
-      h('p.petit', 'Une seconde façon de jouer une manche, à choisir dans les Réglages. Les '
+      h('div.titre-section', 'La version « Immédiat »'),
+      h('p.petit', 'La deuxième des trois façons de jouer une manche, à choisir dans les '
+        + 'Réglages. Les '
         + 'jetons sortent du jeu : on se réveille aux trois tornades, puis on cherche les trois '
         + 'abris, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
         + 'prend la carte Tornade, et la manche suivante commence.'),
@@ -335,6 +336,33 @@ export function vueRegles() {
         'Certaines cartes Tornade manipulent les jetons : dans ce mode, elles ne font rien de '
         + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '
         + 'Vert est seul contre tous — « Cartes du Vert » est là pour le remettre à niveau.'),
+    ),
+
+    // Le troisième mode : entre les jetons de la règle de base et l'Immédiat.
+    h('div.carte',
+      h('div.titre-section', 'La version « Compromis »'),
+      h('p.petit', 'La troisième façon de jouer une manche, et un entre-deux : les jetons '
+        + 'reviennent, mais ils ne se retournent plus — ils se posent. Une carte Refuge, commune '
+        + 'à toute la table, accueille les animaux que chaque équipe met à couvert.'),
+      h('p.petit', 'Chaque équipe a trois jetons de sa couleur. La Tornade en cours dit combien '
+        + 'il faut en mettre à l’Abri pour prendre la manche — de un à trois, indiqué sur la '
+        + 'carte. Chaque combinaison Abri en pose un de plus.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Deux façons de prendre la manche, et deux seulement : poser le dernier jeton demandé — '
+        + 'vos animaux sont à couvert, la manche est à vous sur-le-champ — ou réussir une '
+        + 'collision, qui envoie valser un jeton adverse dans la tornade et emporte la manche de '
+        + 'la même façon.'),
+      h('p.petit.muted', { style: { marginTop: '10px' } },
+        'Le reste tient sans changer : le dé, les combinaisons, le rythme, les X qui figent, le '
+        + 'sens de rotation lu au dos de la prochaine Tornade. C’est le nombre de cartes qui fait '
+        + 'le vainqueur, cinq par défaut — les manches y sont plus longues que dans l’Immédiat, '
+        + 'plus courtes que dans le mode Jeton.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Le nombre de jetons demandés se règle carte par carte, dans « Cartes Tornade en jeu ». '
+        + 'C’est le levier d’équilibrage propre au mode : une Tornade exigeante fait une manche '
+        + 'longue, une Tornade légère une manche expédiée. Sur 200 parties d’IA équilibrées à six '
+        + 'joueurs, la partie dure 4 min 29 s en 6,4 manches — l’Abri en emporte 43 %, la '
+        + 'collision 40 %, les combinaisons de cartes le reste.'),
     ),
 
     h('div.carte',
