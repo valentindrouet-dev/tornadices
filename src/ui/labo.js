@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.52';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.52';
-import { nomSymbole } from './apparence.js?v=1.52';
-import { store } from './store.js?v=1.52';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.52';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.53';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.53';
+import { nomSymbole } from './apparence.js?v=1.53';
+import { store } from './store.js?v=1.53';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.53';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,15 +13,17 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
-  NOM_MODE, modeManche, estJeton, estCompromis, refugePour,
+  NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.52';
-import { tableauCombos } from './combos.js?v=1.52';
-import { barreProfils, idActif } from './profils.js?v=1.52';
-import { construireConfig, tableLots } from './variables.js?v=1.52';
+} from '../core/config.js?v=1.53';
+import { tableauCombos } from './combos.js?v=1.53';
+import { barreProfils, idActif } from './profils.js?v=1.53';
+import {
+  construireConfig, tableLots, tableCartes, tableCartesVert,
+} from './variables.js?v=1.53';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.52';
+} from '../core/proba.js?v=1.53';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -201,12 +203,18 @@ function panneauConfig(rafraichir) {
           const n = Number(e.target.value);
           // Le mode reste celui de la campagne en cours : sans les points, la
           // référence est quatre cartes, pas celle du tableau officiel.
-          const base = configParDefaut(n, { modeManche: modeManche(cfg) });
+          const mode = modeManche(cfg);
+          const base = configParDefaut(n, { modeManche: mode });
           Object.assign(cfg, {
-            // Les lots viennent du tableau réglé, pas du tableau officiel :
-            // sans quoi le Laboratoire testerait autre chose que la table.
-            nbJoueurs: n, lots: lotsPour(tableLots(), n), jetons: base.jetons,
-            jetonsVert: base.jetonsVert, cartesPourGagner: base.cartesPourGagner,
+            // Lots et cartes viennent des tableaux réglés, pas du tableau
+            // officiel : sans quoi le Laboratoire testerait autre chose que la
+            // table. Le Vert a le sien, il joue seul contre deux équipes.
+            nbJoueurs: n,
+            lots: lotsPour(tableLots(), n),
+            jetons: base.jetons,
+            jetonsVert: base.jetonsVert,
+            cartesPourGagner: cartesPour(tableCartes(mode), mode, n),
+            cartesVert: cartesVertPour(tableCartesVert(mode), mode, n),
           });
           rafraichir();
         },
@@ -296,10 +304,11 @@ function panneauConfig(rafraichir) {
         onclick: () => {
           cfg.modeManche = id;
           cfg.sansPoints = id === 'immediat';
-          // Les deux modes n'ont ni le même nombre de cartes ni la même valeur
-          // d'attrape : on repart de leurs références, quitte à les rerégler.
+          // Les trois modes n'ont ni le même nombre de cartes ni la même valeur
+          // d'attrape : on repart de ce qui est réglé pour le mode choisi.
           const base = configParDefaut(cfg.nbJoueurs, { modeManche: id });
-          cfg.cartesPourGagner = base.cartesPourGagner;
+          cfg.cartesPourGagner = cartesPour(tableCartes(id), id, cfg.nbJoueurs);
+          cfg.cartesVert = cartesVertPour(tableCartesVert(id), id, cfg.nbJoueurs);
           cfg.attrapeGagneManche = base.attrapeGagneManche;
           rafraichir();
         },

@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.52';
+export const VERSION = '1.53';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.53',
+    date: '19/08/2026',
+    notes: [
+      'Les cartes pour gagner ne sont plus un nombre mais un tableau, comme les lots : une colonne par nombre de joueurs, de 3 à 8, et deux lignes — les équipes, puis le joueur Vert. Il joue seul contre deux équipes : il lui faut son propre objectif, et c’est le levier d’équilibrage le plus direct qu’il ait. Mesuré à 5 joueurs en Compromis, le Vert gagne 28 parties sur 60 à 2 cartes contre 2 sur 60 à 5.',
+      'Le tableau est propre au mode de jeu : trois cartes avec les jetons, quatre en Immédiat, cinq en Compromis. Les manches n’ont pas la même durée d’un mode à l’autre — un objectif posé pour l’un n’a rien à faire dans l’autre, et changer de mode ne touche plus à ce qu’on avait réglé ailleurs. Un bouton « Valeurs de départ » remet le mode affiché d’aplomb.',
+      'La ligne du Vert n’existe qu’aux effectifs impairs, les seuls où il est là ; ailleurs la case affiche un tiret. Laissée à la même valeur que les équipes, il gagne aux mêmes conditions.',
+      'L’accueil suit : « Cartes pour gagner » et « Cartes du Vert » y écrivent dans la ligne de la table qu’on compose. Le Laboratoire lit les mêmes tableaux quand on change le nombre de joueurs ou le mode d’une campagne.',
+      'La fiche de règles imprimée le montre à son tour : la colonne « Cartes pour gagner » de sa mise en place varie ligne par ligne et signale l’objectif du Vert quand il diffère, et la section du joueur Vert l’énumère effectif par effectif.',
+      'Un réglage enregistré avant cette version repose son nombre unique sur la ligne de l’effectif d’alors, et dans le seul mode où il avait été posé.',
+    ],
+  },
   {
     version: '1.52',
     date: '19/08/2026',

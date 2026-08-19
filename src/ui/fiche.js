@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.52';
-import { store } from './store.js?v=1.52';
-import { aller } from './app.js?v=1.52';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.52';
-import { nomSymbole } from './apparence.js?v=1.52';
-import { construireConfig } from './variables.js?v=1.52';
-import { nomActif } from './profils.js?v=1.52';
-import { VERSION } from '../version.js?v=1.52';
+import { h, remplacer } from './dom.js?v=1.53';
+import { store } from './store.js?v=1.53';
+import { aller } from './app.js?v=1.53';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.53';
+import { nomSymbole } from './apparence.js?v=1.53';
+import { construireConfig } from './variables.js?v=1.53';
+import { nomActif } from './profils.js?v=1.53';
+import { VERSION } from '../version.js?v=1.53';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe,
-} from '../core/config.js?v=1.52';
+} from '../core/config.js?v=1.53';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>

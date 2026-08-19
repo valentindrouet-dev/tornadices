@@ -4,20 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.52';
+import { h, remplacer, duree, vider } from './dom.js?v=1.53';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.52';
-import { Moteur } from '../core/engine.js?v=1.52';
+} from './icons.js?v=1.53';
+import { Moteur } from '../core/engine.js?v=1.53';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis,
-} from '../core/config.js?v=1.52';
-import { ajouterHistorique } from './store.js?v=1.52';
-import { enregistrerPartie } from './resultats.js?v=1.52';
-import { aller } from './app.js?v=1.52';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.52';
+} from '../core/config.js?v=1.53';
+import { ajouterHistorique } from './store.js?v=1.53';
+import { enregistrerPartie } from './resultats.js?v=1.53';
+import { aller } from './app.js?v=1.53';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.53';
 
 let moteur = null;
 let vitesse = 1;

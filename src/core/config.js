@@ -830,6 +830,47 @@ export function lotsOfficiels() {
   return Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, MISE_EN_PLACE[n].lots]));
 }
 
+/**
+ * Combien de cartes Tornade il faut réunir pour gagner, sans rien de réglé.
+ *
+ * La valeur de départ dépend de la façon de jouer une manche : les manches sont
+ * bien plus courtes hors de la règle de base, il en faut donc davantage. C'est
+ * pourquoi le tableau des cartes se garde par mode — un réglage posé en
+ * Compromis n'a aucune raison de suivre en mode Jeton.
+ */
+export function cartesParDefaut(mode, nbJoueurs) {
+  if (mode === 'immediat') return 4;
+  if (mode === 'compromis') return 5;
+  return infosMiseEnPlace(nbJoueurs).cartes;
+}
+
+/** Le tableau officiel des cartes pour gagner, dans un mode donné. */
+export function cartesOfficielles(mode) {
+  return Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, cartesParDefaut(mode, n)]));
+}
+
+/** Une ligne de tableau, bornée — une valeur enregistrée peut être aberrante. */
+function ligneTableau(table, nbJoueurs, defaut, max = 12) {
+  const n = table && Number(table[nbJoueurs]);
+  if (Number.isFinite(n) && n >= 1) return Math.min(max, Math.round(n));
+  return defaut;
+}
+
+/** Les cartes pour gagner à ce nombre de joueurs, dans ce mode. */
+export function cartesPour(table, mode, nbJoueurs) {
+  return ligneTableau(table, nbJoueurs, cartesParDefaut(mode, nbJoueurs));
+}
+
+/**
+ * Et celles du joueur Vert. Il joue seul contre deux équipes : son objectif se
+ * règle à part, ligne par ligne. Rien de réglé, il gagne aux mêmes conditions
+ * que les équipes — et à nombre pair il n'existe pas.
+ */
+export function cartesVertPour(table, mode, nbJoueurs) {
+  if (nbJoueurs % 2 === 0) return null;
+  return ligneTableau(table, nbJoueurs, cartesPour(null, mode, nbJoueurs));
+}
+
 // ── Profils d'IA ──────────────────────────────────────────────────────────────
 // `lancersAvantPasse` : nombre de relances tolérées avant de rendre le lot.
 // `peur` : sensibilité au danger quand le joueur précédent tient aussi un lot.

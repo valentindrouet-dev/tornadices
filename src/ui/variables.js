@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.52';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.52';
-import { store } from './store.js?v=1.52';
-import { aller } from './app.js?v=1.52';
-import { lancerPartie } from './table.js?v=1.52';
+import { h, remplacer } from './dom.js?v=1.53';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.53';
+import { store } from './store.js?v=1.53';
+import { aller } from './app.js?v=1.53';
+import { lancerPartie } from './table.js?v=1.53';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -18,24 +18,25 @@ import {
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
+  cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
-} from '../core/config.js?v=1.52';
-import { tableauCombos, editeurCases } from './combos.js?v=1.52';
+} from '../core/config.js?v=1.53';
+import { tableauCombos, editeurCases } from './combos.js?v=1.53';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.52';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.52';
-import { randomSeed } from '../core/rng.js?v=1.52';
-import { reglagesJoueurs } from './accueil.js?v=1.52';
+} from './apparence.js?v=1.53';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.53';
+import { randomSeed } from '../core/rng.js?v=1.53';
+import { reglagesJoueurs } from './accueil.js?v=1.53';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.52';
+} from './profils.js?v=1.53';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
-const CHAMPS_MISE_EN_PLACE = ['jetons', 'jetonsVert', 'cartesPourGagner'];
+const CHAMPS_MISE_EN_PLACE = ['jetons', 'jetonsVert'];
 
 /**
  * Le tableau des lots en jeu, une ligne par nombre de joueurs.
@@ -72,6 +73,65 @@ export function ecrireLots(nbJoueurs, valeur) {
   enregistrerReglages(v);
 }
 
+/**
+ * Les cartes pour gagner, une ligne par nombre de joueurs — et par mode.
+ *
+ * Deux raisons de garder ces tableaux par mode : la valeur de départ en dépend
+ * (trois cartes avec les jetons, quatre en Immédiat, cinq en Compromis), et un
+ * objectif posé pour un mode n'a aucune raison de suivre dans un autre, où les
+ * manches n'ont pas du tout la même durée.
+ *
+ * Avant la v1.53, le réglage ne portait qu'un seul nombre — celui du dernier
+ * effectif réglé : on le repose sur sa ligne, comme pour les lots.
+ */
+export function tableCartes(mode, v = variables()) {
+  const table = cartesOfficielles(mode);
+  const enregistre = (v.cartesParMode || {})[mode];
+  if (enregistre && typeof enregistre === 'object') {
+    for (const n of NOMBRES_JOUEURS) {
+      const x = Number(enregistre[n]);
+      if (Number.isFinite(x) && x >= 1) table[n] = Math.min(12, Math.round(x));
+    }
+    return table;
+  }
+  // Un réglage d'avant la v1.53 : son nombre unique tenait pour l'effectif
+  // d'alors, et seulement pour le mode où il avait été posé.
+  if (Number(v.cartesPourGagner) >= 1 && modeManche(v) === mode) {
+    table[store.get('nbJoueurs', 6)] = Math.min(12, Math.round(Number(v.cartesPourGagner)));
+  }
+  return table;
+}
+
+/** Et celles du joueur Vert, qui joue seul contre deux équipes. */
+export function tableCartesVert(mode, v = variables()) {
+  const equipes = tableCartes(mode, v);
+  const table = Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, equipes[n]]));
+  const enregistre = (v.cartesVertParMode || {})[mode];
+  if (enregistre && typeof enregistre === 'object') {
+    for (const n of NOMBRES_JOUEURS) {
+      const x = Number(enregistre[n]);
+      if (Number.isFinite(x) && x >= 1) table[n] = Math.min(12, Math.round(x));
+    }
+    return table;
+  }
+  if (Number(v.cartesVert) >= 1 && modeManche(v) === mode) {
+    table[store.get('nbJoueurs', 6)] = Math.min(12, Math.round(Number(v.cartesVert)));
+  }
+  return table;
+}
+
+/** Écrit une ligne de l'un des deux tableaux de cartes. */
+export function ecrireCartes(mode, nbJoueurs, valeur, vert = false) {
+  const cle = vert ? 'cartesVertParMode' : 'cartesParMode';
+  const table = vert ? tableCartesVert(mode) : tableCartes(mode);
+  table[nbJoueurs] = Math.min(12, Math.max(1, Math.round(Number(valeur) || 1)));
+  const v = variables();
+  v[cle] = { ...(v[cle] || {}), [mode]: table };
+  // Les anciens réglages uniques ne doivent pas ressurgir derrière le tableau.
+  delete v[vert ? 'cartesVert' : 'cartesPourGagner'];
+  enregistrerReglages(v);
+}
+
 export function variables() {
   return reglagesCourants();
 }
@@ -97,11 +157,19 @@ export function construireConfig(nbJoueurs) {
     // Le tableau des lots se lit par ligne, plus bas : ni l'ancien nombre unique
     // ni le tableau lui-même n'ont à être recopiés tels quels dans la config.
     if (cle === 'lots' || cle === 'lotsParJoueurs') continue;
+    // Même chose pour les cartes : elles se lisent par ligne, plus bas.
+    if (cle === 'cartesPourGagner' || cle === 'cartesVert') continue;
+    if (cle === 'cartesParMode' || cle === 'cartesVertParMode') continue;
     if (v.suivreTableau !== false && CHAMPS_MISE_EN_PLACE.includes(cle)) continue;
     cfg[cle] = Array.isArray(val) ? val.slice() : val;
   }
   // Combien de lots tournent, à cet effectif-là : la ligne du tableau.
   cfg.lots = lotsPour(tableLots(v), nbJoueurs);
+  // Et combien de cartes il faut pour gagner — le Vert ayant la sienne, il joue
+  // seul contre deux équipes.
+  const mode = modeManche(cfg);
+  cfg.cartesPourGagner = cartesPour(tableCartes(mode, v), mode, nbJoueurs);
+  cfg.cartesVert = cartesVertPour(tableCartesVert(mode, v), mode, nbJoueurs);
   // Des réglages enregistrés avant le renommage des faces (v1.3) porteraient
   // encore « cloche » et « étoile » : on les retraduit plutôt que de laisser au
   // dé des symboles que plus rien ne reconnaît.
@@ -241,6 +309,71 @@ function carteApparence(sym, rafraichir) {
         : null,
     ),
     message,
+  );
+}
+
+/**
+ * Le tableau des cartes pour gagner : une colonne par nombre de joueurs, et
+ * deux lignes — les équipes, puis le joueur Vert, qui joue seul contre elles.
+ *
+ * Le tableau est propre au mode de jeu affiché : les manches n'ont pas la même
+ * durée d'un mode à l'autre, un objectif posé pour l'un n'a rien à faire dans
+ * l'autre.
+ */
+function tableauCartes(nbCourant, mode, rafraichir) {
+  const equipes = tableCartes(mode);
+  const vert = tableCartesVert(mode);
+  const officielles = cartesOfficielles(mode);
+  const surMesure = NOMBRES_JOUEURS.some((n) => equipes[n] !== officielles[n]
+    || (n % 2 === 1 && vert[n] !== equipes[n]));
+  const champ = (n, valeur, estVert) => h('input.champ-mini', {
+    type: 'number', value: valeur, min: 1, max: 12, step: 1,
+    title: estVert
+      ? `Cartes que le joueur Vert doit réunir à ${n} joueurs`
+      : `Cartes qu’une équipe doit réunir à ${n} joueurs — par défaut ${officielles[n]}`,
+    onchange: (e) => { ecrireCartes(mode, n, e.target.value, estVert); rafraichir(); },
+  });
+  return h('div', { style: { marginTop: '16px' } },
+    h('div.rangee', { style: { marginBottom: '8px' } },
+      h('div.titre-section', { style: { margin: 0 } }, 'Cartes pour gagner, par nombre de joueurs'),
+      h('div.pousse'),
+      surMesure
+        ? h('button.btn.btn--petit', {
+            title: `Remettre les valeurs de départ du mode ${NOM_MODE[mode]}`,
+            onclick: () => {
+              const v = variables();
+              if (v.cartesParMode) delete v.cartesParMode[mode];
+              if (v.cartesVertParMode) delete v.cartesVertParMode[mode];
+              delete v.cartesPourGagner;
+              delete v.cartesVert;
+              enregistrerReglages(v);
+              rafraichir();
+            },
+          }, 'Valeurs de départ')
+        : null,
+    ),
+    h('div.tbl-defile', h('table.tbl.tbl--lots',
+      h('thead', h('tr',
+        h('th', 'Joueurs'),
+        ...NOMBRES_JOUEURS.map((n) => h('th.num', { class: n === nbCourant ? 'col-courante' : '' },
+          String(n))))),
+      h('tbody',
+        h('tr',
+          h('td', 'Une équipe'),
+          ...NOMBRES_JOUEURS.map((n) => h('td.num', { class: n === nbCourant ? 'col-courante' : '' },
+            champ(n, equipes[n], false)))),
+        h('tr',
+          h('td', 'Le joueur Vert'),
+          // Le Vert n'existe qu'à nombre impair : ailleurs, la case n'aurait
+          // personne à qui s'appliquer.
+          ...NOMBRES_JOUEURS.map((n) => h('td.num', { class: n === nbCourant ? 'col-courante' : '' },
+            n % 2 === 1 ? champ(n, vert[n], true) : h('span.mini.muted', '—')))),
+      ))),
+    h('p.mini.muted', { style: { marginTop: '8px' } },
+      `Mode ${NOM_MODE[mode]} : ${officielles[3]} cartes par défaut, quel que soit l’effectif. `
+      + 'À nombre impair le Vert joue seul contre deux équipes — c’est l’asymétrie la plus '
+      + 'sensible du jeu, et cette ligne est là pour la corriger. La même valeur que les '
+      + 'équipes le fait gagner aux mêmes conditions.'),
   );
 }
 
@@ -647,16 +780,12 @@ export function vueVariables() {
           estCompromis(cfg)
             ? num('Jetons à l’Abri', cfg.jetonsRefuge, 'jetonsRefuge', { min: 1, max: 6 })
             : null,
-          num('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner',
-            { min: 1, max: 12 }),
-          // Le Vert n'existe qu'à nombre impair : ailleurs, le champ n'aurait
-          // personne à qui s'appliquer.
-          nb % 2
-            ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner, 'cartesVert',
-                { min: 1, max: 12 })
-            : null,
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
         ),
+
+        // Les cartes pour gagner ne sont pas un nombre : elles dépendent du
+        // nombre de joueurs, et le Vert — seul contre deux équipes — a le sien.
+        tableauCartes(nb, modeManche(cfg), dessiner),
 
         // Qui ouvre la partie. Seule la première manche est concernée : les
         // suivantes reviennent toujours aux perdants de la précédente.

@@ -231,6 +231,13 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   base) ou la version **sans les points** ;
 - nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
   face** — depuis les options de partie comme depuis le Laboratoire ;
+- **les cartes pour gagner, une ligne par nombre de joueurs et par mode**
+  (`cartesParMode`, `cartesVertParMode`) : le joueur Vert, seul contre deux
+  équipes, a sa propre ligne. Les tableaux sont gardés par mode parce que la
+  valeur de départ en dépend — 3 cartes avec les jetons, 4 en Immédiat, 5 en
+  Compromis — et qu'un objectif posé pour un mode n'a rien à faire dans un autre,
+  où les manches n'ont pas la même durée. Mesuré à 5 joueurs en Compromis : le
+  Vert gagne 28 parties sur 60 à 2 cartes, 2 sur 60 à 5 ;
 - **les lots en jeu, une ligne par nombre de joueurs** (`lotsParJoueurs`) : trois
   lots à six joueurs n'ont rien à voir avec trois lots à trois, le réglage porte
   donc un tableau complet et la partie y lit sa ligne (`lotsPour`). C'était un

@@ -1,21 +1,23 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.52';
-import { store } from './store.js?v=1.52';
-import { aller } from './app.js?v=1.52';
-import { eveillerSons } from './sons.js?v=1.52';
-import { lancerPartie, partieEnCours } from './table.js?v=1.52';
-import { construireConfig, variables, ecrireLots } from './variables.js?v=1.52';
+import { h, remplacer } from './dom.js?v=1.53';
+import { store } from './store.js?v=1.53';
+import { aller } from './app.js?v=1.53';
+import { eveillerSons } from './sons.js?v=1.53';
+import { lancerPartie, partieEnCours } from './table.js?v=1.53';
+import {
+  construireConfig, variables, ecrireLots, ecrireCartes,
+} from './variables.js?v=1.53';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   OPTIONS_MANCHE, cartesDuMode, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.52';
-import { nomSymbole } from './apparence.js?v=1.52';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.52';
-import { randomSeed } from '../core/rng.js?v=1.52';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.52';
+} from '../core/config.js?v=1.53';
+import { nomSymbole } from './apparence.js?v=1.53';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.53';
+import { randomSeed } from '../core/rng.js?v=1.53';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.53';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -202,6 +204,8 @@ export function vueAccueil() {
           x = Math.min(opts.max ?? 99, Math.max(opts.min ?? 1, x));
           if (cle === 'lots') {
             ecrireLots(nb, x);
+          } else if (cle === 'cartesPourGagner' || cle === 'cartesVert') {
+            ecrireCartes(modeManche(cfg), nb, x, cle === 'cartesVert');
           } else {
             ecrireReglage(cle, x);
             // Toucher une valeur de mise en place, c'est quitter le tableau
@@ -254,7 +258,13 @@ export function vueAccueil() {
           nb % 2 && estJeton(cfg)
             ? champ('Jetons du Vert', cfg.jetonsVert, 'jetonsVert', { min: 1, max: 12 })
             : null,
+          // Les cartes ont un tableau par effectif et par mode : depuis
+          // l'accueil, on écrit dans la ligne de la table qu'on compose.
           champ('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner', { min: 1, max: 12 }),
+          nb % 2
+            ? champ('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner, 'cartesVert',
+                { min: 1, max: 12 })
+            : null,
           ligneApercu('Cartes Tornade en jeu',
             `${cartesEnJeu(cfg).length} sur ${cartesDuMode(cfg).length}`),
           ligneApercu('Lancer / constat / passage',

@@ -11,6 +11,7 @@ import {
   COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs, MISE_EN_PLACE,
   MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
+  cartesPour, cartesVertPour, cartesOfficielles,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -1344,6 +1345,46 @@ console.log('\nLes bornes du jeu');
   verifier('assainirConfig borne le sien', assainirConfig({ nbJoueurs: 9 }).nbJoueurs === 8);
   verifier('la mise en place hors bornes rend la ligne la plus proche',
     infosMiseEnPlace(9) === MISE_EN_PLACE[8]);
+}
+
+// ── 3 septies bis. Les cartes pour gagner, par table et par équipe ──────────
+console.log('\nCartes pour gagner');
+{
+  for (const [mode, attendu] of [['jeton', 3], ['immediat', 4], ['compromis', 5]]) {
+    const off = cartesOfficielles(mode);
+    verifier(`mode ${mode} : ${attendu} cartes par défaut à toutes les tables`,
+      NOMBRES_JOUEURS.every((n) => off[n] === attendu));
+  }
+  verifier('une ligne réglée l’emporte', cartesPour({ 6: 7 }, 'jeton', 6) === 7);
+  verifier('une ligne absente retombe sur le défaut du mode',
+    cartesPour({ 6: 7 }, 'immediat', 5) === 4);
+  for (const mauvais of [null, {}, { 6: 0 }, { 6: -2 }, { 6: 'trois' }]) {
+    if (cartesPour(mauvais, 'jeton', 6) !== 3) {
+      verifier(`une ligne aberrante retombe sur le défaut (${JSON.stringify(mauvais)})`, false);
+    }
+  }
+  verifier('une ligne aberrante retombe sur le défaut, quelle qu’elle soit', true);
+
+  // Le Vert n'existe qu'à nombre impair, et gagne aux mêmes conditions sans
+  // réglage propre.
+  verifier('le Vert n’a pas d’objectif à nombre pair', cartesVertPour({ 6: 2 }, 'jeton', 6) === null);
+  verifier('sans réglage, il gagne comme les équipes', cartesVertPour({}, 'compromis', 5) === 5);
+  verifier('avec réglage, il a le sien', cartesVertPour({ 5: 2 }, 'compromis', 5) === 2);
+
+  // Et le moteur l'applique : c'est le levier d'équilibrage du Vert.
+  const spec = Array.from({ length: 5 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const compte = (cartesVert) => {
+    const cfg = { ...configParDefaut(5, { modeManche: 'compromis' }), cartesVert };
+    let gagnees = 0;
+    for (let g = 0; g < 60; g++) {
+      if (new Moteur(cfg, spec, `objectif-vert-${g}`).jouerJusquAuBout().vainqueur === 'vert') gagnees++;
+    }
+    return gagnees;
+  };
+  const facile = compte(2);
+  const dur = compte(5);
+  verifier(`le Vert gagne ${facile}/60 à 2 cartes et ${dur}/60 à 5 — l’objectif pèse`,
+    facile > dur * 2);
 }
 
 // ── 3 septies bis bis. Les lots, une ligne par nombre de joueurs ────────────
