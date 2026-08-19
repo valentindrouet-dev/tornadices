@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.51';
+export const VERSION = '1.52';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.52',
+    date: '19/08/2026',
+    notes: [
+      'La fiche de règles ne décrit plus une seule table : sa mise en place est un tableau de trois à huit joueurs — équipes, lots, dés par lot, jetons, cartes pour gagner — et la ligne de votre table est mise en relief. On sort la feuille une fois, elle sert quel que soit l’effectif du soir.',
+      'Le joueur Vert a sa section : à quels effectifs il existe, ses jetons, son objectif en cartes, ses combinaisons propres si vous les avez réglées à part, et la carte Tornade qui le désigne — celle qui sort du paquet à nombre pair, faute de Vert à désigner. Quand ses exigences diffèrent, le tableau des combinaisons gagne une colonne « Dés du Vert » ; sinon elle n’apparaît pas, plutôt que de répéter la précédente.',
+      'Les dés d’une combinaison tiennent désormais sur une seule ligne, quel qu’en soit le nombre : une exigence de quatre dés coupée en deux se lisait mal. Les en-têtes des colonnes étroites ne se coupent plus non plus.',
+    ],
+  },
   {
     version: '1.51',
     date: '19/08/2026',

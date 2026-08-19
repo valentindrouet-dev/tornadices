@@ -12,20 +12,27 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.51';
-import { store } from './store.js?v=1.51';
-import { aller } from './app.js?v=1.51';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.51';
-import { nomSymbole } from './apparence.js?v=1.51';
-import { construireConfig } from './variables.js?v=1.51';
-import { nomActif } from './profils.js?v=1.51';
-import { VERSION } from '../version.js?v=1.51';
+import { h, remplacer } from './dom.js?v=1.52';
+import { store } from './store.js?v=1.52';
+import { aller } from './app.js?v=1.52';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.52';
+import { nomSymbole } from './apparence.js?v=1.52';
+import { construireConfig } from './variables.js?v=1.52';
+import { nomActif } from './profils.js?v=1.52';
+import { VERSION } from '../version.js?v=1.52';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
-  infosMiseEnPlace,
-} from '../core/config.js?v=1.51';
+  infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe,
+} from '../core/config.js?v=1.52';
+
+/** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
+const desRequis = (requis, taille = 21) =>
+  h('span.fiche-des', suiteSymboles(requis, taille));
+
+/** Vrai s'il y a un joueur Vert à cette table : il n'existe qu'à nombre impair. */
+const avecVert = (nb) => nb % 2 === 1;
 
 /** Une section de la fiche : un titre, puis ce qu'il y a à dire. */
 const section = (titre, ...contenu) => h('section.fiche-bloc',
@@ -39,8 +46,9 @@ export function vueFiche() {
   const nb = bornerJoueurs(store.get('nbJoueurs', 6));
   const cfg = construireConfig(nb);
   const mode = modeManche(cfg);
-  const sieges = placement(nb);
-  const equipes = [...new Set(sieges)];
+  // La fiche vaut pour toutes les tables, pas seulement celle de ce soir : on
+  // construit la configuration de chaque effectif, de trois à huit.
+  const parEffectif = Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, construireConfig(n)]));
 
   remplacer(racine,
     // Les commandes : elles ne s'impriment pas.
@@ -58,15 +66,16 @@ export function vueFiche() {
       + '« Enregistrer au format PDF ».'),
 
     h('article.fiche',
-      enTete(cfg, nb, mode),
-      miseEnPlace(cfg, nb, equipes),
+      enTete(cfg, mode),
+      miseEnPlace(cfg, nb, parEffectif),
       leDe(cfg),
       lesCombinaisons(cfg),
       leTour(cfg),
       gagnerLaManche(cfg, mode),
       lAttrape(cfg, mode),
+      leJoueurVert(cfg, parEffectif),
       lesCartes(cfg, mode),
-      finDePartie(cfg, mode),
+      finDePartie(cfg, mode, parEffectif),
       h('p.fiche-pied',
         `TornaDice — jeu de Sylvain Bonnafous, édité par Big Budi Games. `
         + `Fiche produite par la table virtuelle, version ${VERSION}, `
@@ -76,42 +85,65 @@ export function vueFiche() {
   return racine;
 }
 
-function enTete(cfg, nb, mode) {
+function enTete(cfg, mode) {
   return h('header.fiche-entete',
     h('h1.fiche-jeu', 'TORNADICE'),
     h('p.fiche-sous',
-      `Règles de la partie · ${nb} joueurs · façon de jouer une manche : ${NOM_MODE[mode]}`),
+      `Règles de la partie · de 3 à 8 joueurs · façon de jouer une manche : ${NOM_MODE[mode]}`),
   );
 }
 
-function miseEnPlace(cfg, nb, equipes) {
-  const mep = infosMiseEnPlace(nb);
+/**
+ * La mise en place, de trois à huit joueurs.
+ *
+ * La fiche ne décrit pas une table mais le jeu réglé : on la sort une fois, et
+ * elle doit servir quel que soit le nombre de joueurs du soir. Chaque ligne est
+ * construite avec la configuration de son effectif — les lots viennent du
+ * tableau réglé, les jetons et les cartes de la mise en place.
+ */
+function miseEnPlace(cfg, nb, parEffectif) {
   const depart = COULEURS_EQUIPE[cfg.equipeDepart] || COULEURS_EQUIPE.jaune;
-  const vert = equipes.includes('vert');
   return section('Mise en place',
-    h('table.tbl.fiche-tbl',
-      h('tbody',
-        ligne('Joueurs', `${nb} — ${equipes.map((id) => {
-          const n = COULEURS_EQUIPE[id];
-          const combien = nb === 3 && id !== 'vert' ? 1 : Math.floor((nb - (vert ? 1 : 0)) / 2);
-          return id === 'vert' ? `${n.emblemeUn} (1)` : `${n.emblemeNom} (${combien})`;
-        }).join(', ')}`),
-        ligne('Lots de dés en jeu', cfg.lots),
-        ligne('Dés par lot', cfg.desParLot),
-        estJeton(cfg) ? ligne('Jetons par équipe', cfg.jetons) : null,
-        estJeton(cfg) && vert ? ligne('Jetons du joueur Vert', cfg.jetonsVert) : null,
-        estCompromis(cfg) ? ligne('Jetons de sa couleur, par équipe', cfg.jetonsRefuge) : null,
-        ligne('Cartes Tornade pour gagner', cfg.cartesPourGagner),
-        vert && cfg.cartesVert ? ligne('Cartes pour le joueur Vert', cfg.cartesVert) : null,
-        ligne('Qui prend les lots à la première manche', depart.nom),
-      )),
+    h('table.tbl.fiche-tbl.fiche-tbl--mep',
+      h('thead', h('tr',
+        h('th.num', 'Joueurs'),
+        h('th', 'Équipes'),
+        h('th.num', 'Lots'),
+        h('th.num', 'Dés par lot'),
+        estJeton(cfg) ? h('th.num', 'Jetons par équipe') : null,
+        estJeton(cfg) ? h('th.num', 'Jetons du Vert') : null,
+        estCompromis(cfg) ? h('th.num', 'Jetons de sa couleur') : null,
+        h('th.num', 'Cartes pour gagner'))),
+      h('tbody', ...NOMBRES_JOUEURS.map((n) => {
+        const c = parEffectif[n];
+        const vert = avecVert(n);
+        const parEquipe = Math.floor((n - (vert ? 1 : 0)) / 2);
+        return h('tr', { class: n === nb ? 'fiche-ligne-courante' : '' },
+          h('td.num', h('strong', String(n))),
+          h('td.petit', vert
+            ? `${parEquipe} + ${parEquipe} + le Vert`
+            : `${parEquipe} + ${parEquipe}`),
+          h('td.num', c.lots),
+          h('td.num', c.desParLot),
+          estJeton(cfg) ? h('td.num', c.jetons) : null,
+          estJeton(cfg) ? h('td.num', vert ? c.jetonsVert : '—') : null,
+          estCompromis(cfg) ? h('td.num', c.jetonsRefuge) : null,
+          h('td.num', vert && c.cartesVert && c.cartesVert !== c.cartesPourGagner
+            ? `${c.cartesPourGagner} · Vert ${c.cartesVert}`
+            : c.cartesPourGagner));
+      }))),
     h('p.fiche-note',
-      'Aux manches suivantes, les dés reviennent toujours aux perdants de la manche '
+      `Les Bleus sont les ${COULEURS_EQUIPE.bleu.emblemeNom}, les Jaunes les `
+      + `${COULEURS_EQUIPE.jaune.emblemeNom}. À nombre impair, un joueur reste seul : `
+      + `le ${COULEURS_EQUIPE.vert.emblemeUn}, en vert, qui forme une équipe à lui tout seul.`),
+    h('p.fiche-note',
+      `${depart.nom} prennent les lots à la première manche`
+      + (cfg.equipeDepart === 'vert' ? '.' : ', et le Vert avec eux.')
+      + ' Aux manches suivantes, les dés reviennent toujours aux perdants de la manche '
       + 'précédente. Chaque joueur ne tient qu’un lot à la fois'
-      + (cfg.lotsCumules ? ', sauf quand deux lots se rejoignent — ils s’empilent alors dans la même main.' : ' ; deux lots qui se rejoignent se poussent l’un l’autre.')),
-    cfg.lots !== mep.lots
-      ? h('p.fiche-note', `Le tableau officiel prévoit ${mep.lots} lots à ${nb} joueurs.`)
-      : null,
+      + (cfg.lotsCumules
+        ? ', sauf quand deux lots se rejoignent — ils s’empilent alors dans la même main.'
+        : ' ; deux lots qui se rejoignent se poussent l’un l’autre.')),
   );
 }
 
@@ -137,20 +169,34 @@ function lesCombinaisons(cfg) {
     active: 'Tornade éveillée',
     toutes: 'les deux états',
   };
+  const asym = !!cfg.combosAsymetriques && cfg.combos.some((c) => difference(cfg, c));
   const lignes = cfg.combos
     .filter((c) => comboPossible(cfg.faces, c.requis))
     .map((c) => h('tr',
       h('td.fiche-combo-nom', c.nom),
-      h('td', h('span.rangee.rangee--serree', suiteSymboles(c.requis, 22))),
+      h('td.fiche-col-des', desRequis(c.requis)),
+      asym
+        ? h('td.fiche-col-des', difference(cfg, c)
+            ? desRequis(requisPourEquipe(cfg, c.id, c.requis, 'vert'))
+            : h('span.mini.muted', 'les mêmes'))
+        : null,
       h('td.petit', ETAT[c.face] || ETAT.toutes),
       h('td.petit', effetCombo(cfg, c))));
   const mortes = cfg.combos.filter((c) => !comboPossible(cfg.faces, c.requis));
   return section('Les combinaisons',
     h('table.tbl.fiche-tbl',
       h('thead', h('tr',
-        h('th', 'Combinaison'), h('th', 'Dés requis'),
+        h('th', 'Combinaison'),
+        h('th', 'Dés requis'),
+        asym ? h('th', 'Dés du Vert') : null,
         h('th', 'Possible quand'), h('th', 'Effet'))),
       h('tbody', ...lignes)),
+    asym
+      ? h('p.fiche-note',
+          `Le joueur Vert joue seul contre deux équipes : certaines combinaisons lui demandent `
+          + 'autre chose. La colonne « Dés du Vert » ne vaut que pour lui ; « les mêmes » veut '
+          + 'dire qu’il joue l’exigence des deux équipes.')
+      : null,
     h('p.fiche-note',
       'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
       + 'ensuite vers le voisin, puis l’effet s’applique. Quand plusieurs combinaisons sortent '
@@ -161,6 +207,12 @@ function lesCombinaisons(cfg) {
           + 'la combinaison demande des faces qu’il ne porte pas.')
       : null,
   );
+}
+
+/** L'exigence du Vert diffère-t-elle de celle des deux équipes ? */
+function difference(cfg, combo) {
+  const propre = requisPourEquipe(cfg, combo.id, combo.requis, 'vert');
+  return JSON.stringify(propre) !== JSON.stringify(combo.requis);
 }
 
 /**
@@ -287,24 +339,65 @@ function lesCartes(cfg, mode) {
         return h('tr',
           h('td.fiche-combo-nom', c.court || c.nom),
           estCompromis(cfg) ? h('td.num', String(refugePour(cfg, c))) : null,
-          h('td', requis
-            ? h('span.rangee.rangee--serree', suiteSymboles(requis, 20))
-            : h('span.mini.muted', '—')),
+          h('td.fiche-col-des', requis ? desRequis(requis, 19) : h('span.mini.muted', '—')),
           h('td.petit', c.texte));
       }))),
   );
 }
 
-function finDePartie(cfg, mode) {
+/**
+ * Le joueur Vert : il n'existe qu'à nombre impair, et tout ce qui le distingue
+ * tient ici plutôt que dispersé en notes de bas de tableau.
+ */
+function leJoueurVert(cfg, parEffectif) {
+  const vert = COULEURS_EQUIPE.vert;
+  const impairs = NOMBRES_JOUEURS.filter(avecVert);
+  const combosPropres = cfg.combos.filter((c) => cfg.combosAsymetriques && difference(cfg, c));
+  const cowboy = cartesDuMode(cfg)
+    .find((c) => c.equipeRequise === 'vert' && cartesEnJeu(cfg).includes(c.id));
+  // « Un autre nombre » ne se dit que s'il est vraiment autre : régler l'objectif
+  // du Vert à la même valeur que les équipes ne change rien.
+  const cartesVert = impairs.filter((n) => parEffectif[n].cartesVert
+    && parEffectif[n].cartesVert !== parEffectif[n].cartesPourGagner);
+  return section(`Le joueur Vert — le ${vert.emblemeUn}`,
+    h('p', `À ${impairs.join(', ')} joueurs, la table ne se partage pas en deux : un joueur `
+      + 'reste seul et forme une équipe à lui tout seul, en vert. Il ferme la ronde, entre un '
+      + 'Jaune et un Bleu.'),
+    h('p', 'Il joue exactement comme les autres — mêmes dés, mêmes combinaisons, même façon de '
+      + 'prendre une manche — mais il les joue seul contre deux équipes. C’est l’asymétrie la '
+      + 'plus sensible du jeu, et les réglages ci-dessous sont là pour la corriger.'),
+    h('ul.fiche-liste',
+      estJeton(cfg)
+        ? h('li', `Il a ses propres jetons : ${impairs.map((n) => `${parEffectif[n].jetonsVert} à ${n} joueurs`).join(', ')}.`)
+        : null,
+      cartesVert.length
+        ? h('li', 'Il lui faut un autre nombre de cartes pour gagner : '
+            + `${cartesVert.map((n) => `${parEffectif[n].cartesVert} à ${n} joueurs`).join(', ')}.`)
+        : h('li', 'Il lui faut le même nombre de cartes que les deux équipes pour gagner.'),
+      combosPropres.length
+        ? h('li', 'Certaines combinaisons lui demandent autre chose — voir la colonne qui lui '
+            + `est réservée dans le tableau des combinaisons : ${combosPropres.map((c) => c.nom).join(', ')}.`)
+        : h('li', 'Ses combinaisons sont celles de tout le monde.'),
+      cowboy
+        ? h('li', `La carte « ${cowboy.court || cowboy.nom} » le désigne : ${cowboy.texte} `
+            + 'À nombre pair, elle sort du paquet — elle ne désignerait personne.')
+        : null,
+      cfg.equipeDepart === 'vert'
+        ? h('li', 'C’est lui qui ouvre la première manche.')
+        : h('li', 'Il prend les dés avec l’équipe qui ouvre la première manche.'),
+    ),
+  );
+}
+
+function finDePartie(cfg, mode, parEffectif) {
+  const cartes = [...new Set(NOMBRES_JOUEURS.map((n) => parEffectif[n].cartesPourGagner))];
   return section('Fin de partie',
     h('p', estJeton(cfg)
-      ? `L’équipe qui remporte une manche prend une carte Tornade. La première à en réunir `
-        + `${cfg.cartesPourGagner} gagne la partie.`
-      : `L’équipe qui remporte une manche prend la carte Tornade en cours. La première à en `
-        + `réunir ${cfg.cartesPourGagner} gagne la partie.`),
-    cfg.cartesVert
-      ? h('p.fiche-note',
-          `Le joueur Vert joue seul contre deux équipes : il lui en faut ${cfg.cartesVert}.`)
-      : null,
+      ? 'L’équipe qui remporte une manche prend une carte Tornade.'
+      : 'L’équipe qui remporte une manche prend la carte Tornade en cours.'),
+    h('p', cartes.length === 1
+      ? `La première à en réunir ${cartes[0]} gagne la partie, quel que soit le nombre de joueurs.`
+      : 'La première à réunir le nombre de cartes de sa table — voir la mise en place — gagne '
+        + 'la partie.'),
   );
 }

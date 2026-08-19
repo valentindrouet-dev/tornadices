@@ -1410,3 +1410,14 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   .fiche-titre { break-after: avoid; }
   a[href]::after { content: none !important; }
 }
+
+/* Les dés d'une exigence tiennent sur une ligne : une combinaison de quatre dés
+   coupée en deux se lit mal, et la colonne a la place de s'élargir. */
+.fiche-des { display: inline-flex; flex-wrap: nowrap; gap: 4px; white-space: nowrap; }
+.fiche-col-des { white-space: nowrap; width: 1%; }
+/* Les en-têtes ne se coupent pas en confettis : la colonne des dés est déjà
+   étroite, son titre tient sur une ou deux lignes courtes. */
+.fiche-tbl th { white-space: nowrap; }
+.fiche-tbl th:last-child, .fiche-tbl--mep th { white-space: normal; }
+.fiche-tbl--mep th { font-size: 10.5px; }
+.fiche-ligne-courante { background: var(--accent-clair); }

@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.51';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.51';
-import { nomSymbole } from './apparence.js?v=1.51';
-import { store } from './store.js?v=1.51';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.51';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.52';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.52';
+import { nomSymbole } from './apparence.js?v=1.52';
+import { store } from './store.js?v=1.52';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.52';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -15,13 +15,13 @@ import {
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
   NOM_MODE, modeManche, estJeton, estCompromis, refugePour,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.51';
-import { tableauCombos } from './combos.js?v=1.51';
-import { barreProfils, idActif } from './profils.js?v=1.51';
-import { construireConfig, tableLots } from './variables.js?v=1.51';
+} from '../core/config.js?v=1.52';
+import { tableauCombos } from './combos.js?v=1.52';
+import { barreProfils, idActif } from './profils.js?v=1.52';
+import { construireConfig, tableLots } from './variables.js?v=1.52';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.51';
+} from '../core/proba.js?v=1.52';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.

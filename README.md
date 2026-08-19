@@ -177,6 +177,15 @@ et sans dépendance. La fiche est un document HTML propre ; `@media print` effac
 la barre et les boutons, et le navigateur écrit le PDF lui-même
 (« Enregistrer au format PDF » dans sa boîte d'impression).
 
+La fiche ne décrit pas une table mais le jeu réglé : on la sort une fois et elle
+sert quel que soit l'effectif du soir. La mise en place est donc **un tableau de
+3 à 8 joueurs** — chaque ligne construite avec `construireConfig(n)`, donc avec
+les lots de son effectif — et la table du jour y est mise en relief. Le joueur
+Vert a sa section : quand il existe, ses jetons, son objectif, ses combinaisons
+propres si l'asymétrie est cochée, et la carte qui le désigne. Quand ces
+exigences diffèrent, le tableau des combinaisons gagne une colonne « Dés du
+Vert » ; sinon elle n'apparaît pas.
+
 Les libellés ne sont pas recopiés de la référence : ils décrivent ce que la
 partie fera vraiment. `effetCombo()` réécrit l'Abri selon le mode — retourner un
 jeton, remporter la manche, poser un jeton sur le Refuge — et donne à la
