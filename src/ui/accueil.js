@@ -1,27 +1,27 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.47';
-import { store } from './store.js?v=1.47';
-import { aller } from './app.js?v=1.47';
-import { eveillerSons } from './sons.js?v=1.47';
-import { lancerPartie, partieEnCours } from './table.js?v=1.47';
-import { construireConfig, variables } from './variables.js?v=1.47';
+import { h, remplacer } from './dom.js?v=1.48';
+import { store } from './store.js?v=1.48';
+import { aller } from './app.js?v=1.48';
+import { eveillerSons } from './sons.js?v=1.48';
+import { lancerPartie, partieEnCours } from './table.js?v=1.48';
+import { construireConfig, variables, ecrireLots } from './variables.js?v=1.48';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   OPTIONS_MANCHE, cartesDuMode, cartesEnJeu,
-} from '../core/config.js?v=1.47';
-import { nomSymbole } from './apparence.js?v=1.47';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.47';
-import { randomSeed } from '../core/rng.js?v=1.47';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.47';
+} from '../core/config.js?v=1.48';
+import { nomSymbole } from './apparence.js?v=1.48';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.48';
+import { randomSeed } from '../core/rng.js?v=1.48';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.48';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
 ];
 
 /** Les valeurs qui décrochent du tableau officiel dès qu'on y touche. */
-const CHAMPS_TABLEAU = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
+const CHAMPS_TABLEAU = ['jetons', 'jetonsVert', 'cartesPourGagner'];
 
 /** Écrit un réglage de partie, comme le ferait la page Réglages. */
 function ecrireReglage(cle, valeur) {
@@ -197,10 +197,14 @@ export function vueAccueil() {
           let x = Number(e.target.value);
           if (!isFinite(x)) return;
           x = Math.min(opts.max ?? 99, Math.max(opts.min ?? 1, x));
-          ecrireReglage(cle, x);
-          // Toucher une valeur de mise en place, c'est quitter le tableau
-          // officiel — comme dans les Réglages, sans case à décocher d'abord.
-          if (CHAMPS_TABLEAU.includes(cle)) ecrireReglage('suivreTableau', false);
+          if (cle === 'lots') {
+            ecrireLots(nb, x);
+          } else {
+            ecrireReglage(cle, x);
+            // Toucher une valeur de mise en place, c'est quitter le tableau
+            // officiel — comme dans les Réglages, sans case à décocher d'abord.
+            if (CHAMPS_TABLEAU.includes(cle)) ecrireReglage('suivreTableau', false);
+          }
           dessiner();
         },
       })),
@@ -234,7 +238,9 @@ export function vueAccueil() {
       h('table.tbl',
         h('tbody',
           champ('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
-          champ('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9 }),
+          // Les lots ont un tableau par effectif : depuis l'accueil, on écrit
+          // dans la ligne de la table qu'on est en train de composer.
+          champ('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 12 }),
           cfg.sansPoints
             ? null
             : champ('Jetons par équipe', cfg.jetons, 'jetons', { min: 1, max: 12 }),

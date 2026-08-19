@@ -8,7 +8,7 @@ import {
   TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
-  COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil,
+  COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -1253,6 +1253,25 @@ console.log('\nTornades du mode sans les points');
     verifier(`${n} joueurs — 80 parties au bout (${JSON.stringify(r.raisons)})`,
       r.raisons.manchesMax === undefined);
   }
+}
+
+// ── 3 septies bis bis. Les lots, une ligne par nombre de joueurs ────────────
+console.log('\nLots en jeu, par nombre de joueurs');
+{
+  const officiels = lotsOfficiels();
+  verifier(`le tableau officiel couvre les sept tables (${NOMBRES_JOUEURS.join(', ')})`,
+    NOMBRES_JOUEURS.every((n) => officiels[n] === infosMiseEnPlace(n).lots));
+  verifier('une ligne réglée l’emporte', lotsPour({ 5: 6 }, 5) === 6);
+  verifier('une ligne absente retombe sur l’officiel',
+    lotsPour({ 5: 6 }, 6) === officiels[6]);
+  for (const mauvais of [null, undefined, {}, { 6: 0 }, { 6: -3 }, { 6: 'trois' }, { 6: NaN }]) {
+    if (lotsPour(mauvais, 6) !== officiels[6]) {
+      verifier(`une ligne aberrante retombe sur l’officiel (${JSON.stringify(mauvais)})`, false);
+    }
+  }
+  verifier('une ligne aberrante retombe sur l’officiel, quelle qu’elle soit', true);
+  verifier('une ligne démesurée est ramenée à douze lots', lotsPour({ 6: 400 }, 6) === 12);
+  verifier('une ligne décimale est arrondie', lotsPour({ 6: 3.6 }, 6) === 4);
 }
 
 // ── 3 septies bis ter. Le compte rendu d'une manche ─────────────────────────

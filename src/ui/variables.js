@@ -3,13 +3,13 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.47';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.47';
-import { store } from './store.js?v=1.47';
-import { aller } from './app.js?v=1.47';
-import { lancerPartie } from './table.js?v=1.47';
+import { h, remplacer } from './dom.js?v=1.48';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.48';
+import { store } from './store.js?v=1.48';
+import { aller } from './app.js?v=1.48';
+import { lancerPartie } from './table.js?v=1.48';
 import {
-  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES, SYMBOLES,
+  configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
@@ -17,21 +17,59 @@ import {
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.47';
-import { tableauCombos, editeurCases } from './combos.js?v=1.47';
+  NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
+} from '../core/config.js?v=1.48';
+import { tableauCombos, editeurCases } from './combos.js?v=1.48';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.47';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.47';
-import { randomSeed } from '../core/rng.js?v=1.47';
-import { reglagesJoueurs } from './accueil.js?v=1.47';
+} from './apparence.js?v=1.48';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.48';
+import { randomSeed } from '../core/rng.js?v=1.48';
+import { reglagesJoueurs } from './accueil.js?v=1.48';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.47';
+} from './profils.js?v=1.48';
 
-const CHAMPS_MISE_EN_PLACE = ['lots', 'jetons', 'jetonsVert', 'cartesPourGagner'];
+// « lots » n'est plus de la partie : il a son propre tableau, une ligne par
+// nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
+const CHAMPS_MISE_EN_PLACE = ['jetons', 'jetonsVert', 'cartesPourGagner'];
+
+/**
+ * Le tableau des lots en jeu, une ligne par nombre de joueurs.
+ *
+ * Avant la v1.48 le réglage ne portait qu'un seul nombre, celui du dernier
+ * effectif réglé : on ne savait plus pour quelle table il avait été posé. Un
+ * réglage ancien repose donc sa valeur sur la ligne de l'effectif d'alors, et
+ * les autres lignes reprennent le tableau officiel.
+ */
+export function tableLots(v = variables()) {
+  const table = lotsOfficiels();
+  if (v.lotsParJoueurs && typeof v.lotsParJoueurs === 'object') {
+    for (const n of NOMBRES_JOUEURS) {
+      const x = Number(v.lotsParJoueurs[n]);
+      if (Number.isFinite(x) && x >= 1) table[n] = Math.min(12, Math.round(x));
+    }
+    return table;
+  }
+  if (v.suivreTableau === false && Number(v.lots) >= 1) {
+    const herite = store.get('nbJoueurs', 6);
+    table[herite] = Math.min(12, Math.round(Number(v.lots)));
+  }
+  return table;
+}
+
+/** Écrit une ligne du tableau des lots. */
+export function ecrireLots(nbJoueurs, valeur) {
+  const table = tableLots();
+  table[nbJoueurs] = Math.min(12, Math.max(1, Math.round(Number(valeur) || 1)));
+  const v = variables();
+  v.lotsParJoueurs = table;
+  // L'ancien réglage unique ne doit pas ressurgir derrière le tableau.
+  delete v.lots;
+  enregistrerReglages(v);
+}
 
 export function variables() {
   return reglagesCourants();
@@ -54,9 +92,14 @@ export function construireConfig(nbJoueurs) {
     // `combos` est stocké par identifiant, pas sous la forme d'une liste : il se
     // fusionne plus bas, sans quoi il écraserait les combinaisons du moteur.
     if (cle === 'combos') continue;
+    // Le tableau des lots se lit par ligne, plus bas : ni l'ancien nombre unique
+    // ni le tableau lui-même n'ont à être recopiés tels quels dans la config.
+    if (cle === 'lots' || cle === 'lotsParJoueurs') continue;
     if (v.suivreTableau !== false && CHAMPS_MISE_EN_PLACE.includes(cle)) continue;
     cfg[cle] = Array.isArray(val) ? val.slice() : val;
   }
+  // Combien de lots tournent, à cet effectif-là : la ligne du tableau.
+  cfg.lots = lotsPour(tableLots(v), nbJoueurs);
   // Des réglages enregistrés avant le renommage des faces (v1.3) porteraient
   // encore « cloche » et « étoile » : on les retraduit plutôt que de laisser au
   // dé des symboles que plus rien ne reconnaît.
@@ -200,6 +243,52 @@ function carteApparence(sym, rafraichir) {
 }
 
 /**
+ * Le tableau des lots : une ligne par nombre de joueurs, éditable.
+ *
+ * @param {number} nbCourant  l'effectif choisi sur l'accueil — sa ligne est
+ *   mise en avant, pour qu'on voie laquelle s'appliquera à la prochaine partie.
+ */
+function tableauLots(nbCourant, rafraichir) {
+  const table = tableLots();
+  const officiels = lotsOfficiels();
+  const surMesure = NOMBRES_JOUEURS.some((n) => table[n] !== officiels[n]);
+  return h('div', { style: { marginTop: '14px' } },
+    h('div.rangee', { style: { marginBottom: '8px' } },
+      h('div.titre-section', { style: { margin: 0 } }, 'Lots en jeu, par nombre de joueurs'),
+      h('div.pousse'),
+      surMesure
+        ? h('button.btn.btn--petit', {
+            title: 'Remettre les sept lignes aux valeurs du tableau officiel',
+            onclick: () => {
+              const v = variables();
+              delete v.lotsParJoueurs;
+              delete v.lots;
+              enregistrerReglages(v);
+              rafraichir();
+            },
+          }, 'Tableau officiel')
+        : null,
+    ),
+    h('div.tbl-defile', h('table.tbl.tbl--lots',
+      h('thead', h('tr',
+        h('th', 'Joueurs'),
+        ...NOMBRES_JOUEURS.map((n) => h('th.num', { class: n === nbCourant ? 'col-courante' : '' }, String(n))))),
+      h('tbody', h('tr',
+        h('td', 'Lots'),
+        ...NOMBRES_JOUEURS.map((n) => h('td.num', { class: n === nbCourant ? 'col-courante' : '' },
+          h('input.champ-mini', {
+            type: 'number', value: table[n], min: 1, max: 12, step: 1,
+            title: `Lots en jeu à ${n} joueurs — officiel : ${officiels[n]}`,
+            onchange: (e) => { ecrireLots(n, e.target.value); rafraichir(); },
+          }))))),
+    )),
+    h('p.mini.muted', { style: { marginTop: '8px' } },
+      `Le tableau officiel prévoit ${NOMBRES_JOUEURS.map((n) => `${officiels[n]} à ${n}`).join(', ')}. `
+      + `La colonne en relief est celle de votre table — ${nbCourant} joueurs.`),
+  );
+}
+
+/**
  * Le Laboratoire garde sa propre copie de configuration, complète et modifiable
  * à part. Changer de réglage enregistré doit donc la refaire, sans quoi les deux
  * pages parleraient de deux jeux de règles différents. Le nombre de joueurs de
@@ -281,8 +370,10 @@ export function vueVariables() {
       // ── Dés ───────────────────────────────────────────────────────────────
       h('div.carte',
         titreAide('Dés', [
-          `Le lot compte ${cfg.desParLot} dés, et ${cfg.lots} lots tournent autour de la table`
-          + `${suivreTableau ? ` — le tableau officiel en prévoit ${mep.lots} à ${nb} joueurs` : ''}.`,
+          `Le lot compte ${cfg.desParLot} dés. Combien de lots tournent autour de la table `
+          + `dépend du nombre de joueurs : le tableau ci-dessous en donne un par effectif, et la `
+          + `partie lit sa ligne. À ${nb} joueurs, ce sera ${cfg.lots} lot${cfg.lots > 1 ? 's' : ''}`
+          + `${cfg.lots === mep.lots ? ' — la valeur officielle' : ` au lieu des ${mep.lots} officiels`}.`,
           'Le d6 est le dé du jeu : 2 tornades, 1 X, 1 abri, 2 ZzZ. Le X fige son dé — il ne se '
           + 'relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et chaque '
           + 'face se change une à une dans les menus ci-dessous.',
@@ -291,7 +382,7 @@ export function vueVariables() {
           + 'que l’éclair et le ZzZ. Sans face éclair, la combinaison Attaque ne peut pas sortir — '
           + 'passez le déclencheur sur « Échecs » pour garder une attrape.',
         ]),
-        h('div.grille.grille--3', { style: { gap: '12px' } },
+        h('div.grille.grille--2', { style: { gap: '12px' } },
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
           h('label.champ', 'Type de dé',
             h('div.segment', ...TYPES_DE.map((n) => h('button', {
@@ -302,8 +393,13 @@ export function vueVariables() {
               onclick: () => { ecrire('faces', facesPourDe(n)); dessiner(); },
             }, `d${n}`))),
           ),
-          num('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 9 }),
         ),
+
+        // Les lots en jeu ne sont pas un nombre mais un tableau : trois lots à
+        // six joueurs n'ont rien à voir avec trois lots à trois. Chaque ligne se
+        // règle à part, et la partie lit celle de son effectif.
+        tableauLots(nb, dessiner),
+
         h('div.faces-edit', { style: { marginTop: '14px' } },
           ...cfg.faces.map((f, i) => h('div.face-case',
             pastilleSymbole(f, 38),
@@ -316,7 +412,9 @@ export function vueVariables() {
               },
             }, ...ORDRE_SYMBOLES.map((sy) => h('option', {
               value: sy, selected: sy === f,
-            }, SYMBOLES[sy].nom))),
+            // Le nom affiché, pas celui du moteur : la pastille montre un
+            // réveil, le menu doit dire « Réveil ».
+            }, nomSymbole(sy)))),
           )),
         ),
       ),

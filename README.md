@@ -201,6 +201,12 @@ Tout passe par l’objet de configuration, entièrement exposé dans le Laborato
   base) ou la version **sans les points** ;
 - nombre de dés par lot, **type de dé** (d6, d8, d10) et **symbole de chaque
   face** — depuis les options de partie comme depuis le Laboratoire ;
+- **les lots en jeu, une ligne par nombre de joueurs** (`lotsParJoueurs`) : trois
+  lots à six joueurs n'ont rien à voir avec trois lots à trois, le réglage porte
+  donc un tableau complet et la partie y lit sa ligne (`lotsPour`). C'était un
+  nombre unique dont on ne savait plus pour quel effectif il avait été posé. Un
+  réglage d'avant la v1.48 repose sa valeur sur la ligne de l'effectif d'alors,
+  les autres lignes reprenant le tableau officiel ;
 - nombre de dés requis pour chaque combinaison, y compris celles des cartes Tornade ;
 - règle des trois jokers : active ou non, et à partir de combien de jokers ;
 - laquelle des deux combinaisons porte l'attrape — l'Attaque ou l'Échec — et,

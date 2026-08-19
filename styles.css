@@ -1310,3 +1310,12 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .tbl-defile .tbl--resultats { min-width: 640px; }
 .tbl-defile .tbl--manches { min-width: 620px; }
 .tbl--manches .barre-fond { margin: 0; }
+
+/* Le tableau des lots : une colonne par nombre de joueurs, celle de la table
+   en cours mise en relief. */
+.tbl--lots th, .tbl--lots td { padding: 6px 8px; text-align: center; }
+.tbl--lots td:first-child, .tbl--lots th:first-child { text-align: left; }
+.tbl--lots .champ-mini { width: 52px; text-align: center; }
+.tbl--lots .col-courante { background: var(--accent-clair); }
+.tbl--lots th.col-courante { color: var(--accent-fonce); }
+.tbl-defile .tbl--lots { min-width: 420px; }

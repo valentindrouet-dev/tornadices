@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.47';
-export const BUILD_DATE = '2026-08-18';
+export const VERSION = '1.48';
+export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.48',
+    date: '19/08/2026',
+    notes: [
+      'Les lots en jeu ne sont plus un nombre mais un tableau : une colonne par nombre de joueurs, de 3 à 9, dans les Réglages. La partie lit la ligne de sa table, et la colonne de votre effectif est mise en relief. C’était un réglage unique dont on ne savait plus pour quel nombre de joueurs il avait été posé — trois lots à six joueurs n’ont rien à voir avec trois lots à trois.',
+      'Le tableau part sur les valeurs officielles — 2 lots à 3 et 4 joueurs, 3 à 5 et 6, 4 à 7 et 8, 5 à 9 — et chaque ligne se règle à part. Un bouton « Tableau officiel » remet les sept d’aplomb, et n’apparaît que si l’une d’elles a bougé.',
+      'Le champ « Lots en jeu » de l’accueil écrit maintenant dans la ligne de la table qu’on est en train de composer, et le Laboratoire lit la même : changer le nombre de joueurs d’une campagne y amène le bon nombre de lots. Un réglage enregistré avant cette version repose sa valeur sur la ligne de l’effectif d’alors.',
+      'Les lots quittent du même coup la case « Suivre le tableau officiel » : ils ont leur propre tableau, la case ne gouverne plus que les jetons et les cartes.',
+      'Correction : dans les Réglages, les menus qui posent un symbole sur une face du dé affichaient encore « Tornade » et « Vache » sous un réveil et une maison. Ils disent le nom affiché — « Réveil », « Abri » — comme partout ailleurs.',
+    ],
+  },
   {
     version: '1.47',
     date: '18/08/2026',

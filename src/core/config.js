@@ -708,6 +708,30 @@ export const MISE_EN_PLACE = {
   9: { lots: 5, jetons: 5, jetonsVert: 2, cartes: 3, extrapole: true },
 };
 
+/** Les tables auxquelles le jeu se joue, du plus petit au plus grand. */
+export const NOMBRES_JOUEURS = [3, 4, 5, 6, 7, 8, 9];
+
+/**
+ * Combien de lots tournent, à ce nombre de joueurs.
+ *
+ * Ce n'est pas un réglage unique mais une ligne par table : trois lots à six
+ * joueurs n'ont rien à voir avec trois lots à trois. Le réglage porte donc un
+ * tableau complet, et la partie y lit sa ligne — au lieu d'un seul nombre dont
+ * on ne savait plus pour quel effectif il avait été posé.
+ *
+ * Une ligne absente ou aberrante retombe sur le tableau officiel.
+ */
+export function lotsPour(table, nbJoueurs) {
+  const n = table && Number(table[nbJoueurs]);
+  if (Number.isFinite(n) && n >= 1) return Math.min(12, Math.round(n));
+  return infosMiseEnPlace(nbJoueurs).lots;
+}
+
+/** Le tableau officiel des lots, prêt à être édité ligne par ligne. */
+export function lotsOfficiels() {
+  return Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, MISE_EN_PLACE[n].lots]));
+}
+
 // ── Profils d'IA ──────────────────────────────────────────────────────────────
 // `lancersAvantPasse` : nombre de relances tolérées avant de rendre le lot.
 // `peur` : sensibilité au danger quand le joueur précédent tient aussi un lot.
