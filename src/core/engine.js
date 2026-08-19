@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.53';
+import { makeRng } from './rng.js?v=1.54';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
-  modeManche, estImmediat, estCompromis, estJeton, refugePour,
-} from './config.js?v=1.53';
+  modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
+} from './config.js?v=1.54';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -101,6 +101,9 @@ export class Moteur {
     this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
     this.onDebutManche = null; // ({manche, carte, porteurs})
     this.transition = null;    // entre deux manches : les dés reviennent au centre
+    // Règle « carte de sens » : la décision en attente entre deux manches.
+    this.choixSens = null;
+    this.onChoixSens = null;   // (choix) — la carte de sens attend une réponse
 
     this._initJoueurs(specJoueurs);
     this._initEquipes();
@@ -186,15 +189,21 @@ export class Moteur {
     // choses que les cartes Tornade savent modifier.
     this._bonusCartes = 0;
     this._mancheParAttrape = false;
-    if (!estJeton(this.cfg)) {
+    // D'où vient le sens de la manche qui commence — trois règles au choix.
+    const regleSens = sensRotation(this.cfg);
+    if (regleSens === 'carte') {
       // Le sens se lit au dos de la prochaine carte, celle qui reste face
       // cachée sur la pioche pendant qu'on joue celle du dessus. Ce n'est donc
       // pas un sens puis l'autre : c'est la pile qui l'annonce.
       const suivante = this.pioche[1];
       if (suivante && suivante.sens) this.sens = suivante.sens;
-    } else if (!premiere) {
-      this.sens = -this.sens;
+    } else if (regleSens === 'alterne') {
+      if (!premiere) this.sens = -this.sens;
     }
+    // « perdants » : rien à faire ici. La carte de sens posée sur la table ne
+    // bouge qu'entre deux manches, quand ceux qui reçoivent les dés décident de
+    // la retourner ou de la laisser — c'est déjà fait quand on arrive ici.
+    if (regleSens === 'perdants') this._cloreChoixSens();
     this.debutManche = this.now;
     this.carte = this.pioche[0] || null;
     this.passif = (this.carte && this.carte.effetPassif) || {};
@@ -276,6 +285,128 @@ export class Moteur {
       }
     }
     return out;
+  }
+
+  // ── La carte de sens ────────────────────────────────────────────────────────
+  // Une carte posée au milieu de la table indique le sens de circulation. Elle
+  // ne tourne pas toute seule : à la fin d'une manche, ceux qui reçoivent les
+  // dés — les perdants — la retournent s'ils y ont intérêt, ou la laissent.
+  //
+  // Ce que vaut un sens, à la table, tient en deux gestes : on ne peut attraper
+  // que son voisin d'aval, et on ne peut être attrapé que par son voisin
+  // d'amont. Choisir le sens, c'est donc choisir sa proie et son prédateur.
+
+  /**
+   * Le goût d'un joueur pour l'attrape, entre 0 et 1 — la part de l'éclair dans
+   * ce qu'il vise une fois réveillé. L'Équilibré emprunte trois styles à tour de
+   * rôle : c'est leur moyenne qui le décrit, pas celui du lot en cours.
+   * Un humain ne se laisse pas prévoir : on le suppose à mi-chemin.
+   */
+  _appetitAttaque(x) {
+    if (x.type === 'humain') return 0.5;
+    const p = x.profil;
+    const styles = p.styles && p.styles.length
+      ? p.styles.map((id) => PROFILS_IA[id]).filter(Boolean)
+      : [p];
+    if (!styles.length) return 0.5;
+    let total = 0;
+    for (const s of styles) {
+      const vise = (s.vise && s.vise.eveille) || {};
+      const somme = Object.values(vise).reduce((a, b) => a + b, 0);
+      total += somme ? (vise.eclair || 0) / somme : 0;
+    }
+    return total / styles.length;
+  }
+
+  /**
+   * Ce que rapporte un sens à un camp : ce qu'il peut prendre à son voisin
+   * d'aval, moins ce que son voisin d'amont peut lui prendre.
+   *
+   * Trois choses comptent, et ce sont celles que l'on peut lire à la table :
+   * l'adresse de celui qui attrape, l'esquive de celui qu'on attrape, et le
+   * goût de chacun pour le contact — un voisin d'amont qui ne cherche que
+   * l'éclair n'est pas le même danger qu'un joueur qui court à l'abri. On
+   * ajoute une base à ce goût : une combinaison servie est jouée d'office, même
+   * par qui ne la visait pas.
+   */
+  _scoreSens(joueurs, s) {
+    const n = this.joueurs.length;
+    let score = 0;
+    for (const j of joueurs) {
+      const proie = this.joueurs[(j.siege + s + n) % n];
+      const chasseur = this.joueurs[(j.siege - s + n) % n];
+      // Une proie qui garde longtemps son lot est plus souvent à portée : on
+      // n'attrape que le voisin qui tient quelque chose.
+      const exposition = Math.min(1.5, (proie.profil.lancersAvantPasse || 8) / 8);
+      score += (0.5 + this._appetitAttaque(j)) * j.adresse * (1 - proie.esquive) * exposition;
+      score -= (0.5 + this._appetitAttaque(chasseur)) * chasseur.adresse * (1 - j.esquive);
+    }
+    return score;
+  }
+
+  /** Le sens que l'IA retiendrait pour ce camp. */
+  _sensConseille(joueurs) {
+    const garde = this._scoreSens(joueurs, this.sens);
+    const inverse = this._scoreSens(joueurs, -this.sens);
+    // Retourner la carte pour un gain nul n'est pas une décision : on ne la
+    // touche que si l'autre sens vaut nettement mieux.
+    return inverse > garde + 0.02 ? -this.sens : this.sens;
+  }
+
+  /**
+   * Ouvre la décision de fin de manche. Une table sans humain parmi les
+   * perdants tranche aussitôt ; sinon la carte attend le temps de la
+   * transition, et rester sans rien faire la laisse en place.
+   */
+  _ouvrirChoixSens(porteurs) {
+    const joueurs = porteurs.map((id) => this.joueurs[id]).filter(Boolean);
+    if (!joueurs.length) { this.choixSens = null; return; }
+    const conseil = this._sensConseille(joueurs);
+    this.choixSens = {
+      joueurs: joueurs.map((j) => j.id),
+      equipes: [...new Set(joueurs.map((j) => j.equipe))],
+      sens: this.sens,
+      conseil,
+      // Un seul humain parmi les perdants suffit : c'est lui qui décide, la
+      // table ne retourne pas la carte à sa place.
+      humain: joueurs.some((j) => j.type === 'humain'),
+      decide: false,
+      inverse: false,
+    };
+    if (!this.choixSens.humain) this.choisirSens(conseil !== this.sens);
+    else if (this.onChoixSens) this.onChoixSens(this.choixSens);
+  }
+
+  /**
+   * Retourne la carte de sens, ou la laisse. Ouvert à la table de jeu : c'est
+   * le geste d'un joueur humain.
+   * @returns {boolean} vrai si la décision a été prise ici.
+   */
+  choisirSens(inverser) {
+    const c = this.choixSens;
+    if (!c || c.decide) return false;
+    c.decide = true;
+    c.inverse = !!inverser;
+    if (c.inverse) {
+      this.sens = -this.sens;
+      this._log(
+        `Carte de sens retournée — la manche suivante se jouera en sens `
+        + `${this.sens > 0 ? 'horaire' : 'antihoraire'}.`,
+        'manche',
+      );
+    } else {
+      this._log('Carte de sens laissée en place.', 'manche');
+    }
+    if (this.transition) this.transition.sensChoisi = { ...c };
+    if (this.onChoixSens) this.onChoixSens(c);
+    if (this.onEtatChange) this.onEtatChange();
+    return true;
+  }
+
+  /** La manche commence : ce qui n'a pas été décidé ne l'est plus. */
+  _cloreChoixSens() {
+    if (this.choixSens && !this.choixSens.decide) this.choisirSens(false);
+    this.choixSens = null;
   }
 
   _nouveauLot() {
@@ -1377,10 +1508,18 @@ export class Moteur {
       fin: this.now + dureeTransition,
       carteSuivante: this.pioche[0] || null,
     };
+    // La carte de sens se retourne maintenant, entre deux manches : ceux qui
+    // reçoivent les dés en décident, et la table doit pouvoir le montrer avant
+    // que la manche suivante ne s'ouvre.
+    this.choixSens = null;
+    if (sensRotation(this.cfg) === 'perdants' && this._prochainsPorteurs) {
+      this._ouvrirChoixSens(this._prochainsPorteurs);
+    }
     if (this.onFinManche) {
       this.onFinManche({
         vainqueur: equipeId, porteursAvant, manche: this.manche,
         duree: dureeTransition, carteSuivante: this.pioche[0] || null,
+        choixSens: this.choixSens,
       });
     }
     this.file.pousser(this.now + dureeTransition, { type: 'nouvelleManche' });

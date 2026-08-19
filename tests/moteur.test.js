@@ -12,6 +12,7 @@ import {
   JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs, MISE_EN_PLACE,
   MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
   cartesPour, cartesVertPour, cartesOfficielles,
+  OPTIONS_SENS, sensRotation,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 import {
@@ -1607,6 +1608,147 @@ console.log('\nQui commence');
       const r = lancerCampagne(cfg, spec(5), `dep-camp-${dep}`, 60);
       verifier(`${sansPoints ? 'sans points' : 'jetons'}, départ ${dep} — 60 parties au bout`,
         r.raisons.manchesMax === undefined && r.raisons.cartes === 60);
+    }
+  }
+}
+
+// ── 3 septies quater. Le sens de rotation, trois règles ──────────────────────
+console.log('\nLe sens de rotation');
+{
+  const spec = (n, humains = 0) => Array.from({ length: n }, (_, i) => ({
+    nom: `J${i + 1}`, type: i < humains ? 'humain' : 'ia', profil: 'equilibre',
+  }));
+
+  verifier('sans réglage, le mode Jeton alterne et les deux autres lisent la pioche',
+    sensRotation(configParDefaut(6, { modeManche: 'jeton' })) === 'alterne'
+    && sensRotation(configParDefaut(6, { modeManche: 'immediat' })) === 'carte'
+    && sensRotation(configParDefaut(6, { modeManche: 'compromis' })) === 'carte');
+  verifier('une valeur inconnue retombe sur la règle du mode',
+    sensRotation({ modeManche: 'jeton', sensRotation: 'nimportequoi' }) === 'alterne');
+  verifier('un réglage d’avant la v1.54 est complété par assainirConfig',
+    assainirConfig({ nbJoueurs: 6, modeManche: 'compromis' }).sensRotation === 'carte'
+    && assainirConfig({ nbJoueurs: 6, sensRotation: 'perdants' }).sensRotation === 'perdants');
+
+  // Le sens observé au début de chaque manche, partie menée jusqu'au bout.
+  const sensDesManches = (opts, graine) => {
+    const cfg = configParDefaut(6, opts);
+    Object.assign(cfg, opts);
+    const m = new Moteur(cfg, spec(6), graine);
+    const vus = [m.sens];
+    const avant = m._demarrerManche.bind(m);
+    m._demarrerManche = (premiere) => { avant(premiere); vus.push(m.sens); };
+    m.jouerJusquAuBout();
+    return { m, vus };
+  };
+
+  {
+    const { m, vus } = sensDesManches({ modeManche: 'jeton', sensRotation: 'alterne' }, 'sens-alt');
+    let alterne = true;
+    for (let i = 2; i < vus.length; i++) if (vus[i] === vus[i - 1]) alterne = false;
+    verifier(`« une manche sur l’autre » — ${m.manche} manches, le sens s’inverse à chaque fois`,
+      alterne && m.termine, vus.join(' '));
+  }
+
+  {
+    // Sous la règle des perdants, le sens ne bouge qu'entre deux manches, et
+    // seulement si les perdants y gagnent : il n'alterne donc pas d'office.
+    const { m, vus } = sensDesManches(
+      { modeManche: 'jeton', sensRotation: 'perdants' }, 'sens-perd');
+    const decisions = m.journal.filter((l) => /Carte de sens/.test(l.texte || ''));
+    verifier(`« carte de sens » — ${m.manche} manches menées à terme`, m.termine, vus.join(' '));
+    // La dernière manche donne la partie : elle n'ouvre plus de décision, il
+    // n'y a plus de manche suivante à orienter.
+    verifier('une décision est prise à la fin de chaque manche sauf la dernière',
+      decisions.length === m.statsManches.length - 1,
+      `${decisions.length} décision(s) pour ${m.statsManches.length} manche(s)`);
+    verifier('le sens enregistré suit la carte, jamais une alternance forcée',
+      vus.every((s) => s === 1 || s === -1));
+  }
+
+  // La décision d'une IA se prend d'elle-même ; celle d'un humain attend.
+  {
+    const cfg = configParDefaut(6, { sensRotation: 'perdants' });
+    cfg.sensRotation = 'perdants';
+    const m = new Moteur(cfg, spec(6), 'sens-ia');
+    let ouverte = null;
+    m.onFinManche = (info) => { if (!ouverte) ouverte = info.choixSens; };
+    while (!m.termine && m.file.taille && !ouverte) m.avancerJusqua(m.file.tete._t);
+    verifier('table d’IA — la carte est tranchée sans attendre',
+      !!ouverte && ouverte.decide === true && ouverte.humain === false);
+  }
+  {
+    const cfg = configParDefaut(6, { sensRotation: 'perdants' });
+    cfg.sensRotation = 'perdants';
+    const m = new Moteur(cfg, spec(6, 6), 'sens-humain');
+    let ouverte = null;
+    m.onFinManche = (info) => { if (!ouverte) ouverte = info.choixSens; };
+    let garde = 0;
+    while (!m.termine && m.file.taille && !ouverte && garde++ < 200000) {
+      m.avancerJusqua(m.file.tete._t);
+      if (m.duel) { m.reflexeHumain(m.duel.cibleId, 'esquiver'); m.reflexeHumain(m.duel.toucheurId, 'toucher'); }
+      for (const j of m.joueurs) if (j.attente && j.lots.length) m.lancerHumain(j.id);
+    }
+    verifier('table humaine — la carte attend une réponse',
+      !!ouverte && ouverte.decide === false && ouverte.humain === true);
+    if (ouverte) {
+      const avant = m.sens;
+      verifier('retourner la carte inverse le sens', m.choisirSens(true) && m.sens === -avant);
+      verifier('on ne décide qu’une fois', m.choisirSens(true) === false && m.sens === -avant);
+    }
+  }
+
+  // Le conseil de l'IA est bien celui de son intérêt : face à un voisin d'aval
+  // inattaquable et un voisin d'amont redoutable, elle retourne la carte.
+  {
+    const cfg = configParDefaut(4, { sensRotation: 'perdants' });
+    cfg.sensRotation = 'perdants';
+    const m = new Moteur(cfg, spec(4), 'sens-conseil');
+    m.sens = 1;
+    for (const j of m.joueurs) { j.adresse = 0.5; j.esquive = 0.5; }
+    // Le siège 1 est la proie facile, le siège 3 le prédateur : le camp du
+    // siège 0 a tout intérêt à tourner vers le premier.
+    m.joueurs[1].esquive = 0.02;
+    m.joueurs[3].adresse = 0.95;
+    verifier('le sens conseillé mène vers la proie, pas vers le chasseur',
+      m._sensConseille([m.joueurs[0]]) === 1);
+    m.joueurs[1].esquive = 0.95;
+    m.joueurs[3].adresse = 0.05;
+    m.joueurs[3].esquive = 0.02;
+    verifier('les voisins échangés, l’IA retourne la carte',
+      m._sensConseille([m.joueurs[0]]) === -1);
+  }
+
+  // Le caractère des voisins compte autant que leur adresse : on préfère avoir
+  // dans le dos quelqu'un qui court à l'abri plutôt qu'un chercheur d'éclairs.
+  {
+    const cfg = configParDefaut(4, { sensRotation: 'perdants' });
+    cfg.sensRotation = 'perdants';
+    const m = new Moteur(cfg, [
+      { nom: 'A', type: 'ia', profil: 'equilibre' },
+      { nom: 'B', type: 'ia', profil: 'logique' },
+      { nom: 'C', type: 'ia', profil: 'equilibre' },
+      { nom: 'D', type: 'ia', profil: 'tresAgressif' },
+    ], 'sens-caractere');
+    m.sens = 1;
+    // Mêmes mains pour tous : seul le caractère les sépare.
+    for (const j of m.joueurs) { j.adresse = 0.6; j.esquive = 0.55; }
+    verifier('le Très agressif est meilleur en proie qu’en prédateur',
+      m._appetitAttaque(m.joueurs[3]) > m._appetitAttaque(m.joueurs[1])
+      && m._sensConseille([m.joueurs[0]]) === -1);
+  }
+
+  // Aucune des trois règles ne bloque une partie, dans les trois modes.
+  for (const mode of MODES_MANCHE) {
+    for (const [regle] of OPTIONS_SENS) {
+      const cfg = configParDefaut(5, { modeManche: mode, sensRotation: regle });
+      cfg.sensRotation = regle;
+      const r = lancerCampagne(cfg, spec(5), `sens-${mode}-${regle}`, 40);
+      // Une partie finit sur l'objectif ou sur la pioche épuisée — jamais sur
+      // la limite de manches, qui signalerait une partie qui tourne en rond.
+      verifier(`${mode} · ${regle} — 40 parties au bout`,
+        r.raisons.manchesMax === undefined
+        && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 40,
+        JSON.stringify(r.raisons));
     }
   }
 }

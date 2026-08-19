@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.53';
+import { h } from './dom.js?v=1.54';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.53';
+} from './icons.js?v=1.54';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
-  PROFILS_IA, COULEURS_EQUIPE,
-} from '../core/config.js?v=1.53';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.53';
+  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
+} from '../core/config.js?v=1.54';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.54';
 
 export function vueRegles() {
   return h('div.page',
@@ -48,7 +48,8 @@ export function vueRegles() {
         + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
       h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Abri. '
         + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
-        + 'Le sens de circulation s’inverse à chaque manche.'),
+        + 'Le sens de circulation s’inverse à chaque manche — deux autres façons d’en décider '
+        + 'sont décrites plus bas.'),
       h('p.petit.muted', 'Les Réglages proposent une seconde façon de compter, « sans les '
         + 'points » : le premier Abri arrête la manche. Elle est décrite plus bas.'),
       // Chaque équipe a son emblème : c'est ainsi qu'on les nomme à la table.
@@ -244,10 +245,8 @@ export function vueRegles() {
         'La Tornade de feuille ouvre la partie sans pouvoir particulier, mais elle se gagne '
         + 'comme les autres : l’équipe qui prend la manche de chauffe la met dans sa pile.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Le sens de rotation ne s’inverse plus d’une manche à l’autre : chaque Tornade porte une '
-        + 'flèche au dos, et l’on joue la manche dans le sens qu’annonce la prochaine carte, '
-        + 'encore face cachée sur la pioche. Deux manches de suite peuvent tourner dans le même '
-        + 'sens.'),
+        'Chaque Tornade porte aussi une flèche à son dos. Elle sert à l’une des trois façons de '
+        + 'décider du sens de rotation — voir la section qui leur est consacrée, plus bas.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Les combinaisons se règlent carte par carte dans les Réglages, sous « Cartes Tornade en '
         + 'jeu » — plus dans le tableau des combinaisons.'),
@@ -317,6 +316,34 @@ export function vueRegles() {
         + 'enregistrée sous l’ancien nom reste donc valable.'),
     ),
 
+    // Le sens de rotation se règle à part de la façon de jouer une manche : les
+    // trois façons de tourner se marient avec les trois façons de compter.
+    h('div.carte',
+      h('div.titre-section', 'Le sens de rotation'),
+      h('p.petit', 'Le sens décide de tout ce qui se passe entre voisins : on ne passe son lot '
+        + 'qu’à son voisin d’aval, on ne peut attraper que lui, et l’on n’est attrapé que par son '
+        + 'voisin d’amont. Trois façons d’en décider, au choix dans les Réglages.'),
+      h('table.tbl',
+        h('thead', h('tr', h('th', 'Règle'), h('th', 'Comment le sens se décide'))),
+        // Pas de `nowrap` ici : « Au dos de la prochaine Tornade » ne tient pas
+        // sur une ligne de téléphone, et forcerait la page à déborder.
+        h('tbody', ...OPTIONS_SENS.map(([id, lib]) => h('tr',
+          h('td', { style: { fontWeight: '700' } }, lib),
+          h('td.petit', AIDE_SENS[id]),
+        ))),
+      ),
+      h('div.encart', { style: { marginTop: '12px' } },
+        'La carte de sens fait de la défaite une décision. L’équipe qui reçoit les dés regarde qui '
+        + 'elle aura devant elle et qui elle aura derrière : retourner la carte lui change sa '
+        + 'proie et son prédateur d’un même geste. C’est le seul moment de la partie où l’on '
+        + 'choisit ses voisins — et il revient à celui qui vient de perdre.'),
+      h('p.mini.muted', { style: { marginTop: '10px' } },
+        'À la table virtuelle, les équipes menées par l’ordinateur pèsent les deux sens — adresse '
+        + 'des uns, esquive des autres — et ne retournent la carte que si elles y gagnent. Quand '
+        + 'un joueur humain reçoit les dés, la partie s’arrête le temps qu’il décide ; sans '
+        + 'réponse, la carte reste en place.'),
+    ),
+
     h('div.carte',
       h('div.titre-section', 'La version « Immédiat »'),
       h('p.petit', 'La deuxième des trois façons de jouer une manche, à choisir dans les '
@@ -353,8 +380,8 @@ export function vueRegles() {
         + 'collision, qui envoie valser un jeton adverse dans la tornade et emporte la manche de '
         + 'la même façon.'),
       h('p.petit.muted', { style: { marginTop: '10px' } },
-        'Le reste tient sans changer : le dé, les combinaisons, le rythme, les X qui figent, le '
-        + 'sens de rotation lu au dos de la prochaine Tornade. C’est le nombre de cartes qui fait '
+        'Le reste tient sans changer : le dé, les combinaisons, le rythme, les X qui figent, la '
+        + 'façon dont se décide le sens de rotation. C’est le nombre de cartes qui fait '
         + 'le vainqueur, cinq par défaut — les manches y sont plus longues que dans l’Immédiat, '
         + 'plus courtes que dans le mode Jeton.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },

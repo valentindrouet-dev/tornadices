@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.53';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.53';
-import { store } from './store.js?v=1.53';
-import { aller } from './app.js?v=1.53';
-import { lancerPartie } from './table.js?v=1.53';
+import { h, remplacer } from './dom.js?v=1.54';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.54';
+import { store } from './store.js?v=1.54';
+import { aller } from './app.js?v=1.54';
+import { lancerPartie } from './table.js?v=1.54';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -20,19 +20,20 @@ import {
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
-} from '../core/config.js?v=1.53';
-import { tableauCombos, editeurCases } from './combos.js?v=1.53';
+  OPTIONS_SENS, AIDE_SENS, sensRotation,
+} from '../core/config.js?v=1.54';
+import { tableauCombos, editeurCases } from './combos.js?v=1.54';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.53';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.53';
-import { randomSeed } from '../core/rng.js?v=1.53';
-import { reglagesJoueurs } from './accueil.js?v=1.53';
+} from './apparence.js?v=1.54';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.54';
+import { randomSeed } from '../core/rng.js?v=1.54';
+import { reglagesJoueurs } from './accueil.js?v=1.54';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.53';
+} from './profils.js?v=1.54';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -510,6 +511,31 @@ export function vueVariables() {
             ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
               class: modeManche(cfg) === id ? 'on' : '',
               onclick: () => { ecrire('modeManche', id); dessiner(); },
+            }, lib)),
+          ),
+        ),
+      ),
+
+      // ── Sens de rotation ──────────────────────────────────────────────────
+      // À quoi tient le sens d'une manche. Il se règle à part du mode : les
+      // trois façons de jouer se marient avec les trois façons de tourner.
+      h('div.carte',
+        titreAide('Le sens de rotation', [
+          AIDE_SENS[sensRotation(cfg)],
+          sensRotation(cfg) === 'perdants'
+            ? 'Un sens vaut ce que valent ses voisins : on n’attrape que son voisin d’aval, et '
+              + 'seul son voisin d’amont peut vous attraper. Retourner la carte, c’est donc '
+              + 'changer de proie et de prédateur d’un même geste. Les équipes menées par '
+              + 'l’ordinateur pèsent les deux sens et ne retournent la carte que si elles y '
+              + 'gagnent. Quand vous recevez les dés, la partie s’arrête le temps que vous '
+              + 'décidiez ; sans réponse, la carte reste en place.'
+            : '',
+        ]),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_SENS.map(([id, lib]) => h('button', {
+              class: sensRotation(cfg) === id ? 'on' : '',
+              onclick: () => { ecrire('sensRotation', id); dessiner(); },
             }, lib)),
           ),
         ),

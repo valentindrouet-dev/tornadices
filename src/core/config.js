@@ -164,6 +164,41 @@ export const AIDE_MANCHE = {
     + 'l’adversaire part dans la tornade, et la manche est à vous. Cinq cartes pour gagner.',
 };
 
+// ── Le sens de rotation ──────────────────────────────────────────────────────
+// Trois façons de décider dans quel sens tourne une manche.
+export const OPTIONS_SENS = [
+  ['alterne', 'Une manche sur l’autre'],
+  ['carte', 'Au dos de la prochaine Tornade'],
+  ['perdants', 'Carte de sens — les perdants décident'],
+];
+
+export const NOM_SENS = Object.fromEntries(OPTIONS_SENS);
+
+export const AIDE_SENS = {
+  alterne: 'Règle de base : le sens s’inverse à chaque manche, sans que personne n’ait à en '
+    + 'décider. Une manche dans un sens, la suivante dans l’autre.',
+  carte: 'Chaque Tornade porte une flèche à son dos. La manche se joue dans le sens qu’annonce '
+    + 'la prochaine carte, encore face cachée sur la pioche — deux manches de suite peuvent donc '
+    + 'tourner dans le même sens.',
+  perdants: 'Une carte posée sur la table indique le sens. À la fin d’une manche, l’équipe '
+    + 'perdante — celle qui reçoit les dés — peut la retourner pour inverser le sens, ou la '
+    + 'laisser en place. C’est un choix, pas une obligation : celui qui subit décide de la façon '
+    + 'dont il repart.',
+};
+
+/**
+ * Comment se décide le sens d'une manche.
+ *
+ * Sans réglage, chaque mode garde ce qu'il faisait : la règle de base alterne,
+ * les deux autres lisent le dos de la prochaine Tornade — c'est la pioche qui
+ * l'annonce, et elle sert déjà à cela.
+ */
+export function sensRotation(cfg) {
+  const s = cfg && cfg.sensRotation;
+  if (OPTIONS_SENS.some(([id]) => id === s)) return s;
+  return modeManche(cfg) === 'jeton' ? 'alterne' : 'carte';
+}
+
 /**
  * La façon de jouer une manche, en un seul mot.
  *
@@ -398,6 +433,9 @@ export function assainirConfig(cfg) {
   // Les deux restent écrits, `modeManche` faisant foi.
   sortie.modeManche = modeManche(cfg);
   sortie.sansPoints = sortie.modeManche === 'immediat';
+  // Le sens de rotation : une valeur inconnue — ou absente, avant la v1.54 —
+  // retombe sur ce que le mode faisait jusqu'ici.
+  sortie.sensRotation = sensRotation(sortie);
   // Compromis : de un à trois jetons demandés, jamais zéro ni davantage.
   sortie.jetonsRefuge = Math.min(6, Math.max(1, Math.round(Number(cfg.jetonsRefuge) || 3)));
   if (cfg.refugeCartes && typeof cfg.refugeCartes === 'object') {
@@ -1051,6 +1089,12 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // qui fait foi, et `modeManche(cfg)` sait lire l'un comme l'autre.
     modeManche: mode,
     sansPoints: mode === 'immediat',
+    // Comment se décide le sens d'une manche. `null` = ce que le mode fait
+    // naturellement : la règle de base alterne, les deux autres lisent le dos
+    // de la prochaine Tornade.
+    sensRotation: OPTIONS_SENS.some(([id]) => id === opts.sensRotation)
+      ? opts.sensRotation
+      : (mode === 'jeton' ? 'alterne' : 'carte'),
     // Compromis : les jetons de sa couleur qu'une équipe peut mettre à l'Abri.
     jetonsRefuge: 3,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.

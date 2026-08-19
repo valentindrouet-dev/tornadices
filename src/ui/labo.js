@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.53';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.53';
-import { nomSymbole } from './apparence.js?v=1.53';
-import { store } from './store.js?v=1.53';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.53';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.54';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.54';
+import { nomSymbole } from './apparence.js?v=1.54';
+import { store } from './store.js?v=1.54';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.54';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -14,16 +14,17 @@ import {
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
   NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
+  OPTIONS_SENS, AIDE_SENS, sensRotation,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.53';
-import { tableauCombos } from './combos.js?v=1.53';
-import { barreProfils, idActif } from './profils.js?v=1.53';
+} from '../core/config.js?v=1.54';
+import { tableauCombos } from './combos.js?v=1.54';
+import { barreProfils, idActif } from './profils.js?v=1.54';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.53';
+} from './variables.js?v=1.54';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.53';
+} from '../core/proba.js?v=1.54';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -316,6 +317,19 @@ function panneauConfig(rafraichir) {
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
       AIDE_MANCHE[modeManche(cfg)]),
+
+    // Le sens de rotation se compare comme le reste : c'est un levier
+    // d'équilibrage à part entière, et il change qui peut attraper qui.
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Le sens de rotation'),
+    h('div.segment',
+      ...OPTIONS_SENS.map(([id, lib]) => h('button', {
+        class: sensRotation(cfg) === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => { cfg.sensRotation = id; rafraichir(); },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      AIDE_SENS[sensRotation(cfg)]),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',

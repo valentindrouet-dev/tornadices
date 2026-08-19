@@ -4,20 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.53';
+import { h, remplacer, duree, vider } from './dom.js?v=1.54';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.53';
-import { Moteur } from '../core/engine.js?v=1.53';
+} from './icons.js?v=1.54';
+import { Moteur } from '../core/engine.js?v=1.54';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-  estJeton, estCompromis,
-} from '../core/config.js?v=1.53';
-import { ajouterHistorique } from './store.js?v=1.53';
-import { enregistrerPartie } from './resultats.js?v=1.53';
-import { aller } from './app.js?v=1.53';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.53';
+  estJeton, estCompromis, sensRotation,
+} from '../core/config.js?v=1.54';
+import { ajouterHistorique } from './store.js?v=1.54';
+import { enregistrerPartie } from './resultats.js?v=1.54';
+import { aller } from './app.js?v=1.54';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.54';
 
 let moteur = null;
 let vitesse = 1;
@@ -510,6 +510,74 @@ export function vueTable() {
       || PRIORITE_ALERTE.indexOf(couleur) < PRIORITE_ALERTE.indexOf(cur.couleur);
     if (remplace) alertesRetenues.set(pid, { couleur, fin: moteur.now + duree });
   };
+  const FLECHE = (s) => (s > 0 ? '↻' : '↺');
+  const NOM_TOUR = (s) => (s > 0 ? 'horaire' : 'antihoraire');
+
+  /**
+   * Ce que la table dit du sens, une fois la carte tranchée. Quand ceux qui
+   * reçoivent les dés sont tous menés par l'ordinateur, la décision est déjà
+   * prise à l'ouverture de la transition : le panneau n'a plus qu'à la dire.
+   */
+  function blocChoixSens(choix) {
+    if (!choix || !choix.decide) return null;
+    return h('div.transition-sens',
+      h('span.transition-sens-fleche', FLECHE(moteur.sens)),
+      h('span', choix.inverse
+        ? `Carte de sens retournée — manche suivante en sens ${NOM_TOUR(moteur.sens)}`
+        : `Carte de sens laissée — manche suivante en sens ${NOM_TOUR(moteur.sens)}`),
+    );
+  }
+
+  // ── La carte de sens, quand c'est à un humain de trancher ──────────────────
+  // Même traitement que la Tornade révélée : la partie attend. Une décision de
+  // fin de manche ne se prend pas en trois secondes pendant que les dés volent.
+  // Sans réponse, la carte reste où elle est — ne rien faire est une réponse.
+  let panneauSens = null;
+  let minuterieSens = null;
+  let attenteSens = false;
+
+  function fermerSens(inverser) {
+    if (minuterieSens) { clearTimeout(minuterieSens); minuterieSens = null; }
+    if (panneauSens) { panneauSens.remove(); panneauSens = null; }
+    attenteSens = false;
+    if (moteur.choixSens && !moteur.choixSens.decide) moteur.choisirSens(!!inverser);
+    ancrage = performance.now();
+  }
+
+  function montrerChoixSens(choix) {
+    if (!choix || choix.decide || !choix.humain) return;
+    attenteSens = true;
+    // « Les Bleus », « Le Vert » : le nom d'équipe s'écrit sans article, et une
+    // phrase en manque. Le Vert est un joueur, les autres sont des équipes.
+    const camps = choix.equipes
+      .map((e) => (e === 'vert' ? 'le Vert' : `les ${COULEURS_EQUIPE[e].nom}`))
+      .join(' et ');
+    const titre = `${camps.charAt(0).toUpperCase()}${camps.slice(1)} `
+      + `${choix.equipes.length === 1 && choix.equipes[0] === 'vert' ? 'reçoit' : 'reçoivent'} les dés`;
+    panneauSens = h('div.voile-carte',
+      h('div.carte-annonce',
+        h('div.mini.muted', 'Carte de sens'),
+        h('h2', { style: { margin: '6px 0 10px' } }, titre),
+        h('div.texte-carte-grand',
+          'Gardez le sens de circulation, ou retournez la carte pour l’inverser. '
+          + 'On n’attrape que son voisin d’aval — changer de sens, c’est changer '
+          + 'de proie et de voisin dangereux.'),
+        h('div.rangee.rangee--serree', {
+          style: { justifyContent: 'center', marginTop: '16px' },
+        },
+          h('button.btn', { onclick: () => fermerSens(false) },
+            `Garder ${FLECHE(choix.sens)} ${NOM_TOUR(choix.sens)}`),
+          h('button.btn.btn--primaire', { onclick: () => fermerSens(true) },
+            `Retourner ${FLECHE(-choix.sens)} ${NOM_TOUR(-choix.sens)}`),
+        ),
+        h('div.mini.muted', { style: { marginTop: '16px' } },
+          'Espace pour garder le sens — sans réponse, la carte reste en place.'),
+      ),
+    );
+    racine.appendChild(panneauSens);
+    minuterieSens = setTimeout(() => fermerSens(false), Math.max(2000, 9000 / vitesse));
+  }
+
   // Fin de manche : les dés reviennent au centre, la carte suivante recouvre
   // la précédente, puis les lots repartent vers l'équipe qui vient de perdre.
   let panneauTransition = null;
@@ -527,7 +595,9 @@ export function vueTable() {
       info.carteSuivante
         ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
         : h('div.transition-carte', 'Dernière carte jouée'),
+      blocChoixSens(info.choixSens),
     );
+    montrerChoixSens(info.choixSens);
     panneauTransition.style.left = `${CENTRE.x}%`;
     panneauTransition.style.top = `${CENTRE.y}%`;
     zoneTable.appendChild(panneauTransition);
@@ -580,10 +650,10 @@ export function vueTable() {
     if (!carte) return;
     fermerCarte();
     carteEnAttente = carte;
-    // Le sens annoncé est celui de la manche qui commence — il vient du dos de
-    // la carte SUIVANTE, pas de celle qu'on retourne. Montrer la flèche de la
-    // carte révélée dirait le contraire de ce qui va se jouer.
-    const fleche = estJeton(moteur.cfg) ? null : (moteur.sens > 0 ? '↻' : '↺');
+    // Le sens annoncé est celui de la manche qui commence — sous la règle des
+    // dos de cartes, il vient du dos de la carte SUIVANTE, pas de celle qu'on
+    // retourne. Montrer la flèche de la carte révélée dirait le contraire.
+    const fleche = FLECHE(moteur.sens);
     panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
       h('div.carte-annonce',
         h('div.mini.muted', `Manche ${manche}`),
@@ -596,14 +666,11 @@ export function vueTable() {
                 suiteSymboles(requisCarte(moteur.cfg, carte.combo), 34)))
           : h('div.mini.muted', { style: { marginTop: '14px' } },
               'Aucune combinaison — la carte agit d’elle-même.'),
-        fleche
-          ? h('div.rangee.rangee--serree', {
-              style: { justifyContent: 'center', marginTop: '14px' },
-            },
-              h('span.fleche-sens', fleche),
-              h('span.mini.muted',
-                `Manche jouée en sens ${moteur.sens > 0 ? 'horaire' : 'antihoraire'}`))
-          : null,
+        h('div.rangee.rangee--serree', {
+          style: { justifyContent: 'center', marginTop: '14px' },
+        },
+          h('span.fleche-sens', fleche),
+          h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
         h('div.mini.muted', { style: { marginTop: '16px' } }, 'Espace ou clic pour continuer'),
       ),
     );
@@ -658,7 +725,7 @@ export function vueTable() {
   let actif = true;
   function boucle() {
     if (!actif || moteur !== maPartie) return;
-    if (!enPause && !carteEnAttente && !moteur.termine) {
+    if (!enPause && !carteEnAttente && !attenteSens && !moteur.termine) {
       const cible = moteur.now + (performance.now() - ancrage) * vitesse;
       ancrage = performance.now();
       moteur.avancerJusqua(cible);
@@ -673,6 +740,15 @@ export function vueTable() {
   function auClavier(ev) {
     if (!actif || moteur !== maPartie || moteur.termine) return;
     if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
+    // La carte de sens attend une réponse : elle passe avant tout le reste, et
+    // l'espace fait le geste neutre — on la laisse en place.
+    if (attenteSens) {
+      if (ev.code === 'Space' || ev.code === 'Enter' || ev.code === 'Escape') {
+        fermerSens(false);
+        ev.preventDefault();
+      }
+      return;
+    }
     // La carte du tour passe avant tout : sans cela l'espace lancerait les dés
     // derrière le voile, sur une manche qu'on n'a pas encore vue commencer.
     if (carteEnAttente) {
@@ -714,7 +790,8 @@ export function vueTable() {
   const surveillant = new MutationObserver(() => {
     if (!document.body.contains(racine)) {
       actif = false;
-    fermerCarte();
+      fermerCarte();
+      fermerSens(false);
       window.removeEventListener('keydown', auClavier);
       window.removeEventListener('resize', placerSieges);
       suiviTaille.disconnect();
@@ -815,22 +892,33 @@ export function vueTable() {
     peindreRefuge();
 
     const reste = Math.max(0, moteur.pioche.length - 1);
-    // Le dos de la carte du dessus porte la flèche : c'est elle qui donne le
-    // sens de la manche en cours. On la montre donc sur la pioche, à sa place.
-    const sensPioche = moteur.sens > 0 ? '↻' : '↺';
-    siChange(elPioche, `pioche-${reste}-${moteur.sens}`, () => h('div.pioche',
+    // Où se lit le sens dépend de la règle : au dos de la carte du dessus de la
+    // pioche, ou sur une carte de sens posée à part que les perdants
+    // retournent. Dans les deux cas la flèche est à sa place sur la table.
+    const regleSens = sensRotation(moteur.cfg);
+    const carteDeSens = regleSens === 'perdants';
+    const sensPioche = FLECHE(moteur.sens);
+    siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
       h('div.pioche-pile',
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
           h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
-        reste
+        reste && !carteDeSens
           ? h('div.dos-fleche', {
-              title: moteur.sens > 0 ? 'Manche en cours : sens horaire' : 'Manche en cours : sens antihoraire',
+              title: `Manche en cours : sens ${NOM_TOUR(moteur.sens)}`,
             }, sensPioche)
           : null,
         reste ? h('div.pioche-nb', reste) : h('div.pioche-nb.pioche-nb--vide', '0'),
       ),
       h('div.mini.muted', { style: { marginTop: '8px', textAlign: 'center' } },
         reste > 1 ? `${reste} tornades restantes` : reste === 1 ? '1 tornade restante' : 'pile épuisée'),
+      carteDeSens
+        ? h('div.carte-sens', {
+            title: `Carte de sens : ${NOM_TOUR(moteur.sens)}. Les perdants de la manche `
+              + 'peuvent la retourner.',
+          },
+            h('div.carte-sens-fleche', sensPioche),
+            h('div.carte-sens-nom', 'Carte de sens'))
+        : null,
     ));
 
     const jetons = Object.values(moteur.equipes)

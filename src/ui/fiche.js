@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.53';
-import { store } from './store.js?v=1.53';
-import { aller } from './app.js?v=1.53';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.53';
-import { nomSymbole } from './apparence.js?v=1.53';
-import { construireConfig } from './variables.js?v=1.53';
-import { nomActif } from './profils.js?v=1.53';
-import { VERSION } from '../version.js?v=1.53';
+import { h, remplacer } from './dom.js?v=1.54';
+import { store } from './store.js?v=1.54';
+import { aller } from './app.js?v=1.54';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.54';
+import { nomSymbole } from './apparence.js?v=1.54';
+import { construireConfig } from './variables.js?v=1.54';
+import { nomActif } from './profils.js?v=1.54';
+import { VERSION } from '../version.js?v=1.54';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
-  infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe,
-} from '../core/config.js?v=1.53';
+  infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation,
+} from '../core/config.js?v=1.54';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -40,6 +40,16 @@ const section = (titre, ...contenu) => h('section.fiche-bloc',
 
 /** Une ligne « libellé — valeur » du tableau de mise en place. */
 const ligne = (libelle, valeur) => h('tr', h('td', libelle), h('td.num', valeur));
+
+/**
+ * Un tableau de la fiche, dans un cadre qui défile.
+ *
+ * La feuille est faite pour du papier : ses tableaux ont le nombre de colonnes
+ * qu'il faut, pas celui qui tiendrait sur un téléphone. Plutôt que de les
+ * réduire — on ne lit plus rien — on les laisse défiler à l'horizontale à
+ * l'écran. À l'impression, le cadre s'efface et le tableau reprend sa place.
+ */
+const tableau = (...enfants) => h('div.fiche-defile', h(...enfants));
 
 export function vueFiche() {
   const racine = h('div.page');
@@ -104,7 +114,7 @@ function enTete(cfg, mode) {
 function miseEnPlace(cfg, nb, parEffectif) {
   const depart = COULEURS_EQUIPE[cfg.equipeDepart] || COULEURS_EQUIPE.jaune;
   return section('Mise en place',
-    h('table.tbl.fiche-tbl.fiche-tbl--mep',
+    tableau('table.tbl.fiche-tbl.fiche-tbl--mep',
       h('thead', h('tr',
         h('th.num', 'Joueurs'),
         h('th', 'Équipes'),
@@ -184,7 +194,7 @@ function lesCombinaisons(cfg) {
       h('td.petit', effetCombo(cfg, c))));
   const mortes = cfg.combos.filter((c) => !comboPossible(cfg.faces, c.requis));
   return section('Les combinaisons',
-    h('table.tbl.fiche-tbl',
+    tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
         h('th', 'Combinaison'),
         h('th', 'Dés requis'),
@@ -245,22 +255,45 @@ function effetCombo(cfg, c) {
   return c.libelle;
 }
 
+/**
+ * Le tour de jeu.
+ *
+ * La fiche vaut pour toutes les tables : elle ne nomme donc jamais un nombre qui
+ * dépend de l'effectif — les lots, les jetons, les cartes à réunir sont dans le
+ * tableau de mise en place, et le texte y renvoie. Seuls les nombres qui valent
+ * pour toute table, comme les dés d'un lot, s'écrivent en toutes lettres.
+ */
 function leTour(cfg) {
   return section('Le tour de jeu',
     h('ol.fiche-liste',
-      h('li', `Chacun joue en même temps : ${cfg.lots} lots de ${cfg.desParLot} dés circulent `
-        + 'autour de la table, et celui qui tient un lot le relance aussi vite et aussi souvent '
-        + 'qu’il veut.'),
+      h('li', `Chacun joue en même temps : plusieurs lots de ${cfg.desParLot} dés circulent `
+        + 'autour de la table — leur nombre dépend de l’effectif, voir la mise en place — et '
+        + 'celui qui tient un lot le relance aussi vite et aussi souvent qu’il veut.'),
       h('li', 'Dès qu’une combinaison sort, elle est jouée : le lot part vers le voisin, et '
         + 'l’effet s’applique.'),
       h('li', `Chaque manche commence Tornade endormie. Il faut d’abord se réveiller — la `
         + `combinaison « ${nomCombo(cfg, 'reveil')} » — avant de pouvoir agir sur les autres.`),
-      h('li', `Le sens de circulation ${estJeton(cfg)
-        ? 's’inverse à chaque manche.'
-        : 'est celui qu’annonce la flèche au dos de la prochaine carte Tornade, encore face cachée sur la pioche : deux manches de suite peuvent tourner dans le même sens.'}`),
+      h('li', `Le sens de circulation ${TOUR_SENS[sensRotation(cfg)]}`),
     ),
+    sensRotation(cfg) === 'perdants'
+      ? h('p.fiche-note',
+          'La carte de sens ne se retourne qu’à ce moment-là : une fois la manche commencée, le '
+          + 'sens ne change plus. On n’attrape que son voisin d’aval et l’on n’est attrapé que '
+          + 'par son voisin d’amont — la retourner, c’est changer de proie et de danger d’un '
+          + 'même geste.')
+      : null,
   );
 }
+
+/** Ce que la fiche dit du sens, selon la règle retenue. */
+const TOUR_SENS = {
+  alterne: 's’inverse à chaque manche.',
+  carte: 'est celui qu’annonce la flèche au dos de la prochaine carte Tornade, encore face '
+    + 'cachée sur la pioche : deux manches de suite peuvent tourner dans le même sens.',
+  perdants: 'est indiqué par une carte de sens posée sur la table. À la fin de chaque manche, '
+    + 'l’équipe qui reçoit les dés — celle qui vient de perdre — la retourne pour inverser le '
+    + 'sens, ou la laisse en place. C’est un choix, jamais une obligation.',
+};
 
 function nomCombo(cfg, id) {
   const c = cfg.combos.find((x) => x.id === id);
@@ -272,7 +305,8 @@ function gagnerLaManche(cfg, mode) {
   if (estJeton(cfg)) {
     return section('Gagner une manche',
       h('p', `Chaque combinaison « ${abri} » retourne un jeton de votre équipe. La manche revient `
-        + `à la première équipe qui a retourné ses ${cfg.jetons} jetons.`),
+        + 'à la première équipe qui a retourné tous les siens — leur nombre dépend de '
+        + 'l’effectif, voir la mise en place.'),
       h('p.fiche-note', 'Les jetons repartent face cachée à chaque manche : chaque manche est une '
         + 'course indépendante.'),
     );
@@ -328,7 +362,7 @@ function lesCartes(cfg, mode) {
         ? 'Une carte par manche, retournée au début. Elle change la manche qui commence.'
         : 'Une carte par manche : on la révèle, on la joue. L’équipe qui remporte la manche la '
           + 'prend dans sa pile — c’est ainsi qu’on gagne la partie.'),
-    h('table.tbl.fiche-tbl',
+    tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
         h('th', 'Carte'),
         estCompromis(cfg) ? h('th.num', 'Au Refuge') : null,

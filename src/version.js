@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.53';
+export const VERSION = '1.54';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.54',
+    date: '19/08/2026',
+    notes: [
+      'Une troisième façon de décider du sens de rotation : une carte de sens posée sur la table. Elle ne tourne pas toute seule — à la fin de chaque manche, l’équipe qui reçoit les dés, celle qui vient de perdre, la retourne pour inverser le sens ou la laisse en place. C’est un choix, jamais une obligation, et c’est le seul moment de la partie où l’on choisit ses voisins.',
+      'Le sens de rotation se règle désormais à part de la façon de jouer une manche : « Une manche sur l’autre », « Au dos de la prochaine Tornade » ou « Carte de sens ». Les trois se marient avec les trois modes, dans les Réglages comme au Laboratoire. Un réglage enregistré avant cette version garde ce que son mode faisait — alternance avec les jetons, dos de carte ailleurs.',
+      'Les IA savent y jouer : elles pèsent les deux sens — adresse de celui qui attrape, esquive de celui qu’on attrape, et goût de chacun pour le contact — et ne retournent la carte que si elles y gagnent. Sur 200 parties à six joueurs de caractères variés, elles la retournent 43 à 52 % du temps selon le mode ; sur une table de joueurs identiques, jamais : entre deux voisins interchangeables, il n’y a rien à gagner à bouger la carte.',
+      'Quand un joueur humain reçoit les dés, la partie s’arrête le temps qu’il décide, comme à la révélation d’une Tornade. Sans réponse, la carte reste en place. La table montre la carte de sens à côté de la pioche, et la transition de fin de manche dit ce qu’elle est devenue.',
+      'Les règles cessent d’être écrites pour une seule table : plus aucun nombre qui dépend de l’effectif n’apparaît en toutes lettres dans les phrases — les lots, les jetons, les cartes à réunir sont dans le tableau de mise en place, et le texte y renvoie. « 2 lots de 4 dés circulent » devient « plusieurs lots de 4 dés circulent — leur nombre dépend de l’effectif ». La page Règles gagne une section consacrée au sens de rotation, et la fiche imprimée décrit celui que vous avez réglé.',
+    ],
+  },
   {
     version: '1.53',
     date: '19/08/2026',

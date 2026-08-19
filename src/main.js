@@ -1,5 +1,5 @@
-import { demarrer } from './ui/app.js?v=1.53';
-import { VERSION } from './version.js?v=1.53';
+import { demarrer } from './ui/app.js?v=1.54';
+import { VERSION } from './version.js?v=1.54';
 
 demarrer(document.getElementById('app'));
 
