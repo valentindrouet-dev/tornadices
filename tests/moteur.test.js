@@ -949,13 +949,20 @@ console.log('\nManche sans les points');
       && attrapeEmporteManche({ sansPoints: false, attrapeGagneManche: 'touche' }));
 
     const cfg = configParDefaut(6, { sansPoints: true });
-    const m = new Moteur(cfg, spec(6), 'sp-attrape');
     const sources = new Set();
-    m.onJeton = (pid, equipe, n, source) => sources.add(source);
-    m.jouerJusquAuBout();
-    const tentees = m.joueurs.reduce((a, j) => a + j.stats.collisionsTentees, 0);
-    const reussies = m.joueurs.reduce((a, j) => a + j.stats.collisionsReussies, 0);
-    verifier(`des contacts sont bien tentés (${tentees}, dont ${reussies} réussis)`, tentees > 0);
+    // Le dé officiel n'a pas d'éclair : le contact vient du double X, et une
+    // partie sur huit se joue sans qu'aucun ne tombe au bon moment. On regarde
+    // donc une poignée de parties — une seule ne dit rien.
+    let tentees = 0, reussies = 0;
+    for (let g = 0; g < 8; g++) {
+      const m = new Moteur(cfg, spec(6), `sp-attrape-${g}`);
+      m.onJeton = (pid, equipe, n, source) => sources.add(source);
+      m.jouerJusquAuBout();
+      tentees += m.joueurs.reduce((a, j) => a + j.stats.collisionsTentees, 0);
+      reussies += m.joueurs.reduce((a, j) => a + j.stats.collisionsReussies, 0);
+    }
+    verifier(`des contacts sont bien tentés (${tentees} sur 8 parties, dont ${reussies} réussis)`,
+      tentees > 0);
     verifier('aucun jeton n’est jamais annoncé sur une attrape', !sources.has('collision'));
 
     // Sur une campagne, des manches doivent réellement se gagner à l'attrape.
@@ -1137,10 +1144,10 @@ console.log('\nCartes Tornade — un paquet par mode');
   {
     const cfg = configParDefaut(6, { sansPoints: true });
     cfg.melangerCartes = false;
-    cfg.cartesSansPoints = ['spOrageuse'];
+    cfg.cartesSansPoints = ['spFurieuse'];
     // Une exigence d'un seul ZzZ : impossible à confondre avec la référence.
-    cfg.combosCartesSansPoints = { spOrageuse: { zzz: 1 } };
-    const combo = CARTES_PAR_ID.spOrageuse.combo;
+    cfg.combosCartesSansPoints = { spFurieuse: { zzz: 1 } };
+    const combo = CARTES_PAR_ID.spFurieuse.combo;
     verifier('l’exigence réglée l’emporte sur celle de la carte',
       JSON.stringify(requisCarte(cfg, combo)) === '{"zzz":1}'
       && JSON.stringify(combo.requis) !== '{"zzz":1}');
@@ -1609,6 +1616,108 @@ console.log('\nQui commence');
       verifier(`${sansPoints ? 'sans points' : 'jetons'}, départ ${dep} — 60 parties au bout`,
         r.raisons.manchesMax === undefined && r.raisons.cartes === 60);
     }
+  }
+}
+
+// ── 3 septies quater bis. Les trois Tornades qui gênent ─────────────────────
+console.log('\nTornades paisible, maladroite et Mini');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  verifier('les trois sont au paquet des modes Immédiat et Compromis',
+    ['spPaisible', 'spMaladroite', 'spMini']
+      .every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)
+        && cartesEnJeu(configParDefaut(6, { modeManche: 'immediat' })).includes(id)
+        && cartesEnJeu(configParDefaut(6, { modeManche: 'compromis' })).includes(id)));
+  verifier('la Tornade orageuse a quitté le jeu',
+    !CARTES_SANS_POINTS.some((c) => c.id === 'spOrageuse') && !CARTES_PAR_ID.spOrageuse);
+  verifier('aucune des trois ne demande plus d’un jeton à l’Abri',
+    ['spPaisible', 'spMaladroite', 'spMini']
+      .every((id) => refugePour(configParDefaut(6, { modeManche: 'compromis' }), CARTES_PAR_ID[id]) === 1));
+
+  // Une partie sur une seule carte : l'effet de la manche est celui de la carte
+  // et de rien d'autre.
+  const surUneCarte = (id, opts = {}) => {
+    const cfg = configParDefaut(6, { modeManche: 'immediat', ...opts });
+    cfg.melangerCartes = false;
+    cfg.cartesSansPoints = [id];
+    const m = new Moteur(cfg, spec(6), `carte-${id}`);
+    return m;
+  };
+
+  // Mini-Tornade : un lot de moins au coup d'envoi, jamais moins d'un.
+  {
+    const normal = surUneCarte('spSommeil');
+    const mini = surUneCarte('spMini');
+    const lots = (m) => m.joueurs.reduce((a, j) => a + j.lots.length, 0);
+    verifier(`Mini-Tornade — ${lots(mini)} lot(s) au lieu de ${lots(normal)}`,
+      lots(mini) === lots(normal) - 1 && lots(mini) >= 1);
+    // À trois joueurs il n'y a que deux lots : la carte en laisse un, pas zéro.
+    const cfg3 = configParDefaut(3, { modeManche: 'immediat' });
+    cfg3.melangerCartes = false;
+    cfg3.cartesSansPoints = ['spMini'];
+    cfg3.lots = 1;
+    const m3 = new Moteur(cfg3, spec(3), 'mini-3');
+    verifier('elle ne descend jamais sous un lot',
+      m3.joueurs.reduce((a, j) => a + j.lots.length, 0) === 1);
+  }
+
+  // Tornade paisible : un seul dé relancé à la fois. Le premier jet d'un lot
+  // neuf part toujours en entier — c'est une relance qui se fait un par un.
+  {
+    const compter = (id) => {
+      const m = surUneCarte(id);
+      let relances = 0, plusieurs = 0;
+      const avant = m._demarrerLancer.bind(m);
+      m._demarrerLancer = (j, indices) => {
+        const lot = j.lots[0];
+        const neuf = lot && lot.des.some((d) => d.sym === null);
+        const roulants = lot ? lot.des.filter((d) => d.roule).length : 0;
+        const ok = avant(j, indices);
+        if (!ok || neuf) return ok;
+        const partis = lot.des.filter((d) => d.roule).length - roulants;
+        if (partis > 0) { relances++; if (partis > 1) plusieurs++; }
+        return ok;
+      };
+      m.jouerJusquAuBout();
+      return { relances, plusieurs };
+    };
+    const paisible = compter('spPaisible');
+    const temoin = compter('spFeuille');
+    verifier(`Tornade paisible — ${paisible.relances} relances, jamais deux dés à la fois`,
+      paisible.relances > 0 && paisible.plusieurs === 0,
+      `${paisible.plusieurs} relance(s) multiple(s)`);
+    verifier(`sans elle, les relances multiples existent bien (${temoin.plusieurs} sur ${temoin.relances})`,
+      temoin.plusieurs > 0);
+  }
+
+  // Tornade maladroite : tout est plus lent, et l'on se trompe davantage.
+  {
+    const duree = (id) => {
+      let total = 0, manches = 0;
+      for (let g = 0; g < 40; g++) {
+        const cfg = configParDefaut(6, { modeManche: 'immediat' });
+        cfg.melangerCartes = false;
+        cfg.cartesSansPoints = [id];
+        const m = new Moteur(cfg, spec(6), `duree-${id}-${g}`);
+        m.jouerJusquAuBout();
+        for (const s of m.statsManches) { total += s.duree; manches++; }
+      }
+      return total / Math.max(1, manches);
+    };
+    const sans = duree('spFeuille');
+    const avec = duree('spMaladroite');
+    verifier(`Tornade maladroite — manche de ${(avec / 1000).toFixed(1)}s contre ${(sans / 1000).toFixed(1)}s sans elle`,
+      avec > sans * 1.1);
+  }
+
+  // Et aucune des trois ne bloque une partie, dans les deux modes concernés.
+  for (const mode of ['immediat', 'compromis']) {
+    const r = lancerCampagne(configParDefaut(5, { modeManche: mode }), spec(5), `gene-${mode}`, 60);
+    verifier(`${mode} — 60 parties au bout avec le nouveau paquet`,
+      r.raisons.manchesMax === undefined
+      && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 60,
+      JSON.stringify(r.raisons));
   }
 }
 

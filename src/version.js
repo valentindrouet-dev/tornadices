@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.54';
+export const VERSION = '1.55';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.55',
+    date: '19/08/2026',
+    notes: [
+      'Trois Tornades entrent au paquet des modes Immédiat et Compromis, et la Tornade orageuse en sort. Les nouvelles ne donnent rien et ne demandent rien : elles gênent, et la manche se gagne comme d’habitude — l’Abri, ou le contact. C’est la respiration qui manquait à une pioche où presque toutes les cartes accélèrent.',
+      '« Tornade paisible » — relancez les dés un par un : plus jamais deux dés en l’air à la fois, sauf le premier jet d’un lot neuf, qui part toujours en entier. « Tornade maladroite » — lancez les dés de votre autre main : tout est plus lent, et l’on relance un X par mégarde plus souvent. « Mini-Tornade » — jouez avec un lot de dés de moins, jamais moins d’un.',
+      'Les trois demandent un seul jeton à l’Abri en Compromis : une Tornade qui vous handicape n’a pas en plus à vous en demander davantage. Mesuré à six joueurs, la Maladroite passe ainsi de 58 s à 37 s de manche — au milieu du paquet, au lieu d’en être la plus longue. En Immédiat, où rien ne compense, ce sont les trois manches les plus longues du paquet : 46 s pour la Mini-Tornade, 43 s pour la Paisible, 35 s pour la Maladroite, contre 28 s de moyenne.',
+      'La Tornade orageuse demandait trois éclairs, un symbole que le dé officiel ne porte plus : elle ne pouvait plus rien faire et tenait la place d’une carte vivante.',
+      'Si vous aviez déjà coché vos cartes à la main dans « Cartes Tornade en jeu », votre paquet reste le vôtre : les trois nouvelles y apparaissent décochées, à vous de les ajouter.',
+    ],
+  },
   {
     version: '1.54',
     date: '19/08/2026',

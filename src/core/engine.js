@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.54';
+import { makeRng } from './rng.js?v=1.55';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.54';
+} from './config.js?v=1.55';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -253,7 +253,10 @@ export class Moteur {
   // Manches suivantes : les perdants de la manche précédente — ou les gagnants
   // si la « Journée de la triche » était en jeu.
   _porteursDeDepart() {
-    const nbLots = this.cfg.lots;
+    // La Mini-Tornade retire un lot pour la manche : moins de dés en l'air,
+    // donc moins d'occasions — et jamais moins d'un lot, sans quoi il ne se
+    // passerait plus rien.
+    const nbLots = Math.max(1, (this.cfg.lots || 1) - (this.passif.lotsEnMoins || 0));
     let candidats;
     if (this._prochainsPorteurs && this._prochainsPorteurs.length) {
       candidats = this._prochainsPorteurs;

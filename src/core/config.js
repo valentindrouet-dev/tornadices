@@ -767,15 +767,44 @@ export const CARTES_SANS_POINTS = [
     effetPassif: { doubleSiAttrape: true },
     sens: 1,
   },
+  // Trois Tornades qui ne donnent rien et ne demandent rien : elles gênent. La
+  // manche se gagne comme d'habitude — l'Abri, ou le contact — mais tout le
+  // monde joue avec un handicap, le même pour tous. C'est la contrepartie des
+  // Tornades qui emportent la manche d'une combinaison : une pioche qui ne
+  // ferait qu'accélérer n'aurait pas de respiration.
   {
-    id: 'spOrageuse',
-    refuge: 2,
-    court: 'Tornade orageuse',
-    nom: 'Tornade orageuse',
-    texte: 'Vous gagnez la manche.',
-    combo: { id: 'spOrageuse', requis: { eclair: 3 }, effet: 'gagnerManche' },
-    effetPassif: null,
+    id: 'spPaisible',
+    refuge: 1,
+    court: 'Tornade paisible',
+    nom: 'Tornade paisible',
+    texte: 'Relancez les dés un par un.',
+    combo: null,
+    effetPassif: { unParUn: true },
+    sens: -1,
+  },
+  {
+    id: 'spMaladroite',
+    // Les trois gênantes demandent le minimum à l'Abri : une Tornade qui vous
+    // handicape n'a pas en plus à vous en demander davantage. Mesuré à six
+    // joueurs, la Maladroite passe de 58 s à 37 s de manche — au milieu du
+    // paquet, au lieu d'être la plus longue de toutes.
+    refuge: 1,
+    court: 'Tornade maladroite',
+    nom: 'Tornade maladroite',
+    texte: 'Lancez les dés de votre autre main.',
+    combo: null,
+    effetPassif: { lenteur: 1.35, erreur: 0.06 },
     sens: 1,
+  },
+  {
+    id: 'spMini',
+    refuge: 1,
+    court: 'Mini-Tornade',
+    nom: 'Mini-Tornade',
+    texte: 'Jouez avec un lot de dés de moins.',
+    combo: null,
+    effetPassif: { lotsEnMoins: 1 },
+    sens: -1,
   },
   {
     id: 'spFurieuse',
