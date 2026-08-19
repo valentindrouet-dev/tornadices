@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.56';
+export const VERSION = '1.57';
 export const BUILD_DATE = '2026-08-19';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.57',
+    date: '19/08/2026',
+    notes: [
+      'Correction : les cartes ajoutées au jeu manquaient à qui avait composé son paquet à la main. Décocher une carte est un choix ; ne pas cocher une carte qui n’existait pas n’en est pas un — et rien ne distinguait les deux. Un paquet enregistré avant la v1.55 n’avait donc que dix Tornades au lieu de treize, aux Réglages comme dans la fiche PDF.',
+      'Le paquet retient désormais ce qu’il avait sous les yeux au moment où on l’a composé : une carte arrivée depuis le rejoint, une carte décochée reste dehors. Les paquets d’avant sont datés par la plus récente des cartes qu’ils retiennent — ils récupèrent les trois Tornades de la v1.55 sans rien perdre de leurs autres choix.',
+      'Le titre « Cartes Tornade en jeu » affiche le compte : 13/13 quand le paquet est complet. On voit d’un coup d’œil qu’il manque quelque chose.',
+      'Correction d’impression : le cadre qui fait défiler les tableaux de la fiche sur téléphone restait actif sur papier, où il aurait coupé net ce qui dépassait d’une page. Et les longs tableaux se poursuivent maintenant d’une page à l’autre, en-tête repris, au lieu d’être poussés entiers sur la suivante — la fiche tient en trois pages au lieu de quatre.',
+    ],
+  },
   {
     version: '1.56',
     date: '19/08/2026',

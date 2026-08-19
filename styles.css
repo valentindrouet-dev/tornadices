@@ -1426,23 +1426,32 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   font-size: 11.5px; color: var(--gris); text-align: center;
 }
 
+/* Un tableau de la fiche est dimensionné pour du papier : sur un téléphone il
+   défile à l'horizontale plutôt que de pousser toute la page de côté. Déclaré
+   AVANT le bloc d'impression, qui l'annule : à spécificité égale c'est l'ordre
+   du fichier qui tranche, et un cadre resté défilant à l'impression coupe net
+   ce qui dépasse de la page. */
+.fiche-defile { overflow-x: auto; }
+
 @media print {
   /* Seule la fiche s'imprime : la barre, les boutons et le fond disparaissent. */
   body::before, .barre, .fiche-commandes, .banniere-version { display: none !important; }
   body { background: #fff; }
   .page { padding: 0; max-width: none; }
   .fiche { border: 0; box-shadow: none; padding: 0; max-width: none; }
-  .fiche-bloc { break-inside: avoid; }
   .fiche-titre { break-after: avoid; }
+  /* Un bloc court ne se coupe pas en deux ; un tableau plus haut qu'une page,
+     lui, doit pouvoir se poursuivre sur la suivante — sinon ses dernières
+     lignes n'existent nulle part. C'est donc à la ligne, et non au bloc, que
+     l'on demande de rester d'un seul tenant. */
+  .fiche-bloc { break-inside: auto; }
+  .fiche-tbl tr { break-inside: avoid; }
+  .fiche-tbl thead { display: table-header-group; }
   /* Le cadre qui fait défiler les tableaux à l'écran n'a rien à faire sur du
      papier : la page a la largeur qu'il faut, le tableau s'y pose entier. */
   .fiche-defile { overflow: visible; }
   a[href]::after { content: none !important; }
 }
-
-/* Un tableau de la fiche est dimensionné pour du papier : sur un téléphone il
-   défile à l'horizontale plutôt que de pousser toute la page de côté. */
-.fiche-defile { overflow-x: auto; }
 
 /* Les dés d'une exigence tiennent sur une ligne : une combinaison de quatre dés
    coupée en deux se lit mal, et la colonne a la place de s'élargir. */

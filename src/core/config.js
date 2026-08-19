@@ -302,15 +302,58 @@ export function cleCombosCartes(cfg) {
     : m === 'compromis' ? 'combosCartesCompromis' : 'combosCartes';
 }
 
+/**
+ * La clé qui retient ce que le paquet enregistré avait sous les yeux.
+ *
+ * Décocher une carte est un choix ; ne pas cocher une carte qui n'existait pas
+ * n'en est pas un. Sans mémoire de ce qui était proposé au moment où l'on a
+ * composé le paquet, les deux se ressemblent — et une carte ajoutée au jeu
+ * manquerait sans bruit à qui a touché ses cases une fois.
+ */
+export const cleVues = (cfg) => `${clePaquet(cfg)}Vues`;
+
 /** Les cartes en jeu dans le mode en cours. */
 export function cartesEnJeu(cfg) {
-  const paquet = cartesDuMode(cfg);
-  const connues = new Set(paquet.map((c) => c.id));
+  const paquet = cartesDuMode(cfg).map((c) => c.id);
+  const connues = new Set(paquet);
   const liste = cfg[clePaquet(cfg)];
   // Un paquet enregistré peut porter des cartes de l'autre mode — un réglage
   // d'avant la séparation des paquets : elles ne comptent pas ici.
   const retenues = Array.isArray(liste) ? liste.filter((id) => connues.has(id)) : [];
-  return retenues.length ? retenues : paquet.map((c) => c.id);
+  // Un paquet vide n'existe pas : sans choix enregistré, le jeu est complet.
+  if (!retenues.length) return paquet;
+  const gardees = new Set(retenues);
+
+  const vues = cfg[cleVues(cfg)];
+  if (Array.isArray(vues) && vues.length) {
+    const avaitVu = new Set(vues);
+    return paquet.filter((id) => gardees.has(id) || !avaitVu.has(id));
+  }
+
+  // Pas de trace — un paquet composé avant la v1.57. On le date alors par la
+  // plus récente des cartes qu'il retient : un paquet qui contient une carte
+  // arrivée en v1.55 a forcément été composé après, et ce qu'il ne retient pas
+  // a bien été décoché. Seules les cartes plus récentes que cette date le
+  // rejoignent — le reste de ses choix tient.
+  let vuJusqua = '0';
+  for (const id of retenues) {
+    const c = CARTES_PAR_ID[id];
+    if (c && apresVersion(c.depuis, vuJusqua)) vuJusqua = c.depuis;
+  }
+  return paquet.filter((id) => gardees.has(id)
+    || apresVersion((CARTES_PAR_ID[id] || {}).depuis, vuJusqua));
+}
+
+/** `a` est-elle une version postérieure à `b` ? « 1.55 » > « 1.9 ». */
+function apresVersion(a, b) {
+  if (!a) return false;
+  const x = String(a).split('.').map((n) => Number(n) || 0);
+  const y = String(b || '0').split('.').map((n) => Number(n) || 0);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] || 0) - (y[i] || 0);
+    if (d) return d > 0;
+  }
+  return false;
 }
 
 /** L'exigence d'une combinaison de carte dans le mode en cours. */
@@ -774,6 +817,8 @@ export const CARTES_SANS_POINTS = [
   // ferait qu'accélérer n'aurait pas de respiration.
   {
     id: 'spPaisible',
+    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
+    depuis: '1.55',
     refuge: 1,
     court: 'Tornade paisible',
     nom: 'Tornade paisible',
@@ -784,6 +829,8 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spMaladroite',
+    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
+    depuis: '1.55',
     // Les trois gênantes demandent le minimum à l'Abri : une Tornade qui vous
     // handicape n'a pas en plus à vous en demander davantage. Mesuré à six
     // joueurs, la Maladroite passe de 58 s à 37 s de manche — au milieu du
@@ -798,6 +845,8 @@ export const CARTES_SANS_POINTS = [
   },
   {
     id: 'spMini',
+    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
+    depuis: '1.55',
     refuge: 1,
     court: 'Mini-Tornade',
     nom: 'Mini-Tornade',

@@ -3,37 +3,37 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.56';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.56';
-import { store } from './store.js?v=1.56';
-import { aller } from './app.js?v=1.56';
-import { lancerPartie } from './table.js?v=1.56';
+import { h, remplacer } from './dom.js?v=1.57';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.57';
+import { store } from './store.js?v=1.57';
+import { aller } from './app.js?v=1.57';
+import { lancerPartie } from './table.js?v=1.57';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
+  cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.56';
-import { tableauCombos, editeurCases } from './combos.js?v=1.56';
+} from '../core/config.js?v=1.57';
+import { tableauCombos, editeurCases } from './combos.js?v=1.57';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.56';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.56';
-import { randomSeed } from '../core/rng.js?v=1.56';
-import { reglagesJoueurs } from './accueil.js?v=1.56';
+} from './apparence.js?v=1.57';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.57';
+import { randomSeed } from '../core/rng.js?v=1.57';
+import { reglagesJoueurs } from './accueil.js?v=1.57';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.56';
+} from './profils.js?v=1.57';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -859,9 +859,11 @@ export function vueVariables() {
       // Un paquet par mode de jeu : ce qu'on coche ici ne vaut que pour le mode
       // en cours, et l'autre garde le sien intact.
       h('div.carte',
-        titreAide(`Cartes Tornade en jeu — ${NOM_MODE[modeManche(cfg)]}`, [
+        titreAide(
+          `Cartes Tornade en jeu — ${NOM_MODE[modeManche(cfg)]} · `
+          + `${cartesEnJeu(cfg).length}/${cartesDuMode(cfg).length}`, [
           'Une carte par manche, dans l’ordre de la pile. Décochez celles que vous ne voulez pas '
-          + 'voir sortir.',
+          + 'voir sortir — le compte du titre dit combien sont en jeu sur le total du mode.',
           'Chaque mode de jeu a son propre paquet : ce que vous cochez ici ne vaut que pour '
           + `« ${NOM_MODE[modeManche(cfg)]} ». Changez de `
           + 'mode en haut de la page et vous retrouverez l’autre paquet, intact.',
@@ -902,6 +904,10 @@ export function vueVariables() {
                   onclick: () => {
                     const liste = dedans ? paquet.filter((x) => x !== c.id) : [...paquet, c.id];
                     ecrire(clePaquet(cfg), liste);
+                    // Et ce qui était proposé au moment du choix : une carte
+                    // ajoutée au jeu plus tard n'aura pas été décochée, elle
+                    // n'existait pas. Sans cette trace, elle manquerait.
+                    ecrire(cleVues(cfg), cartesDuMode(cfg).map((x) => x.id));
                     dessiner();
                   },
                 }, h('span.case', '✓'), c.court),

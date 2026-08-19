@@ -321,6 +321,9 @@ console.log('\nJokers');
     const cfg = configParDefaut(6);
     // « Journée intensive » : 2 tornades + 2 abris, servies par deux jokers.
     cfg.cartes = ['intensive'];
+    // Un paquet voulu exactement tel quel : on dit ce qu'il avait sous les yeux,
+    // sinon les cartes arrivées depuis le rejoindraient.
+    cfg.cartesVues = CARTES_TORNADE.map((c) => c.id);
     cfg.melangerCartes = false;
     const m = new Moteur(cfg, humains, 'carte-office');
     const j = m.joueurs[0];
@@ -1145,6 +1148,7 @@ console.log('\nCartes Tornade — un paquet par mode');
     const cfg = configParDefaut(6, { sansPoints: true });
     cfg.melangerCartes = false;
     cfg.cartesSansPoints = ['spFurieuse'];
+    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
     // Une exigence d'un seul ZzZ : impossible à confondre avec la référence.
     cfg.combosCartesSansPoints = { spFurieuse: { zzz: 1 } };
     const combo = CARTES_PAR_ID.spFurieuse.combo;
@@ -1641,6 +1645,7 @@ console.log('\nTornades paisible, maladroite et Mini');
     const cfg = configParDefaut(6, { modeManche: 'immediat', ...opts });
     cfg.melangerCartes = false;
     cfg.cartesSansPoints = [id];
+    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
     const m = new Moteur(cfg, spec(6), `carte-${id}`);
     return m;
   };
@@ -1656,6 +1661,7 @@ console.log('\nTornades paisible, maladroite et Mini');
     const cfg3 = configParDefaut(3, { modeManche: 'immediat' });
     cfg3.melangerCartes = false;
     cfg3.cartesSansPoints = ['spMini'];
+    cfg3.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
     cfg3.lots = 1;
     const m3 = new Moteur(cfg3, spec(3), 'mini-3');
     verifier('elle ne descend jamais sous un lot',
@@ -1699,6 +1705,7 @@ console.log('\nTornades paisible, maladroite et Mini');
         const cfg = configParDefaut(6, { modeManche: 'immediat' });
         cfg.melangerCartes = false;
         cfg.cartesSansPoints = [id];
+        cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
         const m = new Moteur(cfg, spec(6), `duree-${id}-${g}`);
         m.jouerJusquAuBout();
         for (const s of m.statsManches) { total += s.duree; manches++; }
@@ -1719,6 +1726,52 @@ console.log('\nTornades paisible, maladroite et Mini');
       && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 60,
       JSON.stringify(r.raisons));
   }
+}
+
+// ── 3 septies quater ter. Un paquet enregistré et les cartes arrivées depuis ─
+console.log('\nPaquet enregistré et cartes nouvelles');
+{
+  const tousSp = CARTES_SANS_POINTS.map((c) => c.id);
+  const nouvelles = CARTES_SANS_POINTS.filter((c) => c.depuis).map((c) => c.id);
+  verifier('les cartes de la v1.55 portent leur date d’arrivée',
+    nouvelles.length === 3 && nouvelles.every((id) => CARTES_PAR_ID[id].depuis === '1.55'));
+
+  const enJeu = (paquet, vues) => cartesEnJeu({
+    modeManche: 'compromis',
+    cartesCompromis: paquet,
+    ...(vues ? { cartesCompromisVues: vues } : {}),
+  });
+
+  // Le cas qui a mordu : un paquet composé avant que les trois n'existent.
+  {
+    const avant = tousSp.filter((id) => !nouvelles.includes(id));
+    const sans = avant.filter((id) => id !== 'spF5');   // et une carte décochée
+    const obtenu = enJeu(sans);
+    verifier(`un paquet d’avant la v1.55 récupère les trois nouvelles (${obtenu.length} cartes)`,
+      nouvelles.every((id) => obtenu.includes(id)));
+    verifier('sans reprendre celle qu’on avait décochée', !obtenu.includes('spF5'));
+  }
+
+  // Un paquet qui en retient une : il a donc vu les trois, et son choix tient.
+  {
+    const obtenu = enJeu(['spFeuille', 'spMini']);
+    verifier('un paquet qui connaît la v1.55 garde son choix exact',
+      obtenu.length === 2 && obtenu.includes('spMini') && !obtenu.includes('spPaisible'));
+  }
+
+  // Et avec la trace de ce qui était proposé, le choix vaut sans discussion.
+  {
+    const obtenu = enJeu(['spFeuille'], tousSp);
+    verifier('un paquet daté est repris tel quel',
+      obtenu.length === 1 && obtenu[0] === 'spFeuille');
+    const partiel = enJeu(['spFeuille'], ['spFeuille', 'spVaches']);
+    verifier('et ce qu’il n’avait pas sous les yeux le rejoint',
+      partiel.includes('spFeuille') && !partiel.includes('spVaches')
+      && nouvelles.every((id) => partiel.includes(id)));
+  }
+
+  verifier('un paquet vide reste le jeu complet',
+    enJeu([]).length === tousSp.length && enJeu(null).length === tousSp.length);
 }
 
 // ── 3 septies quater. Le sens de rotation, trois règles ──────────────────────

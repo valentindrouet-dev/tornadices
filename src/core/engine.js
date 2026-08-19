@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.56';
+import { makeRng } from './rng.js?v=1.57';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.56';
+} from './config.js?v=1.57';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
