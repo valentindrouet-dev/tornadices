@@ -4,20 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.59';
+import { h, remplacer, duree, vider } from './dom.js?v=1.60';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.59';
-import { Moteur } from '../core/engine.js?v=1.59';
+} from './icons.js?v=1.60';
+import { Moteur } from '../core/engine.js?v=1.60';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation,
-} from '../core/config.js?v=1.59';
-import { ajouterHistorique } from './store.js?v=1.59';
-import { enregistrerPartie } from './resultats.js?v=1.59';
-import { aller } from './app.js?v=1.59';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.59';
+} from '../core/config.js?v=1.60';
+import { ajouterHistorique } from './store.js?v=1.60';
+import { enregistrerPartie } from './resultats.js?v=1.60';
+import { aller } from './app.js?v=1.60';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.60';
 
 let moteur = null;
 let vitesse = 1;
@@ -62,7 +62,9 @@ function tailleDeSiege(n) {
   return Math.min(36, Math.floor((utile - (colonnes - 1) * ecart) / colonnes));
 }
 
-const COULEUR_ECLAT = { vache: '#6cb800', echec: '#e2000f', endormi: '#8794a3' };
+// L'éclat d'écran reprend la couleur de l'événement : la nuit de la lune
+// quand on s'endort, le rouge de l'échec, le vert de l'abri.
+const COULEUR_ECLAT = { vache: '#6cb800', echec: '#e2000f', endormi: '#4b5bc7' };
 
 /** Sous cette largeur, la table passe en disposition verticale. */
 const surMobile = () => window.innerWidth <= 860;
@@ -499,7 +501,7 @@ export function vueTable() {
 
   // Les combinaisons obligatoires sont jouées dans la foulée du lancer : sans
   // rémanence, leur alerte clignoterait le temps d'une image. On la retient.
-  const PRIORITE_ALERTE = ['rouge', 'jaune', 'bleu', 'vert', 'violet'];
+  const PRIORITE_ALERTE = ['rouge', 'jaune', 'or', 'vert', 'nuit'];
   const alertesRetenues = new Map();
   moteur.onCombinaison = (pid, comboId) => {
     const couleur = ALERTES[comboId];

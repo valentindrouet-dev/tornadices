@@ -486,9 +486,11 @@ label.champ {
 /* La zone de jeu du joueur s'entoure d'un halo dès que la combinaison sort. */
 [data-alerte] { border-color: var(--c-alerte); animation: halo 1s ease-in-out infinite; }
 [data-alerte="rouge"]  { --c-alerte: #e2000f; --c-halo: rgba(226, 0, 15, .40); }
-[data-alerte="bleu"]   { --c-alerte: #2b93de; --c-halo: rgba(43, 147, 222, .40); }
+/* L'or du soleil pour le réveil, la nuit de la lune pour l'endormissement :
+   les halos reprennent la couleur des faces qui les déclenchent. */
+[data-alerte="or"]     { --c-alerte: #d99b06; --c-halo: rgba(217, 155, 6, .40); }
 [data-alerte="vert"]   { --c-alerte: #52a72e; --c-halo: rgba(82, 167, 46, .40); }
-[data-alerte="violet"] { --c-alerte: #a05ce0; --c-halo: rgba(160, 92, 224, .40); }
+[data-alerte="nuit"]   { --c-alerte: #4b5bc7; --c-halo: rgba(75, 91, 199, .40); }
 @keyframes halo {
   0%, 100% { box-shadow: 0 0 0 0 var(--c-halo), var(--ombre); }
   50% { box-shadow: 0 0 0 9px transparent, var(--ombre); }
@@ -672,9 +674,10 @@ label.champ {
   animation: annonceEntree .18s ease-out;
   transition: opacity .3s linear, transform .3s ease-in;
 }
-.annonce--bleu   { --c-annonce: #1f7fc4; }
+.annonce--bleu   { --c-annonce: #1f7fc4; }   /* annonce neutre, sans combinaison */
+.annonce--or     { --c-annonce: #b07d05; }
 .annonce--vert   { --c-annonce: #3d8f28; }
-.annonce--violet { --c-annonce: #8c46d4; }
+.annonce--nuit   { --c-annonce: #414bad; }
 .annonce--jaune  { --c-annonce: #d98a06; }
 .annonce--rouge  { --c-annonce: #cf1420; }
 .annonce--sortie { opacity: 0; transform: translate(-50%, -190%); }
@@ -853,9 +856,12 @@ label.champ {
   background: var(--fond-tour, #f3f5f8);
   border-left: 3px solid var(--bord-tour, #cfd7e0);
 }
-.journal .ligne--tour[data-couleur="bleu"]   { --fond-tour: #e4f2fd; --bord-tour: #7ec0ee; }
+/* Chaque ligne porte la couleur de la face qui l'a produite : l'or du soleil,
+   le vert de la grange, la nuit de la lune. L'attrape garde son ambre clair —
+   c'est la seule qui ne vient pas d'une face du dé. */
+.journal .ligne--tour[data-couleur="or"]     { --fond-tour: #f8e5a6; --bord-tour: #c98f04; }
 .journal .ligne--tour[data-couleur="vert"]   { --fond-tour: #e6f5e2; --bord-tour: #86ca6b; }
-.journal .ligne--tour[data-couleur="violet"] { --fond-tour: #f2e9fd; --bord-tour: #bf95ee; }
+.journal .ligne--tour[data-couleur="nuit"]   { --fond-tour: #e5e8fa; --bord-tour: #4b5bc7; }
 .journal .ligne--tour[data-couleur="jaune"]  { --fond-tour: #fdf3dc; --bord-tour: #f2c257; }
 .journal .ligne--tour[data-couleur="rouge"]  { --fond-tour: #fde8e8; --bord-tour: #ee8a86; }
 .journal .ligne--tour[data-couleur="carte"]  { --fond-tour: #fdeee2; --bord-tour: #f0a468; }

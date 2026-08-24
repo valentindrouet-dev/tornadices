@@ -89,13 +89,17 @@ export const SYMBOLE_BLOQUANT = 'x';
 
 // Couleur d'alerte affichée autour de la zone d'un joueur quand la combinaison
 // apparaît sur ses dés.
+// Chaque combinaison a sa couleur, et c'est celle de sa face : l'or du soleil
+// pour le réveil, la nuit de la lune pour l'endormissement, le vert de la grange
+// pour l'abri. On les retrouve à l'identique au halo du joueur, dans le bandeau
+// d'annonce et dans le journal — un même événement, une même couleur.
 export const ALERTES = {
   blocage: 'rouge',
   echecJokers: 'rouge',
   collision: 'jaune',
-  reveil: 'bleu',
+  reveil: 'or',
   vache: 'vert',
-  endormir: 'violet',
+  endormir: 'nuit',
 };
 
 // Laquelle des deux combinaisons porte l'attrape. Ce sont bien les combinaisons

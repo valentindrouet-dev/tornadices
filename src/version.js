@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.59';
+export const VERSION = '1.60';
 export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.60',
+    date: '24/08/2026',
+    notes: [
+      'Le réveil et l’endormissement prennent la couleur de leur face : l’or du soleil pour l’un, la nuit bleu-violet de la lune pour l’autre. Ils étaient restés au bleu ciel et au violet clair d’avant le nouveau dé.',
+      'La couleur suit partout le même événement : la ligne du journal, le halo autour du joueur, le bandeau d’annonce au centre de la table, l’éclat d’écran quand c’est vous qu’on endort, et la légende des alertes dans les Règles.',
+    ],
+  },
   {
     version: '1.59',
     date: '24/08/2026',

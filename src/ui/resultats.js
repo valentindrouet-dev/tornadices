@@ -12,13 +12,13 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.59';
-import { store } from './store.js?v=1.59';
-import { aller } from './app.js?v=1.59';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.59';
+} from './dom.js?v=1.60';
+import { store } from './store.js?v=1.60';
+import { aller } from './app.js?v=1.60';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.60';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche,
-} from '../core/config.js?v=1.59';
+} from '../core/config.js?v=1.60';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat

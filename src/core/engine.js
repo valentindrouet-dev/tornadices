@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.59';
+import { makeRng } from './rng.js?v=1.60';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.59';
+} from './config.js?v=1.60';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -1157,7 +1157,7 @@ export class Moteur {
       case 'reveil':
         j.eveille = true; j.stats.reveils++;
         this._flash('reveil', j.id);
-        this._annoncer('Réveil !', 'bleu', j.id);
+        this._annoncer('Réveil !', 'or', j.id);
         break;
       case 'blocage':
       case 'echecJokers':
@@ -1179,7 +1179,7 @@ export class Moteur {
           cible.eveille = false;
           cible.stats.foisEndormi++;
           this._flash('endormi', cible.id);
-          this._annoncer(`Endort ${cible.nom}`, 'violet', j.id);
+          this._annoncer(`Endort ${cible.nom}`, 'nuit', j.id);
         }
         break;
       }
@@ -1192,7 +1192,7 @@ export class Moteur {
           }
         }
         this._annoncer(
-          noms.length ? `Endort ${noms.join(' et ')}` : 'Endort ses voisins', 'violet', j.id,
+          noms.length ? `Endort ${noms.join(' et ')}` : 'Endort ses voisins', 'nuit', j.id,
         );
         break;
       }

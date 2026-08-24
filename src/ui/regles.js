@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.59';
+import { h } from './dom.js?v=1.60';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.59';
+} from './icons.js?v=1.60';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.59';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.59';
+} from '../core/config.js?v=1.60';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.60';
 
 export function vueRegles() {
   return h('div.page',
@@ -163,9 +163,9 @@ export function vueRegles() {
       h('div.rangee',
         ...[[`rouge`, `Échec — deux « ${nomSymbole('x')} » ou trois jokers, le lot part`],
           ['jaune', 'Trois éclairs — attrape'],
-          ['bleu', `Trois « ${nomSymbole('tornade')} » — réveil`],
+          ['or', `Trois « ${nomSymbole('tornade')} » — réveil`],
           ['vert', `Trois « ${nomSymbole('vache')} » — jeton`],
-          ['violet', `Trois « ${nomSymbole('zzz')} » — endormi`]].map(([c, texte]) =>
+          ['nuit', `Trois « ${nomSymbole('zzz')} » — endormi`]].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),
       ),
       h('p.petit', { style: { marginTop: '14px' } },
