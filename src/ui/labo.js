@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.57';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.57';
-import { nomSymbole } from './apparence.js?v=1.57';
-import { store } from './store.js?v=1.57';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.57';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.58';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.58';
+import { nomSymbole } from './apparence.js?v=1.58';
+import { store } from './store.js?v=1.58';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.58';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -16,15 +16,15 @@ import {
   NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.57';
-import { tableauCombos } from './combos.js?v=1.57';
-import { barreProfils, idActif } from './profils.js?v=1.57';
+} from '../core/config.js?v=1.58';
+import { tableauCombos } from './combos.js?v=1.58';
+import { barreProfils, idActif } from './profils.js?v=1.58';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.57';
+} from './variables.js?v=1.58';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.57';
+} from '../core/proba.js?v=1.58';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -267,7 +267,7 @@ function panneauConfig(rafraichir) {
       h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
       h('button', {
         class: `chip${cfg.combos.some((c) => c.id === 'echecJokers') ? ' on' : ''}`,
-        title: 'Trois jokers d’un coup font partir le lot, comme deux X',
+        title: `Trois jokers d’un coup font partir le lot, comme deux « ${nomSymbole('x')} »`,
         onclick: () => {
           const actif = cfg.combos.some((c) => c.id === 'echecJokers');
           cfg.echecJokers = !actif;

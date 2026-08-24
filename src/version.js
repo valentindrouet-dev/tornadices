@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.57';
-export const BUILD_DATE = '2026-08-19';
+export const VERSION = '1.58';
+export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.58',
+    date: '19/08/2026',
+    notes: [
+      'Le dé officiel change de visage : un soleil orange pour le Réveil, une grange verte pour l’Abri, une lune bleue pour le Sommeil, une tornade rouge pour la face qui fige le dé. Quatre images, quatre couleurs qu’on distingue d’un bout à l’autre de la table.',
+      'Deux faces changent aussi de nom : le « ZzZ » devient le « Sommeil », et le « X » devient la « Tornade ». Le pouvoir, lui, ne bouge pas d’un iota — mêmes symboles pour le moteur, mêmes combinaisons, mêmes effets, et toutes les règles enregistrées restent valables.',
+      'La face qui fige le dé rejoint les faces personnalisables : elles sont quatre désormais, chacune avec ses illustrations au choix et l’import de votre propre image. Tous les dessins d’avant restent proposés — le réveil, la maison, la tornade verte, la vache, le ZzZ violet, le ZzZ gris, la croix noire — et gardent la couleur qu’ils avaient.',
+      'Les règles, les Réglages, le Laboratoire et la fiche PDF nomment les faces au lieu de les écrire en dur : « deux « Tornade » figent vos dés » suit désormais le nom que vous leur donnez, quel qu’il soit.',
+      'Le joker gagne un filet blanc entre ses quatre quarts de couleur : avec l’orange du soleil à côté de celui de l’éclair, deux quarts voisins se lisaient comme une seule moitié.',
+    ],
+  },
   {
     version: '1.57',
     date: '19/08/2026',

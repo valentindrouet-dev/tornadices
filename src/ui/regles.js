@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.57';
+import { h } from './dom.js?v=1.58';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.57';
+} from './icons.js?v=1.58';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.57';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.57';
+} from '../core/config.js?v=1.58';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.58';
 
 export function vueRegles() {
   return h('div.page',
@@ -44,7 +44,8 @@ export function vueRegles() {
       h('p', 'Deux équipes, les Bleus et les Jaunes — et un joueur Vert en solo si le nombre '
         + 'est impair. Plusieurs lots de dés circulent en même temps autour de la table. Celui '
         + 'qui tient un lot le relance aussi vite et aussi souvent qu’il veut, jusqu’à sortir une '
-        + 'combinaison… ou jusqu’à ce que deux X figent ses dés et lui fassent rendre le lot. '
+        + `combinaison… ou jusqu’à ce que deux « ${nomSymbole('x')} » figent ses dés et lui `
+        + 'fassent rendre le lot. '
         + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
       h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Abri. '
         + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
@@ -75,26 +76,28 @@ export function vueRegles() {
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
       h('p.petit', { style: { marginTop: '12px' } },
-        `Le dé officiel porte six faces : deux ${nomSymbole('tornade')}s, un X, `
-        + `un ${nomSymbole('vache')} et deux ZzZ. `
+        `Le dé officiel porte six faces : deux « ${nomSymbole('tornade')} », un `
+        + `« ${nomSymbole('x')} », un « ${nomSymbole('vache')} » et deux « ${nomSymbole('zzz')} ». `
         + 'L’éclair et le joker n’y sont plus — ils restent disponibles dans les Réglages, '
         + 'à poser soi-même sur une face pour les essayer.'),
       h('p.mini.muted',
-        `Les deux faces de couleur portent l’habillage officiel : ${nomSymbole('tornade')} sur `
-        + `le bleu, ${nomSymbole('vache')} sur le vert. Le moteur, lui, continue de parler de `
-        + `« ${nomAncien('tornade')} » et de « ${nomAncien('vache')} » — les pouvoirs et les `
-        + 'combinaisons n’ont pas bougé, et les Réglages permettent de reprendre l’ancien dessin.'),
+        'Les quatre faces du jeu portent l’habillage officiel : le soleil qui réveille, la grange '
+        + 'où l’on s’abrite, la lune du sommeil, la tornade rouge qui fige le dé. Le moteur, lui, '
+        + `continue de parler de « ${nomAncien('tornade')} », « ${nomAncien('vache')} », `
+        + `« ${nomAncien('zzz')} » et « ${nomAncien('x')} » — les pouvoirs et les combinaisons `
+        + 'n’ont pas bougé, et les Réglages permettent de reprendre chaque ancien dessin.'),
       h('div.encart', { style: { marginTop: '14px' } },
         'Un dé peut être relancé autant de fois qu’on veut, un par un ou tous ensemble — '
-        + 'sauf les X : dès qu’un X sort, le dé est figé sur cette face. Au deuxième X, il ne reste '
-        + 'plus assez de dés libres pour former quoi que ce soit : le lot part aussitôt.'),
+        + `sauf « ${nomSymbole('x')} » : dès que ce symbole sort, le dé est figé sur cette face. `
+        + 'Au deuxième, il ne reste plus assez de dés libres pour former quoi que ce soit : le '
+        + 'lot part aussitôt.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Le dé du jeu est et reste le d6. Les Réglages proposent un d8 et un d10 pour '
         + 'l’équilibrage : ils reprennent la même série de symboles depuis le début, et chaque '
         + 'face y reste modifiable une à une.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'Sans face éclair, la combinaison Attaque ne peut pas sortir : c’est donc l’Échec — '
-        + 'le double X — qui porte l’attrape par défaut. Posez un éclair sur une face et '
+        + `le double « ${nomSymbole('x')} » — qui porte l’attrape par défaut. Posez un éclair sur une face et `
         + 'repassez le déclencheur sur « Éclairs » pour retrouver l’attaque choisie.'),
     ),
 
@@ -103,21 +106,23 @@ export function vueRegles() {
       h('div.rangee', { style: { marginBottom: '12px' } },
         pastilleSymbole('joker', 46),
         h('p.petit', { style: { flex: '1', margin: 0 } },
-          'Le joker prend la face de n’importe quel symbole — tornade, abri, ZzZ ou éclair — '
-          + 'jamais celle du X. Il valide donc n’importe quelle combinaison, et se garde d’un '
+          `Le joker prend la face de n’importe quel symbole — ${nomSymbole('tornade')}, `
+          + `${nomSymbole('vache')}, ${nomSymbole('zzz')} ou éclair — jamais celle qui fige le dé. `
+          + 'Il valide donc n’importe quelle combinaison, et se garde d’un '
           + 'lancer à l’autre comme n’importe quel dé utile.'),
       ),
       h('p.petit', 'Quand un joker sert plusieurs combinaisons au même jet, c’est le joueur qui '
         + 'décide laquelle est jouée : la table lui laisse un instant pour trancher, puis joue '
         + 'la meilleure d’office s’il ne dit rien.'),
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
-        'Trois jokers d’un coup : c’est un échec, comme deux X. Le lot part sans rien tenter, '
+        `Trois jokers d’un coup : c’est un échec, comme deux « ${nomSymbole('x')} ». Le lot part sans rien tenter, `
         + 'et cet échec l’emporte sur tout ce que les jokers auraient pu servir — sans quoi le '
         + 'joker n’aurait aucun revers. Règle décochable dans les Réglages de partie.'),
       h('div.rangee', { style: { marginTop: '14px' } },
         pastilleSymbole('jokerDouble', 40),
         h('p.petit', { style: { flex: '1', margin: 0 } },
-          h('strong', nomSymbole('jokerDouble')), ' — un joker limité à l’éclair et au ZzZ. '
+          h('strong', nomSymbole('jokerDouble')),
+          ` — un joker limité à l’éclair et au « ${nomSymbole('zzz')} ». `
           + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Réglages '
           + 'pour l’essayer. Il ne compte pas dans les trois jokers de l’échec.'),
       ),
@@ -143,8 +148,8 @@ export function vueRegles() {
         h('span', { html: SVG_TORNADE_EVEILLEE, style: { width: '30px', color: 'var(--bleu)' } }),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
-        'Il faut être réveillé pour agir : les abris comme les ZzZ ne comptent que Tornade '
-        + 'éveillée, et les tornades ne comptent que si l’on dort encore. Seuls l’attrape et '
+        'Il faut être réveillé pour agir : les abris comme les sommeils ne comptent que Tornade '
+        + 'éveillée, et les réveils ne comptent que si l’on dort encore. Seuls l’attrape et '
         + 'les deux échecs valent dans les deux états.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
@@ -156,9 +161,11 @@ export function vueRegles() {
       h('p.petit', 'Dès qu’une combinaison sort, la zone du joueur s’entoure d’un halo de couleur : '
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
-        ...[['rouge', 'Échec — deux X ou trois jokers, le lot part'], ['jaune', 'Trois éclairs — attrape'],
-          ['bleu', 'Trois tornades — réveil'], ['vert', 'Trois abris — jeton'],
-          ['violet', 'Trois ZzZ — endormi']].map(([c, texte]) =>
+        ...[[`rouge`, `Échec — deux « ${nomSymbole('x')} » ou trois jokers, le lot part`],
+          ['jaune', 'Trois éclairs — attrape'],
+          ['bleu', `Trois « ${nomSymbole('tornade')} » — réveil`],
+          ['vert', `Trois « ${nomSymbole('vache')} » — jeton`],
+          ['violet', `Trois « ${nomSymbole('zzz')} » — endormi`]].map(([c, texte]) =>
           h('span.badge', { 'data-alerte': c, style: { padding: '6px 12px' } }, texte)),
       ),
       h('p.petit', { style: { marginTop: '14px' } },
@@ -190,7 +197,7 @@ export function vueRegles() {
       h('p.petit', 'Deux combinaisons peuvent tenter le contact, et les Réglages disent '
         + 'laquelle : « Éclairs » désigne l’Attaque — la règle de base — et « Échecs » désigne '
         + 'l’Échec. Ce sont bien les combinaisons qui décident des dés : réglez la ligne du '
-        + 'tableau, et le déclencheur suit, qu’il demande trois éclairs, deux X ou trois X.'),
+        + `tableau, et le déclencheur suit, qu’il demande trois éclairs ou deux « ${nomSymbole('x')} ».`),
       h('p.petit.muted', 'En mode « Échecs », on ne choisit plus d’attaquer : on attaque à chaque '
         + 'fois que le hasard le permet, et l’échec cesse d’être une pure perte. L’Attaque, elle, '
         + 'reste réglable dans le tableau mais ne se joue plus — sans quoi elle coûterait le lot '
@@ -352,7 +359,7 @@ export function vueRegles() {
         + 'abris, et le premier joueur qui les sort arrête la manche sur-le-champ. Son équipe '
         + 'prend la carte Tornade, et la manche suivante commence.'),
       h('p.petit.muted', 'Tout le reste tient : le dé, les combinaisons, l’attrape, le rythme, '
-        + 'les X qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le '
+        + `les « ${nomSymbole('x')} » qui figent. Seul le décompte change — c’est le nombre de cartes qui fait le `
         + 'vainqueur, quatre en général au lieu de trois.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'L’attrape emporte la manche elle aussi : il n’y a plus de jeton à prendre, un contact '
@@ -380,7 +387,7 @@ export function vueRegles() {
         + 'collision, qui envoie valser un jeton adverse dans la tornade et emporte la manche de '
         + 'la même façon.'),
       h('p.petit.muted', { style: { marginTop: '10px' } },
-        'Le reste tient sans changer : le dé, les combinaisons, le rythme, les X qui figent, la '
+        `Le reste tient sans changer : le dé, les combinaisons, le rythme, les « ${nomSymbole('x')} » qui figent, la `
         + 'façon dont se décide le sens de rotation. C’est le nombre de cartes qui fait '
         + 'le vainqueur, cinq par défaut — les manches y sont plus longues que dans l’Immédiat, '
         + 'plus courtes que dans le mode Jeton.'),
@@ -423,7 +430,7 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Incidents fâcheux'),
       h('ul.petit',
-        h('li', 'Relancer un X par mégarde : le joueur passe son lot.'),
+        h('li', `Relancer un « ${nomSymbole('x')} » par mégarde : le joueur passe son lot.`),
         h('li', 'Lancer les dés au lieu de les passer, ou ne pas passer après une attrape : '
           + 'les équipes adverses retournent un jeton.'),
         h('li', 'Un dé tombe, un imprévu survient : mettez le jeu en pause.'),

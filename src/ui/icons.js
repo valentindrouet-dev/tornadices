@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole } from './apparence.js?v=1.57';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.58';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -52,24 +52,30 @@ const GLYPHES = {
   vide: `<circle cx="50" cy="50" r="8" fill="${NOIR}" opacity=".3"/>`,
 };
 
+// Les pastilles du dé officiel. Le soleil est orange, la grange verte, la lune
+// d'un bleu de nuit clair, la tornade rouge — quatre couleurs qu'on distingue
+// d'un bout à l'autre de la table, même du coin de l'œil.
 export const COULEUR_FACE = {
-  tornade: '#a8dcf2',
+  tornade: '#f0951c',
   vache: '#82dc0a',
-  zzz: '#c28ef2',
+  zzz: '#8ba6f5',
   eclair: '#f9b115',
   joker: '#f4a11c',
-  jokerDouble: '#c28ef2',
+  jokerDouble: '#8ba6f5',
   x: '#e2000f',
   vide: '#e6edf4',
 };
 
 // Le joker porte les couleurs des quatre symboles qu'il peut prendre — éclair,
-// tornade, vache et ZzZ — et l'étoile par-dessus. Jamais le X.
+// soleil, grange et lune — et l'étoile par-dessus. Jamais la tornade rouge.
+// Un filet blanc sépare les quarts : deux couleurs voisines s'y liraient sinon
+// comme une seule moitié.
 const FACE_JOKER = svg(`
   <path d="M50 50 L50 7 A43 43 0 0 0 7 50 Z" fill="${COULEUR_FACE.eclair}"/>
   <path d="M50 50 L50 7 A43 43 0 0 1 93 50 Z" fill="${COULEUR_FACE.tornade}"/>
   <path d="M50 50 L93 50 A43 43 0 0 1 50 93 Z" fill="${COULEUR_FACE.vache}"/>
   <path d="M50 50 L50 93 A43 43 0 0 1 7 50 Z" fill="${COULEUR_FACE.zzz}"/>
+  <path d="M7 50h86M50 7v86" stroke="#fff" stroke-width="2.6"/>
   <path d="M50 22 L57.2 41.1 L77.6 42 L57.2 54.8 L67 74.5 L50 63.2
            L33 74.5 L38.4 54.8 L22.4 42 L42.8 41.1 Z"
     fill="#fff" stroke="${NOIR}" stroke-width="6" stroke-linejoin="round"/>`);
@@ -183,12 +189,81 @@ export const SVG_LOGO = `
   </svg>`;
 
 // ── Faces personnalisables ───────────────────────────────────────────────────
-// Modèles d'illustration fournis pour la Tornade et l'Abri. Même pastille,
-// même diamètre, même trait noir : seul le pictogramme change, pour que la face
-// reste lisible à côté des autres.
+// Modèles d'illustration fournis pour les quatre faces que le jeu met en avant.
+// Même pastille, même diamètre, même noir : seul le pictogramme change, pour que
+// les faces restent lisibles les unes à côté des autres.
+//
+// Les dessins d'avant gardent la couleur qu'ils avaient : reprendre l'ancien
+// réveil sur l'orange du soleil ne rendrait pas la face d'alors.
+const COULEURS_DAVANT = { tornade: '#a8dcf2', zzz: '#c28ef2' };
 
-// Un réveil, sur le bleu de la Tornade.
-const FACE_REVEIL = face(COULEUR_FACE.tornade, `
+// ── Les quatre faces officielles ─────────────────────────────────────────────
+
+// Le soleil : votre Tornade se réveille. Un disque plein, huit longs rayons et
+// huit courts entre eux — la même alternance que sur le dé imprimé.
+const FACE_SOLEIL = face(COULEUR_FACE.tornade, `
+  <circle cx="50" cy="50" r="15" fill="${NOIR}"/>
+  <g stroke="${NOIR}" stroke-width="4.2" stroke-linecap="round">
+    ${Array.from({ length: 16 }, (_, k) => {
+    const a = (k * Math.PI) / 8;
+    // Un rayon sur deux est court : c'est ce qui donne au soleil son relief.
+    const r1 = 23;
+    const r2 = k % 2 === 0 ? 41 : 32;
+    const [cx, cy] = [Math.sin(a), -Math.cos(a)];
+    return `<path d="M${(50 + cx * r1).toFixed(1)} ${(50 + cy * r1).toFixed(1)}`
+        + `L${(50 + cx * r2).toFixed(1)} ${(50 + cy * r2).toFixed(1)}"/>`;
+  }).join('\n    ')}
+  </g>`);
+
+// La grange : l'abri où l'on met les bêtes à couvert. Toit à deux pentes, grande
+// porte, lucarne, bardage à droite et une barrière croisée à gauche.
+const FACE_GRANGE = face(COULEUR_FACE.vache, `
+  <g fill="none" stroke="${NOIR}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 50 34 33 50 26 66 33 78 50" stroke-width="8.6"/>
+    <path d="M28 48v36h44V48" stroke-width="5.6"/>
+    <path d="M76 55v29M84 60v24M69 84h20" stroke-width="4.4"/>
+    <path d="M13 60h16v24H13zM13 60l16 24M29 60 13 84" stroke-width="4"/>
+  </g>
+  <g fill="${NOIR}">
+    <rect x="45.5" y="42" width="9" height="8" rx="1"/>
+    <path d="M38 60h24v24H38z"/>
+  </g>`);
+
+// La lune et ses ZzZ : le sommeil, sur un bleu de nuit clair.
+const FACE_LUNE = face(COULEUR_FACE.zzz, `
+  <path fill="${NOIR}" d="M43 18A32 32 0 1 0 60 78 26 26 0 1 1 43 18Z"/>
+  <g fill="none" stroke="${NOIR}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M62 26h18L62 45h18" stroke-width="8"/>
+    <path d="M73 50h13L73 66h13" stroke-width="6.6"/>
+    <path d="M64 70h10L64 82h10" stroke-width="5.4"/>
+  </g>`);
+
+// La tornade, sur le rouge du dé bloqué : ce dé est pris dans la tornade, il ne
+// se relance plus. Des bandes pleines qui se resserrent, et la queue qui serpente.
+const FACE_TORNADE_ROUGE = face(COULEUR_FACE.x, `
+  <g fill="none" stroke="${NOIR}" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="6.8">
+      <ellipse cx="50" cy="27" rx="23" ry="8"/>
+      <path d="M29 37c8.5 6 26 7.4 39 3"/>
+      <path d="M34 48c7 5.2 19 6.2 29 2.6"/>
+      <path d="M39 59c5.6 4 13 4.8 18.6 2.2"/>
+    </g>
+    <g stroke-width="5.8">
+      <path d="M44 69c2.2 4.4 7 6 11.2 4"/>
+      <path d="M47 79c2.2 3.2 6.4 3.6 9.2 1.2"/>
+    </g>
+    <g stroke-width="4.4">
+      <path d="M21 38c-2.4-2.6-2.8-6-1-8.8"/>
+      <path d="M79 38c2.4-2.6 2.8-6 1-8.8"/>
+      <path d="M28 55c-1.8-2-2.2-4.8-.8-7"/>
+      <path d="M72 55c1.8-2 2.2-4.8.8-7"/>
+    </g>
+  </g>`);
+
+// ── Les dessins d'avant, gardés comme variantes ──────────────────────────────
+
+// Un réveil, sur le bleu qu'avait alors la Tornade.
+const FACE_REVEIL = face(COULEURS_DAVANT.tornade, `
   <g fill="none" stroke="${NOIR}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="50" cy="55" r="27"/>
     <path d="M28 26c-5 2-8.5 7-9 12.5 4-4 9-6.5 14-7z" fill="${NOIR}"/>
@@ -218,18 +293,29 @@ const FACE_ABRI = face(COULEUR_FACE.vache, `
     <path d="M42 76V62a8 8 0 0 1 16 0v14"/>
   </g>`);
 
-// Le même ZzZ, sur un gris de sommeil plutôt que sur le violet. Les trois Z ne
-// bougent pas : c'est la pastille qui change, et c'est elle qu'on reconnaît de
-// l'autre bout de la table. Le gris est tenu à distance de celui de la face
-// « ? » — deux faces grises qu'on confondrait ne rendraient service à personne.
+// Les trois Z seuls, sur le violet qu'avait alors la face du sommeil.
+const FACE_ZZZ_VIOLET = face(COULEURS_DAVANT.zzz, GLYPHES.zzz);
+
+// Les mêmes, sur un gris de sommeil. Le gris est tenu à distance de celui de la
+// face « ? » — deux faces grises qu'on confondrait ne serviraient personne.
 const GRIS_SOMMEIL = '#bcbfc2';
 const FACE_ZZZ_GRIS = face(GRIS_SOMMEIL, GLYPHES.zzz);
 
+// La croix noire sur le rouge : le dé bloqué, tel qu'il était dessiné avant la
+// tornade.
+const FACE_CROIX = face(COULEUR_FACE.x, GLYPHES.x);
+
 const MODELES_DESSIN = {
+  soleil: FACE_SOLEIL,
+  grange: FACE_GRANGE,
+  lune: FACE_LUNE,
+  tornadeRouge: FACE_TORNADE_ROUGE,
   reveil: FACE_REVEIL,
   tornadeVerte: FACE_TORNADE_VERTE,
   abri: FACE_ABRI,
+  zzzViolet: FACE_ZZZ_VIOLET,
   zzzGris: FACE_ZZZ_GRIS,
+  croix: FACE_CROIX,
 };
 
 /**
@@ -266,9 +352,9 @@ export function faceDe(symbole, options = {}) {
     div.title = 'Le dé roule…';
   } else if (symbole) {
     div.innerHTML = dessinFace(symbole);
-    if (verrou) div.title = 'X — ce dé est bloqué, il ne peut plus être relancé';
-    else if (symbole === 'joker') div.title = 'Joker — il prend la face de votre choix, sauf le X';
-    else if (symbole === 'jokerDouble') div.title = 'Joker limité à l’éclair et au ZzZ';
+    if (verrou) div.title = `${nomSymbole('x')} — ce dé est bloqué, il ne peut plus être relancé`;
+    else if (symbole === 'joker') div.title = 'Joker — il prend la face de votre choix, sauf celle qui fige le dé';
+    else if (symbole === 'jokerDouble') div.title = `Joker limité à l’éclair et au « ${nomSymbole('zzz')} »`;
   } else {
     div.innerHTML = SVG_INCONNU;
     div.title = 'Ce dé n’a pas encore été lancé';

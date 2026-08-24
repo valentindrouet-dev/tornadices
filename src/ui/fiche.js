@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.57';
-import { store } from './store.js?v=1.57';
-import { aller } from './app.js?v=1.57';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.57';
-import { nomSymbole } from './apparence.js?v=1.57';
-import { construireConfig } from './variables.js?v=1.57';
-import { nomActif } from './profils.js?v=1.57';
-import { VERSION } from '../version.js?v=1.57';
+import { h, remplacer } from './dom.js?v=1.58';
+import { store } from './store.js?v=1.58';
+import { aller } from './app.js?v=1.58';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.58';
+import { nomSymbole } from './apparence.js?v=1.58';
+import { construireConfig } from './variables.js?v=1.58';
+import { nomActif } from './profils.js?v=1.58';
+import { VERSION } from '../version.js?v=1.58';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation,
-} from '../core/config.js?v=1.57';
+} from '../core/config.js?v=1.58';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -169,7 +169,8 @@ function leDe(cfg) {
     ),
     h('p.fiche-note',
       'Un dé se relance autant de fois qu’on veut, seul ou avec les autres du lot — '
-      + `sauf le ${nomSymbole('x')} : dès qu’il sort, ce dé est figé et ne se relance plus.`),
+      + `sauf « ${nomSymbole('x')} » : dès que ce symbole sort, le dé est figé et ne se relance `
+      + 'plus.'),
   );
 }
 

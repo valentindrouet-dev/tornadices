@@ -1,10 +1,9 @@
 // Apparence des faces : illustration et nom, changeables à tout moment.
 //
-// Trois faces se personnalisent — la Tornade bleue, qui porte le Réveil, l'Abri
-// vert, et le ZzZ. Le pouvoir ne bouge pas : c'est le même symbole pour le
-// moteur, avec la même combinaison et le même effet. Seuls le dessin et le nom
-// affiché changent, pour essayer une autre direction artistique sans toucher
-// aux règles.
+// Quatre faces se personnalisent — le Réveil, l'Abri, le Sommeil et la Tornade.
+// Le pouvoir ne bouge pas : c'est le même symbole pour le moteur, avec la même
+// combinaison et le même effet. Seuls le dessin et le nom affiché changent, pour
+// essayer une autre direction artistique sans toucher aux règles.
 //
 // Trois états possibles pour chaque face :
 //   · rien d'enregistré        → l'apparence officielle ci-dessous ;
@@ -15,26 +14,27 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.57';
-import { SYMBOLES } from '../core/config.js?v=1.57';
+import { store } from './store.js?v=1.58';
+import { SYMBOLES } from '../core/config.js?v=1.58';
 
-/** Les faces personnalisables : celles que le jeu met en avant. */
-export const FACES_PERSONNALISABLES = ['tornade', 'vache', 'zzz'];
+/** Les faces personnalisables : les quatre que le jeu met en avant. */
+export const FACES_PERSONNALISABLES = ['tornade', 'vache', 'zzz', 'x'];
 
 /**
  * L'apparence officielle du jeu — ce que le site montre sans aucun réglage.
- * La face bleue est un réveil, la face verte un abri — une maison. Les
- * identifiants de symbole, eux, ne changent pas : le moteur continue de parler
- * de « tornade » et de « vache », et toutes les règles enregistrées restent
- * valables.
+ * Quatre faces : le soleil qui réveille, la grange où l'on s'abrite, la lune du
+ * sommeil, et la tornade rouge qui fige le dé. Les identifiants de symbole, eux,
+ * ne changent pas : le moteur continue de parler de « tornade », de « vache »,
+ * de « zzz » et de « x », et toutes les règles enregistrées restent valables.
  *
- * Le ZzZ n'y figure pas : il n'a jamais été réhabillé, son dessin d'origine EST
- * l'officiel. Une face absente d'ici garde donc son nom et son dessin de
- * toujours — c'est ce que `apparenceDe` rend faute d'entrée.
+ * Une face absente d'ici garde son nom et son dessin de toujours — c'est ce que
+ * `apparenceDe` rend faute d'entrée.
  */
 export const APPARENCE_OFFICIELLE = {
-  tornade: { nom: 'Réveil', image: 'reveil' },
-  vache: { nom: 'Abri', image: 'abri' },
+  tornade: { nom: 'Réveil', image: 'soleil' },
+  vache: { nom: 'Abri', image: 'grange' },
+  zzz: { nom: 'Sommeil', image: 'lune' },
+  x: { nom: 'Tornade', image: 'tornadeRouge' },
 };
 
 /**
@@ -44,27 +44,39 @@ export const APPARENCE_OFFICIELLE = {
  */
 export const MODELES_FACE = {
   tornade: [
-    ['reveil', 'Réveil (officiel)'],
-    ['', 'Tornade (ancien dessin)'],
+    ['soleil', 'Soleil (officiel)'],
+    ['reveil', 'Réveil (ancien officiel)'],
+    ['', 'Tornade (premier dessin)'],
   ],
   vache: [
-    ['abri', 'Abri (officiel)'],
+    ['grange', 'Grange (officielle)'],
+    ['abri', 'Maison (ancien officiel)'],
     ['tornadeVerte', 'Tornade verte'],
     ['', 'Vache (premier dessin)'],
   ],
   zzz: [
-    ['', 'ZzZ violet (officiel)'],
+    ['lune', 'Lune (officielle)'],
+    ['zzzViolet', 'ZzZ violet (ancien officiel)'],
     ['zzzGris', 'ZzZ gris'],
+  ],
+  x: [
+    ['tornadeRouge', 'Tornade rouge (officielle)'],
+    ['', 'X (premier dessin)'],
   ],
 };
 
 /** Nom proposé avec chaque illustration : le dessin et le nom vont ensemble. */
 export const NOM_MODELE = {
+  soleil: 'Réveil',
+  grange: 'Abri',
+  lune: 'Sommeil',
+  tornadeRouge: 'Tornade',
   reveil: 'Réveil',
   abri: 'Abri',
   tornadeVerte: 'Tornade',
-  // Le ZzZ gris ne change que de pastille : il garde son nom, sans quoi le menu
-  // rebaptiserait une face qui n'a pas changé de sens.
+  // Les deux ZzZ ne changent que de pastille : ils gardent leur nom, sans quoi
+  // le menu rebaptiserait une face qui n'a pas changé de sens.
+  zzzViolet: 'ZzZ',
   zzzGris: 'ZzZ',
   '': null, // le dessin d'avant reprend le nom du symbole
 };

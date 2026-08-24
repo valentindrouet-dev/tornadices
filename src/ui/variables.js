@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.57';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.57';
-import { store } from './store.js?v=1.57';
-import { aller } from './app.js?v=1.57';
-import { lancerPartie } from './table.js?v=1.57';
+import { h, remplacer } from './dom.js?v=1.58';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.58';
+import { store } from './store.js?v=1.58';
+import { aller } from './app.js?v=1.58';
+import { lancerPartie } from './table.js?v=1.58';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,19 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.57';
-import { tableauCombos, editeurCases } from './combos.js?v=1.57';
+} from '../core/config.js?v=1.58';
+import { tableauCombos, editeurCases } from './combos.js?v=1.58';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.57';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.57';
-import { randomSeed } from '../core/rng.js?v=1.57';
-import { reglagesJoueurs } from './accueil.js?v=1.57';
+} from './apparence.js?v=1.58';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.58';
+import { randomSeed } from '../core/rng.js?v=1.58';
+import { reglagesJoueurs } from './accueil.js?v=1.58';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.57';
+} from './profils.js?v=1.58';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -555,12 +555,14 @@ export function vueVariables() {
           + `dépend du nombre de joueurs : le tableau ci-dessous en donne un par effectif, et la `
           + `partie lit sa ligne. À ${nb} joueurs, ce sera ${cfg.lots} lot${cfg.lots > 1 ? 's' : ''}`
           + `${cfg.lots === mep.lots ? ' — la valeur officielle' : ` au lieu des ${mep.lots} officiels`}.`,
-          'Le d6 est le dé du jeu : 2 tornades, 1 X, 1 abri, 2 ZzZ. Le X fige son dé — il ne se '
-          + 'relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et chaque '
-          + 'face se change une à une dans les menus ci-dessous.',
+          `Le d6 est le dé du jeu : 2 « ${nomSymbole('tornade')} », 1 « ${nomSymbole('x')} », `
+          + `1 « ${nomSymbole('vache')} », 2 « ${nomSymbole('zzz')} ». Le symbole qui fige le dé `
+          + 'ne se relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et '
+          + 'chaque face se change une à une dans les menus ci-dessous.',
           'Ni joker ni éclair au départ : posez-les vous-même sur une face pour les essayer. Le '
-          + 'joker prend la face de n’importe quel symbole sauf le X ; le joker double ne remplace '
-          + 'que l’éclair et le ZzZ. Sans face éclair, la combinaison Attaque ne peut pas sortir — '
+          + 'joker prend la face de n’importe quel symbole sauf celui qui fige le dé ; le joker '
+          + `double ne remplace que l’éclair et le « ${nomSymbole('zzz')} ». Sans face éclair, la `
+          + 'combinaison Attaque ne peut pas sortir — '
           + 'passez le déclencheur sur « Échecs » pour garder une attrape.',
         ]),
         h('div.grille.grille--2', { style: { gap: '12px' } },
@@ -632,7 +634,7 @@ export function vueVariables() {
           }, h('span.case', '✓'), 'Combinaisons du Vert à part'),
           h('button', {
             class: `chip${cfg.echecJokers !== false ? ' on' : ''}`,
-            title: 'Trois jokers d’un coup font partir le lot, comme deux X',
+            title: `Trois jokers d’un coup font partir le lot, comme deux « ${nomSymbole('x')} »`,
             onclick: () => { ecrire('echecJokers', cfg.echecJokers === false); dessiner(); },
           }, h('span.case', '✓'), 'Trois jokers = échec'),
         ),
@@ -841,7 +843,7 @@ export function vueVariables() {
       h('div.carte',
         titreAide('Adresse et incidents', [
           'Adresse de base : la chance de toucher, de 0 à 1, avant l’écart propre à chaque joueur.',
-          'Taux d’erreur : la part des gestes où l’on relance un X par mégarde — ce qui fait '
+          `Taux d’erreur : la part des gestes où l’on relance par mégarde un « ${nomSymbole('x')} » — ce qui fait `
           + 'partir le lot. Erreur punie : la part de ces bourdes assez graves pour offrir un '
           + 'jeton aux équipes adverses.',
         ]),
@@ -970,10 +972,10 @@ export function vueVariables() {
       // même combinaison et le même effet. Seuls le dessin et le nom changent.
       h('div.carte',
         titreAide('Apparence des faces', [
-          'Trois faces se réhabillent quand vous voulez : la bleue, qui porte le réveil, la verte, '
-          + 'qui porte l’abri, et le ZzZ. Reprenez un dessin d’avant, choisissez une autre '
-          + 'pastille, ou importez votre propre image — elle est découpée en rond, comme une face '
-          + 'de dé.',
+          'Les quatre faces du jeu se réhabillent quand vous voulez : le soleil qui réveille, la '
+          + 'grange où l’on s’abrite, la lune du sommeil et la tornade rouge qui fige le dé. '
+          + 'Reprenez un dessin d’avant, choisissez une autre pastille, ou importez votre propre '
+          + 'image — elle est découpée en rond, comme une face de dé.',
           'Le pouvoir ne change pas d’un iota : même symbole pour le moteur, même combinaison, '
           + 'même effet. Seuls le dessin et le nom affiché changent, partout sur le site.',
           'L’image est enregistrée dans ce navigateur, en clair dans la page : pas de fichier à '

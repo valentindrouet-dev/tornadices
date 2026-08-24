@@ -10,7 +10,7 @@ export const SYMBOLES = {
   joker: {
     id: 'joker', nom: 'Joker', couleur: '#f4a11c',
     joker: ['tornade', 'vache', 'zzz', 'eclair'],
-    desc: 'Prend la face de n’importe quel symbole, sauf le X',
+    desc: 'Prend la face de n’importe quel symbole, sauf celui qui fige le dé',
   },
   jokerDouble: {
     id: 'jokerDouble', nom: 'Joker éclair/ZzZ', couleur: '#c28ef2',
