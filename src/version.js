@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.58';
+export const VERSION = '1.59';
 export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.59',
+    date: '24/08/2026',
+    notes: [
+      'L’import d’une image de face est réparé. Quatre choses pouvaient l’empêcher, et chacune échouait en silence : le bouton cliquait le champ de fichier par du code, ce que certains navigateurs — Safari en tête — refusent d’exécuter ; le filtre de formats grisait dans le sélecteur les fichiers un peu inhabituels ; les images de plus de 400 ko étaient refusées ; et une écriture refusée par le navigateur n’était signalée nulle part.',
+      'Le bouton est maintenant l’étiquette du champ lui-même : c’est le navigateur qui ouvre le sélecteur, sans code, et cela marche partout. Toute image est acceptée, quel que soit son format ou son poids — un fichier de plusieurs méga-octets est ramené à 256 px et ré-encodé en PNG à l’import, transparence comprise.',
+      'Chaque échec se dit désormais en toutes lettres, à l’endroit où il se produit : fichier qui n’est pas une image, image indécodable, mémoire du navigateur pleine ou coupée en navigation privée.',
+      'Une image ronde à fond transparent se pose exactement à la place des dessins du jeu : le blanc du dé reste à la charge de la page, et le rond garde le diamètre des autres faces. Une image opaque, elle, est toujours découpée en rond.',
+      'Correction au passage : toutes les pastilles d’un même symbole partageaient un seul identifiant de découpe. Elles suivaient donc la première, et auraient disparu avec elle au premier redessin.',
+    ],
+  },
   {
     version: '1.58',
     date: '19/08/2026',

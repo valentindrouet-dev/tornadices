@@ -201,6 +201,19 @@ a { color: var(--accent-fonce); }
   transition: transform .08s, box-shadow .13s, background .13s, border-color .13s;
 }
 .btn:hover { border-color: var(--accent-bord); }
+/* Un bouton qui est en réalité une étiquette de champ fichier : c'est le
+   navigateur qui ouvre le sélecteur, sans clic programmé — le seul chemin qui
+   marche partout. Le champ reste dans la page, réduit à rien : masqué en
+   `display: none`, certains navigateurs n'ouvriraient jamais le sélecteur. */
+.btn--fichier { display: inline-block; position: relative; overflow: hidden; }
+.champ-fichier {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+  /* Un champ fichier natif ne se laisse pas étirer : on l'agrandit d'un cran
+     pour que toute la surface de l'étiquette réponde au clic. */
+  font-size: 200px;
+}
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn--primaire {

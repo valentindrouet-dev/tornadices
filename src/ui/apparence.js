@@ -14,8 +14,8 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.58';
-import { SYMBOLES } from '../core/config.js?v=1.58';
+import { store } from './store.js?v=1.59';
+import { SYMBOLES } from '../core/config.js?v=1.59';
 
 /** Les faces personnalisables : les quatre que le jeu met en avant. */
 export const FACES_PERSONNALISABLES = ['tornade', 'vache', 'zzz', 'x'];
@@ -110,16 +110,20 @@ function apparenceDe(sym) {
 /**
  * Règle l'apparence d'une face. Contrairement au nom, l'illustration retient un
  * `''` explicite — c'est ainsi qu'on redemande le dessin d'avant.
+ *
+ * @returns {boolean} faux si le navigateur a refusé d'enregistrer — mémoire
+ *   locale pleine ou coupée. L'appelant doit le dire : une image importée qui
+ *   ne s'enregistre pas ressemble sinon à un bouton cassé.
  */
 export function reglerApparence(sym, { nom, image } = {}) {
-  if (!FACES_PERSONNALISABLES.includes(sym)) return;
+  if (!FACES_PERSONNALISABLES.includes(sym)) return false;
   const tout = apparences();
   const avant = tout[sym] || {};
   tout[sym] = {
     nom: nom === undefined ? (avant.nom || '') : String(nom || ''),
     image: image === undefined ? (avant.image ?? '') : String(image || ''),
   };
-  store.set(CLE, tout);
+  return store.set(CLE, tout) !== false;
 }
 
 /** Remet une face au dé officiel. */

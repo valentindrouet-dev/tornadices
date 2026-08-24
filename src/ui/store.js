@@ -8,8 +8,16 @@ const CLE = 'tornadices.v1';
 function lire() {
   try { return JSON.parse(localStorage.getItem(CLE) || '{}'); } catch { return {}; }
 }
+/**
+ * Écrit, et dit si cela a pris.
+ *
+ * Le navigateur refuse d'écrire quand sa mémoire locale est pleine, ou quand
+ * elle est coupée — navigation privée, réglage de confidentialité. Le taire
+ * n'aide personne : un réglage qui ne s'enregistre pas ressemble à un bouton
+ * cassé. Les appelants qui n'en font rien ne perdent rien à l'ignorer.
+ */
 function ecrire(o) {
-  try { localStorage.setItem(CLE, JSON.stringify(o)); } catch { /* quota — sans gravité */ }
+  try { localStorage.setItem(CLE, JSON.stringify(o)); return true; } catch { return false; }
 }
 
 export const store = {
@@ -17,10 +25,11 @@ export const store = {
     const o = lire();
     return cle in o ? o[cle] : defaut;
   },
+  /** @returns {boolean} faux si le navigateur a refusé d'enregistrer. */
   set(cle, valeur) {
     const o = lire();
     o[cle] = valeur;
-    ecrire(o);
+    return ecrire(o);
   },
   supprimer(cle) {
     const o = lire();

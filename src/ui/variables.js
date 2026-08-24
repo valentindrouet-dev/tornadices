@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.58';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.58';
-import { store } from './store.js?v=1.58';
-import { aller } from './app.js?v=1.58';
-import { lancerPartie } from './table.js?v=1.58';
+import { h, remplacer } from './dom.js?v=1.59';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.59';
+import { store } from './store.js?v=1.59';
+import { aller } from './app.js?v=1.59';
+import { lancerPartie } from './table.js?v=1.59';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,19 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.58';
-import { tableauCombos, editeurCases } from './combos.js?v=1.58';
+} from '../core/config.js?v=1.59';
+import { tableauCombos, editeurCases } from './combos.js?v=1.59';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.58';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.58';
-import { randomSeed } from '../core/rng.js?v=1.58';
-import { reglagesJoueurs } from './accueil.js?v=1.58';
+} from './apparence.js?v=1.59';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.59';
+import { randomSeed } from '../core/rng.js?v=1.59';
+import { reglagesJoueurs } from './accueil.js?v=1.59';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.58';
+} from './profils.js?v=1.59';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -230,8 +230,54 @@ function ecrire(cle, valeur) {
   enregistrerReglages(v);
 }
 
-/** Limite de l'image importée : au-delà, le stockage du navigateur déborde. */
-const POIDS_MAX_IMAGE = 400 * 1024;
+/**
+ * Le côté auquel une image importée est ramenée. Une face de dé ne dépasse
+ * jamais quelques dizaines de pixels à l'écran : 256 suffit largement, et le
+ * stockage du navigateur ne déborde pas.
+ */
+const COTE_IMAGE = 256;
+
+/**
+ * Prépare une image importée : on la ramène à la taille d'une face, on la
+ * ré-encode en PNG, et l'on rend une adresse `data:` — la page reste autonome,
+ * sans requête vers l'extérieur.
+ *
+ * Le fond reste transparent : c'est l'application qui pose le blanc derrière la
+ * face. Une image ronde à fond transparent se pose donc exactement comme les
+ * dessins du jeu.
+ *
+ * Aucune image n'est refusée pour son poids : un fichier de plusieurs méga-
+ * octets ressort à quelques dizaines de kilo-octets, ce qui était jusqu'ici le
+ * premier motif d'échec de l'import.
+ */
+function preparerImage(fichier) {
+  return new Promise((resolve, rejeter) => {
+    const lecteur = new FileReader();
+    lecteur.onerror = () => rejeter(new Error('lecture'));
+    lecteur.onload = () => {
+      const source = String(lecteur.result || '');
+      // Un SVG est déjà léger, et le redessiner le pixelliserait : on le garde.
+      if (/^data:image\/svg\+xml/.test(source)) { resolve(source); return; }
+      const img = new Image();
+      img.onerror = () => rejeter(new Error('decodage'));
+      img.onload = () => {
+        try {
+          const e = Math.min(COTE_IMAGE / img.width, COTE_IMAGE / img.height, 1);
+          const l = Math.max(1, Math.round(img.width * e));
+          const ht = Math.max(1, Math.round(img.height * e));
+          const toile = document.createElement('canvas');
+          toile.width = l;
+          toile.height = ht;
+          toile.getContext('2d').drawImage(img, 0, 0, l, ht);
+          // Toujours en PNG : le JPEG perdrait la transparence en la noircissant.
+          resolve(toile.toDataURL('image/png'));
+        } catch { rejeter(new Error('decodage')); }
+      };
+      img.src = source;
+    };
+    lecteur.readAsDataURL(fichier);
+  });
+}
 
 /**
  * Le bloc qui réhabille une face : l'aperçu, le nom, l'illustration, et le
@@ -253,25 +299,39 @@ function carteApparence(sym, rafraichir) {
         ? `Face officielle — l’ancien dessin s’appelait « ${nomAncien(sym)} ».`
         : 'Dessin d’origine du jeu — celui de la règle papier.'));
 
+  // `accept` reste large : un filtre trop étroit grise le fichier dans le
+  // sélecteur, et l'import a alors l'air cassé alors qu'il attend seulement un
+  // autre format. On accepte donc toute image, et l'on explique ensuite.
   const fichier = h('input', {
-    type: 'file', accept: 'image/png,image/jpeg,image/svg+xml,image/webp',
-    style: { display: 'none' },
+    type: 'file', accept: 'image/*',
+    // Pas `display: none` : sur certains navigateurs — Safari en tête — un champ
+    // ainsi masqué n'ouvre jamais le sélecteur. Il reste donc affiché, mais
+    // réduit à rien et posé derrière son étiquette.
+    class: 'champ-fichier',
     onchange: (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
-      if (f.size > POIDS_MAX_IMAGE) {
-        message.textContent = `Image trop lourde (${Math.round(f.size / 1024)} ko) — `
-          + `${Math.round(POIDS_MAX_IMAGE / 1024)} ko au maximum.`;
+      if (f.type && !/^image\//.test(f.type)) {
+        message.textContent = `« ${f.name} » n’est pas une image. PNG, JPEG, WebP ou SVG.`;
         return;
       }
-      const lecteur = new FileReader();
-      lecteur.onload = () => {
-        reglerApparence(sym, { image: String(lecteur.result) });
+      message.textContent = 'Lecture de l’image…';
+      preparerImage(f).then((image) => {
+        // Une écriture refusée — mémoire locale pleine, ou coupée en navigation
+        // privée — ne doit pas passer inaperçue : sans ce mot, l'import aurait
+        // l'air de ne rien faire du tout.
+        if (!reglerApparence(sym, { image })) {
+          message.textContent = 'Le navigateur a refusé d’enregistrer l’image : sa mémoire '
+            + 'locale est pleine, ou désactivée en navigation privée. Remettez une face au dé '
+            + 'officiel pour faire de la place, puis réessayez.';
+          return;
+        }
         rafraichir();
-      };
-      lecteur.onerror = () => { message.textContent = 'Lecture impossible : essayez un autre fichier.'; };
-      // En `data:` : la page reste autonome, sans requête vers l'extérieur.
-      lecteur.readAsDataURL(f);
+      }).catch((err) => {
+        message.textContent = err && err.message === 'decodage'
+          ? `« ${f.name} » n’a pas pu être décodée : essayez un PNG.`
+          : `« ${f.name} » n’a pas pu être lue : essayez un autre fichier.`;
+      });
     },
   });
 
@@ -308,8 +368,10 @@ function carteApparence(sym, rafraichir) {
       ),
     ),
     h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
-      fichier,
-      h('button.btn.btn--petit', { onclick: () => fichier.click() }, 'Importer une image…'),
+      // Une étiquette, pas un bouton qui cliquerait le champ à votre place :
+      // c'est le navigateur lui-même qui ouvre le sélecteur, et cela marche
+      // partout — y compris là où un `click()` programmé reste sans effet.
+      h('label.btn.btn--petit.btn--fichier', fichier, 'Importer une image…'),
       faceModifiee(sym)
         ? h('button.btn.btn--petit', {
             onclick: () => { reinitialiserApparence(sym); rafraichir(); },
@@ -978,8 +1040,14 @@ export function vueVariables() {
           + 'image — elle est découpée en rond, comme une face de dé.',
           'Le pouvoir ne change pas d’un iota : même symbole pour le moteur, même combinaison, '
           + 'même effet. Seuls le dessin et le nom affiché changent, partout sur le site.',
-          'L’image est enregistrée dans ce navigateur, en clair dans la page : pas de fichier à '
-          + 'héberger, rien qui parte vers l’extérieur. Un PNG carré de 256 px suffit largement.',
+          'Le mieux est un PNG carré avec un rond au centre et de la transparence autour : le '
+          + 'fond blanc du dé reste à la charge de la page, et votre rond se pose exactement à la '
+          + 'place des dessins du jeu. Une image opaque marche aussi — elle est alors découpée en '
+          + 'rond.',
+          'La taille n’a pas d’importance : l’image est ramenée à 256 px et ré-encodée en PNG au '
+          + 'moment de l’import, transparence comprise. Elle est ensuite enregistrée dans ce '
+          + 'navigateur, en clair dans la page : pas de fichier à héberger, rien qui parte vers '
+          + 'l’extérieur.',
         ],
           h('button.btn.btn--petit', {
             onclick: () => { reinitialiserApparences(); dessiner(); },

@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole, nomSymbole } from './apparence.js?v=1.58';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.59';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -318,10 +318,19 @@ const MODELES_DESSIN = {
   croix: FACE_CROIX,
 };
 
+// Deux pastilles du même symbole vivent côte à côte dans la page : leurs
+// découpes ne peuvent pas partager un identifiant, sans quoi toutes suivraient
+// la première — et disparaîtraient avec elle au premier redessin.
+let numeroDecoupe = 0;
+
 /**
  * Le dessin d'une face, personnalisation comprise : un modèle fourni, une image
- * importée, ou le dessin d'origine. Une image importée est posée dans un cercle
- * découpé, pour qu'elle prenne la forme d'une face quelle que soit la photo.
+ * importée, ou le dessin d'origine.
+ *
+ * Une image importée est posée dans le cercle d'une face — même diamètre que
+ * les dessins du jeu — et découpée à ce cercle : une photo carrée prend ainsi
+ * la forme d'une face. Le fond n'est pas peint : une image ronde à fond
+ * transparent laisse voir le blanc du dé, qui reste à la charge de la page.
  */
 export function dessinFace(sym) {
   const choix = imageSymbole(sym);
@@ -330,10 +339,11 @@ export function dessinFace(sym) {
   // Une image importée : `data:` uniquement, jamais une adresse distante — le
   // site doit rester entièrement autonome, sans requête vers l'extérieur.
   if (!/^data:image\//.test(choix)) return SVG_SYMBOLE[sym] || '';
+  const id = `c-${sym}-${++numeroDecoupe}`;
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs><clipPath id="c-${sym}"><circle cx="50" cy="50" r="43"/></clipPath></defs>
+      <defs><clipPath id="${id}"><circle cx="50" cy="50" r="43"/></clipPath></defs>
       <image href="${choix}" x="7" y="7" width="86" height="86"
-        preserveAspectRatio="xMidYMid slice" clip-path="url(#c-${sym})"/>
+        preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>
     </svg>`;
 }
 
