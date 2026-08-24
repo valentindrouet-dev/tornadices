@@ -12,8 +12,8 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.61';
-import { store } from './store.js?v=1.61';
+import { h } from './dom.js?v=1.62';
+import { store } from './store.js?v=1.62';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -27,9 +27,9 @@ const CLE_INTEGRES = 'profilsIntegresModifies';
  * Les réglages livrés avec le jeu — écrits dans le code, donc les mêmes pour
  * tout le monde, sans rien à enregistrer ni à partager.
  *
- * « Vichy » est le paquet imprimé de l'auteur : quatorze Tornades, la manche qui
- * se prend d'un seul Abri, et les combinaisons des cartes telles qu'elles sont
- * dessinées dessus.
+ * « Vichy » est le paquet imprimé de l'auteur : ses quatorze Tornades, et la
+ * manche qui se prend d'un seul Abri. Les combinaisons des cartes sont celles
+ * du carton — elles sont dans la définition des cartes, pas ici.
  */
 export const PROFILS_INTEGRES = [
   {
@@ -38,27 +38,19 @@ export const PROFILS_INTEGRES = [
     integre: true,
     variables: {
       modeManche: 'immediat',
-      // Les quatorze du paquet imprimé, prises dans les seize du jeu : ni la
-      // Tornade de feuille — celle de chauffe la remplace, et ne rapporte rien —
-      // ni la Mini-Tornade, dont la Chargée est l'inverse.
+      // Le paquet imprimé au complet — les quatorze. Le nommer plutôt que de le
+      // laisser vide fige ce que Vichy joue : une carte ajoutée au jeu plus tard
+      // n'entrera pas dans ce réglage sans qu'on le décide.
       cartesSansPoints: [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
         'spElectrique', 'spVaches', 'spPoules',
       ],
-      // Le choix est daté : les deux cartes écartées l'ont bien été.
       cartesSansPointsVues: [
-        'spFeuille', 'spVaches', 'spPoules', 'spCowboy', 'spSiecle', 'spSommeil',
-        'spElectrique', 'spPaisible', 'spMaladroite', 'spMini', 'spFurieuse',
-        'spMega', 'spChauffe', 'spChargee', 'spTricheurs', 'spF5',
+        'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
+        'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
+        'spElectrique', 'spVaches', 'spPoules',
       ],
-      // Les combinaisons dessinées sur les cartes : quatre abris, quatre lunes,
-      // trois tornades.
-      combosCartesSansPoints: {
-        spMega: { vache: 4 },
-        spSommeil: { zzz: 4 },
-        spFurieuse: { x: 3 },
-      },
     },
   },
 ];

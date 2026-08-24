@@ -1133,10 +1133,10 @@ console.log('\nCartes Tornade — un paquet par mode');
     const sorties = new Set(m.statsManches.map((s) => s.carte));
     verifier('une partie sans les points ne tire que des Tornades',
       [...sorties].every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)));
-    // La Tornade de feuille n'a pas de pouvoir, mais elle se gagne comme les
-    // autres : l'équipe qui prend la manche de chauffe la met dans sa pile.
-    verifier('elle ouvre sur la Tornade de feuille, qui rapporte bien son point',
-      m.statsManches[0].carte === 'spFeuille' && m.statsManches[0].compte === true);
+    // La Tornade de Chauffe ouvre le paquet, et ne rapporte rien : c'est un
+    // tour d'essai, la carte est défaussée à la fin de la manche.
+    verifier('elle ouvre sur la Tornade de Chauffe, qui ne rapporte rien',
+      m.statsManches[0].carte === 'spChauffe' && m.statsManches[0].compte === false);
 
     const avecJetons = new Moteur(avec, spec(6), 'paquet-sp');
     avecJetons.jouerJusquAuBout();
@@ -1642,8 +1642,7 @@ console.log('\nRéglage livré « Vichy »');
   const effet = (id) => CARTES_PAR_ID[id].effetPassif || {};
   verifier('la Tornade de chauffe ne rapporte pas de carte',
     CARTES_PAR_ID.spChauffe.neCompted === true && CARTES_PAR_ID.spChauffe.toujoursPremiere === true);
-  verifier('la Chargée ajoute un lot, la Mini en retire un',
-    effet('spChargee').lotsEnPlus === 1 && effet('spMini').lotsEnMoins === 1);
+  verifier('la Chargée ajoute un lot', effet('spChargee').lotsEnPlus === 1);
   verifier('les Tricheurs rendent les dés au gagnant',
     effet('spTricheurs').gagnantPrendLesDes === true);
   verifier('la Chapardeuse vole une carte', effet('spF5').volerCarte === true);
@@ -1663,8 +1662,7 @@ console.log('\nRéglage livré « Vichy »');
 
   const enJeu = cartesEnJeu(cfg);
   verifier(`le paquet en jeu est bien celui de Vichy (${enJeu.length} cartes)`,
-    enJeu.length === 14 && paquet.every((id) => enJeu.includes(id))
-    && !enJeu.includes('spFeuille') && !enJeu.includes('spMini'));
+    enJeu.length === 14 && paquet.every((id) => enJeu.includes(id)));
 
   // La Tornade chargée doit vraiment poser un lot de plus, la chauffe ne rien
   // rapporter, et une campagne entière aller au bout.
@@ -1704,19 +1702,19 @@ console.log('\nRéglage livré « Vichy »');
 }
 
 // ── 3 septies quater bis. Les trois Tornades qui gênent ─────────────────────
-console.log('\nTornades paisible, maladroite et Mini');
+console.log('\nTornades Paisible, Maladroite et Chargée');
 {
   const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
 
   verifier('les trois sont au paquet des modes Immédiat et Compromis',
-    ['spPaisible', 'spMaladroite', 'spMini']
+    ['spPaisible', 'spMaladroite', 'spChargee']
       .every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)
         && cartesEnJeu(configParDefaut(6, { modeManche: 'immediat' })).includes(id)
         && cartesEnJeu(configParDefaut(6, { modeManche: 'compromis' })).includes(id)));
-  verifier('la Tornade orageuse a quitté le jeu',
-    !CARTES_SANS_POINTS.some((c) => c.id === 'spOrageuse') && !CARTES_PAR_ID.spOrageuse);
+  verifier('les Tornades hors du paquet imprimé ont quitté le jeu',
+    ['spOrageuse', 'spFeuille', 'spMini'].every((id) => !CARTES_PAR_ID[id]));
   verifier('aucune des trois ne demande plus d’un jeton à l’Abri',
-    ['spPaisible', 'spMaladroite', 'spMini']
+    ['spPaisible', 'spMaladroite', 'spChauffe']
       .every((id) => refugePour(configParDefaut(6, { modeManche: 'compromis' }), CARTES_PAR_ID[id]) === 1));
 
   // Une partie sur une seule carte : l'effet de la manche est celui de la carte
@@ -1730,22 +1728,23 @@ console.log('\nTornades paisible, maladroite et Mini');
     return m;
   };
 
-  // Mini-Tornade : un lot de moins au coup d'envoi, jamais moins d'un.
+  // Tornade Chargée : un lot de plus au coup d'envoi, jamais plus qu'il n'y a de
+  // joueurs — personne ne tient deux lots.
   {
     const normal = surUneCarte('spSommeil');
-    const mini = surUneCarte('spMini');
+    const chargee = surUneCarte('spChargee');
     const lots = (m) => m.joueurs.reduce((a, j) => a + j.lots.length, 0);
-    verifier(`Mini-Tornade — ${lots(mini)} lot(s) au lieu de ${lots(normal)}`,
-      lots(mini) === lots(normal) - 1 && lots(mini) >= 1);
-    // À trois joueurs il n'y a que deux lots : la carte en laisse un, pas zéro.
+    verifier(`Tornade Chargée — ${lots(chargee)} lot(s) au lieu de ${lots(normal)}`,
+      lots(chargee) === lots(normal) + 1);
+    // À trois joueurs avec trois lots, elle n'en ajoute pas un quatrième.
     const cfg3 = configParDefaut(3, { modeManche: 'immediat' });
     cfg3.melangerCartes = false;
-    cfg3.cartesSansPoints = ['spMini'];
+    cfg3.cartesSansPoints = ['spChargee'];
     cfg3.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
-    cfg3.lots = 1;
-    const m3 = new Moteur(cfg3, spec(3), 'mini-3');
-    verifier('elle ne descend jamais sous un lot',
-      m3.joueurs.reduce((a, j) => a + j.lots.length, 0) === 1);
+    cfg3.lots = 3;
+    const m3 = new Moteur(cfg3, spec(3), 'chargee-3');
+    verifier('elle ne pose jamais plus de lots qu’il n’y a de joueurs',
+      m3.joueurs.reduce((a, j) => a + j.lots.length, 0) === 3);
   }
 
   // Tornade paisible : un seul dé relancé à la fois. Le premier jet d'un lot
@@ -1769,7 +1768,7 @@ console.log('\nTornades paisible, maladroite et Mini');
       return { relances, plusieurs };
     };
     const paisible = compter('spPaisible');
-    const temoin = compter('spFeuille');
+    const temoin = compter('spTricheurs');
     verifier(`Tornade paisible — ${paisible.relances} relances, jamais deux dés à la fois`,
       paisible.relances > 0 && paisible.plusieurs === 0,
       `${paisible.plusieurs} relance(s) multiple(s)`);
@@ -1792,7 +1791,7 @@ console.log('\nTornades paisible, maladroite et Mini');
       }
       return total / Math.max(1, manches);
     };
-    const sans = duree('spFeuille');
+    const sans = duree('spTricheurs');
     const avec = duree('spMaladroite');
     verifier(`Tornade maladroite — manche de ${(avec / 1000).toFixed(1)}s contre ${(sans / 1000).toFixed(1)}s sans elle`,
       avec > sans * 1.1);
@@ -1812,13 +1811,14 @@ console.log('\nTornades paisible, maladroite et Mini');
 console.log('\nPaquet enregistré et cartes nouvelles');
 {
   const tousSp = CARTES_SANS_POINTS.map((c) => c.id);
-  const nouvelles = CARTES_SANS_POINTS.filter((c) => c.depuis === '1.55').map((c) => c.id);
-  // Toute carte ajoutée au jeu après coup porte sa date : c'est ce qui permet à
-  // un paquet composé avant elle de la récupérer.
-  const recentes = CARTES_SANS_POINTS.filter((c) => c.depuis).map((c) => c.id);
-  verifier(`les cartes ajoutées après coup portent leur date (${recentes.length} sur ${tousSp.length})`,
-    nouvelles.length === 3 && recentes.length >= 3
-    && recentes.every((id) => /^\d+\.\d+$/.test(CARTES_PAR_ID[id].depuis)));
+  // Une carte ajoutée au jeu après coup porte sa date d'arrivée : c'est ce qui
+  // permet à un paquet composé avant elle de la récupérer. Le paquet imprimé
+  // est arrivé d'un bloc — aucune carte n'est donc datée pour l'instant, et
+  // c'est bien ce que l'on vérifie ici : les paquets d'avant gardent alors leur
+  // choix exact, sans rien récupérer.
+  const datees = CARTES_SANS_POINTS.filter((c) => c.depuis);
+  verifier(`les dates d’arrivée sont bien formées (${datees.length} carte(s) datée(s))`,
+    datees.every((c) => /^\d+\.\d+$/.test(c.depuis)));
 
   const enJeu = (paquet, vues) => cartesEnJeu({
     modeManche: 'compromis',
@@ -1826,37 +1826,27 @@ console.log('\nPaquet enregistré et cartes nouvelles');
     ...(vues ? { cartesCompromisVues: vues } : {}),
   });
 
-  // Le cas qui a mordu : un paquet composé avant que les récentes n'existent.
+  // Sans trace de ce qui était proposé, on date le paquet par la plus récente
+  // des cartes qu'il retient : ce qui est arrivé après le rejoint, le reste de
+  // ses choix tient.
   {
-    const avant = tousSp.filter((id) => !recentes.includes(id));
-    const sans = avant.filter((id) => id !== 'spSommeil');   // et une carte décochée
+    const sans = tousSp.filter((id) => id !== 'spSommeil' && !CARTES_PAR_ID[id].depuis);
     const obtenu = enJeu(sans);
-    verifier(`un paquet ancien récupère les ${recentes.length} cartes ajoutées depuis`,
-      recentes.every((id) => obtenu.includes(id)),
-      `${obtenu.length} cartes en jeu`);
-    verifier('sans reprendre celle qu’on avait décochée', !obtenu.includes('spSommeil'));
+    verifier('un paquet sans trace garde ce qu’il avait décoché',
+      !obtenu.includes('spSommeil'), `${obtenu.length} cartes en jeu`);
+    verifier('et récupère tout ce qui est arrivé après lui',
+      datees.every((c) => obtenu.includes(c.id)));
   }
 
-  // Un paquet qui retient la plus récente des cartes datées : il les a donc
-  // toutes vues, et son choix tient tel quel.
+  // Avec la trace de ce qui était proposé, le choix vaut sans discussion.
   {
-    const derniere = recentes
-      .slice()
-      .sort((a, b2) => (CARTES_PAR_ID[a].depuis < CARTES_PAR_ID[b2].depuis ? 1 : -1))[0];
-    const obtenu = enJeu(['spFeuille', derniere]);
-    verifier(`un paquet qui connaît « ${CARTES_PAR_ID[derniere].nom} » garde son choix exact`,
-      obtenu.length === 2 && obtenu.includes(derniere) && !obtenu.includes('spPaisible'));
-  }
-
-  // Et avec la trace de ce qui était proposé, le choix vaut sans discussion.
-  {
-    const obtenu = enJeu(['spFeuille'], tousSp);
+    const obtenu = enJeu(['spPaisible'], tousSp);
     verifier('un paquet daté est repris tel quel',
-      obtenu.length === 1 && obtenu[0] === 'spFeuille');
-    const partiel = enJeu(['spFeuille'], ['spFeuille', 'spVaches']);
+      obtenu.length === 1 && obtenu[0] === 'spPaisible');
+    const partiel = enJeu(['spPaisible'], ['spPaisible', 'spVaches']);
     verifier('et ce qu’il n’avait pas sous les yeux le rejoint',
-      partiel.includes('spFeuille') && !partiel.includes('spVaches')
-      && nouvelles.every((id) => partiel.includes(id)));
+      partiel.includes('spPaisible') && !partiel.includes('spVaches')
+      && partiel.includes('spSommeil') && partiel.length === tousSp.length - 1);
   }
 
   verifier('un paquet vide reste le jeu complet',

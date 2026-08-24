@@ -726,6 +726,10 @@ export const CARTES_TORNADE = [
 
 // ── Cartes Tornade du mode « sans les points » ────────────────────────────────
 //
+// Le paquet imprimé, quatorze cartes, dans l'ordre du carton. Titres et textes
+// sont ceux des cartes : ce que la table affiche doit se lire à l'identique de
+// ce qu'on a dans la main.
+//
 // Un paquet entièrement à part : sans jeton à retourner, une carte ne peut plus
 // jouer sur les jetons, elle joue sur les cartes elles-mêmes. Trois façons :
 //   · `doubleSi` — l'équipe désignée gagne deux cartes si elle prend la manche ;
@@ -740,44 +744,74 @@ export const CARTES_TORNADE = [
 // carte par carte dans les Réglages. Sans effet dans les deux autres modes.
 export const CARTES_SANS_POINTS = [
   {
-    id: 'spFeuille',
+    id: 'spChauffe',
     refuge: 1,
-    court: 'Tornade de feuille',
-    nom: 'Tornade de feuille',
-    // La première Tornade n'a pas de pouvoir, mais elle se gagne comme les
-    // autres : l'équipe qui prend la manche la met dans sa pile.
-    texte: 'Aucun pouvoir — la manche de chauffe. Elle se gagne comme les autres.',
+    court: 'Tornade de Chauffe',
+    nom: 'Tornade de Chauffe',
+    texte: 'Cette tornade ne rapporte pas de Carte Tornade',
     combo: null,
     effetPassif: null,
+    // La manche se joue comme les autres, mais la carte est défaussée.
+    neCompted: true,
     toujoursPremiere: true,
     sens: 1,
   },
   {
-    id: 'spVaches',
-    refuge: 2,
-    court: 'Tornade de Vaches',
-    nom: 'Tornade de Vaches',
-    texte: 'Les Vaches (Bleus) gagnent 2 cartes Tornade si elles remportent cette manche.',
+    id: 'spPaisible',
+    refuge: 1,
+    court: 'Tornade Paisible',
+    nom: 'Tornade Paisible',
+    texte: 'Vous ne pouvez relancer les dés que un par un',
     combo: null,
-    effetPassif: { doubleSi: 'bleu' },
+    effetPassif: { unParUn: true },
     sens: -1,
   },
   {
-    id: 'spPoules',
-    refuge: 2,
-    court: 'Tornade de Poules',
-    nom: 'Tornade de Poules',
-    texte: 'Les Poules (Jaunes) gagnent 2 cartes Tornade si elles remportent cette manche.',
+    id: 'spMaladroite',
+    refuge: 1,
+    court: 'Tornade Maladroite',
+    nom: 'Tornade Maladroite',
+    texte: 'Vous lancez les dés de votre autre main',
     combo: null,
-    effetPassif: { doubleSi: 'jaune' },
+    effetPassif: { lenteur: 1.35, erreur: 0.06 },
+    sens: 1,
+  },
+  {
+    id: 'spChargee',
+    refuge: 2,
+    court: 'Tornade Chargée',
+    nom: 'Tornade Chargée',
+    texte: 'Vous jouez avec un lot de dés supplémentaire',
+    combo: null,
+    effetPassif: { lotsEnPlus: 1 },
     sens: -1,
+  },
+  {
+    id: 'spTricheurs',
+    refuge: 2,
+    court: 'Tornade des Tricheurs',
+    nom: 'Tornade des Tricheurs',
+    texte: 'L’équipe gagnante commence la manche suivante avec les lots de dés',
+    combo: null,
+    effetPassif: { gagnantPrendLesDes: true },
+    sens: -1,
+  },
+  {
+    id: 'spF5',
+    refuge: 2,
+    court: 'Tornade Chapardeuse',
+    nom: 'Tornade Chapardeuse',
+    texte: 'L’équipe gagnante vole une Carte Tornade à l’équipe adverse',
+    combo: null,
+    effetPassif: { volerCarte: true },
+    sens: 1,
   },
   {
     id: 'spCowboy',
     refuge: 2,
-    court: 'Tornade de Cow-boy',
-    nom: 'Tornade de Cow-boy',
-    texte: 'Le Cow-boy (Vert) gagne 2 cartes Tornade s’il remporte cette manche.',
+    court: 'Tornade de Cow-Boy',
+    nom: 'Tornade de Cow-Boy',
+    texte: 'Le Cow-Boy gagne 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'vert' },
     // Sans joueur Vert, la carte ne désignerait personne : elle sort du paquet.
@@ -789,145 +823,71 @@ export const CARTES_SANS_POINTS = [
     refuge: 3,
     court: 'Tornade du Siècle',
     nom: 'Tornade du Siècle',
-    texte: 'Vous gagnez 2 cartes Tornade à cette manche.',
+    texte: 'Vous gagnez 2 Cartes Tornade à cette manche',
     combo: null,
-    // Elle vaut double pour qui la remporte, quelle que soit l'équipe : c'est
-    // la carte qui double, pas un camp.
+    // Elle vaut double pour qui la remporte, quelle que soit l'équipe.
     effetPassif: { doubleTous: true },
-    depuis: '1.61',
     sens: 1,
+  },
+  {
+    id: 'spMega',
+    refuge: 3,
+    court: 'Méga Tornade',
+    nom: 'Méga Tornade',
+    texte: 'Vous gagnez immédiatement la Manche',
+    combo: { id: 'spMega', requis: { vache: 4 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: -1,
   },
   {
     id: 'spSommeil',
     refuge: 2,
-    court: 'Tornade de Sommeil',
-    nom: 'Tornade de Sommeil',
-    texte: 'Vous gagnez la manche.',
-    combo: { id: 'spSommeil', requis: { zzz: 3 }, effet: 'gagnerManche' },
+    court: 'Tornade du Sommeil',
+    nom: 'Tornade du Sommeil',
+    texte: 'Vous gagnez immédiatement la Manche',
+    combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'gagnerManche' },
+    effetPassif: null,
+    sens: -1,
+  },
+  {
+    id: 'spFurieuse',
+    refuge: 3,
+    court: 'Tornade Furieuse',
+    nom: 'Tornade Furieuse',
+    texte: 'Vous gagnez immédiatement la Manche',
+    combo: { id: 'spFurieuse', requis: { x: 3 }, effet: 'gagnerManche' },
     effetPassif: null,
     sens: -1,
   },
   {
     id: 'spElectrique',
     refuge: 2,
-    court: 'Tornade électrique',
-    nom: 'Tornade électrique',
-    texte: 'Vous gagnez 2 cartes Tornade si vous remportez cette manche en attrapant.',
+    court: 'Tornade Électrique',
+    nom: 'Tornade Électrique',
+    texte: 'Vous gagnez 2 Cartes Tornade si vous gagnez la manche en rattrapant',
     combo: null,
     effetPassif: { doubleSiAttrape: true },
     sens: 1,
   },
-  // Trois Tornades qui ne donnent rien et ne demandent rien : elles gênent. La
-  // manche se gagne comme d'habitude — l'Abri, ou le contact — mais tout le
-  // monde joue avec un handicap, le même pour tous. C'est la contrepartie des
-  // Tornades qui emportent la manche d'une combinaison : une pioche qui ne
-  // ferait qu'accélérer n'aurait pas de respiration.
   {
-    id: 'spPaisible',
-    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
-    depuis: '1.55',
-    refuge: 1,
-    court: 'Tornade paisible',
-    nom: 'Tornade paisible',
-    texte: 'Relancez les dés un par un.',
-    combo: null,
-    effetPassif: { unParUn: true },
-    sens: -1,
-  },
-  {
-    id: 'spMaladroite',
-    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
-    depuis: '1.55',
-    // Les trois gênantes demandent le minimum à l'Abri : une Tornade qui vous
-    // handicape n'a pas en plus à vous en demander davantage. Mesuré à six
-    // joueurs, la Maladroite passe de 58 s à 37 s de manche — au milieu du
-    // paquet, au lieu d'être la plus longue de toutes.
-    refuge: 1,
-    court: 'Tornade maladroite',
-    nom: 'Tornade maladroite',
-    texte: 'Lancez les dés de votre autre main.',
-    combo: null,
-    effetPassif: { lenteur: 1.35, erreur: 0.06 },
-    sens: 1,
-  },
-  {
-    id: 'spMini',
-    // Arrivée en v1.55 : un paquet composé avant elle ne l'a pas décochée.
-    depuis: '1.55',
-    refuge: 1,
-    court: 'Mini-Tornade',
-    nom: 'Mini-Tornade',
-    texte: 'Jouez avec un lot de dés de moins.',
-    combo: null,
-    effetPassif: { lotsEnMoins: 1 },
-    sens: -1,
-  },
-  {
-    id: 'spFurieuse',
-    refuge: 3,
-    court: 'Tornade furieuse',
-    nom: 'Tornade furieuse',
-    texte: 'Vous gagnez la manche.',
-    combo: { id: 'spFurieuse', requis: { x: 3 }, effet: 'gagnerManche' },
-    effetPassif: null,
-    sens: -1,
-  },
-  {
-    id: 'spMega',
-    refuge: 3,
-    court: 'Mega-Tornade',
-    nom: 'Mega-Tornade',
-    texte: 'Vous gagnez la manche.',
-    combo: { id: 'spMega', requis: { tornade: 1, vache: 1, zzz: 1, eclair: 1 }, effet: 'gagnerManche' },
-    effetPassif: null,
-    sens: -1,
-  },
-  // ── Les trois Tornades du paquet imprimé qui manquaient ────────────────────
-  {
-    id: 'spChauffe',
-    refuge: 1,
-    court: 'Tornade de chauffe',
-    nom: 'Tornade de chauffe',
-    texte: 'Cette tornade ne rapporte pas de carte Tornade.',
-    combo: null,
-    effetPassif: null,
-    // La manche se joue, mais la carte est défaussée : c'est un tour d'essai.
-    neCompted: true,
-    toujoursPremiere: true,
-    depuis: '1.61',
-    sens: 1,
-  },
-  {
-    id: 'spChargee',
+    id: 'spVaches',
     refuge: 2,
-    court: 'Tornade chargée',
-    nom: 'Tornade chargée',
-    texte: 'Vous jouez avec un lot de dés supplémentaire.',
+    court: 'Tornade de Vaches',
+    nom: 'Tornade de Vaches',
+    texte: 'Les Vaches gagnent 2 Cartes Tornade à cette manche',
     combo: null,
-    effetPassif: { lotsEnPlus: 1 },
-    depuis: '1.61',
+    effetPassif: { doubleSi: 'bleu' },
     sens: -1,
   },
   {
-    id: 'spTricheurs',
+    id: 'spPoules',
     refuge: 2,
-    court: 'Tornade des tricheurs',
-    nom: 'Tornade des tricheurs',
-    texte: 'L’équipe gagnante commence la manche suivante avec les lots de dés.',
+    court: 'Tornade de Poules',
+    nom: 'Tornade de Poules',
+    texte: 'Les Poules gagnent 2 Cartes Tornade à cette manche',
     combo: null,
-    effetPassif: { gagnantPrendLesDes: true },
-    depuis: '1.61',
+    effetPassif: { doubleSi: 'jaune' },
     sens: -1,
-  },
-  {
-    id: 'spF5',
-    refuge: 2,
-    court: 'Tornade chapardeuse',
-    nom: 'Tornade chapardeuse',
-    texte: 'L’équipe gagnante vole une carte Tornade à l’équipe adverse.',
-    combo: null,
-    effetPassif: { volerCarte: true },
-    sens: 1,
   },
 ];
 

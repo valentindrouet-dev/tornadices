@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.61';
+export const VERSION = '1.62';
 export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.62',
+    date: '24/08/2026',
+    notes: [
+      'Le paquet Tornade est désormais celui du carton imprimé, et rien d’autre : quatorze cartes, avec les titres et les textes exacts des cartes. « Tornade de Chauffe », « Tornade Paisible », « Tornade Maladroite », « Tornade Chargée », « Tornade des Tricheurs », « Tornade Chapardeuse », « Tornade de Cow-Boy », « Tornade du Siècle », « Méga Tornade », « Tornade du Sommeil », « Tornade Furieuse », « Tornade Électrique », « Tornade de Vaches », « Tornade de Poules ».',
+      'Les deux Tornades qui n’étaient pas du paquet sortent du jeu : la « Tornade de feuille », que la Tornade de Chauffe remplace, et la « Mini-Tornade », dont la Chargée est l’inverse. Un paquet enregistré qui les contenait les perd sans bruit — elles n’existent plus.',
+      'Les combinaisons sont celles dessinées sur les cartes : quatre abris pour la Méga Tornade, quatre lunes pour celle du Sommeil, trois tornades pour la Furieuse. Elles sont dans la définition des cartes, donc valables pour tout le monde et plus seulement dans le réglage Vichy.',
+    ],
+  },
   {
     version: '1.61',
     date: '24/08/2026',
