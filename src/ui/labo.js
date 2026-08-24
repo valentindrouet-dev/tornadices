@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.62';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.62';
-import { nomSymbole } from './apparence.js?v=1.62';
-import { store } from './store.js?v=1.62';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.62';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.63';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.63';
+import { nomSymbole } from './apparence.js?v=1.63';
+import { store } from './store.js?v=1.63';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.63';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -15,16 +15,16 @@ import {
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
   NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-  assainirConfig, TYPES_DE, facesPourDe, aideVariance,
-} from '../core/config.js?v=1.62';
-import { tableauCombos } from './combos.js?v=1.62';
-import { barreProfils, idActif } from './profils.js?v=1.62';
+  assainirConfig, aideVariance,
+} from '../core/config.js?v=1.63';
+import { tableauCombos } from './combos.js?v=1.63';
+import { barreProfils, idActif } from './profils.js?v=1.63';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.62';
+} from './variables.js?v=1.63';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.62';
+} from '../core/proba.js?v=1.63';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -245,14 +245,8 @@ function panneauConfig(rafraichir) {
     ),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Dés'),
-    h('div.grille.grille--3', { style: { gap: '10px' } },
+    h('div.grille.grille--2', { style: { gap: '10px' } },
       num('Dés par lot', cfg.desParLot, (v) => { cfg.desParLot = Math.max(1, Math.min(12, v)); }, { min: 1, max: 12 }),
-      h('label.champ', 'Type de dé',
-        h('div.segment', ...TYPES_DE.map((n) => h('button', {
-          class: cfg.faces.length === n ? 'on' : '',
-          onclick: () => { cfg.faces = facesPourDe(n); rafraichir(); },
-        }, `d${n}`))),
-      ),
       num('Lots en jeu', cfg.lots, (v) => { cfg.lots = Math.max(1, v); }, { min: 1, max: 9 }),
     ),
     h('div.faces-edit', { style: { marginTop: '10px' } },

@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.62';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.62';
-import { store } from './store.js?v=1.62';
-import { aller } from './app.js?v=1.62';
-import { lancerPartie } from './table.js?v=1.62';
+import { h, remplacer } from './dom.js?v=1.63';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.63';
+import { store } from './store.js?v=1.63';
+import { aller } from './app.js?v=1.63';
+import { lancerPartie } from './table.js?v=1.63';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -16,24 +16,24 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
   COULEURS_EQUIPE,
-  assainirFaces, assainirRequis, TYPES_DE, facesPourDe, aideVariance,
+  assainirFaces, assainirRequis, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.62';
-import { tableauCombos, editeurCases } from './combos.js?v=1.62';
+} from '../core/config.js?v=1.63';
+import { tableauCombos, editeurCases } from './combos.js?v=1.63';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.62';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.62';
-import { randomSeed } from '../core/rng.js?v=1.62';
-import { reglagesJoueurs } from './accueil.js?v=1.62';
+} from './apparence.js?v=1.63';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.63';
+import { randomSeed } from '../core/rng.js?v=1.63';
+import { reglagesJoueurs } from './accueil.js?v=1.63';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.62';
+} from './profils.js?v=1.63';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -619,8 +619,8 @@ export function vueVariables() {
           + `${cfg.lots === mep.lots ? ' — la valeur officielle' : ` au lieu des ${mep.lots} officiels`}.`,
           `Le d6 est le dé du jeu : 2 « ${nomSymbole('tornade')} », 1 « ${nomSymbole('x')} », `
           + `1 « ${nomSymbole('vache')} », 2 « ${nomSymbole('zzz')} ». Le symbole qui fige le dé `
-          + 'ne se relance jamais. Le d8 et le d10 reprennent la même série depuis le début, et '
-          + 'chaque face se change une à une dans les menus ci-dessous.',
+          + 'ne se relance jamais. Le dé a six faces, et c’est un réglage du jeu qui ne bouge '
+          + 'plus ; chaque face, elle, se change une à une dans les menus ci-dessous.',
           'Ni joker ni éclair au départ : posez-les vous-même sur une face pour les essayer. Le '
           + 'joker prend la face de n’importe quel symbole sauf celui qui fige le dé ; le joker '
           + `double ne remplace que l’éclair et le « ${nomSymbole('zzz')} ». Sans face éclair, la `
@@ -629,15 +629,6 @@ export function vueVariables() {
         ]),
         h('div.grille.grille--2', { style: { gap: '12px' } },
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
-          h('label.champ', 'Type de dé',
-            h('div.segment', ...TYPES_DE.map((n) => h('button', {
-              class: cfg.faces.length === n ? 'on' : '',
-              // Changer de dé repart de la répartition officielle étirée sur le
-              // nouveau nombre de faces : garder les anciennes en tronquant
-              // ferait disparaître des symboles sans le dire.
-              onclick: () => { ecrire('faces', facesPourDe(n)); dessiner(); },
-            }, `d${n}`))),
-          ),
         ),
 
         // Les lots en jeu ne sont pas un nombre mais un tableau : trois lots à

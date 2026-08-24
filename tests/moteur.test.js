@@ -5,7 +5,7 @@ import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
   // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
   assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
-  TYPES_DE, facesPourDe, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
+  NB_FACES_DE, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
   COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
@@ -728,9 +728,11 @@ console.log('\nRéglages enregistrés d’une ancienne version');
     assainirFaces(ancien.faces).join(',') === 'tornade,tornade,vache,zzz,zzz,x',
     assainirFaces(ancien.faces).join(','));
   verifier('un symbole vraiment inconnu tombe sur « vide »',
-    assainirFaces(['tornade', 'brouette']).join(',') === 'tornade,vide');
-  verifier('la longueur du dé est conservée',
-    assainirFaces(ancien.faces).length === ancien.faces.length);
+    assainirFaces(['tornade', 'brouette']).slice(0, 2).join(',') === 'tornade,vide');
+  // Le dé du jeu a six faces : ce n'est plus un réglage, et tout ce qui est
+  // relu y revient — c'est éprouvé plus bas, section « Le dé du jeu ».
+  verifier('le dé relu a toujours six faces',
+    assainirFaces(ancien.faces).length === NB_FACES_DE);
   verifier('des faces absentes rendent le dé par défaut',
     assainirFaces(undefined).join(',') === FACES_PAR_DEFAUT.join(','));
   verifier('les exigences sont retraduites elles aussi',
@@ -764,26 +766,31 @@ console.log('\nRéglages enregistrés d’une ancienne version');
     !soigne.raisons.limite && !soigne.raisons.manchesMax);
 }
 
-// ── 3 quinquies. Type de dé et irrégularité du rythme ────────────────────────
-console.log('\nType de dé');
+// ── 3 quinquies. Le dé a six faces, et c'est tout ────────────────────────────
+console.log('\nLe dé du jeu');
 {
   const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
 
-  verifier('le d6 est bien la répartition officielle',
-    facesPourDe(6).join(',') === FACES_PAR_DEFAUT.join(','));
-  verifier('le d8 reprend la série depuis le début (2 tornades en plus)',
-    facesPourDe(8).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade',
-    facesPourDe(8).join(','));
-  verifier('le d10 y ajoute un X et un abri',
-    facesPourDe(10).join(',') === 'tornade,tornade,x,vache,zzz,zzz,tornade,tornade,x,vache');
-  verifier('un autre modèle s’étire pareil',
-    facesPourDe(8, FACES_JOKER_ECLAIR).join(',') === 'tornade,joker,x,zzz,vache,eclair,tornade,joker');
+  verifier('six faces, et la répartition officielle',
+    NB_FACES_DE === 6 && FACES_PAR_DEFAUT.length === 6
+    && assainirFaces(null).join(',') === FACES_PAR_DEFAUT.join(','));
 
-  for (const n of TYPES_DE) {
-    const cfg = configParDefaut(6);
-    cfg.faces = facesPourDe(n);
-    const r = lancerCampagne(cfg, spec, `de-${n}`, 40);
-    verifier(`d${n} — 40 parties menées à terme, ${(r.duree.medianeMs / 60000).toFixed(1)} min`,
+  // Le type de dé n'est plus réglable : un d8 ou un d10 enregistré du temps où
+  // il l'était reviendrait sans aucun moyen d'en sortir.
+  verifier('un d8 enregistré revient à six faces',
+    assainirFaces(['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'joker']).length === 6);
+  verifier('un d10 aussi, et il garde ses six premières faces',
+    assainirFaces(['joker', 'eclair', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'joker', 'x', 'vache'])
+      .join(',') === 'joker,eclair,x,vache,zzz,zzz');
+  verifier('un dé trop court est complété par la répartition officielle',
+    assainirFaces(['joker', 'joker']).join(',') === 'joker,joker,x,vache,zzz,zzz');
+  verifier('une configuration enregistrée passe par le même filtre',
+    assainirConfig({ nbJoueurs: 6, faces: FACES_JOKER_ECLAIR.concat(['x', 'x']) }).faces.length === 6);
+
+  // Et le dé du jeu mène bien une campagne à terme.
+  {
+    const r = lancerCampagne(configParDefaut(6), spec, 'de-officiel', 40);
+    verifier(`d6 — 40 parties menées à terme, ${(r.duree.medianeMs / 60000).toFixed(1)} min`,
       !r.raisons.limite && !r.raisons.manchesMax
       && Object.values(r.victoires).reduce((a, b) => a + b, 0) === 40);
   }
@@ -1635,6 +1642,30 @@ console.log('\nRéglage livré « Vichy »');
 
   const paquet = vichy.variables.cartesSansPoints;
   verifier(`son paquet compte 14 Tornades (${paquet.length})`, paquet.length === 14);
+
+  // Les cartes à réunir, effectif par effectif : l'objectif monte avec la table,
+  // et le Vert — seul contre deux équipes — en a bien moins à réunir.
+  {
+    const eq = vichy.variables.cartesParMode.immediat;
+    const vert = vichy.variables.cartesVertParMode.immediat;
+    verifier('ses cartes pour gagner suivent le nombre de joueurs (4·5·5·5·6·6)',
+      NOMBRES_JOUEURS.map((n) => eq[n]).join('·') === '4·5·5·5·6·6');
+    verifier('celles du Vert aussi, aux effectifs impairs (2·3·4)',
+      [3, 5, 7].map((n) => vert[n]).join('·') === '2·3·4');
+    verifier('le Vert en a toujours moins que les équipes',
+      [3, 5, 7].every((n) => vert[n] < eq[n]));
+    // Et une partie jouée sous Vichy lit bien ces lignes-là.
+    verifier('une partie Vichy vise le nombre de cartes de sa table',
+      NOMBRES_JOUEURS.every((n) => {
+        const c = { ...configParDefaut(n, { modeManche: 'immediat' }),
+          cartesPourGagner: eq[n], cartesVert: vert[n] };
+        const m = new Moteur(c, spec(n), `vichy-cartes-${n}`);
+        m.jouerJusquAuBout();
+        const gagnant = m.equipes[m.vainqueur];
+        return !gagnant || gagnant.cartes.length >= (m.vainqueur === 'vert' ? vert[n] : eq[n])
+          || m.raisonFin !== 'cartes';
+      }));
+  }
   verifier('elles existent toutes', paquet.every((id) => !!CARTES_PAR_ID[id]));
   verifier('aucune n’y figure deux fois', new Set(paquet).size === paquet.length);
 

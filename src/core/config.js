@@ -418,6 +418,9 @@ export function noteCarteMode(carte, cfg) {
 // Modifiable face par face dans les réglages de partie et dans le Laboratoire.
 export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz'];
 
+/** Le dé de TornaDice a six faces, et ce n'est pas un réglage. */
+export const NB_FACES_DE = FACES_PAR_DEFAUT.length;
+
 // Le dé d'avant, avec joker et éclair : la combinaison Attaque n'est servie que
 // par un dé qui porte des éclairs.
 export const FACES_JOKER_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
@@ -435,10 +438,19 @@ export function assainirSymbole(id) {
   return SYMBOLES_ANCIENS[id] || 'vide';
 }
 
-/** Traduit une liste de faces enregistrée, longueur conservée. */
+/**
+ * Traduit une liste de faces enregistrée, et la ramène au dé du jeu.
+ *
+ * Le dé de TornaDice a six faces, et ce n'est plus un réglage : un dé à huit ou
+ * dix faces enregistré du temps où on pouvait en changer reviendrait sinon sans
+ * aucun moyen d'en sortir, puisque rien ne permet plus d'en retirer. Les faces
+ * en trop tombent, celles qui manquent reprennent la répartition officielle.
+ */
 export function assainirFaces(faces) {
   if (!Array.isArray(faces) || !faces.length) return FACES_PAR_DEFAUT.slice();
-  return faces.map(assainirSymbole);
+  const propres = faces.map(assainirSymbole);
+  return Array.from({ length: NB_FACES_DE },
+    (_, i) => propres[i] || FACES_PAR_DEFAUT[i % FACES_PAR_DEFAUT.length]);
 }
 
 /** Traduit les clés d'une exigence { cloche: 3 } → { tornade: 3 }. */
@@ -522,20 +534,6 @@ export function aideVariance(v, cfg) {
   const base = (cfg && cfg.dureePassage) || 1000;
   return `${pct} % — un passage de ${base} ms dure de `
     + `${Math.round(base * (1 - v))} à ${Math.round(base * (1 + v))} ms`;
-}
-
-// Le dé de base est toujours le d6 ; le d8 et le d10 sont là pour l'équilibrage.
-export const TYPES_DE = [6, 8, 10];
-
-/**
- * Étire une répartition de six faces sur un dé plus grand en reprenant la série
- * depuis le début : le d8 ajoute une tornade et un joker, le d10 y ajoute un X
- * et un ZzZ. C'est la façon la plus régulière de garder les proportions du d6,
- * et chaque face reste modifiable une à une.
- */
-export function facesPourDe(nbFaces, base = FACES_PAR_DEFAUT) {
-  const modele = base.length ? base : FACES_PAR_DEFAUT;
-  return Array.from({ length: nbFaces }, (_, i) => modele[i % modele.length]);
 }
 
 

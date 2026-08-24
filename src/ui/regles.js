@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.62';
+import { h } from './dom.js?v=1.63';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.62';
+} from './icons.js?v=1.63';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.62';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.62';
+} from '../core/config.js?v=1.63';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.63';
 
 export function vueRegles() {
   return h('div.page',
@@ -92,9 +92,8 @@ export function vueRegles() {
         + 'Au deuxième, il ne reste plus assez de dés libres pour former quoi que ce soit : le '
         + 'lot part aussitôt.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Le dé du jeu est et reste le d6. Les Réglages proposent un d8 et un d10 pour '
-        + 'l’équilibrage : ils reprennent la même série de symboles depuis le début, et chaque '
-        + 'face y reste modifiable une à une.'),
+        'Le dé du jeu est et reste le d6 : six faces, ni plus ni moins. Ce qu’elles portent, en '
+        + 'revanche, se change une à une dans les Réglages — c’est là que se fait l’équilibrage.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'Sans face éclair, la combinaison Attaque ne peut pas sortir : c’est donc l’Échec — '
         + `le double « ${nomSymbole('x')} » — qui porte l’attrape par défaut. Posez un éclair sur une face et `

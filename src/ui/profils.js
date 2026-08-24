@@ -12,8 +12,8 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.62';
-import { store } from './store.js?v=1.62';
+import { h } from './dom.js?v=1.63';
+import { store } from './store.js?v=1.63';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -51,6 +51,13 @@ export const PROFILS_INTEGRES = [
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
         'spElectrique', 'spVaches', 'spPoules',
       ],
+      // Les cartes à réunir pour gagner, effectif par effectif. Plus il y a de
+      // monde, plus les manches sont disputées : l'objectif monte avec la table.
+      cartesParMode: { immediat: { 3: 4, 4: 5, 5: 5, 6: 5, 7: 6, 8: 6 } },
+      // Le Vert joue seul contre deux équipes : il lui en faut beaucoup moins,
+      // et l'écart se creuse à mesure que la table grandit. Il n'existe qu'aux
+      // effectifs impairs — les lignes paires ne sont jamais lues.
+      cartesVertParMode: { immediat: { 3: 2, 5: 3, 7: 4 } },
     },
   },
 ];

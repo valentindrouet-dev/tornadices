@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.62';
+export const VERSION = '1.63';
 export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.63',
+    date: '24/08/2026',
+    notes: [
+      'Le type de dé n’est plus un réglage : TornaDice se joue au d6, six faces, ni plus ni moins. Le choix d6/d8/d10 disparaît des Réglages et du Laboratoire. Ce que portent les faces, en revanche, se change toujours une à une — c’est là que se fait l’équilibrage.',
+      'Un d8 ou un d10 enregistré du temps où l’on pouvait en changer revient à six faces, ses six premières conservées : sans cela il serait resté sans aucun moyen d’en sortir, puisque rien ne permet plus d’en retirer.',
+      'Le réglage « Vichy » reçoit sa répartition de cartes pour gagner, effectif par effectif : 4 cartes à 3 joueurs, 5 de 4 à 6, 6 à 7 et 8. Le joueur Vert, seul contre deux équipes, en réunit 2 à 3 joueurs, 3 à 5 et 4 à 7.',
+    ],
+  },
   {
     version: '1.62',
     date: '24/08/2026',
