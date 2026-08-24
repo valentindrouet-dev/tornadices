@@ -15,6 +15,9 @@ import {
   OPTIONS_SENS, sensRotation,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
+// Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
+// décrivent est du jeu : il se vérifie ici comme le reste.
+import { PROFILS_INTEGRES } from '../src/ui/profils.js';
 import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
 } from '../src/core/proba.js';
@@ -1623,6 +1626,83 @@ console.log('\nQui commence');
   }
 }
 
+// ── 3 septies quater quater. Le réglage livré « Vichy » ─────────────────────
+console.log('\nRéglage livré « Vichy »');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const vichy = PROFILS_INTEGRES.find((p) => p.id === 'vichy');
+  verifier('le réglage est écrit dans le code, pas dans le navigateur', !!vichy && vichy.integre);
+
+  const paquet = vichy.variables.cartesSansPoints;
+  verifier(`son paquet compte 14 Tornades (${paquet.length})`, paquet.length === 14);
+  verifier('elles existent toutes', paquet.every((id) => !!CARTES_PAR_ID[id]));
+  verifier('aucune n’y figure deux fois', new Set(paquet).size === paquet.length);
+
+  // Ce que chaque carte imprimée doit savoir faire.
+  const effet = (id) => CARTES_PAR_ID[id].effetPassif || {};
+  verifier('la Tornade de chauffe ne rapporte pas de carte',
+    CARTES_PAR_ID.spChauffe.neCompted === true && CARTES_PAR_ID.spChauffe.toujoursPremiere === true);
+  verifier('la Chargée ajoute un lot, la Mini en retire un',
+    effet('spChargee').lotsEnPlus === 1 && effet('spMini').lotsEnMoins === 1);
+  verifier('les Tricheurs rendent les dés au gagnant',
+    effet('spTricheurs').gagnantPrendLesDes === true);
+  verifier('la Chapardeuse vole une carte', effet('spF5').volerCarte === true);
+  verifier('le Siècle vaut double pour qui le remporte',
+    effet('spSiecle').doubleTous === true && !CARTES_PAR_ID.spSiecle.combo);
+  verifier('la Paisible relance un dé à la fois, la Maladroite ralentit',
+    effet('spPaisible').unParUn === true && effet('spMaladroite').lenteur > 1);
+
+  // Les combinaisons dessinées sur les cartes arrivent bien au moteur.
+  const cfg = configParDefaut(6, { modeManche: 'immediat' });
+  Object.assign(cfg, vichy.variables);
+  cfg.nbJoueurs = 6;
+  verifier('les combinaisons imprimées arrivent au moteur',
+    JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spMega.combo)) === '{"vache":4}'
+    && JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spSommeil.combo)) === '{"zzz":4}'
+    && JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spFurieuse.combo)) === '{"x":3}');
+
+  const enJeu = cartesEnJeu(cfg);
+  verifier(`le paquet en jeu est bien celui de Vichy (${enJeu.length} cartes)`,
+    enJeu.length === 14 && paquet.every((id) => enJeu.includes(id))
+    && !enJeu.includes('spFeuille') && !enJeu.includes('spMini'));
+
+  // La Tornade chargée doit vraiment poser un lot de plus, la chauffe ne rien
+  // rapporter, et une campagne entière aller au bout.
+  {
+    const c = configParDefaut(6, { modeManche: 'immediat' });
+    Object.assign(c, vichy.variables);
+    c.melangerCartes = false;
+    const m = new Moteur(c, spec(6), 'vichy-chauffe');
+    verifier('la partie ouvre sur la Tornade de chauffe', m.carte && m.carte.id === 'spChauffe');
+    m.jouerJusquAuBout();
+    const chauffe = m.statsManches.find((x) => x.carte === 'spChauffe');
+    verifier('et la manche de chauffe ne rapporte aucune carte',
+      chauffe && chauffe.compte === false);
+  }
+  {
+    const c = configParDefaut(6, { modeManche: 'immediat' });
+    Object.assign(c, vichy.variables);
+    c.melangerCartes = false;
+    c.cartesSansPoints = ['spChargee'];
+    c.cartesSansPointsVues = CARTES_SANS_POINTS.map((x) => x.id);
+    const avec = new Moteur(c, spec(6), 'vichy-lots');
+    const temoin = new Moteur({ ...c, cartesSansPoints: ['spSommeil'] }, spec(6), 'vichy-lots');
+    const lots = (m) => m.joueurs.reduce((a, j) => a + j.lots.length, 0);
+    verifier(`la Tornade chargée pose ${lots(avec)} lots au lieu de ${lots(temoin)}`,
+      lots(avec) === lots(temoin) + 1);
+  }
+  {
+    const c = configParDefaut(5, { modeManche: 'immediat' });
+    Object.assign(c, vichy.variables);
+    c.nbJoueurs = 5;
+    const r = lancerCampagne(c, spec(5), 'vichy-camp', 60);
+    verifier('60 parties de Vichy menées à terme',
+      r.raisons.manchesMax === undefined
+      && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 60,
+      JSON.stringify(r.raisons));
+  }
+}
+
 // ── 3 septies quater bis. Les trois Tornades qui gênent ─────────────────────
 console.log('\nTornades paisible, maladroite et Mini');
 {
@@ -1732,9 +1812,13 @@ console.log('\nTornades paisible, maladroite et Mini');
 console.log('\nPaquet enregistré et cartes nouvelles');
 {
   const tousSp = CARTES_SANS_POINTS.map((c) => c.id);
-  const nouvelles = CARTES_SANS_POINTS.filter((c) => c.depuis).map((c) => c.id);
-  verifier('les cartes de la v1.55 portent leur date d’arrivée',
-    nouvelles.length === 3 && nouvelles.every((id) => CARTES_PAR_ID[id].depuis === '1.55'));
+  const nouvelles = CARTES_SANS_POINTS.filter((c) => c.depuis === '1.55').map((c) => c.id);
+  // Toute carte ajoutée au jeu après coup porte sa date : c'est ce qui permet à
+  // un paquet composé avant elle de la récupérer.
+  const recentes = CARTES_SANS_POINTS.filter((c) => c.depuis).map((c) => c.id);
+  verifier(`les cartes ajoutées après coup portent leur date (${recentes.length} sur ${tousSp.length})`,
+    nouvelles.length === 3 && recentes.length >= 3
+    && recentes.every((id) => /^\d+\.\d+$/.test(CARTES_PAR_ID[id].depuis)));
 
   const enJeu = (paquet, vues) => cartesEnJeu({
     modeManche: 'compromis',
@@ -1742,21 +1826,26 @@ console.log('\nPaquet enregistré et cartes nouvelles');
     ...(vues ? { cartesCompromisVues: vues } : {}),
   });
 
-  // Le cas qui a mordu : un paquet composé avant que les trois n'existent.
+  // Le cas qui a mordu : un paquet composé avant que les récentes n'existent.
   {
-    const avant = tousSp.filter((id) => !nouvelles.includes(id));
-    const sans = avant.filter((id) => id !== 'spF5');   // et une carte décochée
+    const avant = tousSp.filter((id) => !recentes.includes(id));
+    const sans = avant.filter((id) => id !== 'spSommeil');   // et une carte décochée
     const obtenu = enJeu(sans);
-    verifier(`un paquet d’avant la v1.55 récupère les trois nouvelles (${obtenu.length} cartes)`,
-      nouvelles.every((id) => obtenu.includes(id)));
-    verifier('sans reprendre celle qu’on avait décochée', !obtenu.includes('spF5'));
+    verifier(`un paquet ancien récupère les ${recentes.length} cartes ajoutées depuis`,
+      recentes.every((id) => obtenu.includes(id)),
+      `${obtenu.length} cartes en jeu`);
+    verifier('sans reprendre celle qu’on avait décochée', !obtenu.includes('spSommeil'));
   }
 
-  // Un paquet qui en retient une : il a donc vu les trois, et son choix tient.
+  // Un paquet qui retient la plus récente des cartes datées : il les a donc
+  // toutes vues, et son choix tient tel quel.
   {
-    const obtenu = enJeu(['spFeuille', 'spMini']);
-    verifier('un paquet qui connaît la v1.55 garde son choix exact',
-      obtenu.length === 2 && obtenu.includes('spMini') && !obtenu.includes('spPaisible'));
+    const derniere = recentes
+      .slice()
+      .sort((a, b2) => (CARTES_PAR_ID[a].depuis < CARTES_PAR_ID[b2].depuis ? 1 : -1))[0];
+    const obtenu = enJeu(['spFeuille', derniere]);
+    verifier(`un paquet qui connaît « ${CARTES_PAR_ID[derniere].nom} » garde son choix exact`,
+      obtenu.length === 2 && obtenu.includes(derniere) && !obtenu.includes('spPaisible'));
   }
 
   // Et avec la trace de ce qui était proposé, le choix vaut sans discussion.

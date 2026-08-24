@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.60';
+import { makeRng } from './rng.js?v=1.61';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.60';
+} from './config.js?v=1.61';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -253,10 +253,13 @@ export class Moteur {
   // Manches suivantes : les perdants de la manche précédente — ou les gagnants
   // si la « Journée de la triche » était en jeu.
   _porteursDeDepart() {
-    // La Mini-Tornade retire un lot pour la manche : moins de dés en l'air,
-    // donc moins d'occasions — et jamais moins d'un lot, sans quoi il ne se
-    // passerait plus rien.
-    const nbLots = Math.max(1, (this.cfg.lots || 1) - (this.passif.lotsEnMoins || 0));
+    // Deux Tornades jouent sur le nombre de lots : la Mini en retire un, la
+    // Chargée en ajoute un. Jamais moins d'un lot — sans quoi il ne se passerait
+    // plus rien — ni plus qu'il n'y a de joueurs, personne n'en tenant deux.
+    const nbLots = Math.max(1, Math.min(
+      this.joueurs.length,
+      (this.cfg.lots || 1) - (this.passif.lotsEnMoins || 0) + (this.passif.lotsEnPlus || 0),
+    ));
     let candidats;
     if (this._prochainsPorteurs && this._prochainsPorteurs.length) {
       candidats = this._prochainsPorteurs;
@@ -1363,6 +1366,8 @@ export class Moteur {
     const eq = this.equipes[equipeId];
     let bonus = this._bonusCartes;
     if (p.doubleSi && p.doubleSi === equipeId) bonus = Math.max(bonus, 1);
+    // La Tornade du siècle vaut double pour qui la remporte, quel qu'il soit.
+    if (p.doubleTous) bonus = Math.max(bonus, 1);
     if (p.doubleSiAttrape && this._mancheParAttrape) bonus = Math.max(bonus, 1);
 
     for (let k = 0; k < bonus && this.pioche.length; k++) {
@@ -1378,11 +1383,11 @@ export class Moteur {
       if (victime) {
         eq.cartes.push(victime.cartes.pop());
         this._log(
-          `Tornade F5 : ${this._nomEquipe(equipeId)} volent une carte aux `
+          `${this._nomEquipe(equipeId)} volent une carte aux `
           + `${this._nomEquipe(victime.id)}.`, 'manche',
         );
       } else {
-        this._log('Tornade F5 : aucune carte à voler.', 'manche');
+        this._log('Aucune carte à voler.', 'manche');
       }
     }
   }

@@ -4,20 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.60';
+import { h, remplacer, duree, vider } from './dom.js?v=1.61';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.60';
-import { Moteur } from '../core/engine.js?v=1.60';
+} from './icons.js?v=1.61';
+import { Moteur } from '../core/engine.js?v=1.61';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation,
-} from '../core/config.js?v=1.60';
-import { ajouterHistorique } from './store.js?v=1.60';
-import { enregistrerPartie } from './resultats.js?v=1.60';
-import { aller } from './app.js?v=1.60';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.60';
+} from '../core/config.js?v=1.61';
+import { ajouterHistorique } from './store.js?v=1.61';
+import { enregistrerPartie } from './resultats.js?v=1.61';
+import { aller } from './app.js?v=1.61';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.61';
 
 let moteur = null;
 let vitesse = 1;
@@ -78,6 +78,29 @@ function alerteDesCombos(dispo) {
     if (dispo.some((d) => d.id === id)) return ALERTES[id];
   }
   return null;
+}
+
+/**
+ * Le texte d'une carte Tornade, avec ses mots en avant.
+ *
+ * Le carton imprimé met « carte Tornade » et le nom des équipes en couleur :
+ * c'est ce qu'on lit en premier quand la carte est posée au milieu de la table.
+ * On reprend la même mise en avant, sans toucher au texte de la carte — il
+ * reste une simple phrase dans la configuration.
+ */
+const MOTS_EN_AVANT = /(cartes? Tornade|Cow-?boy|Vaches|Poules|manche suivante)/gi;
+
+function texteCarte(txt) {
+  const frag = document.createDocumentFragment();
+  let reste = String(txt || '');
+  let dernier = 0;
+  for (const m of reste.matchAll(MOTS_EN_AVANT)) {
+    if (m.index > dernier) frag.appendChild(document.createTextNode(reste.slice(dernier, m.index)));
+    frag.appendChild(h('span.accent', m[0]));
+    dernier = m.index + m[0].length;
+  }
+  if (dernier < reste.length) frag.appendChild(document.createTextNode(reste.slice(dernier)));
+  return frag;
 }
 
 /** Ne reconstruit `hote` que si la signature a changé. */
@@ -657,10 +680,10 @@ export function vueTable() {
     // retourne. Montrer la flèche de la carte révélée dirait le contraire.
     const fleche = FLECHE(moteur.sens);
     panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
-      h('div.carte-annonce',
+      h('div.carte-annonce.carte-annonce--tornade',
         h('div.mini.muted', `Manche ${manche}`),
         h('h2', { style: { margin: '6px 0 10px' } }, carte.nom),
-        h('div.texte-carte-grand', carte.texte),
+        h('div.texte-carte-grand', texteCarte(carte.texte)),
         carte.combo
           ? h('div', { style: { marginTop: '14px' } },
               h('div.mini.muted', { style: { marginBottom: '6px' } }, 'Combinaison de la carte'),
@@ -882,7 +905,7 @@ export function vueTable() {
         ? h('div.carte-journee',
             h('div.mini.muted', `Manche ${moteur.manche}`),
             h('div.nom-carte', moteur.carte.nom),
-            h('div.texte-carte', moteur.carte.texte),
+            h('div.texte-carte', texteCarte(moteur.carte.texte)),
             moteur.carte.combo
               ? h('div.rangee.rangee--serree', { style: { marginTop: '7px' } },
                   suiteSymboles(requisCarte(moteur.cfg, moteur.carte.combo), 21))

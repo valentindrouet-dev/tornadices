@@ -472,15 +472,56 @@ label.champ {
 .jeton.on { background: var(--couleur-eq); box-shadow: 0 0 0 3px color-mix(in srgb, var(--couleur-eq) 22%, transparent); }
 .jeton.on svg { width: 13px; height: 13px; color: #fff; }
 
+/* ── La carte Tornade, à l'image du paquet imprimé ─────────────────────────── */
+/* Un cadre orange, un panneau crème à l'intérieur, un titre en capitales
+   penchées : la carte de l'écran doit se reconnaître à côté de celle qu'on a
+   dans la main. Aucune police n'est téléchargée — le site ne demande rien à
+   l'extérieur — alors le caractère vient de la graisse, de l'italique et des
+   capitales resserrées plutôt que d'un fichier. */
+:root {
+  --tornade-orange: #e8541f;
+  --tornade-orange-fonce: #c33d10;
+  --tornade-creme: #fdf3ea;
+  --tornade-rouge: #d3262a;
+}
 .carte-journee {
-  background: linear-gradient(180deg, #fff, #f0f8fe);
-  border: 1.5px solid var(--accent-bord);
+  position: relative;
+  background: var(--tornade-orange);
+  border: 0;
   border-radius: 14px;
-  padding: 11px 13px;
+  padding: 12px 6px 10px;
   box-shadow: var(--ombre);
 }
-.carte-journee .nom-carte { font-weight: 800; font-size: 14.5px; }
-.carte-journee .texte-carte { font-size: 12.5px; color: var(--encre-doux); }
+/* Un seul panneau crème dans le cadre orange, comme sur le carton. */
+.carte-journee::before {
+  content: ''; position: absolute; inset: 5px;
+  border-radius: 9px; background: var(--tornade-creme);
+}
+.carte-journee > * { position: relative; }
+.carte-journee > .mini {
+  padding: 0 10px 2px;
+  margin: 0;
+  color: var(--tornade-orange-fonce) !important;
+  font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+.carte-journee .nom-carte {
+  font-size: 16px; font-weight: 900; font-style: italic;
+  letter-spacing: .01em; text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--tornade-orange-fonce);
+  padding: 0 10px 5px;
+  border-bottom: 2px solid rgba(232, 84, 31, .28);
+  margin: 0 0 6px;
+}
+.carte-journee .texte-carte {
+  font-size: 12.5px; font-weight: 700; font-style: italic;
+  line-height: 1.32; color: #2a1c14;
+  padding: 0 10px 4px;
+}
+/* Les mots que la carte met en avant — « carte Tornade », le nom d'une équipe —
+   se détachent comme sur le carton imprimé. */
+.carte-journee .texte-carte .accent { color: var(--tornade-rouge); font-weight: 900; }
+.carte-journee > .rangee { padding: 2px 10px 0; margin: 0 !important; }
 
 /* ── Alertes de combinaison ───────────────────────────────────────────────── */
 /* La zone de jeu du joueur s'entoure d'un halo dès que la combinaison sort. */
@@ -1280,6 +1321,40 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   to { opacity: 1; transform: none; }
 }
 .texte-carte-grand { font-size: 16px; line-height: 1.45; color: var(--encre-doux); }
+
+/* La Tornade révélée en grand : le même carton que dans le coin de la table,
+   à la taille où on le lit vraiment. */
+.carte-annonce--tornade {
+  position: relative;
+  background: var(--tornade-orange);
+  border: 0;
+  padding: 26px 34px;
+}
+/* Un seul panneau crème, posé dans le cadre orange — et non une bande par
+   ligne : le carton imprimé n'a qu'une fenêtre. */
+.carte-annonce--tornade::before {
+  content: ''; position: absolute; inset: 11px;
+  border-radius: 16px; background: var(--tornade-creme);
+}
+.carte-annonce--tornade > * { position: relative; }
+/* Seule la première ligne — le numéro de manche — prend les capitales du
+   bandeau ; les mentions du bas restent des mentions. */
+.carte-annonce--tornade > .mini.muted:first-child {
+  color: var(--tornade-orange-fonce) !important;
+  font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+}
+.carte-annonce--tornade h2 {
+  font-size: 30px; font-weight: 900; font-style: italic;
+  text-transform: uppercase; letter-spacing: .01em; line-height: 1.05;
+  color: var(--tornade-orange-fonce);
+  padding-bottom: 12px !important;
+  border-bottom: 3px solid rgba(232, 84, 31, .3);
+}
+.carte-annonce--tornade .texte-carte-grand {
+  font-weight: 800; font-style: italic; color: #2a1c14; font-size: 17.5px;
+  padding-top: 14px;
+}
+.carte-annonce--tornade .accent { color: var(--tornade-rouge); font-weight: 900; }
 /* La flèche du dos, en plein milieu de la pioche : le sens de la manche en cours.
    Centrée sur les cartes, pas sur le bloc — la pastille du compte occupe 26px à droite. */
 .dos-fleche {

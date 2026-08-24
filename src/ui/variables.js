@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.60';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.60';
-import { store } from './store.js?v=1.60';
-import { aller } from './app.js?v=1.60';
-import { lancerPartie } from './table.js?v=1.60';
+import { h, remplacer } from './dom.js?v=1.61';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.61';
+import { store } from './store.js?v=1.61';
+import { aller } from './app.js?v=1.61';
+import { lancerPartie } from './table.js?v=1.61';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,19 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.60';
-import { tableauCombos, editeurCases } from './combos.js?v=1.60';
+} from '../core/config.js?v=1.61';
+import { tableauCombos, editeurCases } from './combos.js?v=1.61';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.60';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.60';
-import { randomSeed } from '../core/rng.js?v=1.60';
-import { reglagesJoueurs } from './accueil.js?v=1.60';
+} from './apparence.js?v=1.61';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.61';
+import { randomSeed } from '../core/rng.js?v=1.61';
+import { reglagesJoueurs } from './accueil.js?v=1.61';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.60';
+} from './profils.js?v=1.61';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».

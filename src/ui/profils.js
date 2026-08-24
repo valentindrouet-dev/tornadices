@@ -12,20 +12,93 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.60';
-import { store } from './store.js?v=1.60';
+import { h } from './dom.js?v=1.61';
+import { store } from './store.js?v=1.61';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
 // La clé historique des réglages : c'est elle que « Par défaut » manipule, et
 // c'est ce qu'un navigateur ouvert de longue date contient déjà.
 const CLE_LIBRE = 'variables';
+// Ce qu'on a modifié par-dessus un réglage livré avec le jeu, par identifiant.
+const CLE_INTEGRES = 'profilsIntegresModifies';
 
-/** Tous les réglages enregistrés, dans l'ordre où ils ont été créés. */
+/**
+ * Les réglages livrés avec le jeu — écrits dans le code, donc les mêmes pour
+ * tout le monde, sans rien à enregistrer ni à partager.
+ *
+ * « Vichy » est le paquet imprimé de l'auteur : quatorze Tornades, la manche qui
+ * se prend d'un seul Abri, et les combinaisons des cartes telles qu'elles sont
+ * dessinées dessus.
+ */
+export const PROFILS_INTEGRES = [
+  {
+    id: 'vichy',
+    nom: 'Vichy',
+    integre: true,
+    variables: {
+      modeManche: 'immediat',
+      // Les quatorze du paquet imprimé, prises dans les seize du jeu : ni la
+      // Tornade de feuille — celle de chauffe la remplace, et ne rapporte rien —
+      // ni la Mini-Tornade, dont la Chargée est l'inverse.
+      cartesSansPoints: [
+        'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
+        'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
+        'spElectrique', 'spVaches', 'spPoules',
+      ],
+      // Le choix est daté : les deux cartes écartées l'ont bien été.
+      cartesSansPointsVues: [
+        'spFeuille', 'spVaches', 'spPoules', 'spCowboy', 'spSiecle', 'spSommeil',
+        'spElectrique', 'spPaisible', 'spMaladroite', 'spMini', 'spFurieuse',
+        'spMega', 'spChauffe', 'spChargee', 'spTricheurs', 'spF5',
+      ],
+      // Les combinaisons dessinées sur les cartes : quatre abris, quatre lunes,
+      // trois tornades.
+      combosCartesSansPoints: {
+        spMega: { vache: 4 },
+        spSommeil: { zzz: 4 },
+        spFurieuse: { x: 3 },
+      },
+    },
+  },
+];
+
+const INTEGRES_PAR_ID = Object.fromEntries(PROFILS_INTEGRES.map((p) => [p.id, p]));
+
+/** Ce qu'on a modifié par-dessus les réglages livrés, par identifiant. */
+function modificationsIntegrees() {
+  const o = store.get(CLE_INTEGRES, {});
+  return o && typeof o === 'object' ? o : {};
+}
+
+/** Vrai si ce réglage est livré avec le jeu — il ne se renomme ni ne s'efface. */
+export function estIntegre(id) {
+  return !!INTEGRES_PAR_ID[id];
+}
+
+/** Vrai si un réglage livré a été modifié ici — on peut alors y revenir. */
+export function integreModifie(id) {
+  return estIntegre(id) && !!modificationsIntegrees()[id];
+}
+
+/** Rend un réglage livré tel qu'il est écrit dans le code. */
+export function retablirIntegre(id) {
+  if (!estIntegre(id)) return;
+  const tout = modificationsIntegrees();
+  delete tout[id];
+  store.set(CLE_INTEGRES, tout);
+}
+
+/**
+ * Tous les réglages proposés : ceux livrés avec le jeu d'abord, puis les vôtres
+ * dans l'ordre où vous les avez créés.
+ */
 export function profils() {
   const l = store.get(CLE_LISTE, []);
-  if (!Array.isArray(l)) return [];
-  return l.filter((p) => p && typeof p === 'object' && p.id);
+  const miens = Array.isArray(l) ? l.filter((p) => p && typeof p === 'object' && p.id) : [];
+  // Un réglage à vous ne peut pas porter l'identifiant d'un réglage livré : le
+  // second l'emporterait, et l'on ne saurait plus lequel on modifie.
+  return [...PROFILS_INTEGRES, ...miens.filter((p) => !estIntegre(p.id))];
 }
 
 /** L'identifiant du réglage sélectionné, ou `null` pour « Par défaut ». */
@@ -55,9 +128,17 @@ export function nomActif() {
  * pas à savoir lequel des deux.
  */
 export function reglagesCourants() {
-  const p = profilActif();
-  if (!p) return store.get(CLE_LIBRE, {});
-  return p.variables && typeof p.variables === 'object' ? p.variables : {};
+  const id = idActif();
+  if (!id) return store.get(CLE_LIBRE, {});
+  // Un réglage livré avec le jeu se lit dans le code — sauf si on l'a modifié
+  // ici, auquel cas c'est notre version qui vaut, jusqu'à ce qu'on la rende.
+  if (estIntegre(id)) {
+    const mien = modificationsIntegrees()[id];
+    if (mien && typeof mien === 'object') return mien;
+    return JSON.parse(JSON.stringify(INTEGRES_PAR_ID[id].variables));
+  }
+  const p = profils().find((x) => x.id === id);
+  return p && p.variables && typeof p.variables === 'object' ? p.variables : {};
 }
 
 /** Et l'unique écriture, au même endroit que la lecture. */
@@ -65,11 +146,18 @@ export function enregistrerReglages(v) {
   const valeur = v && typeof v === 'object' ? v : {};
   const id = idActif();
   if (!id) { store.set(CLE_LIBRE, valeur); return; }
-  const liste = profils();
-  const p = liste.find((x) => x.id === id);
+  // Le code ne se réécrit pas : ce qu'on modifie par-dessus un réglage livré
+  // est gardé à part, et « Réglage d'origine » l'efface d'un coup.
+  if (estIntegre(id)) {
+    store.set(CLE_INTEGRES, { ...modificationsIntegrees(), [id]: valeur });
+    return;
+  }
+  const liste = store.get(CLE_LISTE, []);
+  const miens = Array.isArray(liste) ? liste : [];
+  const p = miens.find((x) => x && x.id === id);
   if (!p) { store.set(CLE_LIBRE, valeur); return; }
   p.variables = valeur;
-  store.set(CLE_LISTE, liste);
+  store.set(CLE_LISTE, miens);
 }
 
 /**
@@ -98,10 +186,14 @@ function nomLibre(liste, souhaite, sauf = null) {
  * qu'on a sous les yeux — et le sélectionne. Rend son identifiant.
  */
 export function creerProfil(nom) {
-  const liste = profils();
+  // Les identifiants et les noms se cherchent parmi tous les réglages proposés,
+  // mais l'écriture ne touche que les vôtres : le code ne s'enregistre pas.
+  const tous = profils();
+  const miens = store.get(CLE_LISTE, []);
+  const liste = Array.isArray(miens) ? miens.filter((x) => x && x.id && !estIntegre(x.id)) : [];
   const p = {
-    id: nouvelId(liste),
-    nom: nomLibre(liste, nom),
+    id: nouvelId(tous),
+    nom: nomLibre(tous, nom),
     // Copie : le nouveau réglage ne doit pas partager son objet avec l'ancien.
     variables: JSON.parse(JSON.stringify(reglagesCourants() || {})),
   };
@@ -112,16 +204,25 @@ export function creerProfil(nom) {
 }
 
 export function renommerProfil(id, nom) {
-  const liste = profils();
+  // Un réglage livré avec le jeu porte le nom qu'il a dans le code.
+  if (estIntegre(id)) return;
+  const miens = store.get(CLE_LISTE, []);
+  const liste = Array.isArray(miens) ? miens.filter((x) => x && x.id && !estIntegre(x.id)) : [];
   const p = liste.find((x) => x.id === id);
   if (!p) return;
-  p.nom = nomLibre(liste, nom, id);
+  p.nom = nomLibre(profils(), nom, id);
   store.set(CLE_LISTE, liste);
 }
 
-/** Supprime un réglage. Le supprimer alors qu'il est actif ramène au défaut. */
+/**
+ * Supprime un réglage. Le supprimer alors qu'il est actif ramène au défaut.
+ * Un réglage livré avec le jeu ne s'efface pas : il est dans le code.
+ */
 export function supprimerProfil(id) {
-  store.set(CLE_LISTE, profils().filter((p) => p.id !== id));
+  if (estIntegre(id)) return;
+  const miens = store.get(CLE_LISTE, []);
+  const liste = Array.isArray(miens) ? miens : [];
+  store.set(CLE_LISTE, liste.filter((p) => p && p.id !== id));
   if (store.get(CLE_ACTIF, null) === id) store.set(CLE_ACTIF, null);
 }
 
@@ -150,11 +251,17 @@ export function barreProfils(apres) {
   const courant = profilActif();
   // Rien à éditer sous « Par défaut » : il n'a ni nom propre ni existence à
   // supprimer. Le bouton disparaît plutôt que de s'afficher sans effet.
-  const editable = !!courant;
+  // Un réglage livré avec le jeu n'a ni nom à changer ni existence à supprimer :
+  // il est dans le code. Il se modifie tout de même, et se rend d'un bouton.
+  const livre = !!courant && estIntegre(courant.id);
+  const editable = !!courant && !livre;
 
   const puce = (id, nom) => h('button', {
-    class: `chip chip--profil${(id || null) === actif ? ' on' : ''}`,
-    title: id ? `Passer sur « ${nom} »` : 'Les réglages libres du site, ceux qu’on modifie hors de tout réglage nommé',
+    class: `chip chip--profil${(id || null) === actif ? ' on' : ''}`
+      + (estIntegre(id) ? ' chip--livre' : ''),
+    title: id
+      ? (estIntegre(id) ? `Passer sur « ${nom} » — un réglage livré avec le jeu` : `Passer sur « ${nom} »`)
+      : 'Les réglages libres du site, ceux qu’on modifie hors de tout réglage nommé',
     // On clique une puce pour se servir du réglage, pas pour le renommer : le
     // mode édition se referme, il ne suit pas d'un réglage à l'autre.
     onclick: () => { selectionnerProfil(id); edition = false; apres(); },
@@ -193,6 +300,13 @@ export function barreProfils(apres) {
             onclick: () => { edition = !edition; apres(); },
           }, edition ? 'Terminé' : 'Éditer')
         : null,
+      // Un réglage livré modifié se rend tel qu'il est écrit dans le code.
+      livre && integreModifie(courant.id)
+        ? h('button.btn.btn--petit', {
+            title: `Effacer vos modifications et retrouver « ${courant.nom} » d’origine`,
+            onclick: () => { retablirIntegre(courant.id); apres(); },
+          }, 'Réglage d’origine')
+        : null,
       h('button.btn.btn--petit', {
         title: 'Copier les réglages en cours dans un nouveau réglage, à nommer',
         onclick: () => { creerProfil(`Réglage ${profils().length + 1}`); apres(); },
@@ -213,8 +327,12 @@ export function barreProfils(apres) {
         )
       : null,
     h('p.mini.muted', { style: { marginTop: '10px' } },
-      courant
-        ? `Tout ce que vous modifiez ci-dessous s’enregistre dans « ${courant.nom} », `
+      livre
+        ? `« ${courant.nom} » est livré avec le jeu : il est le même pour tout le monde, `
+          + 'sans rien à enregistrer ni à partager. Ce que vous modifiez ci-dessous ne vaut '
+          + 'que pour ce navigateur, et « Réglage d’origine » le rend tel qu’il est écrit.'
+        : courant
+          ? `Tout ce que vous modifiez ci-dessous s’enregistre dans « ${courant.nom} », `
           + 'aux Réglages comme au Laboratoire. Les autres réglages ne bougent pas.'
         : 'Les réglages libres du site. Créez-en un nouveau pour garder cette version '
           + 'de côté et en essayer une autre : un clic suffit ensuite pour passer de '

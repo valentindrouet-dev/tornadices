@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.60';
+import { h } from './dom.js?v=1.61';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.60';
+} from './icons.js?v=1.61';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.60';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.60';
+} from '../core/config.js?v=1.61';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.61';
 
 export function vueRegles() {
   return h('div.page',
@@ -130,7 +130,7 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'Les combinaisons'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Combinaison'), h('th', 'Effet'), h('th', 'Condition'))),
         h('tbody', ...COMBOS_TORNADE.map((c) => h('tr',
           h('td', h('div.rangee.rangee--serree', suiteSymboles(c.requis, 20))),
@@ -140,7 +140,7 @@ export function vueRegles() {
               : c.face === 'endormie' ? 'Tornade endormie'
                 : 'Quel que soit l’état'),
         ))),
-      ),
+      )),
       h('div.rangee', { style: { marginTop: '14px' } },
         h('span', { html: SVG_TORNADE_ENDORMIE, style: { width: '30px', color: 'var(--gris-clair)' } }),
         h('span.petit', 'Chaque manche commence Tornade endormie : il faut d’abord se réveiller '
@@ -211,7 +211,7 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'Les cartes Tornade — avec les jetons'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
@@ -220,7 +220,7 @@ export function vueRegles() {
             : h('span.mini.muted', '—')),
           h('td.petit', c.texte),
         ))),
-      ),
+      )),
     ),
 
     // Le mode « sans les points » a son propre paquet, de bout en bout : sans
@@ -230,7 +230,7 @@ export function vueRegles() {
       h('p.petit', 'Un paquet entièrement différent : plus de jeton à manipuler, les cartes '
         + 'jouent sur les cartes. Certaines doublent la mise pour une équipe, d’autres emportent '
         + 'la manche à la combinaison, une dernière vole son point à un adversaire.'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
           h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...CARTES_SANS_POINTS.map((c) => h('tr',
@@ -243,7 +243,7 @@ export function vueRegles() {
             : h('span.mini.muted', '—')),
           h('td.petit', c.texte),
         ))),
-      ),
+      )),
       h('div.encart', { style: { marginTop: '12px' } },
         'On révèle une Tornade et on la joue. Une équipe qui doit gagner deux cartes prend celle '
         + 'en cours et la première du dessus de la pioche, qu’elle garde face cachée dans sa '
@@ -261,7 +261,7 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'Mise en place'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th.num', 'Joueurs'), h('th.num', 'Lots de dés'),
           h('th.num', 'Jetons par équipe'), h('th.num', 'Jetons du Vert'),
           h('th.num', 'Cartes pour gagner'))),
@@ -270,7 +270,7 @@ export function vueRegles() {
           h('td.num', m.lots), h('td.num', m.jetons),
           h('td.num', Number(n) % 2 ? m.jetonsVert : '—'), h('td.num', m.cartes),
         ))),
-      ),
+      )),
       h('p.mini.muted', { style: { marginTop: '8px' } },
         'TornaDice se joue de trois à huit joueurs.'),
       h('p.petit', { style: { marginTop: '12px' } },
@@ -330,7 +330,7 @@ export function vueRegles() {
       h('p.petit', 'Le sens décide de tout ce qui se passe entre voisins : on ne passe son lot '
         + 'qu’à son voisin d’aval, on ne peut attraper que lui, et l’on n’est attrapé que par son '
         + 'voisin d’amont. Trois façons d’en décider, au choix dans les Réglages.'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Règle'), h('th', 'Comment le sens se décide'))),
         // Pas de `nowrap` ici : « Au dos de la prochaine Tornade » ne tient pas
         // sur une ligne de téléphone, et forcerait la page à déborder.
@@ -338,7 +338,7 @@ export function vueRegles() {
           h('td', { style: { fontWeight: '700' } }, lib),
           h('td.petit', AIDE_SENS[id]),
         ))),
-      ),
+      )),
       h('div.encart', { style: { marginTop: '12px' } },
         'La carte de sens fait de la défaite une décision. L’équipe qui reçoit les dés regarde qui '
         + 'elle aura devant elle et qui elle aura derrière : retourner la carte lui change sa '
@@ -408,13 +408,13 @@ export function vueRegles() {
         'Aucune IA ne vise l’attrape dans le vide : tant que le joueur suivant a les mains '
         + 'libres, même l’Agressif joue le coup utile — la tornade s’il dort, l’abri s’il est '
         + 'réveillé. L’envie d’attraper revient dès que le voisin reprend un lot.'),
-      h('table.tbl',
+      h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Caractère'), h('th', 'Ce qu’il cherche'))),
         h('tbody', ...Object.values(PROFILS_IA).map((p) => h('tr',
           h('td', { style: { fontWeight: '700', whiteSpace: 'nowrap' } }, p.nom),
           h('td.petit', p.desc),
         ))),
-      ),
+      )),
     ),
 
     h('div.carte',

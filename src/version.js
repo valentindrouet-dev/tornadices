@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.60';
+export const VERSION = '1.61';
 export const BUILD_DATE = '2026-08-24';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.61',
+    date: '24/08/2026',
+    notes: [
+      'Un premier réglage livré avec le jeu : « Vichy ». Il est écrit dans le code, donc le même pour tout le monde — rien à enregistrer, rien à partager. Il apparaît dans « Réglages enregistrés », aux Réglages comme au Laboratoire, et se choisit d’un clic. On peut le modifier chez soi : ces modifications ne valent que pour ce navigateur, et « Réglage d’origine » le rend tel qu’il est écrit. Il ne se renomme ni ne s’efface.',
+      'Vichy joue en Immédiat, avec les quatorze Tornades du paquet imprimé et les combinaisons dessinées dessus : quatre abris pour la Méga, quatre lunes pour celle du Sommeil, trois tornades pour la Furieuse.',
+      'Trois cartes manquaient et sont désormais codées : la « Tornade de chauffe », qui se joue mais ne rapporte pas de carte ; la « Tornade chargée », qui ajoute un lot de dés — l’inverse exact de la Mini-Tornade ; et la « Tornade des tricheurs », qui rend les dés à l’équipe gagnante au lieu de la perdante.',
+      'Deux cartes s’alignent sur le carton : la « Tornade F5 » reprend son nom de « Tornade chapardeuse », et la « Tornade du Siècle » vaut double pour qui remporte la manche, sans combinaison à sortir — c’est la Méga Tornade qui porte les quatre abris.',
+      'La carte Tornade de l’écran ressemble à celle qu’on a dans la main : cadre orange, panneau crème, titre en capitales penchées, et les mots que le carton met en couleur — « carte Tornade », le nom des équipes — repris en rouge. Aucune police n’est téléchargée pour autant : le site ne demande toujours rien à l’extérieur.',
+      'Les tableaux de la page Règles défilent à l’horizontale sur téléphone au lieu de pousser la page de côté.',
+    ],
+  },
   {
     version: '1.60',
     date: '24/08/2026',
