@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.63';
-export const BUILD_DATE = '2026-08-24';
+export const VERSION = '1.64';
+export const BUILD_DATE = '2026-08-25';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.64',
+    date: '24/08/2026',
+    notes: [
+      'Les Tornades n’ont plus de flèche à leur dos : c’est la carte rotation, posée sur la table, qui porte le sens — et elle seule. Le réglage « Au dos de la prochaine Tornade » disparaît, et un réglage qui le demandait encore retombe sur la carte rotation. Restent deux façons d’en décider : la carte que les perdants peuvent retourner, ou l’alternance d’une manche à l’autre.',
+      'Les Réglages se resserrent : « Comment se joue une manche » et « Le sens de rotation » partagent une carte, sur la même ligne. Le nombre de dés par lot n’occupe plus qu’une case étroite, avec la composition des six faces à côté de lui. Et les trois réglages de l’attrape — ce qui la déclenche, ce qu’elle rapporte, ce qui arrive quand deux lots se rencontrent — se lisent d’un seul coup d’œil, côte à côte.',
+      'Les cartes Tornade des Réglages sont toutes à la même hauteur, celle de la plus haute du paquet : les rangées ne se décalent plus. Et leur texte ne vient plus toucher le cadre.',
+    ],
+  },
   {
     version: '1.63',
     date: '24/08/2026',

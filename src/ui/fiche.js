@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.63';
-import { store } from './store.js?v=1.63';
-import { aller } from './app.js?v=1.63';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.63';
-import { nomSymbole } from './apparence.js?v=1.63';
-import { construireConfig } from './variables.js?v=1.63';
-import { nomActif } from './profils.js?v=1.63';
-import { VERSION } from '../version.js?v=1.63';
+import { h, remplacer } from './dom.js?v=1.64';
+import { store } from './store.js?v=1.64';
+import { aller } from './app.js?v=1.64';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.64';
+import { nomSymbole } from './apparence.js?v=1.64';
+import { construireConfig } from './variables.js?v=1.64';
+import { nomActif } from './profils.js?v=1.64';
+import { VERSION } from '../version.js?v=1.64';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation,
-} from '../core/config.js?v=1.63';
+} from '../core/config.js?v=1.64';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -278,7 +278,7 @@ function leTour(cfg) {
     ),
     sensRotation(cfg) === 'perdants'
       ? h('p.fiche-note',
-          'La carte de sens ne se retourne qu’à ce moment-là : une fois la manche commencée, le '
+          'La carte rotation ne se retourne qu’à ce moment-là : une fois la manche commencée, le '
           + 'sens ne change plus. On n’attrape que son voisin d’aval et l’on n’est attrapé que '
           + 'par son voisin d’amont — la retourner, c’est changer de proie et de danger d’un '
           + 'même geste.')
@@ -289,9 +289,7 @@ function leTour(cfg) {
 /** Ce que la fiche dit du sens, selon la règle retenue. */
 const TOUR_SENS = {
   alterne: 's’inverse à chaque manche.',
-  carte: 'est celui qu’annonce la flèche au dos de la prochaine carte Tornade, encore face '
-    + 'cachée sur la pioche : deux manches de suite peuvent tourner dans le même sens.',
-  perdants: 'est indiqué par une carte de sens posée sur la table. À la fin de chaque manche, '
+  perdants: 'est indiqué par la carte rotation, posée sur la table. À la fin de chaque manche, '
     + 'l’équipe qui reçoit les dés — celle qui vient de perdre — la retourne pour inverser le '
     + 'sens, ou la laisse en place. C’est un choix, jamais une obligation.',
 };

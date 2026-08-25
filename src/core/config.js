@@ -171,36 +171,32 @@ export const AIDE_MANCHE = {
 // ── Le sens de rotation ──────────────────────────────────────────────────────
 // Trois façons de décider dans quel sens tourne une manche.
 export const OPTIONS_SENS = [
-  ['alterne', 'Une manche sur l’autre'],
-  ['carte', 'Au dos de la prochaine Tornade'],
   ['perdants', 'Carte de sens — les perdants décident'],
+  ['alterne', 'Une manche sur l’autre'],
 ];
 
 export const NOM_SENS = Object.fromEntries(OPTIONS_SENS);
 
 export const AIDE_SENS = {
-  alterne: 'Règle de base : le sens s’inverse à chaque manche, sans que personne n’ait à en '
+  perdants: 'La carte rotation, posée sur la table, indique le sens. À la fin d’une manche, '
+    + 'l’équipe perdante — celle qui reçoit les dés — peut la retourner pour inverser le sens, ou '
+    + 'la laisser en place. C’est un choix, pas une obligation : celui qui subit décide de la '
+    + 'façon dont il repart.',
+  alterne: 'Sans carte rotation : le sens s’inverse à chaque manche, sans que personne n’ait à en '
     + 'décider. Une manche dans un sens, la suivante dans l’autre.',
-  carte: 'Chaque Tornade porte une flèche à son dos. La manche se joue dans le sens qu’annonce '
-    + 'la prochaine carte, encore face cachée sur la pioche — deux manches de suite peuvent donc '
-    + 'tourner dans le même sens.',
-  perdants: 'Une carte posée sur la table indique le sens. À la fin d’une manche, l’équipe '
-    + 'perdante — celle qui reçoit les dés — peut la retourner pour inverser le sens, ou la '
-    + 'laisser en place. C’est un choix, pas une obligation : celui qui subit décide de la façon '
-    + 'dont il repart.',
 };
 
 /**
  * Comment se décide le sens d'une manche.
  *
- * Sans réglage, chaque mode garde ce qu'il faisait : la règle de base alterne,
- * les deux autres lisent le dos de la prochaine Tornade — c'est la pioche qui
- * l'annonce, et elle sert déjà à cela.
+ * C'est la carte rotation qui le porte : les Tornades n'ont plus de flèche à
+ * leur dos. Un réglage qui demandait encore de la lire — « carte », jusqu'à la
+ * v1.64 — retombe donc sur elle.
  */
 export function sensRotation(cfg) {
   const s = cfg && cfg.sensRotation;
   if (OPTIONS_SENS.some(([id]) => id === s)) return s;
-  return modeManche(cfg) === 'jeton' ? 'alterne' : 'carte';
+  return 'perdants';
 }
 
 /**
@@ -752,7 +748,6 @@ export const CARTES_SANS_POINTS = [
     // La manche se joue comme les autres, mais la carte est défaussée.
     neCompted: true,
     toujoursPremiere: true,
-    sens: 1,
   },
   {
     id: 'spPaisible',
@@ -762,7 +757,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous ne pouvez relancer les dés que un par un',
     combo: null,
     effetPassif: { unParUn: true },
-    sens: -1,
   },
   {
     id: 'spMaladroite',
@@ -772,7 +766,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous lancez les dés de votre autre main',
     combo: null,
     effetPassif: { lenteur: 1.35, erreur: 0.06 },
-    sens: 1,
   },
   {
     id: 'spChargee',
@@ -782,7 +775,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous jouez avec un lot de dés supplémentaire',
     combo: null,
     effetPassif: { lotsEnPlus: 1 },
-    sens: -1,
   },
   {
     id: 'spTricheurs',
@@ -792,7 +784,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'L’équipe gagnante commence la manche suivante avec les lots de dés',
     combo: null,
     effetPassif: { gagnantPrendLesDes: true },
-    sens: -1,
   },
   {
     id: 'spF5',
@@ -802,7 +793,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'L’équipe gagnante vole une Carte Tornade à l’équipe adverse',
     combo: null,
     effetPassif: { volerCarte: true },
-    sens: 1,
   },
   {
     id: 'spCowboy',
@@ -814,7 +804,6 @@ export const CARTES_SANS_POINTS = [
     effetPassif: { doubleSi: 'vert' },
     // Sans joueur Vert, la carte ne désignerait personne : elle sort du paquet.
     equipeRequise: 'vert',
-    sens: 1,
   },
   {
     id: 'spSiecle',
@@ -825,7 +814,6 @@ export const CARTES_SANS_POINTS = [
     combo: null,
     // Elle vaut double pour qui la remporte, quelle que soit l'équipe.
     effetPassif: { doubleTous: true },
-    sens: 1,
   },
   {
     id: 'spMega',
@@ -835,7 +823,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous gagnez immédiatement la Manche',
     combo: { id: 'spMega', requis: { vache: 4 }, effet: 'gagnerManche' },
     effetPassif: null,
-    sens: -1,
   },
   {
     id: 'spSommeil',
@@ -845,7 +832,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous gagnez immédiatement la Manche',
     combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'gagnerManche' },
     effetPassif: null,
-    sens: -1,
   },
   {
     id: 'spFurieuse',
@@ -855,7 +841,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous gagnez immédiatement la Manche',
     combo: { id: 'spFurieuse', requis: { x: 3 }, effet: 'gagnerManche' },
     effetPassif: null,
-    sens: -1,
   },
   {
     id: 'spElectrique',
@@ -865,7 +850,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Vous gagnez 2 Cartes Tornade si vous gagnez la manche en rattrapant',
     combo: null,
     effetPassif: { doubleSiAttrape: true },
-    sens: 1,
   },
   {
     id: 'spVaches',
@@ -875,7 +859,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Les Vaches gagnent 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'bleu' },
-    sens: -1,
   },
   {
     id: 'spPoules',
@@ -885,7 +868,6 @@ export const CARTES_SANS_POINTS = [
     texte: 'Les Poules gagnent 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'jaune' },
-    sens: -1,
   },
 ];
 
@@ -1174,7 +1156,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // de la prochaine Tornade.
     sensRotation: OPTIONS_SENS.some(([id]) => id === opts.sensRotation)
       ? opts.sensRotation
-      : (mode === 'jeton' ? 'alterne' : 'carte'),
+      : 'perdants',
     // Compromis : les jetons de sa couleur qu'une équipe peut mettre à l'Abri.
     jetonsRefuge: 3,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.

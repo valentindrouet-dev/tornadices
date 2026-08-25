@@ -4,20 +4,20 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.63';
+import { h, remplacer, duree, vider } from './dom.js?v=1.64';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.63';
-import { Moteur } from '../core/engine.js?v=1.63';
+} from './icons.js?v=1.64';
+import { Moteur } from '../core/engine.js?v=1.64';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation,
-} from '../core/config.js?v=1.63';
-import { ajouterHistorique } from './store.js?v=1.63';
-import { enregistrerPartie } from './resultats.js?v=1.63';
-import { aller } from './app.js?v=1.63';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.63';
+} from '../core/config.js?v=1.64';
+import { ajouterHistorique } from './store.js?v=1.64';
+import { enregistrerPartie } from './resultats.js?v=1.64';
+import { aller } from './app.js?v=1.64';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.64';
 
 let moteur = null;
 let vitesse = 1;
@@ -917,21 +917,17 @@ export function vueTable() {
     peindreRefuge();
 
     const reste = Math.max(0, moteur.pioche.length - 1);
-    // Où se lit le sens dépend de la règle : au dos de la carte du dessus de la
-    // pioche, ou sur une carte de sens posée à part que les perdants
-    // retournent. Dans les deux cas la flèche est à sa place sur la table.
+    // Le sens ne se lit plus au dos des Tornades : c'est la carte rotation qui
+    // le porte, posée à côté de la pioche. Sous la règle qui alterne d'une
+    // manche à l'autre, personne ne la retourne — le bandeau du haut suffit.
     const regleSens = sensRotation(moteur.cfg);
+    // La carte rotation est posée sur la table dès qu'elle décide du sens.
     const carteDeSens = regleSens === 'perdants';
     const sensPioche = FLECHE(moteur.sens);
     siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
       h('div.pioche-pile',
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
           h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
-        reste && !carteDeSens
-          ? h('div.dos-fleche', {
-              title: `Manche en cours : sens ${NOM_TOUR(moteur.sens)}`,
-            }, sensPioche)
-          : null,
         reste ? h('div.pioche-nb', reste) : h('div.pioche-nb.pioche-nb--vide', '0'),
       ),
       h('div.mini.muted', { style: { marginTop: '8px', textAlign: 'center' } },

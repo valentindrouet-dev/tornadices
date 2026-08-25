@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.63';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.63';
-import { nomSymbole } from './apparence.js?v=1.63';
-import { store } from './store.js?v=1.63';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.63';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.64';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.64';
+import { nomSymbole } from './apparence.js?v=1.64';
+import { store } from './store.js?v=1.64';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.64';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -16,15 +16,15 @@ import {
   NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.63';
-import { tableauCombos } from './combos.js?v=1.63';
-import { barreProfils, idActif } from './profils.js?v=1.63';
+} from '../core/config.js?v=1.64';
+import { tableauCombos } from './combos.js?v=1.64';
+import { barreProfils, idActif } from './profils.js?v=1.64';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.63';
+} from './variables.js?v=1.64';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.63';
+} from '../core/proba.js?v=1.64';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -848,16 +848,9 @@ function ongletRegles() {
       h('div.titre-section',
         `Cartes Tornade — ${NOM_MODE[modeManche(cfg)]}`),
       h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
-          h('th', 'Combinaison'), h('th', 'Effet'))),
+        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...cartesDuMode(cfg).map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
-          // Le sens que la carte annonce depuis la pioche, encore face cachée.
-          h('td.num', c.sens
-            ? h('span.fleche-sens', {
-                title: c.sens > 0 ? 'Sens horaire' : 'Sens antihoraire',
-              }, c.sens > 0 ? '↻' : '↺')
-            : h('span.mini.muted', '—')),
           h('td', c.combo
             ? h('div.rangee.rangee--serree', suiteSymboles(requisCarte(cfg, c.combo), 18))
             : h('span.mini.muted', 'effet permanent')),

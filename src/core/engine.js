@@ -10,14 +10,14 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.63';
+import { makeRng } from './rng.js?v=1.64';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.63';
+} from './config.js?v=1.64';
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -189,17 +189,9 @@ export class Moteur {
     // choses que les cartes Tornade savent modifier.
     this._bonusCartes = 0;
     this._mancheParAttrape = false;
-    // D'où vient le sens de la manche qui commence — trois règles au choix.
+    // D'où vient le sens de la manche qui commence — deux règles au choix.
     const regleSens = sensRotation(this.cfg);
-    if (regleSens === 'carte') {
-      // Le sens se lit au dos de la prochaine carte, celle qui reste face
-      // cachée sur la pioche pendant qu'on joue celle du dessus. Ce n'est donc
-      // pas un sens puis l'autre : c'est la pile qui l'annonce.
-      const suivante = this.pioche[1];
-      if (suivante && suivante.sens) this.sens = suivante.sens;
-    } else if (regleSens === 'alterne') {
-      if (!premiere) this.sens = -this.sens;
-    }
+    if (regleSens === 'alterne' && !premiere) this.sens = -this.sens;
     // « perdants » : rien à faire ici. La carte de sens posée sur la table ne
     // bouge qu'entre deux manches, quand ceux qui reçoivent les dés décident de
     // la retourner ou de la laisser — c'est déjà fait quand on arrive ici.

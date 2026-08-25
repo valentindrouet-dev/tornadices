@@ -1195,45 +1195,6 @@ console.log('\nTornades du mode sans les points');
 {
   const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
 
-  // Le sens de la manche se lit au dos de la carte suivante, pas en alternant.
-  {
-    const cfg = configParDefaut(6, { sansPoints: true });
-    cfg.melangerCartes = false;
-    // On contrôle la règle elle-même, manche après manche : au coup d'envoi, le
-    // sens doit être celui du dos de la carte encore face cachée. Un attendu
-    // figé ne tiendrait pas — une carte qui vaut double avance la pioche de
-    // deux crans, et la suite des dos n'est donc pas celle du paquet.
-    let controles = 0, fautes = 0;
-    const releve = (moteur) => {
-      const suivante = moteur.pioche[1];
-      if (!suivante || !suivante.sens) return;
-      controles++;
-      if (moteur.sens !== suivante.sens) fautes++;
-    };
-    for (let g = 0; g < 30; g++) {
-      const partie = new Moteur(configParDefaut(6, { sansPoints: true }), spec(6), `sens-${g}`);
-      partie.onDebutManche = () => releve(partie);
-      releve(partie);
-      partie.jouerJusquAuBout();
-    }
-    verifier(`${controles} manches contrôlées — le sens est toujours celui du dos suivant`,
-      controles > 50 && fautes === 0, `${fautes} écart(s)`);
-
-    // Et le mode de base, lui, continue d'alterner sans se soucier des cartes.
-    const base = new Moteur(configParDefaut(6), spec(6), 'sens-base');
-    const sensBase = [base.sens];
-    base.onDebutManche = () => sensBase.push(base.sens);
-    base.jouerJusquAuBout();
-    verifier('avec les jetons, le sens s’inverse toujours d’une manche à l’autre',
-      sensBase.slice(2).every((s, i) => s === -sensBase[i + 1]));
-    // Des flèches qui alterneraient parfaitement rendraient la règle
-    // indiscernable de l'ancienne : le paquet doit porter des séries.
-    const suite = CARTES_SANS_POINTS.map((c) => c.sens);
-    const repetitions = suite.filter((s, i) => i > 0 && suite[i - 1] === s).length;
-    verifier(`le paquet ne se contente pas d’alterner (${repetitions} répétitions sur `
-      + `${suite.length - 1} passages)`, repetitions > 0);
-  }
-
   // Une carte qui vaut double se paie sur la pioche.
   {
     const cfg = configParDefaut(6, { sansPoints: true });
@@ -1891,15 +1852,17 @@ console.log('\nLe sens de rotation');
     nom: `J${i + 1}`, type: i < humains ? 'humain' : 'ia', profil: 'equilibre',
   }));
 
-  verifier('sans réglage, le mode Jeton alterne et les deux autres lisent la pioche',
-    sensRotation(configParDefaut(6, { modeManche: 'jeton' })) === 'alterne'
-    && sensRotation(configParDefaut(6, { modeManche: 'immediat' })) === 'carte'
-    && sensRotation(configParDefaut(6, { modeManche: 'compromis' })) === 'carte');
-  verifier('une valeur inconnue retombe sur la règle du mode',
-    sensRotation({ modeManche: 'jeton', sensRotation: 'nimportequoi' }) === 'alterne');
-  verifier('un réglage d’avant la v1.54 est complété par assainirConfig',
-    assainirConfig({ nbJoueurs: 6, modeManche: 'compromis' }).sensRotation === 'carte'
-    && assainirConfig({ nbJoueurs: 6, sensRotation: 'perdants' }).sensRotation === 'perdants');
+  verifier('sans réglage, c’est la carte rotation qui décide, dans les trois modes',
+    MODES_MANCHE.every((m) => sensRotation(configParDefaut(6, { modeManche: m })) === 'perdants'));
+  verifier('une valeur inconnue retombe sur la carte rotation',
+    sensRotation({ modeManche: 'jeton', sensRotation: 'nimportequoi' }) === 'perdants');
+  // Les Tornades n'ont plus de flèche au dos : le réglage qui demandait de la
+  // lire n'a plus d'objet, et retombe lui aussi sur la carte rotation.
+  verifier('l’ancien réglage « au dos de la Tornade » retombe sur la carte rotation',
+    sensRotation({ sensRotation: 'carte' }) === 'perdants'
+    && assainirConfig({ nbJoueurs: 6, sensRotation: 'carte' }).sensRotation === 'perdants');
+  verifier('aucune carte ne porte plus de sens',
+    [...CARTES_TORNADE, ...CARTES_SANS_POINTS].every((c) => c.sens === undefined));
 
   // Le sens observé au début de chaque manche, partie menée jusqu'au bout.
   const sensDesManches = (opts, graine) => {

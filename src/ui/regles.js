@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.63';
+import { h } from './dom.js?v=1.64';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.63';
+} from './icons.js?v=1.64';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.63';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.63';
+} from '../core/config.js?v=1.64';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.64';
 
 export function vueRegles() {
   return h('div.page',
@@ -230,13 +230,9 @@ export function vueRegles() {
         + 'jouent sur les cartes. Certaines doublent la mise pour une équipe, d’autres emportent '
         + 'la manche à la combinaison, une dernière vole son point à un adversaire.'),
       h('div.tbl-defile', h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Verso'),
-          h('th', 'Combinaison'), h('th', 'Effet'))),
+        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...CARTES_SANS_POINTS.map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
-          h('td.num', h('span.fleche-sens', {
-            title: c.sens > 0 ? 'Sens horaire' : 'Sens antihoraire',
-          }, c.sens > 0 ? '↻' : '↺')),
           h('td', c.combo
             ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
             : h('span.mini.muted', '—')),
@@ -250,9 +246,7 @@ export function vueRegles() {
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'La Tornade de feuille ouvre la partie sans pouvoir particulier, mais elle se gagne '
         + 'comme les autres : l’équipe qui prend la manche de chauffe la met dans sa pile.'),
-      h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Chaque Tornade porte aussi une flèche à son dos. Elle sert à l’une des trois façons de '
-        + 'décider du sens de rotation — voir la section qui leur est consacrée, plus bas.'),
+
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Les combinaisons se règlent carte par carte dans les Réglages, sous « Cartes Tornade en '
         + 'jeu » — plus dans le tableau des combinaisons.'),

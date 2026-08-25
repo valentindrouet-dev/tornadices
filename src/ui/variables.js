@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.63';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.63';
-import { store } from './store.js?v=1.63';
-import { aller } from './app.js?v=1.63';
-import { lancerPartie } from './table.js?v=1.63';
+import { h, remplacer } from './dom.js?v=1.64';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.64';
+import { store } from './store.js?v=1.64';
+import { aller } from './app.js?v=1.64';
+import { lancerPartie } from './table.js?v=1.64';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,19 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.63';
-import { tableauCombos, editeurCases } from './combos.js?v=1.63';
+} from '../core/config.js?v=1.64';
+import { tableauCombos, editeurCases } from './combos.js?v=1.64';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.63';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.63';
-import { randomSeed } from '../core/rng.js?v=1.63';
-import { reglagesJoueurs } from './accueil.js?v=1.63';
+} from './apparence.js?v=1.64';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.64';
+import { randomSeed } from '../core/rng.js?v=1.64';
+import { reglagesJoueurs } from './accueil.js?v=1.64';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.63';
+} from './profils.js?v=1.64';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -557,55 +557,53 @@ export function vueVariables() {
       // de réglage enregistré change tout d'un coup, ici et au Laboratoire.
       barreProfils(() => { reporterAuLabo(); dessiner(); }),
 
-      // ── Mode de jeu ───────────────────────────────────────────────────────
-      // Le premier réglage de la page, parce qu'il change la forme d'une manche
-      // et donc la lecture de tous les autres.
+      // ── Mode de jeu et sens de rotation ───────────────────────────────────
+      // Les deux premiers réglages de la page, côte à côte : ils changent la
+      // forme d'une manche, et donc la lecture de tous les autres. Ils se
+      // règlent à part l'un de l'autre — les trois façons de jouer se marient
+      // avec les deux façons de tourner.
       h('div.carte',
-        titreAide('Comment se joue une manche', [
-          AIDE_MANCHE[modeManche(cfg)],
-          estImmediat(cfg)
-            ? 'Deux façons de prendre la manche, donc : sortir l’Abri, ou attraper son voisin. '
-              + 'Le reste des réglages tient — les dés, les combinaisons, le rythme. Seuls les '
-              + 'jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
-            : '',
-          estCompromis(cfg)
-            ? 'Deux façons de prendre la manche, là aussi : mettre à l’Abri tous les jetons que '
-              + 'la Tornade du jour demande, ou envoyer un adversaire valser dans la tornade '
-              + 'd’une collision réussie. Le nombre de jetons demandés se règle carte par carte, '
-              + 'plus bas, dans « Cartes Tornade en jeu ».'
-            : '',
-        ]),
-        h('div.rangee.rangee--serree',
-          h('div.segment',
-            ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
-              class: modeManche(cfg) === id ? 'on' : '',
-              onclick: () => { ecrire('modeManche', id); dessiner(); },
-            }, lib)),
+        h('div.grille.grille--2', { style: { gap: '18px' } },
+          h('div',
+            titreAide('Comment se joue une manche', [
+              AIDE_MANCHE[modeManche(cfg)],
+              estImmediat(cfg)
+                ? 'Deux façons de prendre la manche, donc : sortir l’Abri, ou attraper son '
+                  + 'voisin. Le reste des réglages tient — les dés, les combinaisons, le rythme. '
+                  + 'Seuls les jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
+                : '',
+              estCompromis(cfg)
+                ? 'Deux façons de prendre la manche, là aussi : mettre à l’Abri tous les jetons '
+                  + 'que la Tornade du jour demande, ou envoyer un adversaire valser dans la '
+                  + 'tornade d’une collision réussie. Le nombre de jetons demandés se règle carte '
+                  + 'par carte, plus bas, dans « Cartes Tornade en jeu ».'
+                : '',
+            ]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
+                class: modeManche(cfg) === id ? 'on' : '',
+                onclick: () => { ecrire('modeManche', id); dessiner(); },
+              }, lib)),
+            ),
           ),
-        ),
-      ),
-
-      // ── Sens de rotation ──────────────────────────────────────────────────
-      // À quoi tient le sens d'une manche. Il se règle à part du mode : les
-      // trois façons de jouer se marient avec les trois façons de tourner.
-      h('div.carte',
-        titreAide('Le sens de rotation', [
-          AIDE_SENS[sensRotation(cfg)],
-          sensRotation(cfg) === 'perdants'
-            ? 'Un sens vaut ce que valent ses voisins : on n’attrape que son voisin d’aval, et '
-              + 'seul son voisin d’amont peut vous attraper. Retourner la carte, c’est donc '
-              + 'changer de proie et de prédateur d’un même geste. Les équipes menées par '
-              + 'l’ordinateur pèsent les deux sens et ne retournent la carte que si elles y '
-              + 'gagnent. Quand vous recevez les dés, la partie s’arrête le temps que vous '
-              + 'décidiez ; sans réponse, la carte reste en place.'
-            : '',
-        ]),
-        h('div.rangee.rangee--serree',
-          h('div.segment',
-            ...OPTIONS_SENS.map(([id, lib]) => h('button', {
-              class: sensRotation(cfg) === id ? 'on' : '',
-              onclick: () => { ecrire('sensRotation', id); dessiner(); },
-            }, lib)),
+          h('div',
+            titreAide('Le sens de rotation', [
+              AIDE_SENS[sensRotation(cfg)],
+              sensRotation(cfg) === 'perdants'
+                ? 'Un sens vaut ce que valent ses voisins : on n’attrape que son voisin d’aval, '
+                  + 'et seul son voisin d’amont peut vous attraper. Retourner la carte, c’est '
+                  + 'donc changer de proie et de prédateur d’un même geste. Les équipes menées '
+                  + 'par l’ordinateur pèsent les deux sens et ne retournent la carte que si elles '
+                  + 'y gagnent. Quand vous recevez les dés, la partie s’arrête le temps que vous '
+                  + 'décidiez ; sans réponse, la carte reste en place.'
+                : '',
+            ]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_SENS.map(([id, lib]) => h('button', {
+                class: sensRotation(cfg) === id ? 'on' : '',
+                onclick: () => { ecrire('sensRotation', id); dessiner(); },
+              }, lib)),
+            ),
           ),
         ),
       ),
@@ -627,32 +625,34 @@ export function vueVariables() {
           + 'combinaison Attaque ne peut pas sortir — '
           + 'passez le déclencheur sur « Échecs » pour garder une attrape.',
         ]),
-        h('div.grille.grille--2', { style: { gap: '12px' } },
+        // Le nombre de dés d'un lot tient en deux chiffres : il n'a pas besoin
+        // d'une ligne à lui. Les six faces du dé se posent à côté, sur la même,
+        // puisque c'est la composition du même lot qu'on lit.
+        h('div.rangee.rangee--des',
           num('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
+          h('div.faces-edit',
+            ...cfg.faces.map((f, i) => h('div.face-case',
+              pastilleSymbole(f, 34),
+              h('select', {
+                onchange: (e) => {
+                  const faces = cfg.faces.slice();
+                  faces[i] = e.target.value;
+                  ecrire('faces', faces);
+                  dessiner();
+                },
+              }, ...ORDRE_SYMBOLES.map((sy) => h('option', {
+                value: sy, selected: sy === f,
+              // Le nom affiché, pas celui du moteur : la pastille montre un
+              // réveil, le menu doit dire « Réveil ».
+              }, nomSymbole(sy)))),
+            )),
+          ),
         ),
 
         // Les lots en jeu ne sont pas un nombre mais un tableau : trois lots à
         // six joueurs n'ont rien à voir avec trois lots à trois. Chaque ligne se
         // règle à part, et la partie lit celle de son effectif.
         tableauLots(nb, dessiner),
-
-        h('div.faces-edit', { style: { marginTop: '14px' } },
-          ...cfg.faces.map((f, i) => h('div.face-case',
-            pastilleSymbole(f, 38),
-            h('select', {
-              onchange: (e) => {
-                const faces = cfg.faces.slice();
-                faces[i] = e.target.value;
-                ecrire('faces', faces);
-                dessiner();
-              },
-            }, ...ORDRE_SYMBOLES.map((sy) => h('option', {
-              value: sy, selected: sy === f,
-            // Le nom affiché, pas celui du moteur : la pastille montre un
-            // réveil, le menu doit dire « Réveil ».
-            }, nomSymbole(sy)))),
-          )),
-        ),
       ),
 
       // ── Combinaisons ──────────────────────────────────────────────────────
@@ -698,68 +698,77 @@ export function vueVariables() {
           rafraichir: dessiner,
         }),
 
-        titreAide('Ce qui déclenche l’attrape', [
-          AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
-          cfg.attrapeSur === 'echec'
-            ? (cfg.attrapeEveille !== false
-              ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter le '
-                + 'contact. Il faut s’être réveillé pour attraper au passage.'
-              : 'L’attrape sur Échec vaut même endormi : chaque Échec tente le contact, dès que '
-                + 'le voisin a un lot.')
-            : 'La case « Il faut être réveillé » ne concerne que l’attrape sur Échec — '
-              + 'l’Attaque vaut dans les deux états.',
-          'Dans les deux cas, on n’attrape que ce qui existe : si le joueur suivant a les mains '
-          + 'vides, il ne se passe rien.',
-        ]),
-        h('div.rangee.rangee--serree',
-          h('div.segment',
-            ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
-              class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
-              // Le dé ne bouge plus : les deux combinaisons restent réglables
-              // dans le tableau, et c'est là qu'on décide de leurs dés.
-              onclick: () => { ecrire('attrapeSur', id); dessiner(); },
-            }, lib)),
-          ),
-          h('button', {
-            class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
-            title: 'Un dormeur ne tend pas la main pour attraper son voisin',
-            onclick: () => { ecrire('attrapeEveille', cfg.attrapeEveille === false); dessiner(); },
-          }, h('span.case', '✓'), 'Il faut être réveillé'),
-        ),
-
-        // Réglable dans les deux modes. Sans les points, « touche » est la
-        // valeur de départ : c'est la base du mode, l'attrape y étant le second
-        // moyen de prendre une manche.
-        titreAide('Ce que rapporte l’attrape', [
-          AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
-          !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
-            ? 'Attention : sans les points, « Un jeton » ne rapporte rien — il n’y a plus de jeton '
-              + 'à retourner. Le contact interrompt son voisin, et c’est tout. Reprenez « Manche '
-              + 'gagnée si le contact réussit » pour rendre l’attrape payante.'
-            : '',
-        ]),
-        h('div.rangee.rangee--serree',
-          h('div.segment',
-            ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-              class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
-              onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
-            }, lib)),
-          ),
-        ),
-
-        titreAide('Quand deux lots se rencontrent',
-          cfg.lotsCumules
-            ? 'Les lots s’accumulent dans la même main : on joue le premier arrivé, les autres '
-              + 'attendent leur tour. Un joueur lent peut se retrouver avec toute la table sur les bras.'
-            : 'Règle de base : le lot que l’on tenait part aussitôt vers le voisin suivant — la '
-              + 'poussée peut se propager — et l’on enchaîne sur celui qui vient d’arriver.'),
-        h('div.rangee.rangee--serree',
-          h('div.segment',
-            ...[['pousse', 'Le lot en cours est poussé'], ['cumul', 'Les lots s’empilent']]
-              .map(([id, lib]) => h('button', {
-                class: (cfg.lotsCumules ? 'cumul' : 'pousse') === id ? 'on' : '',
-                onclick: () => { ecrire('lotsCumules', id === 'cumul'); dessiner(); },
+        // Les trois réglages de l'attrape se lisent ensemble : ce qui la
+        // déclenche, ce qu'elle rapporte, et ce que devient le lot qu'on tenait.
+        // Les séparer en trois cartes obligeait à faire l'aller-retour.
+        h('div.grille.grille--3', { style: { gap: '18px', marginTop: '18px' } },
+          h('div',
+            titreAide('Ce qui déclenche l’attrape', [
+              AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
+              cfg.attrapeSur === 'echec'
+                ? (cfg.attrapeEveille !== false
+                  ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter '
+                    + 'le contact. Il faut s’être réveillé pour attraper au passage.'
+                  : 'L’attrape sur Échec vaut même endormi : chaque Échec tente le contact, dès '
+                    + 'que le voisin a un lot.')
+                : 'La case « Il faut être réveillé » ne concerne que l’attrape sur Échec — '
+                  + 'l’Attaque vaut dans les deux états.',
+              'Dans les deux cas, on n’attrape que ce qui existe : si le joueur suivant a les '
+              + 'mains vides, il ne se passe rien.',
+            ]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
+                class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
+                // Le dé ne bouge plus : les deux combinaisons restent réglables
+                // dans le tableau, et c'est là qu'on décide de leurs dés.
+                onclick: () => { ecrire('attrapeSur', id); dessiner(); },
               }, lib)),
+            ),
+            h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
+              h('button', {
+                class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
+                title: 'Un dormeur ne tend pas la main pour attraper son voisin',
+                onclick: () => { ecrire('attrapeEveille', cfg.attrapeEveille === false); dessiner(); },
+              }, h('span.case', '✓'), 'Il faut être réveillé'),
+            ),
+          ),
+
+          // Réglable dans les trois modes. Sans les points, « touche » est la
+          // valeur de départ : c'est la base du mode, l'attrape y étant le
+          // second moyen de prendre une manche.
+          h('div',
+            titreAide('Ce que rapporte l’attrape', [
+              AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
+              !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
+                ? 'Attention : sans les points, « Un jeton » ne rapporte rien — il n’y a plus de '
+                  + 'jeton à retourner. Le contact interrompt son voisin, et c’est tout. Reprenez '
+                  + '« Manche gagnée si le contact réussit » pour rendre l’attrape payante.'
+                : '',
+            ]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
+                class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
+                onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
+              }, lib)),
+            ),
+          ),
+
+          h('div',
+            titreAide('Quand deux lots se rencontrent',
+              cfg.lotsCumules
+                ? 'Les lots s’accumulent dans la même main : on joue le premier arrivé, les '
+                  + 'autres attendent leur tour. Un joueur lent peut se retrouver avec toute la '
+                  + 'table sur les bras.'
+                : 'Règle de base : le lot que l’on tenait part aussitôt vers le voisin suivant — '
+                  + 'la poussée peut se propager — et l’on enchaîne sur celui qui vient '
+                  + 'd’arriver.'),
+            h('div.segment.segment--plein',
+              ...[['pousse', 'Le lot en cours est poussé'], ['cumul', 'Les lots s’empilent']]
+                .map(([id, lib]) => h('button', {
+                  class: (cfg.lotsCumules ? 'cumul' : 'pousse') === id ? 'on' : '',
+                  onclick: () => { ecrire('lotsCumules', id === 'cumul'); dessiner(); },
+                }, lib)),
+            ),
           ),
         ),
       ),
@@ -967,13 +976,6 @@ export function vueVariables() {
                   },
                 }, h('span.case', '✓'), c.court),
                 h('div.pousse'),
-                // La flèche du verso : c'est elle qui donne le sens de la manche
-                // précédente, quand la carte est encore sur la pioche.
-                c.sens
-                  ? h('span.fleche-sens', {
-                      title: c.sens > 0 ? 'Verso : sens horaire' : 'Verso : sens antihoraire',
-                    }, c.sens > 0 ? '↻' : '↺')
-                  : null,
               ),
               h('div.petit', { style: { marginTop: '8px' } }, c.texte),
               note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,

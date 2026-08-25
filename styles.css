@@ -159,7 +159,15 @@ a { color: var(--accent-fonce); }
 /* Bandeau de chiffres clés : le nombre de tuiles change avec ce qu'on mesure,
    la grille s'ajuste plutôt que d'imposer un compte fixe. */
 .grille--stats { grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); }
-.grille--cartes { gap: 12px; align-items: start; }
+/* Toutes les cartes à la même hauteur, celle de la plus haute du paquet — et
+   pas seulement celle de leur rangée : `1fr` donne à toutes les rangées la
+   hauteur de la plus grande, et `stretch` étire chaque carte dans la sienne. */
+.grille--cartes { gap: 12px; align-items: stretch; grid-auto-rows: 1fr; }
+/* Le nombre de dés d'un lot tient en deux chiffres : il ne prend que la place
+   qu'il faut, et la composition du dé occupe le reste de la ligne. */
+.rangee--des { flex-wrap: nowrap; align-items: flex-end; gap: 14px; }
+.rangee--des > .champ { flex: 0 0 108px; }
+.rangee--des > .faces-edit { flex: 1 1 auto; min-width: 0; margin: 0; }
 /* Une carte Journée telle qu'on la coche : son nom, sa combinaison et son effet
    au même endroit — l'infobulle ne montrait rien de tout cela. */
 .carte-journee {
@@ -264,6 +272,10 @@ a { color: var(--accent-fonce); }
   padding: 3px;
   gap: 2px;
 }
+/* Un segment qui occupe toute la largeur de sa colonne : deux réglages côte à
+   côte doivent s'aligner, et leurs boutons se partager la place également. */
+.segment--plein { display: flex; width: 100%; }
+.segment--plein button { flex: 1 1 0; min-width: 0; text-align: center; }
 .segment button {
   border: 0; background: transparent; font: inherit; font-weight: 700;
   padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--encre-doux);
@@ -499,7 +511,7 @@ label.champ {
 }
 .carte-journee > * { position: relative; }
 .carte-journee > .mini {
-  padding: 0 10px 2px;
+  padding: 2px 14px 2px;
   margin: 0;
   color: var(--tornade-orange-fonce) !important;
   font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
@@ -509,19 +521,29 @@ label.champ {
   letter-spacing: .01em; text-transform: uppercase;
   line-height: 1.1;
   color: var(--tornade-orange-fonce);
-  padding: 0 10px 5px;
+  padding: 0 14px 5px;
   border-bottom: 2px solid rgba(232, 84, 31, .28);
   margin: 0 0 6px;
 }
+/* Une carte est une colonne : le texte prend la place qui reste, et le pied —
+   la combinaison, les jetons à l'Abri — se pose en bas. Toutes les cartes d'une
+   rangée s'alignent ainsi sur la plus haute, sans trou au milieu. */
+.grille--cartes > .carte-journee { display: flex; flex-direction: column; }
 .carte-journee .texte-carte {
   font-size: 12.5px; font-weight: 700; font-style: italic;
   line-height: 1.32; color: #2a1c14;
-  padding: 0 10px 4px;
+  /* Le panneau crème s'arrête à 5 px du bord : le texte se tient à distance de
+     son bord à lui, il ne doit jamais venir toucher le cadre orange. */
+  padding: 4px 14px 10px;
+  flex: 1 1 auto;
 }
 /* Les mots que la carte met en avant — « carte Tornade », le nom d'une équipe —
    se détachent comme sur le carton imprimé. */
 .carte-journee .texte-carte .accent { color: var(--tornade-rouge); font-weight: 900; }
-.carte-journee > .rangee { padding: 2px 10px 0; margin: 0 !important; }
+.carte-journee > .rangee { padding: 2px 14px 4px; margin: 0 !important; }
+/* Le dernier bloc d'une carte se colle en bas : les combinaisons de toutes les
+   cartes d'une rangée se lisent alors sur une même ligne. */
+.carte-journee > .rangee:last-child { margin-top: auto !important; }
 
 /* ── Alertes de combinaison ───────────────────────────────────────────────── */
 /* La zone de jeu du joueur s'entoure d'un halo dès que la combinaison sort. */
@@ -1396,6 +1418,10 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* Reprises mobiles des blocs définis après le grand @media : l'ordre de source
    décide à égalité de spécificité, elles doivent donc rester en fin de feuille. */
 @media (max-width: 860px) {
+  /* Sur un téléphone, le nombre de dés passe au-dessus de la composition : les
+     six faces ont besoin de toute la largeur pour rester lisibles. */
+  .rangee--des { flex-wrap: wrap; align-items: stretch; }
+  .rangee--des > .champ { flex: 1 1 100%; }
   .dos-fleche { width: 42px; height: 42px; font-size: 26px; }
   .annonce--manche { font-size: 17px; padding: 12px 18px; }
 }
