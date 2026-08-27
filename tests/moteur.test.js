@@ -13,6 +13,7 @@ import {
   MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
   cartesPour, cartesVertPour, cartesOfficielles,
   OPTIONS_SENS, sensRotation,
+  comboAutomatique, comboIneluctable, comboRefusable,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -1843,6 +1844,98 @@ console.log('\nPaquet enregistré et cartes nouvelles');
 
   verifier('un paquet vide reste le jeu complet',
     enJeu([]).length === tousSp.length && enJeu(null).length === tousSp.length);
+}
+
+// ── 3 septies quinquies. Ce qu'on fait d'une combinaison servie ─────────────
+console.log('\nCombinaison servie : d’office, ou au choix');
+{
+  const spec = (n, h = 0) => Array.from({ length: n }, (_, i) => ({
+    nom: `J${i + 1}`, type: i < h ? 'humain' : 'ia', profil: 'penible',
+  }));
+
+  verifier('la règle de base applique tout d’office',
+    comboAutomatique(configParDefaut(6)) === true
+    && comboAutomatique({ comboServie: 'choix' }) === false);
+  verifier('une valeur inconnue reste sur la règle de base',
+    comboAutomatique({ comboServie: 'nimportequoi' }) === true
+    && assainirConfig({ nbJoueurs: 6, comboServie: 'choix' }).comboServie === 'choix');
+
+  // L'Abri et l'Échec s'appliquent toujours, quel que soit le réglage.
+  {
+    const cfg = configParDefaut(6, { comboServie: 'choix' });
+    cfg.comboServie = 'choix';
+    const inevitables = ['vache', 'blocage', 'echecJokers']
+      .map((id) => ({ id, combo: { id, echec: id !== 'vache' } }));
+    verifier('l’Abri et les échecs ne se refusent jamais',
+      inevitables.every((d) => comboIneluctable(d) && !comboRefusable(cfg, d)));
+    verifier('la combinaison de la Tornade du jour non plus',
+      comboIneluctable({ id: 'spMega', source: 'journee' }));
+    verifier('le Réveil, l’Endormi et l’Attrape se refusent',
+      ['reveil', 'endormir', 'collision']
+        .every((id) => !comboIneluctable({ id, combo: { id } })
+          && comboRefusable(cfg, { id, combo: { id } })));
+    verifier('mais jamais sous la règle de base',
+      ['reveil', 'endormir'].every((id) => !comboRefusable(configParDefaut(6), { id, combo: { id } })));
+  }
+
+  // À la table, une IA qui vise le ZzZ ne doit plus se réveiller d'office.
+  {
+    const compter = (choix) => {
+      let reveils = 0, manches = 0;
+      for (let g = 0; g < 40; g++) {
+        const cfg = configParDefaut(6, { comboServie: choix });
+        cfg.comboServie = choix;
+        const m = new Moteur(cfg, spec(6), `servie-${choix}-${g}`);
+        m.jouerJusquAuBout();
+        reveils += m.joueurs.reduce((a, j) => a + j.stats.reveils, 0);
+        manches += m.manche;
+      }
+      return { reveils, manches };
+    };
+    const dOffice = compter('auto');
+    const auChoix = compter('choix');
+    verifier(`des IA Pénibles se réveillent moins quand elles peuvent relancer `
+      + `(${auChoix.reveils} contre ${dOffice.reveils} sur 40 parties)`,
+      auChoix.reveils < dOffice.reveils);
+    verifier(`et les parties vont toujours au bout (${auChoix.manches} manches)`,
+      auChoix.manches > 0);
+  }
+
+  // Le joueur humain garde son lot : rien ne part tant qu'il n'encaisse pas.
+  {
+    const cfg = configParDefaut(6, { comboServie: 'choix' });
+    cfg.comboServie = 'choix';
+    const m = new Moteur(cfg, spec(6, 1), 'servie-humain');
+    let tenue = null;
+    for (let i = 0; i < 60000 && m.file.taille && !m.termine && !tenue; i++) {
+      m.avancerJusqua(m.file.tete._t);
+      const j = m.joueurs[0];
+      if (j.attente && j.attente.combos) { tenue = j.attente.combos; break; }
+      if (j.attente && j.lots.length) m.lancerHumain(0);
+      if (m.duel) { m.reflexeHumain(m.duel.cibleId, 'esquiver'); m.reflexeHumain(m.duel.toucheurId, 'toucher'); }
+    }
+    verifier('l’humain se voit proposer la combinaison au lieu de la subir',
+      !!tenue && tenue.length > 0, tenue ? tenue.map((d) => d.id).join('+') : 'jamais proposée');
+    if (tenue) {
+      verifier('son lot ne part pas tout seul',
+        m.joueurs[0].lots.length === 1 && !m.joueurs[0].fige);
+      verifier('et il l’encaisse quand il le décide',
+        m.jouerComboHumain(0, tenue[0].id) === true);
+    }
+  }
+
+  // Aucune des deux règles ne bloque une partie, dans les trois modes.
+  for (const mode of MODES_MANCHE) {
+    for (const choix of ['auto', 'choix']) {
+      const cfg = configParDefaut(5, { modeManche: mode, comboServie: choix });
+      cfg.comboServie = choix;
+      const r = lancerCampagne(cfg, spec(5), `servie-${mode}-${choix}`, 40);
+      verifier(`${mode} · ${choix} — 40 parties au bout`,
+        r.raisons.manchesMax === undefined
+        && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 40,
+        JSON.stringify(r.raisons));
+    }
+  }
 }
 
 // ── 3 septies quater. Le sens de rotation, trois règles ──────────────────────

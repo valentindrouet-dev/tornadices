@@ -168,6 +168,51 @@ export const AIDE_MANCHE = {
     + 'l’adversaire part dans la tornade, et la manche est à vous. Cinq cartes pour gagner.',
 };
 
+// ── Ce qu'on fait d'une combinaison servie ───────────────────────────────────
+//
+// La règle de base ne laisse pas le choix : dès qu'une combinaison sort, elle
+// est jouée et le lot part. La variante rend la main au joueur — il peut
+// relancer par-dessus et viser autre chose.
+//
+// Deux combinaisons échappent toujours au choix, quelle que soit l'option :
+// l'Échec, parce que les dés sont figés et que le lot part de toute façon, et
+// l'Abri, parce que c'est lui qui emporte la manche. La combinaison de la
+// Tornade du jour non plus : elle vaut mieux que tout ce qu'on lui préférerait.
+export const OPTIONS_COMBO_SERVIE = [
+  ['auto', 'Elle s’applique d’office'],
+  ['choix', 'On peut relancer par-dessus'],
+];
+
+export const AIDE_COMBO_SERVIE = {
+  auto: 'Règle de base : une combinaison servie est jouée sur-le-champ. L’effet s’applique, puis '
+    + 'le lot part vers le voisin — on ne relance jamais par-dessus.',
+  choix: 'Vous gardez la main : une combinaison qui sort peut être laissée de côté pour relancer '
+    + 'et viser autre chose. Deux exceptions, qui s’appliquent toujours — l’Échec, parce que les '
+    + 'dés sont figés, et l’Abri, parce qu’il emporte la manche. La combinaison de la Tornade du '
+    + 'jour non plus ne se refuse pas.',
+};
+
+/** Vrai si toute combinaison servie s'applique d'office — la règle de base. */
+export function comboAutomatique(cfg) {
+  return (cfg && cfg.comboServie) !== 'choix';
+}
+
+/** Les combinaisons qu'on ne peut jamais refuser, même avec le choix ouvert. */
+export function comboIneluctable(dispo) {
+  if (!dispo) return false;
+  // Un échec n'est pas un coup qu'on joue : les dés sont figés, le lot part.
+  if (dispo.combo && dispo.combo.echec) return true;
+  if (dispo.id === 'blocage' || dispo.id === 'echecJokers') return true;
+  // L'Abri emporte la manche, la Tornade du jour vaut mieux que le reste.
+  if (dispo.id === 'vache') return true;
+  return dispo.source === 'journee';
+}
+
+/** Peut-on relancer par-dessus cette combinaison-là ? */
+export function comboRefusable(cfg, dispo) {
+  return !comboAutomatique(cfg) && !comboIneluctable(dispo);
+}
+
 // ── Le sens de rotation ──────────────────────────────────────────────────────
 // Trois façons de décider dans quel sens tourne une manche.
 export const OPTIONS_SENS = [
@@ -491,6 +536,7 @@ export function assainirConfig(cfg) {
   // Le sens de rotation : une valeur inconnue — ou absente, avant la v1.54 —
   // retombe sur ce que le mode faisait jusqu'ici.
   sortie.sensRotation = sensRotation(sortie);
+  sortie.comboServie = comboAutomatique(sortie) ? 'auto' : 'choix';
   // Compromis : de un à trois jetons demandés, jamais zéro ni davantage.
   sortie.jetonsRefuge = Math.min(6, Math.max(1, Math.round(Number(cfg.jetonsRefuge) || 3)));
   if (cfg.refugeCartes && typeof cfg.refugeCartes === 'object') {
@@ -1157,6 +1203,8 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     sensRotation: OPTIONS_SENS.some(([id]) => id === opts.sensRotation)
       ? opts.sensRotation
       : 'perdants',
+    // Une combinaison servie est jouée d'office : c'est la règle de base.
+    comboServie: opts.comboServie === 'choix' ? 'choix' : 'auto',
     // Compromis : les jetons de sa couleur qu'une équipe peut mettre à l'Abri.
     jetonsRefuge: 3,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.

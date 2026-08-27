@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.64';
-export const BUILD_DATE = '2026-08-25';
+export const VERSION = '1.65';
+export const BUILD_DATE = '2026-08-27';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.65',
+    date: '24/08/2026',
+    notes: [
+      'Nouveau réglage — « Quand une combinaison sort » : elle s’applique d’office, la règle de base, ou l’on peut relancer par-dessus pour viser autre chose. Deux exceptions qui s’appliquent toujours, quoi qu’on règle : l’Abri, parce qu’il emporte la manche, et l’Échec, parce que les dés sont figés. La combinaison de la Tornade du jour non plus ne se refuse pas.',
+      'À la table, le lot vous reste en main : relancez les dés que vous voulez, ou encaissez la combinaison d’un bouton. Les IA gardent ce qu’elles visaient et relancent le reste — une Pénible ne se réveille plus quand elle cherchait à endormir. Mesuré à six joueurs de caractères variés, elles relancent 28 % des combinaisons servies avec les jetons, 15 % en Immédiat, 19 % en Compromis, et les parties raccourcissent d’environ un dixième.',
+      'Dans la fiche de règles, tout ce qui vient d’un réglage est désormais en gras, avec une ligne qui l’explique en tête de feuille : on distingue d’un coup d’œil ce qui tient du jeu de ce qui tient de la version qu’on a devant soi.',
+      'La fiche dit maintenant les choses dans l’ordre où elles se produisent : « l’effet s’applique, puis le lot part vers le voisin ». Et elle ne signale plus les combinaisons que le dé ne peut pas produire — c’est une remarque d’équilibrage, elle n’a rien à faire sur une feuille de règles.',
+    ],
+  },
   {
     version: '1.64',
     date: '24/08/2026',

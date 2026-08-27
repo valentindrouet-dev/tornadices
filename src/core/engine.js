@@ -10,14 +10,21 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.64';
+import { makeRng } from './rng.js?v=1.65';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-} from './config.js?v=1.64';
+  comboRefusable, comboIneluctable,
+} from './config.js?v=1.65';
+
+// Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
+// si une IA a obtenu ce qu'elle visait, ou tout autre chose.
+const SYMBOLE_DE_COMBO = {
+  reveil: 'tornade', vache: 'vache', endormir: 'zzz', collision: 'eclair',
+};
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
 class FileEvenements {
@@ -876,6 +883,17 @@ export class Moteur {
     if (this.onCombinaison) for (const d of dispo) this.onCombinaison(j.id, d.id);
     const choisi = this._comboAJouer(j, dispo);
     if (choisi) {
+      // Avec le choix ouvert, une combinaison ordinaire peut être laissée de
+      // côté pour relancer et viser autre chose. L'IA tranche tout de suite ;
+      // l'humain reçoit « Relancer » parmi ses options, et l'obtient d'office
+      // s'il ne dit rien — sans quoi le réglage ne changerait rien pour lui.
+      if (comboRefusable(this.cfg, choisi) && this._refuseLaCombo(j, choisi)) {
+        // L'humain garde son lot en main : il relance s'il veut, ou encaisse la
+        // combinaison d'un bouton. L'IA, elle, a déjà tranché.
+        if (j.type === 'humain') this._attenteHumaine(j, dispo.filter((d) => !comboIneluctable(d)));
+        else this._planifier(j.id);
+        return;
+      }
       if (choisi.combo && choisi.combo.echec) this._flash('echec', j.id);
       this._demanderDepart(
         j, this._attrapeAuDepart(j, choisi) ? 'attrape' : 'combo', choisi, null,
@@ -884,6 +902,27 @@ export class Moteur {
       return;
     }
     this._planifier(j.id);
+  }
+
+  /**
+   * Relance-t-on par-dessus la combinaison servie ?
+   *
+   * Il faut d'abord pouvoir : un lot dont tous les dés sont figés ne se relance
+   * pas, et l'on ne s'entête pas au-delà de sa patience. Ensuite vouloir : une
+   * IA garde ce qu'elle visait et refuse le reste — c'est tout l'intérêt du
+   * réglage, ne pas se réveiller quand on cherchait à endormir. L'humain, lui,
+   * garde toujours la main : on lui pose la question.
+   */
+  _refuseLaCombo(j, choisi) {
+    const lot = j.lots[0];
+    if (!lot || lot.des.every((d) => d.verrou)) return false;
+    if (j.type === 'humain') return true;
+    // Passé sa patience, l'IA prend ce qui vient plutôt que de tourner en rond.
+    const seuil = Math.max(1, (j.profil.lancersAvantPasse || 8) * 1.5);
+    if (j.lancersLot >= seuil) return false;
+    const vise = this._objectifIA(j, lot);
+    const sym = SYMBOLE_DE_COMBO[choisi.id];
+    return !!vise && !!sym && vise !== sym;
   }
 
   /**
@@ -1561,15 +1600,36 @@ export class Moteur {
   }
 
   // ── Interface joueur humain ─────────────────────────────────────────────────
-  _attenteHumaine(j) {
+  _attenteHumaine(j, combos = null) {
     const lot = j.lots[0];
     if (!lot || j.fige) { j.attente = null; return; }
     j.attente = {
       // On peut relancer tout dé libre, y compris pendant qu'un autre tourne.
       indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule),
       peutPasser: !this._desEnLAir(lot) && this._lotPose(lot),
+      // Les combinaisons qu'on tient sans être obligé de les jouer : le réglage
+      // « on peut relancer par-dessus » les propose au lieu de les appliquer.
+      combos: combos && combos.length ? combos : null,
     };
     if (this.onEtatChange) this.onEtatChange();
+  }
+
+  /**
+   * Le joueur encaisse une combinaison qu'il tenait sans y être obligé. C'est le
+   * pendant du réglage « on peut relancer par-dessus » : rien ne part tant qu'il
+   * ne l'a pas dit.
+   */
+  jouerComboHumain(pid, comboId) {
+    const j = this.joueurs[pid];
+    if (this.termine || !j || j.type !== 'humain' || j.fige || !j.lots.length) return false;
+    if (!j.attente || !j.attente.combos) return false;
+    const choisi = j.attente.combos.find((d) => d.id === comboId);
+    if (!choisi) return false;
+    j.attente = null;
+    this._demanderDepart(
+      j, this._attrapeAuDepart(j, choisi) ? 'attrape' : 'combo', choisi, null, null,
+    );
+    return true;
   }
 
   /** Relance les dés désignés (tous si `indices` est absent). */

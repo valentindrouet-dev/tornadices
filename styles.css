@@ -611,6 +611,18 @@ label.champ {
 .choix-combo .choix-titre { font-weight: 800; font-size: 13.5px; }
 .choix-combo .combo-btn { padding: 6px 12px; font-size: 14px; }
 
+/* Réglage « on peut relancer par-dessus » : la combinaison est là, dans le
+   panneau du joueur, et attend qu'on l'encaisse. Elle ne bloque rien — les dés
+   restent cliquables derrière. */
+.combo-choix {
+  margin-top: 10px; padding: 9px 11px;
+  border: 1px dashed var(--accent-bord); border-radius: 12px;
+  background: var(--accent-clair);
+  display: grid; gap: 7px; justify-items: start;
+}
+.combo-choix .mini { color: var(--accent-fonce); font-weight: 700; }
+.combo-choix .combo-btn { padding: 6px 12px; font-size: 13.5px; }
+
 /* En pause, rien ne bouge : les dés cessent de tourner, les halos de battre. */
 .en-pause *,
 .en-pause *::before,
@@ -1583,3 +1595,10 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .fiche-tbl th:last-child, .fiche-tbl--mep th { white-space: normal; }
 .fiche-tbl--mep th { font-size: 10.5px; }
 .fiche-ligne-courante { background: var(--accent-clair); }
+/* Ce qui vient d'un réglage, et peut donc changer d'une version à l'autre. */
+.fiche-reglage { font-weight: 800; color: #10233a; }
+.fiche-legende {
+  margin: 0 0 18px; padding: 8px 12px;
+  border-left: 3px solid var(--bord-fort);
+  font-size: 12px; color: var(--gris);
+}

@@ -4,20 +4,21 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.64';
+import { h, remplacer, duree, vider } from './dom.js?v=1.65';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.64';
-import { Moteur } from '../core/engine.js?v=1.64';
+} from './icons.js?v=1.65';
+import { Moteur } from '../core/engine.js?v=1.65';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-  estJeton, estCompromis, sensRotation,
-} from '../core/config.js?v=1.64';
-import { ajouterHistorique } from './store.js?v=1.64';
-import { enregistrerPartie } from './resultats.js?v=1.64';
-import { aller } from './app.js?v=1.64';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.64';
+  estJeton, estCompromis, sensRotation, comboAutomatique,
+} from '../core/config.js?v=1.65';
+import { ajouterHistorique } from './store.js?v=1.65';
+import { enregistrerPartie } from './resultats.js?v=1.65';
+import { aller } from './app.js?v=1.65';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.65';
+import { nomSymbole } from './apparence.js?v=1.65';
 
 let moteur = null;
 let vitesse = 1;
@@ -1024,8 +1025,10 @@ export function vueTable() {
       const lot = j.lots[0];
       const des = lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',');
       const options = j.departEnAttente && j.departEnAttente.options;
+      const enMain = j.attente && j.attente.combos;
       return `${j.id}:${j.lots.length}:${j.eveille}:${j.fige}:${lot.lance}:${des}`
-        + `:${alerteDe(j) || ''}:${options ? options.map((o) => o.id).join('+') : ''}`;
+        + `:${alerteDe(j) || ''}:${options ? options.map((o) => o.id).join('+') : ''}`
+        + `:${enMain ? enMain.map((o) => o.id).join('+') : ''}`;
     }).join('||') + (surMobile() ? '|m' : '|d');
     siChange(zonePanneaux, sig, () => actifs.map((j) => panneau(j)));
   }
@@ -1046,6 +1049,7 @@ export function vueTable() {
     // Plusieurs combinaisons sortent au même jet — grâce au joker le plus souvent :
     // c'est au joueur de dire laquelle il joue, pendant le temps de constat.
     const options = (j.departEnAttente && j.departEnAttente.options) || null;
+    const enMain = (j.attente && j.attente.combos) || null;
 
     return h('div.panneau-humain', { data: alerte ? { alerte } : {} },
       h('div.rangee', { style: { marginBottom: '10px' } },
@@ -1089,13 +1093,30 @@ export function vueTable() {
             }))
         : null,
 
+      // Réglage « on peut relancer par-dessus » : la combinaison est là, mais
+      // rien ne part tant qu'on ne l'encaisse pas. Relancer reste possible.
+      enMain
+        ? h('div.combo-choix',
+            h('div.mini', 'Vous la tenez — encaissez-la, ou relancez pour viser autre chose.'),
+            ...enMain.map((o) => {
+              const def = moteur.cfg.combos.find((c) => c.id === o.id);
+              return h('button.combo-btn', {
+                onclick: () => moteur.jouerComboHumain(j.id, o.id),
+              }, h('span.rangee.rangee--serree', suiteSymboles(o.combo.requis, 17)),
+              def ? def.nom : o.id);
+            }))
+        : null,
+
       h('div.mini', { style: { marginTop: '8px' }, class: j.fige ? 'etat-depart' : 'muted' },
         options ? 'Sans réponse de votre part, la meilleure combinaison est jouée d’office.'
           : j.fige ? 'Le lot part vers votre voisin…'
             : roule && !libres.length ? 'Les dés roulent…'
               : pose || libres.length < lot.des.length
                 ? 'Cliquez un dé pour le relancer, même pendant qu’un autre tourne. '
-                  + 'Les X sont figés, et toute combinaison servie part toute seule.'
+                  + `Les ${nomSymbole('x')} sont figés, et `
+                  + (comboAutomatique(moteur.cfg)
+                    ? 'toute combinaison servie part toute seule.'
+                    : 'seuls l’Abri et l’Échec partent tout seuls.')
                 : 'Lancez le lot pour commencer.'),
     );
   }

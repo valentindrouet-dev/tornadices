@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.64';
-import { store } from './store.js?v=1.64';
-import { aller } from './app.js?v=1.64';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.64';
-import { nomSymbole } from './apparence.js?v=1.64';
-import { construireConfig } from './variables.js?v=1.64';
-import { nomActif } from './profils.js?v=1.64';
-import { VERSION } from '../version.js?v=1.64';
+import { h, remplacer } from './dom.js?v=1.65';
+import { store } from './store.js?v=1.65';
+import { aller } from './app.js?v=1.65';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.65';
+import { nomSymbole } from './apparence.js?v=1.65';
+import { construireConfig } from './variables.js?v=1.65';
+import { nomActif } from './profils.js?v=1.65';
+import { VERSION } from '../version.js?v=1.65';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
-  infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation,
-} from '../core/config.js?v=1.64';
+  infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
+} from '../core/config.js?v=1.65';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -37,6 +37,15 @@ const avecVert = (nb) => nb % 2 === 1;
 /** Une section de la fiche : un titre, puis ce qu'il y a à dire. */
 const section = (titre, ...contenu) => h('section.fiche-bloc',
   h('h2.fiche-titre', titre), ...contenu.filter(Boolean));
+
+/**
+ * Un morceau de règle qui vient d'un réglage.
+ *
+ * Tout ce qui se choisit dans les Réglages peut changer d'une version à l'autre
+ * de la partie : on le met en gras pour qu'à la lecture on sache tout de suite
+ * ce qui tient du jeu et ce qui tient de la version qu'on a devant soi.
+ */
+const reglage = (texte) => h('strong.fiche-reglage', texte);
 
 /** Une ligne « libellé — valeur » du tableau de mise en place. */
 const ligne = (libelle, valeur) => h('tr', h('td', libelle), h('td.num', valeur));
@@ -77,6 +86,11 @@ export function vueFiche() {
 
     h('article.fiche',
       enTete(cfg, mode),
+      // Ce qui est en gras vient d'un réglage : le lecteur doit pouvoir faire
+      // la part de ce qui tient du jeu et de ce qui tient de cette version-ci.
+      h('p.fiche-legende',
+        'Tout ce qui est ', reglage('en gras'), ' se règle avant la partie et peut donc changer '
+        + 'd’une version à l’autre. Le reste est le jeu lui-même.'),
       miseEnPlace(cfg, nb, parEffectif),
       leDe(cfg),
       lesCombinaisons(cfg),
@@ -98,8 +112,8 @@ export function vueFiche() {
 function enTete(cfg, mode) {
   return h('header.fiche-entete',
     h('h1.fiche-jeu', 'TORNADICE'),
-    h('p.fiche-sous',
-      `Règles de la partie · de 3 à 8 joueurs · façon de jouer une manche : ${NOM_MODE[mode]}`),
+    h('p.fiche-sous', 'Règles de la partie · de 3 à 8 joueurs · façon de jouer une manche : ',
+      reglage(NOM_MODE[mode])),
   );
 }
 
@@ -147,13 +161,13 @@ function miseEnPlace(cfg, nb, parEffectif) {
       + `${COULEURS_EQUIPE.jaune.emblemeNom}. À nombre impair, un joueur reste seul : `
       + `le ${COULEURS_EQUIPE.vert.emblemeUn}, en vert, qui forme une équipe à lui tout seul.`),
     h('p.fiche-note',
-      `${depart.nom} prennent les lots à la première manche`
-      + (cfg.equipeDepart === 'vert' ? '.' : ', et le Vert avec eux.')
-      + ' Aux manches suivantes, les dés reviennent toujours aux perdants de la manche '
-      + 'précédente. Chaque joueur ne tient qu’un lot à la fois'
-      + (cfg.lotsCumules
-        ? ', sauf quand deux lots se rejoignent — ils s’empilent alors dans la même main.'
-        : ' ; deux lots qui se rejoignent se poussent l’un l’autre.')),
+      reglage(`${depart.nom} prennent les lots à la première manche`),
+      cfg.equipeDepart === 'vert' ? '.' : ', et le Vert avec eux.',
+      ' Aux manches suivantes, les dés reviennent toujours aux perdants de la manche '
+      + 'précédente. Chaque joueur ne tient qu’un lot à la fois',
+      cfg.lotsCumules
+        ? [', sauf quand ', reglage('deux lots qui se rejoignent s’empilent dans la même main'), '.']
+        : [' ; ', reglage('deux lots qui se rejoignent se poussent l’un l’autre'), '.']),
   );
 }
 
@@ -193,7 +207,6 @@ function lesCombinaisons(cfg) {
         : null,
       h('td.petit', ETAT[c.face] || ETAT.toutes),
       h('td.petit', effetCombo(cfg, c))));
-  const mortes = cfg.combos.filter((c) => !comboPossible(cfg.faces, c.requis));
   return section('Les combinaisons',
     tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
@@ -209,14 +222,15 @@ function lesCombinaisons(cfg) {
           + 'dire qu’il joue l’exigence des deux équipes.')
       : null,
     h('p.fiche-note',
-      'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
-      + 'ensuite vers le voisin, puis l’effet s’applique. Quand plusieurs combinaisons sortent '
-      + 'au même jet, c’est au joueur de choisir laquelle il joue.'),
-    mortes.length
-      ? h('p.fiche-note',
-          `Ce dé ne peut pas produire ${mortes.map((c) => `« ${c.nom} »`).join(', ')} : `
-          + 'la combinaison demande des faces qu’il ne porte pas.')
-      : null,
+      comboAutomatique(cfg)
+        ? [reglage('Une combinaison servie est jouée d’office'), ' : on ne relance pas '
+          + 'par-dessus. L’effet s’applique, puis le lot part vers le voisin. Quand plusieurs '
+          + 'combinaisons sortent au même jet, c’est au joueur de choisir laquelle il joue.']
+        : [reglage('Une combinaison servie peut être laissée de côté'), ' : on relance alors '
+          + 'par-dessus pour viser autre chose. Deux exceptions, qui s’appliquent toujours — '
+          + `« ${nomCombo(cfg, 'vache')} », qui emporte la manche, et l’Échec, dont les dés sont `
+          + 'figés. Quand on joue la combinaison, l’effet s’applique, puis le lot part vers le '
+          + 'voisin.']),
   );
 }
 
@@ -274,7 +288,7 @@ function leTour(cfg) {
         + 'l’effet s’applique.'),
       h('li', `Chaque manche commence Tornade endormie. Il faut d’abord se réveiller — la `
         + `combinaison « ${nomCombo(cfg, 'reveil')} » — avant de pouvoir agir sur les autres.`),
-      h('li', `Le sens de circulation ${TOUR_SENS[sensRotation(cfg)]}`),
+      h('li', 'Le sens de circulation ', reglage(TOUR_SENS[sensRotation(cfg)])),
     ),
     sensRotation(cfg) === 'perdants'
       ? h('p.fiche-note',
@@ -303,25 +317,26 @@ function gagnerLaManche(cfg, mode) {
   const abri = nomCombo(cfg, 'vache');
   if (estJeton(cfg)) {
     return section('Gagner une manche',
-      h('p', `Chaque combinaison « ${abri} » retourne un jeton de votre équipe. La manche revient `
-        + 'à la première équipe qui a retourné tous les siens — leur nombre dépend de '
-        + 'l’effectif, voir la mise en place.'),
+      h('p', reglage(`Chaque combinaison « ${abri} » retourne un jeton de votre équipe`),
+        '. La manche revient à la première équipe qui a retourné tous les siens — leur nombre '
+        + 'dépend de l’effectif, voir la mise en place.'),
       h('p.fiche-note', 'Les jetons repartent face cachée à chaque manche : chaque manche est une '
         + 'course indépendante.'),
     );
   }
   if (estImmediat(cfg)) {
     return section('Gagner une manche',
-      h('p', `Le premier joueur qui sort « ${abri} », réveillé, arrête la manche sur-le-champ : `
-        + 'son équipe prend la carte Tornade en cours. Aucun jeton n’est compté.'),
+      h('p', reglage(`Le premier joueur qui sort « ${abri} », réveillé, arrête la manche `
+        + 'sur-le-champ'), ' : son équipe prend la carte Tornade en cours. Aucun jeton n’est '
+        + 'compté.'),
     );
   }
   return section('Gagner une manche',
-    h('p', 'Une carte Refuge est posée au milieu de la table, commune à tout le monde. '
-      + `Chaque équipe a ${cfg.jetonsRefuge} jetons de sa couleur.`),
+    h('p', 'Une carte Refuge est posée au milieu de la table, commune à tout le monde. ',
+      reglage(`Chaque équipe a ${cfg.jetonsRefuge} jetons de sa couleur`), '.'),
     h('p', `La carte Tornade en cours indique combien de jetons de votre couleur il faut poser `
       + `sur le Refuge — de 1 à ${cfg.jetonsRefuge}. Chaque combinaison « ${abri} » en pose un.`),
-    h('p', h('strong', 'Deux façons de prendre la manche :')),
+    h('p', reglage('Deux façons de prendre la manche :')),
     h('ul.fiche-liste',
       h('li', 'poser le dernier jeton demandé — vos animaux sont à l’abri, la manche est à vous '
         + 'sur-le-champ ;'),
@@ -336,14 +351,15 @@ function lAttrape(cfg, mode) {
   const decl = cfg.combos.find((c) => c.id === comboDeclencheur(cfg));
   const emporte = attrapeEmporteManche(cfg);
   return section(estCompromis(cfg) ? 'La collision' : 'L’attrape',
-    h('p', `C’est la combinaison « ${decl ? decl.nom : 'Attaque'} » qui la déclenche : le lot part `
-      + 'vers le voisin, et vous tentez de toucher sa main au passage. Il peut retirer la sienne '
-      + 'à temps.'
-      + (cfg.attrapeSur === 'echec' && cfg.attrapeEveille !== false
-        ? ' Il faut être réveillé pour tenter le contact.' : '')),
+    h('p', 'C’est la combinaison ',
+      reglage(`« ${decl ? decl.nom : 'Attaque'} »`),
+      ' qui la déclenche : le lot part vers le voisin, et vous tentez de toucher sa main au '
+      + 'passage. Il peut retirer la sienne à temps.',
+      cfg.attrapeSur === 'echec' && cfg.attrapeEveille !== false
+        ? [' ', reglage('Il faut être réveillé pour tenter le contact'), '.'] : ''),
     h('p', 'Le contact ne se tente que si le joueur suivant tient un lot : sur une main vide, il '
       + 'n’y a rien à attraper.'),
-    h('p', h('strong', emporte
+    h('p', reglage(emporte
       ? (estCompromis(cfg)
         ? 'Un contact réussi envoie un jeton adverse dans la tornade et emporte la manche.'
         : 'Un contact réussi emporte la manche entière.')

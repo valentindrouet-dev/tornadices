@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.64';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.64';
-import { store } from './store.js?v=1.64';
-import { aller } from './app.js?v=1.64';
-import { lancerPartie } from './table.js?v=1.64';
+import { h, remplacer } from './dom.js?v=1.65';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.65';
+import { store } from './store.js?v=1.65';
+import { aller } from './app.js?v=1.65';
+import { lancerPartie } from './table.js?v=1.65';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -21,19 +21,20 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
-} from '../core/config.js?v=1.64';
-import { tableauCombos, editeurCases } from './combos.js?v=1.64';
+  OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE,
+} from '../core/config.js?v=1.65';
+import { tableauCombos, editeurCases } from './combos.js?v=1.65';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.64';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.64';
-import { randomSeed } from '../core/rng.js?v=1.64';
-import { reglagesJoueurs } from './accueil.js?v=1.64';
+} from './apparence.js?v=1.65';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.65';
+import { randomSeed } from '../core/rng.js?v=1.65';
+import { reglagesJoueurs } from './accueil.js?v=1.65';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.64';
+} from './profils.js?v=1.65';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -701,7 +702,7 @@ export function vueVariables() {
         // Les trois réglages de l'attrape se lisent ensemble : ce qui la
         // déclenche, ce qu'elle rapporte, et ce que devient le lot qu'on tenait.
         // Les séparer en trois cartes obligeait à faire l'aller-retour.
-        h('div.grille.grille--3', { style: { gap: '18px', marginTop: '18px' } },
+        h('div.grille.grille--4', { style: { gap: '18px', marginTop: '18px' } },
           h('div',
             titreAide('Ce qui déclenche l’attrape', [
               AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
@@ -749,6 +750,24 @@ export function vueVariables() {
               ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
                 class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
                 onclick: () => { ecrire('attrapeGagneManche', id); dessiner(); },
+              }, lib)),
+            ),
+          ),
+
+          h('div',
+            titreAide('Quand une combinaison sort', [
+              AIDE_COMBO_SERVIE[cfg.comboServie === 'choix' ? 'choix' : 'auto'],
+              cfg.comboServie === 'choix'
+                ? 'À la table, le lot vous reste en main : relancez les dés que vous voulez, ou '
+                  + 'encaissez la combinaison d’un bouton. Les IA gardent ce qu’elles visaient et '
+                  + 'relancent le reste — une Pénible ne se réveille plus quand elle cherchait à '
+                  + 'endormir.'
+                : '',
+            ]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_COMBO_SERVIE.map(([id, lib]) => h('button', {
+                class: (cfg.comboServie === 'choix' ? 'choix' : 'auto') === id ? 'on' : '',
+                onclick: () => { ecrire('comboServie', id); dessiner(); },
               }, lib)),
             ),
           ),
