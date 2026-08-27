@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.66';
+export const VERSION = '1.67';
 export const BUILD_DATE = '2026-08-27';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.67',
+    date: '24/08/2026',
+    notes: [
+      'La Tornade du Sommeil change de pouvoir : quatre lunes n’emportent plus la manche, elles endorment vos deux voisins. Elle passe ainsi de la manche la plus courte du paquet à une manche ordinaire — 46 s au lieu de 11 s en Compromis, 27 s en Immédiat — et devient une carte de gêne plutôt qu’un raccourci.',
+      'Une règle jusqu’ici tacite est désormais écrite : la combinaison d’une carte Tornade, et le pouvoir qu’elle donne, valent dans les deux états. On n’a pas besoin d’être réveillé pour la réaliser, ni pour en profiter — c’est ce qui la distingue des combinaisons de base, dont la plupart demandent d’être réveillé. Elle figure dans les Règles, dans la fiche imprimée et dans l’aide des Réglages.',
+    ],
+  },
   {
     version: '1.66',
     date: '24/08/2026',

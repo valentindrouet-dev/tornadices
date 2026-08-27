@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.66';
+import { h } from './dom.js?v=1.67';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.66';
+} from './icons.js?v=1.67';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
-  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS,
-} from '../core/config.js?v=1.66';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.66';
+  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
+} from '../core/config.js?v=1.67';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.67';
 
 export function vueRegles() {
   return h('div.page',
@@ -150,6 +150,7 @@ export function vueRegles() {
         'Il faut être réveillé pour agir : les abris comme les sommeils ne comptent que Tornade '
         + 'éveillée, et les réveils ne comptent que si l’on dort encore. Seuls l’attrape et '
         + 'les deux échecs valent dans les deux états.'),
+      h('div.encart', { style: { marginTop: '10px' } }, REGLE_CARTES_DEUX_ETATS),
       h('div.encart', { style: { marginTop: '10px' } },
         'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
         + 'vers le voisin, puis l’effet s’applique.'),
@@ -247,6 +248,7 @@ export function vueRegles() {
         'La Tornade de feuille ouvre la partie sans pouvoir particulier, mais elle se gagne '
         + 'comme les autres : l’équipe qui prend la manche de chauffe la met dans sa pile.'),
 
+      h('div.encart', { style: { marginTop: '10px' } }, REGLE_CARTES_DEUX_ETATS),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Les combinaisons se règlent carte par carte dans les Réglages, sous « Cartes Tornade en '
         + 'jeu » — plus dans le tableau des combinaisons.'),

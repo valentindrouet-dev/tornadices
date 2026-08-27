@@ -13,7 +13,7 @@ import {
   MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
   cartesPour, cartesVertPour, cartesOfficielles,
   OPTIONS_SENS, sensRotation,
-  comboAutomatique, comboIneluctable, comboRefusable,
+  comboAutomatique, comboIneluctable, comboRefusable, REGLE_CARTES_DEUX_ETATS,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -1648,6 +1648,40 @@ console.log('\nRéglage livré « Vichy »');
   const cfg = configParDefaut(6, { modeManche: 'immediat' });
   Object.assign(cfg, vichy.variables);
   cfg.nbJoueurs = 6;
+  verifier('la Tornade du Sommeil endort les deux voisins',
+    CARTES_PAR_ID.spSommeil.combo.effet === 'endormirVoisins'
+    && /endormez vos deux voisins/i.test(CARTES_PAR_ID.spSommeil.texte));
+
+  // La combinaison d'une carte se réalise dans les deux états : c'est ce qui la
+  // distingue des combinaisons de base, dont la plupart demandent d'être
+  // réveillé. On l'éprouve sur le moteur, pas seulement sur le texte.
+  {
+    const cfg = configParDefaut(6, { modeManche: 'immediat' });
+    cfg.melangerCartes = false;
+    cfg.cartesSansPoints = ['spSommeil'];
+    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+    const m = new Moteur(cfg, spec(6), 'deux-etats');
+    const j = m.joueurs.find((x) => x.lots.length);
+    // Un lot qui sert la combinaison de la carte, et rien d'autre.
+    const requis = requisCarte(cfg, CARTES_PAR_ID.spSommeil.combo);
+    const faces = [];
+    for (const [sym, n] of Object.entries(requis)) for (let i = 0; i < n; i++) faces.push(sym);
+    const poser = () => {
+      const lot = j.lots[0];
+      lot.des.forEach((d, i) => { d.sym = faces[i] || 'vide'; d.roule = false; d.verrou = false; });
+      lot.lance = true;
+    };
+    poser(); j.eveille = false;
+    const endormi = m.combosDisponibles(j).some((d) => d.source === 'journee');
+    poser(); j.eveille = true;
+    const reveille = m.combosDisponibles(j).some((d) => d.source === 'journee');
+    verifier('la combinaison de la carte se réalise Tornade endormie comme réveillée',
+      endormi && reveille, `endormi ${endormi}, réveillé ${reveille}`);
+  }
+
+  verifier('la règle des deux états est écrite quelque part',
+    /deux états/i.test(REGLE_CARTES_DEUX_ETATS));
+
   verifier('les combinaisons imprimées arrivent au moteur',
     JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spMega.combo)) === '{"vache":4}'
     && JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spSommeil.combo)) === '{"zzz":4}'

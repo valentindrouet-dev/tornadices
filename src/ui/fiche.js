@@ -12,20 +12,21 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.66';
-import { store } from './store.js?v=1.66';
-import { aller } from './app.js?v=1.66';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.66';
-import { nomSymbole } from './apparence.js?v=1.66';
-import { construireConfig } from './variables.js?v=1.66';
-import { nomActif } from './profils.js?v=1.66';
-import { VERSION } from '../version.js?v=1.66';
+import { h, remplacer } from './dom.js?v=1.67';
+import { store } from './store.js?v=1.67';
+import { aller } from './app.js?v=1.67';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.67';
+import { nomSymbole } from './apparence.js?v=1.67';
+import { construireConfig } from './variables.js?v=1.67';
+import { nomActif } from './profils.js?v=1.67';
+import { VERSION } from '../version.js?v=1.67';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
-} from '../core/config.js?v=1.66';
+  REGLE_CARTES_DEUX_ETATS,
+} from '../core/config.js?v=1.67';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -212,6 +213,9 @@ function lesCombinaisons(cfg) {
         asym ? h('th', 'Dés du Vert') : null,
         h('th', 'Possible quand'), h('th', 'Effet'))),
       h('tbody', ...lignes)),
+    h('p.fiche-note',
+      'La colonne « Possible quand » ne vaut que pour ces combinaisons-là. ',
+      REGLE_CARTES_DEUX_ETATS),
     asym
       ? h('p.fiche-note',
           `Le joueur Vert joue seul contre deux équipes : certaines combinaisons lui demandent `
@@ -377,6 +381,7 @@ function lesCartes(cfg, mode) {
         ? 'Une carte par manche, retournée au début. Elle change la manche qui commence.'
         : 'Une carte par manche : on la révèle, on la joue. L’équipe qui remporte la manche la '
           + 'prend dans sa pile — c’est ainsi qu’on gagne la partie.'),
+    h('p.fiche-note', h('strong', REGLE_CARTES_DEUX_ETATS)),
     tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
         h('th', 'Carte'),

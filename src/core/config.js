@@ -875,8 +875,8 @@ export const CARTES_SANS_POINTS = [
     refuge: 2,
     court: 'Tornade du Sommeil',
     nom: 'Tornade du Sommeil',
-    texte: 'Vous gagnez immédiatement la Manche',
-    combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'gagnerManche' },
+    texte: 'Vous endormez vos deux voisins',
+    combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'endormirVoisins' },
     effetPassif: null,
   },
   {
@@ -916,6 +916,17 @@ export const CARTES_SANS_POINTS = [
     effetPassif: { doubleSi: 'jaune' },
   },
 ];
+
+/**
+ * La règle qui vaut pour toutes les cartes Tornade, quel que soit le mode : leur
+ * combinaison et leur pouvoir s'obtiennent dans les deux états, Tornade
+ * endormie comme réveillée. C'est ce qui les distingue des combinaisons de base,
+ * dont la plupart demandent d'être réveillé — la carte du jour, elle, est à la
+ * portée de tout le monde du premier lancer au dernier.
+ */
+export const REGLE_CARTES_DEUX_ETATS = 'La combinaison d’une carte Tornade, et le pouvoir qu’elle '
+  + 'donne, valent dans les deux états : on n’a pas besoin d’être réveillé pour la réaliser, ni '
+  + 'pour en profiter.';
 
 /** Le paquet du mode en cours : chaque mode a le sien, de bout en bout. */
 export function cartesDuMode(cfg) {
