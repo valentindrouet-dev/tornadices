@@ -4,21 +4,21 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.65';
+import { h, remplacer, duree, vider } from './dom.js?v=1.66';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.65';
-import { Moteur } from '../core/engine.js?v=1.65';
+} from './icons.js?v=1.66';
+import { Moteur } from '../core/engine.js?v=1.66';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique,
-} from '../core/config.js?v=1.65';
-import { ajouterHistorique } from './store.js?v=1.65';
-import { enregistrerPartie } from './resultats.js?v=1.65';
-import { aller } from './app.js?v=1.65';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.65';
-import { nomSymbole } from './apparence.js?v=1.65';
+} from '../core/config.js?v=1.66';
+import { ajouterHistorique } from './store.js?v=1.66';
+import { enregistrerPartie } from './resultats.js?v=1.66';
+import { aller } from './app.js?v=1.66';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.66';
+import { nomSymbole } from './apparence.js?v=1.66';
 
 let moteur = null;
 let vitesse = 1;

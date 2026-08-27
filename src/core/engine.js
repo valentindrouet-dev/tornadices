@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.65';
+import { makeRng } from './rng.js?v=1.66';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable,
-} from './config.js?v=1.65';
+} from './config.js?v=1.66';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.

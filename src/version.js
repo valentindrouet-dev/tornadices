@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.65';
+export const VERSION = '1.66';
 export const BUILD_DATE = '2026-08-27';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.66',
+    date: '24/08/2026',
+    notes: [
+      'La fiche de règles n’explique plus sa propre typographie : la ligne qui annonçait le gras des réglages disparaît. Le gras reste — une feuille de règles se lit, elle ne se commente pas.',
+      'La carte rotation se dit plus simplement : « l’équipe qui reçoit les dés peut choisir de la retourner ou non pour inverser le sens de rotation ».',
+      'Et « Le tour de jeu » dit les choses dans le même ordre que le reste de la fiche : l’effet s’applique, puis le lot part vers le voisin.',
+    ],
+  },
   {
     version: '1.65',
     date: '24/08/2026',

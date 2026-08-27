@@ -12,20 +12,20 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.65';
-import { store } from './store.js?v=1.65';
-import { aller } from './app.js?v=1.65';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.65';
-import { nomSymbole } from './apparence.js?v=1.65';
-import { construireConfig } from './variables.js?v=1.65';
-import { nomActif } from './profils.js?v=1.65';
-import { VERSION } from '../version.js?v=1.65';
+import { h, remplacer } from './dom.js?v=1.66';
+import { store } from './store.js?v=1.66';
+import { aller } from './app.js?v=1.66';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.66';
+import { nomSymbole } from './apparence.js?v=1.66';
+import { construireConfig } from './variables.js?v=1.66';
+import { nomActif } from './profils.js?v=1.66';
+import { VERSION } from '../version.js?v=1.66';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
-} from '../core/config.js?v=1.65';
+} from '../core/config.js?v=1.66';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -86,11 +86,8 @@ export function vueFiche() {
 
     h('article.fiche',
       enTete(cfg, mode),
-      // Ce qui est en gras vient d'un réglage : le lecteur doit pouvoir faire
-      // la part de ce qui tient du jeu et de ce qui tient de cette version-ci.
-      h('p.fiche-legende',
-        'Tout ce qui est ', reglage('en gras'), ' se règle avant la partie et peut donc changer '
-        + 'd’une version à l’autre. Le reste est le jeu lui-même.'),
+      // Le gras marque ce qui vient d'un réglage. Il se passe de légende : une
+      // feuille de règles se lit, elle n'explique pas sa propre typographie.
       miseEnPlace(cfg, nb, parEffectif),
       leDe(cfg),
       lesCombinaisons(cfg),
@@ -284,8 +281,11 @@ function leTour(cfg) {
       h('li', `Chacun joue en même temps : plusieurs lots de ${cfg.desParLot} dés circulent `
         + 'autour de la table — leur nombre dépend de l’effectif, voir la mise en place — et '
         + 'celui qui tient un lot le relance aussi vite et aussi souvent qu’il veut.'),
-      h('li', 'Dès qu’une combinaison sort, elle est jouée : le lot part vers le voisin, et '
-        + 'l’effet s’applique.'),
+      h('li', 'Dès qu’une combinaison sort, ',
+        reglage(comboAutomatique(cfg)
+          ? 'elle est jouée'
+          : 'on la joue ou l’on relance par-dessus'),
+        ' : l’effet s’applique, puis le lot part vers le voisin.'),
       h('li', `Chaque manche commence Tornade endormie. Il faut d’abord se réveiller — la `
         + `combinaison « ${nomCombo(cfg, 'reveil')} » — avant de pouvoir agir sur les autres.`),
       h('li', 'Le sens de circulation ', reglage(TOUR_SENS[sensRotation(cfg)])),
@@ -304,8 +304,8 @@ function leTour(cfg) {
 const TOUR_SENS = {
   alterne: 's’inverse à chaque manche.',
   perdants: 'est indiqué par la carte rotation, posée sur la table. À la fin de chaque manche, '
-    + 'l’équipe qui reçoit les dés — celle qui vient de perdre — la retourne pour inverser le '
-    + 'sens, ou la laisse en place. C’est un choix, jamais une obligation.',
+    + 'l’équipe qui reçoit les dés — celle qui vient de perdre — peut choisir de la retourner ou '
+    + 'non pour inverser le sens de rotation.',
 };
 
 function nomCombo(cfg, id) {

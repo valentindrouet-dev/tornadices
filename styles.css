@@ -1597,8 +1597,4 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .fiche-ligne-courante { background: var(--accent-clair); }
 /* Ce qui vient d'un réglage, et peut donc changer d'une version à l'autre. */
 .fiche-reglage { font-weight: 800; color: #10233a; }
-.fiche-legende {
-  margin: 0 0 18px; padding: 8px 12px;
-  border-left: 3px solid var(--bord-fort);
-  font-size: 12px; color: var(--gris);
-}
+
