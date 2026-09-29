@@ -1245,7 +1245,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     dureeConstat: 900,         // on regarde le résultat avant que le lot ne parte
     dureeChoix: 2400,          // délai laissé au joueur quand plusieurs combinaisons sortent
     dureePassage: 1000,        // le lot traverse jusqu'au voisin
-    dureeTransition: 3200,     // entre deux manches : les dés reviennent au centre
+    dureeTransition: 2600,     // entre deux manches : les dés reviennent au centre
     tempsReflexion: 300,       // temps de décision d'une IA entre deux gestes
     ecartReflexion: 120,       // écart-type de cette décision
     fenetreReflexe: 900,       // fenêtre pour toucher ou retirer sa main

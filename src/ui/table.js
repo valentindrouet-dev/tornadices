@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.79';
+import { h, remplacer, duree, vider } from './dom.js?v=1.80';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.79';
-import { Moteur } from '../core/engine.js?v=1.79';
+} from './icons.js?v=1.80';
+import { Moteur } from '../core/engine.js?v=1.80';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.79';
-import { ajouterHistorique } from './store.js?v=1.79';
-import { enregistrerPartie } from './resultats.js?v=1.79';
-import { aller } from './app.js?v=1.79';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.79';
-import { nomSymbole } from './apparence.js?v=1.79';
+} from '../core/config.js?v=1.80';
+import { ajouterHistorique } from './store.js?v=1.80';
+import { enregistrerPartie } from './resultats.js?v=1.80';
+import { aller } from './app.js?v=1.80';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.80';
+import { nomSymbole } from './apparence.js?v=1.80';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.79';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.79';
+} from './illustrations.js?v=1.80';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.80';
 
 let moteur = null;
 let vitesse = 1;
@@ -760,6 +760,14 @@ export function vueTable() {
     attenteSens = false;
     if (moteur.choixSens && !moteur.choixSens.decide) moteur.choisirSens(!!inverser);
     ancrage = performance.now();
+    // La carte suivante attendait que le sens soit tranché — sa révélation
+    // montre le sens de la manche qui vient.
+    if (carteDifferee && moteur.transition && actif) {
+      const { carte, manche } = carteDifferee;
+      carteDifferee = null;
+      montrerCarte(carte, manche, { bloquante: false });
+    }
+    carteDifferee = null;
   }
 
   function montrerChoixSens(choix) {
@@ -800,6 +808,8 @@ export function vueTable() {
   // Fin de manche : les dés reviennent au centre, la carte suivante recouvre
   // la précédente, puis les lots repartent vers l'équipe qui vient de perdre.
   let panneauTransition = null;
+  let minuterieRevelation = null;
+  let carteDifferee = null;
   moteur.onFinManche = (info) => {
     const d = Math.max(300, info.duree / vitesse);
     const eq = info.vainqueur ? equipeVue(info.vainqueur, moteur.cfg) : null;
@@ -829,6 +839,21 @@ export function vueTable() {
     }
     // La carte suivante glisse depuis la pioche.
     setTimeout(() => elCarte.classList.add('coin--echange'), d * 0.45);
+    // Et on la révèle pendant la transition, plutôt qu'après : le temps de la
+    // lire est pris sur celui où les dés reviennent au centre, et la manche
+    // suivante s'ouvre sans attendre. Le jeu ne s'arrête pas pour autant —
+    // la révélation se retire d'elle-même quand la manche commence. Si le sens
+    // reste à trancher, elle attend la décision.
+    if (minuterieRevelation) clearTimeout(minuterieRevelation);
+    carteDifferee = null;
+    if (info.carteSuivante) {
+      minuterieRevelation = setTimeout(() => {
+        minuterieRevelation = null;
+        if (!actif || !moteur.transition) return;
+        if (attenteSens) carteDifferee = { carte: info.carteSuivante, manche: info.manche + 1 };
+        else montrerCarte(info.carteSuivante, info.manche + 1, { bloquante: false });
+      }, d * 0.35);
+    }
     setTimeout(() => {
       panneauTransition.classList.add('transition--sortie');
     }, d - 260);
@@ -841,8 +866,12 @@ export function vueTable() {
 
   moteur.onDebutManche = (info) => {
     viderJetonsEnVol();   // les jetons repartent à zéro : plus rien à faire voler
-    montrerCarte(info.carte, info.manche);
-    if (info.premiere) return;
+    if (info.premiere) { montrerCarte(info.carte, info.manche); return; }
+    // La carte a été révélée pendant la transition : la manche démarre tout de
+    // suite, la révélation se retire.
+    if (minuterieRevelation) { clearTimeout(minuterieRevelation); minuterieRevelation = null; }
+    carteDifferee = null;
+    fermerCarte();
     elCarte.classList.remove('coin--echange');
     // Les lots repartent du centre vers leurs nouveaux porteurs.
     const d = Math.max(260, 700 / vitesse);
@@ -866,10 +895,13 @@ export function vueTable() {
     ancrage = performance.now();
   }
 
-  function montrerCarte(carte, manche) {
+  function montrerCarte(carte, manche, { bloquante = true } = {}) {
     if (!carte) return;
     fermerCarte();
-    carteEnAttente = carte;
+    // Bloquante, la partie attend qu'on l'ait vue ; en passant — entre deux
+    // manches —, l'horloge continue et la carte se retire à l'ouverture.
+    if (bloquante) carteEnAttente = carte;
+    const consigne = bloquante ? 'Espace ou clic pour continuer' : 'La manche commence…';
     // Le sens annoncé est celui de la manche qui commence — sous la règle des
     // dos de cartes, il vient du dos de la carte SUIVANTE, pas de celle qu'on
     // retourne. Montrer la flèche de la carte révélée dirait le contraire.
@@ -886,7 +918,7 @@ export function vueTable() {
             h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
               imageSens(moteur.sens, 'img.carte-sens-mini'),
               h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
-            h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
+            h('div.mini.muted', { style: { marginTop: '10px' } }, consigne),
           )
         // Sans image imprimée, la carte dessinée comme le carton, en grand : le
         // même dessin qu'au centre de la table.
@@ -899,13 +931,13 @@ export function vueTable() {
             h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
               imageSens(moteur.sens, 'img.carte-sens-mini'),
               h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
-            h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
+            h('div.mini.muted', { style: { marginTop: '10px' } }, consigne),
           ),
     );
     racine.appendChild(panneauCarte);
     // Personne pour appuyer — une table d'IA, un écran qu'on regarde de loin :
     // la carte se retire d'elle-même plutôt que de bloquer la partie.
-    minuterieCarte = setTimeout(fermerCarte, Math.max(1200, 5200 / vitesse));
+    if (bloquante) minuterieCarte = setTimeout(fermerCarte, Math.max(1200, 4000 / vitesse));
   }
 
   function desVides() {
@@ -979,7 +1011,7 @@ export function vueTable() {
     }
     // La carte du tour passe avant tout : sans cela l'espace lancerait les dés
     // derrière le voile, sur une manche qu'on n'a pas encore vue commencer.
-    if (carteEnAttente) {
+    if (carteEnAttente || panneauCarte) {
       if (ev.code === 'Space' || ev.code === 'Enter' || ev.code === 'Escape') {
         fermerCarte();
         ev.preventDefault();

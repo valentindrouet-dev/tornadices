@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.79';
+export const VERSION = '1.80';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.80',
+    date: '29/09/2026',
+    notes: [
+      'Plus de long temps mort entre deux manches. La carte Tornade suivante était révélée après la transition, et la partie restait figée jusqu’à un appui sur Espace ou 5 secondes — plus de 8 secondes d’arrêt à chaque manche. Elle se révèle désormais pendant la transition, pendant que les dés reviennent au centre, sans arrêter le jeu, et se retire d’elle-même quand la manche commence.',
+      'Quand le sens est à décider par vous, la carte suivante se révèle juste après votre choix, avec le sens retenu.',
+      'La transition entre deux manches passe de 3,2 à 2,6 secondes par défaut (réglable dans les Réglages, « Transition de manche »). La toute première carte de la partie attend toujours qu’on l’ait vue, 4 secondes au plus.',
+    ],
+  },
   {
     version: '1.79',
     date: '29/09/2026',
