@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.69';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.69';
-import { store } from './store.js?v=1.69';
-import { aller } from './app.js?v=1.69';
-import { lancerPartie } from './table.js?v=1.69';
+import { h, remplacer } from './dom.js?v=1.70';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.70';
+import { store } from './store.js?v=1.70';
+import { aller } from './app.js?v=1.70';
+import { lancerPartie } from './table.js?v=1.70';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -24,19 +24,19 @@ import {
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.69';
-import { tableauCombos, editeurCases } from './combos.js?v=1.69';
+} from '../core/config.js?v=1.70';
+import { tableauCombos, editeurCases } from './combos.js?v=1.70';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.69';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.69';
-import { randomSeed } from '../core/rng.js?v=1.69';
-import { reglagesJoueurs } from './accueil.js?v=1.69';
+} from './apparence.js?v=1.70';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.70';
+import { randomSeed } from '../core/rng.js?v=1.70';
+import { reglagesJoueurs } from './accueil.js?v=1.70';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.69';
+} from './profils.js?v=1.70';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -144,7 +144,6 @@ export function variables() {
 export function construireConfig(nbJoueurs) {
   const v = variables();
   const cfg = configParDefaut(nbJoueurs, {
-    echecJokers: v.echecJokers !== false,
     attrapeSur: v.attrapeSur,
     lotsCumules: v.lotsCumules,
     // Le mode change la mise en place par défaut (quatre cartes) : il doit être
@@ -622,11 +621,9 @@ export function vueVariables() {
           + `1 « ${nomSymbole('vache')} », 2 « ${nomSymbole('zzz')} ». Le symbole qui fige le dé `
           + 'ne se relance jamais. Le dé a six faces, et c’est un réglage du jeu qui ne bouge '
           + 'plus ; chaque face, elle, se change une à une dans les menus ci-dessous.',
-          'Ni joker ni éclair au départ : posez-les vous-même sur une face pour les essayer. Le '
-          + 'joker prend la face de n’importe quel symbole sauf celui qui fige le dé ; le joker '
-          + `double ne remplace que l’éclair et le « ${nomSymbole('zzz')} ». Sans face éclair, la `
-          + 'combinaison Attaque ne peut pas sortir — '
-          + 'passez le déclencheur sur « Échecs » pour garder une attrape.',
+          'Pas d’éclair au départ : posez-le vous-même sur une face pour l’essayer. Sans face '
+          + 'éclair, la combinaison Attaque ne peut pas sortir — passez le déclencheur sur '
+          + '« Échecs » pour garder une attrape.',
         ]),
         // Le nombre de dés d'un lot tient en deux chiffres : il n'a pas besoin
         // d'une ligne à lui. Les six faces du dé se posent à côté, sur la même,
@@ -664,12 +661,7 @@ export function vueVariables() {
           'Chaque combinaison se lit comme un lot posé sur la table : un menu par dé, « — » pour '
           + 'un dé qu’on ne demande pas.',
           'Toute combinaison servie est jouée d’office : on ne relance jamais par-dessus. Quand '
-          + 'le joker en sert plusieurs à la fois, le joueur choisit laquelle.',
-          cfg.echecJokers !== false
-            ? 'Trois jokers d’un coup valent un échec : le lot part sans rien tenter, et cet '
-              + 'échec l’emporte sur les combinaisons que les jokers auraient pu servir. C’est le '
-              + 'seul revers du joker — décochez la règle pour jouer sans.'
-            : 'Règle des trois jokers désactivée : les jokers n’ont plus aucun revers.',
+          + 'un même jet en sert plusieurs, le joueur choisit laquelle.',
           'Les lignes bleues sont les combinaisons des cartes Tornade : elles ne valent que le '
           + 'temps de la manche où la carte est en jeu, et le paquet affiché est celui du mode '
           + 'de jeu en cours.',
@@ -688,11 +680,6 @@ export function vueVariables() {
             title: 'Donner au joueur Vert ses propres exigences',
             onclick: () => { ecrire('combosAsymetriques', !cfg.combosAsymetriques); dessiner(); },
           }, h('span.case', '✓'), 'Combinaisons du Vert à part'),
-          h('button', {
-            class: `chip${cfg.echecJokers !== false ? ' on' : ''}`,
-            title: `Trois jokers d’un coup font partir le lot, comme deux « ${nomSymbole('x')} »`,
-            onclick: () => { ecrire('echecJokers', cfg.echecJokers === false); dessiner(); },
-          }, h('span.case', '✓'), 'Trois jokers = échec'),
         ),
         tableauCombos(cfg, {
           ecrireCombo: (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
@@ -763,8 +750,8 @@ export function vueVariables() {
               cfg.comboServie === 'choix'
                 ? 'À la table, le lot vous reste en main : relancez les dés que vous voulez, ou '
                   + 'encaissez la combinaison d’un bouton. Les IA gardent ce qu’elles visaient et '
-                  + 'relancent le reste — une Pénible ne se réveille plus quand elle cherchait à '
-                  + 'endormir.'
+                  + 'relancent le reste. Le Réveil, lui, ne se refuse jamais : un dormeur qui sort '
+                  + 'ses soleils se réveille, quoi qu’il ait visé.'
                 : '',
             ]),
             h('div.segment.segment--plein',
@@ -857,8 +844,8 @@ export function vueVariables() {
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
           nb === TABLE_COCHONS
             ? 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi, et chacun reçoit '
-              + 'une carte Cochon. Les couleurs restent — c’est ce qui dit qui est qui — mais '
-              + 'l’animal est le même pour les trois.'
+              + 'une carte Cochon — un rouge, un orange, un rose. Les Bleus, les Jaunes et le '
+              + 'Vert disparaissent de la table, couleurs comprises.'
             : '',
           estImmediat(cfg)
             ? 'Immédiat : les jetons ne servent plus, leurs champs restent grisés. Une manche '

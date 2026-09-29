@@ -10,15 +10,15 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.69';
+import { makeRng } from './rng.js?v=1.70';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
-  placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
+  placement, infosMiseEnPlace, comboServie, exigenceVide,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-  comboRefusable, comboIneluctable, jetonsSurTornade,
-} from './config.js?v=1.69';
+  comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
+} from './config.js?v=1.70';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -568,17 +568,6 @@ export class Moteur {
     return c;
   }
 
-  /** Combien de jokers du lot peuvent prendre la place de `sym`. */
-  _jokersPour(compte, sym) {
-    let n = 0;
-    for (const [s, k] of Object.entries(compte)) {
-      if (s === sym || !k) continue;
-      const peut = remplacements(s);
-      if (peut && peut.includes(sym)) n += k;
-    }
-    return n;
-  }
-
   /** Tirage pondéré parmi des symboles ; un poids nul ne sort jamais. */
   _tirerPondere(poids) {
     const entrees = Object.entries(poids || {}).filter(([, p]) => p > 0);
@@ -595,10 +584,9 @@ export class Moteur {
    * repris quand la Tornade change d'état, car les objectifs ne sont plus les
    * mêmes une fois réveillé.
    */
-  /** Le dé peut-il sortir ce symbole, directement ou par un joker ? */
+  /** Le dé peut-il sortir ce symbole ? */
   _deProduit(sym) {
-    return (this.cfg.faces || []).some((f) => f === sym
-      || (estJoker(f) && (remplacements(f) || []).includes(sym)));
+    return (this.cfg.faces || []).includes(sym);
   }
 
   /**
@@ -629,7 +617,7 @@ export class Moteur {
       : j.profil;
 
     // Deux envies sont écartées : celles que le dé ne peut pas produire — avec le
-    // dé officiel, sans joker ni éclair, un Agressif chercherait l'éclair jusqu'à
+    // dé officiel, sans éclair, un Agressif chercherait l'éclair jusqu'à
     // épuisement — et l'attrape quand le voisin a les mains vides. Reste le coup
     // utile du moment pour qui ne visait plus rien.
     const attrape = cible ? null : this._symboleAttrape();
@@ -657,9 +645,8 @@ export class Moteur {
     const objectif = this._objectifIA(j, lot);
     if (!objectif) return libres.map(({ i }) => i);
 
-    // Sert l'objectif : le symbole visé, et tout joker capable de le prendre.
-    const sert = (d) => d.sym === objectif
-      || (estJoker(d.sym) && (remplacements(d.sym) || []).includes(objectif));
+    // Sert l'objectif : le symbole visé.
+    const sert = (d) => d.sym === objectif;
     const garde = libres.filter(({ d }) => sert(d));
     const aRelancer = libres.filter(({ d }) => !sert(d));
 
@@ -680,7 +667,7 @@ export class Moteur {
     if (!lot || !this._lotPose(lot)) return [];
     const c = this._compter(lot);
     const out = [];
-    // Les jokers prennent la place qui manque ; une exigence vide ne compte pas.
+    // Une exigence vide ne compte pas : elle serait toujours servie.
     const servie = (requis) => !exigenceVide(requis) && comboServie(c, requis);
 
     for (const combo of this.cfg.combos) {
@@ -724,12 +711,14 @@ export class Moteur {
   _comboAJouer(j, dispo) {
     if (!dispo.length) return null;
     const estEchec = (d) => !!(d.combo && d.combo.echec);
-    // Trois jokers passent avant tout : sans cela, le joker n'aurait aucun revers
-    // puisqu'il servirait au même jet la combinaison de son choix.
-    const bust = dispo.find((d) => estEchec(d) && d.id !== 'blocage');
-    if (bust) return bust;
+    const reveil = dispo.find((d) => d.id === 'reveil');
     const carte = dispo.find((d) => d.source === 'journee');
-    if (carte) return carte;                                   // la carte du jour prime
+    if (carte) {
+      // La carte du jour prime — mais le dormeur qui a sorti ses soleils au même
+      // jet se réveille quand même : le Réveil s'applique en toutes circonstances.
+      return reveil ? { ...carte, reveilAussi: true } : carte;
+    }
+    if (reveil) return reveil;                                 // puis le Réveil, d'office
     const attrape = dispo.find((d) => d.obligatoire && !estEchec(d));
     if (attrape) return attrape;                               // puis l'attrape
     const autres = dispo.filter((d) => !estEchec(d));
@@ -741,13 +730,15 @@ export class Moteur {
   }
 
   /**
-   * Entre quelles combinaisons un joueur humain peut trancher. Le joker en sert
-   * volontiers plusieurs au même jet : c'est à lui de dire laquelle il joue.
+   * Entre quelles combinaisons un joueur humain peut trancher, quand un même jet
+   * en sert plusieurs : c'est à lui de dire laquelle il joue.
    * Un échec ne se choisit pas, et l'Échec ne se choisit jamais contre mieux.
    */
   _optionsDeChoix(j, dispo) {
     if (j.type !== 'humain' || dispo.length < 2) return null;
     if (dispo.some((d) => d.combo && d.combo.echec)) return null;
+    // Le Réveil ne se discute pas : un dormeur qui le sort se réveille.
+    if (dispo.some((d) => d.id === 'reveil')) return null;
     // La combinaison de la carte du jour est jouée d'office : elle vaut mieux que
     // tout ce qu'on pourrait lui préférer, il n'y a pas à hésiter.
     if (dispo.some((d) => d.source === 'journee')) return null;
@@ -1029,7 +1020,6 @@ export class Moteur {
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
       if (dispo.id === 'blocage') return 'Échec';
-      if (dispo.id === 'echecJokers') return 'Trois jokers';
       if (dispo.source === 'journee') return `${this.carte.court} !`;
       const def = this.cfg.combos.find((c) => c.id === dispo.id);
       return `${def ? def.nom : dispo.id} !`;
@@ -1154,19 +1144,23 @@ export class Moteur {
           const cible = this.equipes[q.equipe];
           if (cible) cible.emportes = (cible.emportes || 0) + 1;
           this._log(
-            `${j.nom} envoie un jeton ${this._nomEquipe(q.equipe)} dans la tornade — `
-            + `${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
+            `${j.nom} envoie un jeton ${this._eq(q.equipe).de} dans la tornade — `
+            + `${this._eq(j.equipe).le} ${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`,
+            'combo', j.id,
           );
           this._annoncer(
-            `${q.nom} part dans la tornade — ${this._nomEquipe(j.equipe)} gagnent la manche !`,
+            `${q.nom} part dans la tornade — ${this._eq(j.equipe).le} `
+            + `${this._eq(j.equipe).v('gagne', 'gagnent')} la manche !`,
             'jaune', j.id,
           );
         } else {
           this._log(
-            `Le contact réussit — ${this._nomEquipe(j.equipe)} remportent la manche.`, 'combo', j.id,
+            `Le contact réussit — ${this._eq(j.equipe).le} `
+            + `${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`, 'combo', j.id,
           );
           this._annoncer(
-            `Attrape ${q.nom} — ${this._nomEquipe(j.equipe)} gagnent la manche !`, 'jaune', j.id,
+            `Attrape ${q.nom} — ${this._eq(j.equipe).le} `
+            + `${this._eq(j.equipe).v('gagne', 'gagnent')} la manche !`, 'jaune', j.id,
           );
         }
         // La Tornade électrique paie double une manche prise au contact : il
@@ -1187,6 +1181,12 @@ export class Moteur {
 
   // ── Effets des combinaisons ─────────────────────────────────────────────────
   _effetCombo(j, dispo, choix = {}) {
+    // Le Réveil sorti au même jet que la carte du jour s'applique avec elle.
+    if (dispo.reveilAussi && !j.eveille) {
+      j.eveille = true; j.stats.reveils++;
+      this._flash('reveil', j.id);
+      this._annoncer('Réveil !', 'or', j.id);
+    }
     const effet = dispo.source === 'journee' ? dispo.combo.effet : dispo.id;
     switch (effet) {
       case 'reveil':
@@ -1195,7 +1195,6 @@ export class Moteur {
         this._annoncer('Réveil !', 'or', j.id);
         break;
       case 'blocage':
-      case 'echecJokers':
         break;
       case 'vache':
         this._retournerJeton(j, 1, 'vache');
@@ -1238,8 +1237,8 @@ export class Moteur {
           // Un jeton sauvé retourne dans la tornade — ou repart face cachée
           // devant son équipe, selon l'endroit où se jouent les jetons.
           this._log(jetonsSurTornade(this.cfg)
-            ? `${j.nom} renvoie un jeton des ${this._nomEquipe(cible.id)} dans la Tornade.`
-            : `${j.nom} recache un jeton des ${this._nomEquipe(cible.id)}.`, 'combo', j.id);
+            ? `${j.nom} renvoie un jeton ${this._eq(cible.id).de} dans la Tornade.`
+            : `${j.nom} recache un jeton ${this._eq(cible.id).de}.`, 'combo', j.id);
         }
         break;
       }
@@ -1290,9 +1289,14 @@ export class Moteur {
     return best;
   }
 
-  _nomEquipe(id) {
-    return { bleu: 'Bleus', jaune: 'Jaunes', vert: 'Vert' }[id] || id;
-  }
+  /**
+   * Le nom d'une équipe, et son accord : « les Bleus remportent », « le Vert
+   * remporte », « le Cochon rouge remporte ». Le journal et les annonces en ont
+   * besoin à chaque phrase.
+   */
+  _eq(id) { return nomDansPhrase(id, this.cfg); }
+
+  _nomEquipe(id) { return this._eq(id).nom; }
 
   /**
    * Où en est une équipe sur les jetons : combien sont en jeu, combien elle en a
@@ -1318,13 +1322,15 @@ export class Moteur {
    * sort un de la carte Tornade, ou on le retourne devant son équipe.
    */
   _texteAbri(j, n, suivi) {
-    const eq = this._nomEquipe(j.equipe);
+    const E = this._eq(j.equipe);
+    const eq = E.nom;
     const combien = n > 1 ? `${n} jetons` : 'un jeton';
     const titre = n > 1 ? `${n} abris` : 'Abri';
     if (jetonsSurTornade(this.cfg)) {
-      const reste = suivi.restants === 0 ? 'plus aucun des siens dedans'
-        : suivi.restants === 1 ? 'il lui en reste un dedans'
-          : `il lui en reste ${suivi.restants} dedans`;
+      const lui = E.v('lui', 'leur');
+      const reste = suivi.restants === 0 ? `plus aucun ${E.v('des siens', 'des leurs')} dedans`
+        : suivi.restants === 1 ? `il ${lui} en reste un dedans`
+          : `il ${lui} en reste ${suivi.restants} dedans`;
       return {
         journal: `${j.nom} sort ${combien} de la Tornade — ${eq} : ${reste}.`,
         annonce: `${titre} ! ${eq} ${suivi.restants} dans la Tornade`,
@@ -1354,9 +1360,11 @@ export class Moteur {
     // gagner une manche au nom d'un jeton qui n'existe pas.
     if (estImmediat(this.cfg)) {
       if (source === 'collision') return;
-      this._annoncer(`Abri ! ${this._nomEquipe(j.equipe)} prennent la manche`, 'vert', j.id);
+      this._annoncer(`Abri ! ${this._eq(j.equipe).Le} ${this._eq(j.equipe).v('prend', 'prennent')} la manche`,
+        'vert', j.id);
       if (this.onJeton) this.onJeton(j.id, j.equipe, 1, source);
-      this._log(`${j.nom} sort l’Abri — ${this._nomEquipe(j.equipe)} remportent la manche.`,
+      this._log(`${j.nom} sort l’Abri — ${this._eq(j.equipe).le} `
+        + `${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`,
         'jeton', j.id);
       j.stats.jetonsRetournes += 1;
       j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + 1;
@@ -1450,7 +1458,8 @@ export class Moteur {
       const prise = this.pioche.shift();
       eq.cartes.push(prise.id);
       this._log(
-        `${this._nomEquipe(equipeId)} prennent une seconde carte, face cachée.`, 'manche',
+        `${this._eq(equipeId).Le} ${this._eq(equipeId).v('prend', 'prennent')} une seconde carte, `
+        + 'face cachée.', 'manche',
       );
     }
 
@@ -1459,8 +1468,8 @@ export class Moteur {
       if (victime) {
         eq.cartes.push(victime.cartes.pop());
         this._log(
-          `${this._nomEquipe(equipeId)} volent une carte aux `
-          + `${this._nomEquipe(victime.id)}.`, 'manche',
+          `${this._eq(equipeId).Le} ${this._eq(equipeId).v('vole', 'volent')} une carte `
+          + `${this._eq(victime.id).a}.`, 'manche',
         );
       } else {
         this._log('Aucune carte à voler.', 'manche');
@@ -1514,7 +1523,7 @@ export class Moteur {
     // lettres au centre, plutôt que de laisser deviner d'où vient le point.
     if (equipeId && cause.joueur) {
       this._annoncer(
-        `${cause.joueur.nom} fait gagner ${this._nomEquipe(equipeId)} `
+        `${cause.joueur.nom} fait gagner ${this._eq(equipeId).le} `
         + this._motifVictoire(cause),
         // Au centre de la table, et non sur un siège : c'est le moment de la
         // manche que tout le monde regarde.
@@ -1545,7 +1554,7 @@ export class Moteur {
     });
     if (equipeId) {
       this._log(
-        `${this._nomEquipe(equipeId)} remporte la manche ${this.manche}`
+        `${this._eq(equipeId).Le} ${this._eq(equipeId).v('remporte', 'remportent')} la manche ${this.manche}`
         + (compte ? ` et prend « ${carte.nom} ».` : ` (${carte ? carte.nom : 'carte'} défaussée).`),
         'manche',
       );
@@ -1641,7 +1650,8 @@ export class Moteur {
     this.transits = [];
     this._log(
       equipeId
-        ? `Fin de partie — ${this._nomEquipe(equipeId)} l’emportent avec ${this.equipes[equipeId].cartes.length} cartes Tornade.`
+        ? `Fin de partie — ${this._eq(equipeId).le} ${this._eq(equipeId).v('l’emporte', 'l’emportent')} `
+          + `avec ${this.equipes[equipeId].cartes.length} cartes Tornade.`
         : 'Fin de partie sans vainqueur.',
       'fin',
     );

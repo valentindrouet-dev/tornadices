@@ -7,7 +7,7 @@
 //     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
 //     nombre de X déjà figés.
 
-import { comboServie, remplacements } from './config.js?v=1.69';
+import { comboServie } from './config.js?v=1.70';
 
 const facto = [1];
 function fact(n) {
@@ -42,7 +42,7 @@ function probaRepartition(c, probs, m) {
   return p;
 }
 
-// Les jokers comblent ce qui manque : le même arbitrage qu'à la table.
+// Le même arbitrage qu'à la table.
 const servie = (compte, requis) => comboServie(compte, requis);
 
 /** P(la combinaison `requis` est servie sur un lancer neuf de `nbDes` dés). */
@@ -201,21 +201,13 @@ export function courseAvecGarde(faces, nbDes, requis, opts = {}, tirages = 60000
     let n = 0, gagne = false;
     for (;;) {
       n++;
-      // On garde les dés qui servent la combinaison, dans la limite du requis :
-      // d'abord ceux qui portent le symbole voulu, puis les jokers, qui prennent
-      // la place de ce qui manque encore.
+      // On garde les dés qui servent la combinaison, dans la limite du requis.
       const besoin = { ...requis };
       const garder = new Array(nbDes).fill(false);
       for (let i = 0; i < nbDes; i++) {
         const s = des[i];
         if (fige[i]) { garder[i] = true; if (besoin[s] > 0) besoin[s]--; continue; }
         if (s && besoin[s] > 0) { besoin[s]--; garder[i] = true; }
-      }
-      for (let i = 0; i < nbDes; i++) {
-        if (garder[i] || !des[i]) continue;
-        const peut = remplacements(des[i]);
-        const cible = peut && peut.find((sy) => besoin[sy] > 0);
-        if (cible) { besoin[cible]--; garder[i] = true; }
       }
       for (let i = 0; i < nbDes; i++) if (!garder[i]) des[i] = null;
       for (let i = 0; i < nbDes; i++) {

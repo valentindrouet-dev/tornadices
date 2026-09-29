@@ -12,14 +12,14 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.69';
-import { store } from './store.js?v=1.69';
-import { aller } from './app.js?v=1.69';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.69';
+} from './dom.js?v=1.70';
+import { store } from './store.js?v=1.70';
+import { aller } from './app.js?v=1.70';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.70';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
   equipeVue, auxCochons,
-} from '../core/config.js?v=1.69';
+} from '../core/config.js?v=1.70';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
@@ -187,6 +187,14 @@ export function vueResultats() {
 
 /** Ce que l'instantané dit de la table, pour retrouver l'emblème de chacun. */
 const ctxEquipes = (ctx) => ({ nbJoueurs: ctx.nbJoueurs, cochons: ctx.cochons !== false });
+
+/** Le badge d'une équipe : sa classe, ou la couleur de son Cochon à trois. */
+function attributsBadge(id, ctx) {
+  const eq = equipeVue(id, ctxEquipes(ctx));
+  return auxCochons(ctxEquipes(ctx)) && eq
+    ? { class: 'badge--cochon', style: { '--couleur-eq': eq.hex } }
+    : { class: `badge--${id}` };
+}
 
 function enteteVictoire(r, ctx, eq, quand) {
   return h('div.carte.carte--victoire', {
@@ -420,7 +428,7 @@ function dérouléManches(manches, ctx) {
         h('th', 'Manche'), h('th', 'Durée'), h('th', ''), h('th', 'Remportée par'),
         h('th', 'Comment'), h('th', 'Carte Tornade'), h('th', 'Sens'))),
       h('tbody', ...manches.map((m) => {
-        const eq = m.vainqueur ? COULEURS_EQUIPE[m.vainqueur] : null;
+        const eq = m.vainqueur ? equipeVue(m.vainqueur, ctxEquipes(ctx)) : null;
         const carte = m.carte ? CARTES_PAR_ID[m.carte] : null;
         return h('tr',
           h('td', h('strong', String(m.manche))),
@@ -431,7 +439,7 @@ function dérouléManches(manches, ctx) {
             }))),
           h('td', m.nomJoueur
             ? h('span.rangee.rangee--serree',
-                h('span.badge', { class: `badge--${m.vainqueur}` }, m.nomJoueur))
+                h('span.badge', attributsBadge(m.vainqueur, ctx), m.nomJoueur))
             : h('span.mini.muted', eq ? eq.nom : '—')),
           h('td.petit', raisonManche(m, ctx.mode, ctx.placeJetons !== 'equipe')),
           h('td.petit', carte

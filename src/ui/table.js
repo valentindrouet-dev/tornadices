@@ -4,21 +4,22 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.69';
+import { h, remplacer, duree, vider } from './dom.js?v=1.70';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.69';
-import { Moteur } from '../core/engine.js?v=1.69';
+} from './icons.js?v=1.70';
+import { Moteur } from '../core/engine.js?v=1.70';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
-} from '../core/config.js?v=1.69';
-import { ajouterHistorique } from './store.js?v=1.69';
-import { enregistrerPartie } from './resultats.js?v=1.69';
-import { aller } from './app.js?v=1.69';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.69';
-import { nomSymbole } from './apparence.js?v=1.69';
+  nomDansPhrase, auxCochons, requisPourEquipe,
+} from '../core/config.js?v=1.70';
+import { ajouterHistorique } from './store.js?v=1.70';
+import { enregistrerPartie } from './resultats.js?v=1.70';
+import { aller } from './app.js?v=1.70';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.70';
+import { nomSymbole } from './apparence.js?v=1.70';
 
 let moteur = null;
 let vitesse = 1;
@@ -75,7 +76,7 @@ const surMobile = () => window.innerWidth <= 860;
  * moteur juge jouable : trois éclairs sans voisin à attraper n'annoncent rien.
  */
 function alerteDesCombos(dispo) {
-  for (const id of ['echecJokers', 'blocage', 'collision', 'reveil', 'vache', 'endormir']) {
+  for (const id of ['blocage', 'collision', 'reveil', 'vache', 'endormir']) {
     if (dispo.some((d) => d.id === id)) return ALERTES[id];
   }
   return null;
@@ -190,52 +191,73 @@ export function vueTable() {
   // ── Table ─────────────────────────────────────────────────────────────────
   const elCarte = h('div.coin.coin--carte');
   const elPioche = h('div.coin.coin--pioche');
-  const elScores = h('div.coin.coin--scores');
+  // Les scores se lisent au-dessus du tapis, pas dessus : le centre de la table
+  // est à la carte Tornade, et le cercle des joueurs a besoin de toute la largeur.
+  const elScores = h('div.scores-table');
   // Compromis : la carte Refuge, au centre du tapis. C'est là que chaque
   // équipe met ses animaux à couvert, et c'est ce qu'on regarde pour savoir
   // où en est la manche.
   const elRefuge = h('div.refuge');
-  const zoneTable = h('div.table-zone', h('div.tapis'), elRefuge, elCarte, elPioche, elScores);
+  // Le centre de la table, comme sur un vrai plateau : la carte Tornade en cours
+  // — et le Refuge sous elle, quand il est en jeu — avec, à côté, la pioche et la
+  // carte de sens. Les joueurs font cercle autour.
+  const elCentre = h('div.centre-table', h('div.centre-carte', elCarte, elRefuge), elPioche);
+  const zoneTable = h('div.table-zone', h('div.tapis'), elCentre);
   const elSieges = moteur.joueurs.map((j) => {
-    const el = h('div.siege', { class: `equipe-${j.equipe}${j.type === 'humain' ? ' siege--humain' : ''}` });
+    // La couleur vient de l'équipe telle qu'elle se présente à cette table : à
+    // trois, un Cochon rouge, orange ou rose, et non plus les Bleus ou les Jaunes.
+    const el = h('div.siege', {
+      class: `equipe-${j.equipe}${j.type === 'humain' ? ' siege--humain' : ''}`,
+      style: { '--couleur-eq': equipeVue(j.equipe, moteur.cfg).hex },
+    });
     zoneTable.appendChild(el);
     return el;
   });
   const n = moteur.joueurs.length;
+  // Le joueur humain est assis en bas de la table, face à l'écran — comme on
+  // s'assoit devant un vrai plateau. L'anneau tourne autour de lui sans changer
+  // d'ordre : ses voisins restent ses voisins, le sens horaire reste horaire.
+  // Sans humain à la table, c'est le premier siège qui prend cette place.
+  const siegeBas = Math.max(0, moteur.joueurs.findIndex((j) => j.type === 'humain'));
   const CENTRE = { x: 50, y: 50 };
   const positions = elSieges.map(() => ({ x: 50, y: 50 }));
   const elTapis = zoneTable.querySelector('.tapis');
 
-  // Les sièges tiennent dans le rectangle qui reste une fois les trois coins
-  // réservés : la carte et les scores à gauche, la pioche à droite. Ainsi aucun
-  // panneau ne recouvre un joueur ni la surface de jeu, quelle que soit la
-  // taille de la fenêtre ou le nombre de joueurs.
+  // Les sièges font cercle sur toute la table : plus aucun panneau n'en borde
+  // les côtés, la carte Tornade est au centre et les scores au-dessus. Le centre
+  // se pose au milieu du cercle et rapetisse juste assez pour ne toucher aucun
+  // siège — sur un écran étroit, à huit joueurs, la place vient à manquer.
   function placerSieges() {
     const zw = zoneTable.clientWidth;
     const zh = zoneTable.clientHeight;
-    if (!zw || !zh || surMobile()) return;
+    if (!zw || !zh || surMobile()) {
+      elCentre.style.removeProperty('--echelle-centre');
+      return;
+    }
 
-    const marge = 20;
-    const bandeGauche = Math.max(elCarte.offsetWidth, elScores.offsetWidth) + marge;
-    const bandeDroite = elPioche.offsetWidth + marge;
+    const marge = 12;
     const larg = elSieges[0]?.offsetWidth || 196;
     const haut = elSieges[0]?.offsetHeight || 130;
-
-    const libre = Math.max(240, zw - bandeGauche - bandeDroite);
-    const cx = bandeGauche + libre / 2;
+    const cx = zw / 2;
     const cy = zh / 2;
-    const rx = Math.max(60, libre / 2 - larg / 2);
+    const rx = Math.max(60, zw / 2 - larg / 2 - marge);
     const ry = Math.max(60, zh / 2 - haut / 2 - 6);
 
-    CENTRE.x = (cx / zw) * 100;
-    CENTRE.y = (cy / zh) * 100;
+    CENTRE.x = 50;
+    CENTRE.y = 50;
 
+    const cadres = [];
     elSieges.forEach((el, i) => {
-      const a = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
-      positions[i].x = ((cx + rx * Math.cos(a)) / zw) * 100;
-      positions[i].y = ((cy + ry * Math.sin(a)) / zh) * 100;
+      const a = (Math.PI / 2) + ((i - siegeBas) * 2 * Math.PI) / n;
+      const x = cx + rx * Math.cos(a);
+      const y = cy + ry * Math.sin(a);
+      positions[i].x = (x / zw) * 100;
+      positions[i].y = (y / zh) * 100;
       el.style.left = `${positions[i].x}%`;
       el.style.top = `${positions[i].y}%`;
+      const l = el.offsetWidth || larg;
+      const t = el.offsetHeight || haut;
+      cadres.push({ x0: x - l / 2, x1: x + l / 2, y0: y - t / 2, y1: y + t / 2 });
     });
 
     if (elTapis) {
@@ -244,6 +266,29 @@ export function vueTable() {
       elTapis.style.width = `${((2 * rx) / zw) * 100}%`;
       elTapis.style.height = `${((2 * ry) / zh) * 100}%`;
     }
+
+    // La taille naturelle du centre : `offsetWidth` ignore l'échelle appliquée.
+    const w = elCentre.offsetWidth;
+    const hc = elCentre.offsetHeight;
+    const jeu = 8;
+    const degage = (k) => cadres.every((c) => {
+      const x0 = cx - (w * k) / 2 - jeu;
+      const x1 = cx + (w * k) / 2 + jeu;
+      const y0 = cy - (hc * k) / 2 - jeu;
+      const y1 = cy + (hc * k) / 2 + jeu;
+      return x1 <= c.x0 || c.x1 <= x0 || y1 <= c.y0 || c.y1 <= y0;
+    });
+    let echelle = 1;
+    if (!degage(1)) {
+      let bas = 0.5;
+      let haut2 = 1;
+      for (let t = 0; t < 12; t++) {
+        const milieu = (bas + haut2) / 2;
+        if (degage(milieu)) bas = milieu; else haut2 = milieu;
+      }
+      echelle = bas;
+    }
+    elCentre.style.setProperty('--echelle-centre', echelle.toFixed(3));
   }
 
   // En colonne, les sièges suivraient l'ordre de lecture — 1-2 puis 3-4 — et deux
@@ -263,8 +308,11 @@ export function vueTable() {
     if (impair && k < n) { cellules[k] = [rangees - 1, 'large']; k++; }
     for (let r = impair ? rangees - 2 : rangees - 1; k < n; r--, k++) cellules[k] = [r, 0];
 
+    // Le joueur humain prend la case du bas de l'anneau : la grande case à
+    // nombre impair, celle de gauche de la dernière rangée sinon.
+    const caseBas = Math.min(n - 1, aDroite + 1);
     elSieges.forEach((el, i) => {
-      const c = cellules[i];
+      const c = cellules[(i - siegeBas + caseBas + n) % n];
       if (!c) return;
       const large = c[1] === 'large';
       el.classList.toggle('siege--large', large);
@@ -395,9 +443,13 @@ export function vueTable() {
   const zoneJournal = h('div.journal');
 
   // Une ligne de la liste : les dés demandés, le nom, et ce qu'il faut savoir.
+  // Les dés se lisent tels que la table les demande à qui regarde : la carte
+  // Cochon à trois joueurs, la ligne du Vert s'il joue à part. C'est l'équipe du
+  // joueur humain qui compte — la première assise, s'il n'y en a pas.
+  const equipeLue = (moteur.joueurs.find((j) => j.type === 'humain') || moteur.joueurs[0]).equipe;
   const ligneCombo = (c) => h('div.rangee.rangee--serree',
     h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
-      suiteSymboles(c.requis, 20)),
+      suiteSymboles(requisPourEquipe(moteur.cfg, c.id, c.requis, equipeLue), 20)),
     h('div.mini', { style: { flex: '1' } }, c.nom,
       // Le rappel dit laquelle des deux combinaisons porte le contact —
       // et que l'autre, en mode « Échecs », ne se joue plus.
@@ -410,7 +462,7 @@ export function vueTable() {
   );
 
   // Une combinaison que le dé ne peut pas produire n'est pas une règle, c'est
-  // une ligne morte : sans face joker, « Trois jokers » n'a rien à faire là.
+  // une ligne morte : sans face éclair, l'Attaque n'a rien à faire là.
   const jouables = moteur.cfg.combos.filter((c) => comboPossible(moteur.cfg.faces, c.requis));
   const listeCombos = (titre, etat) => {
     const dedans = jouables.filter((c) => c.face === 'toutes' || c.face === etat);
@@ -446,7 +498,7 @@ export function vueTable() {
 
   racine.appendChild(zoneEntete);
   racine.appendChild(h('div.grille.grille--jeu',
-    h('div', zoneTable, zonePanneaux), zoneCote));
+    h('div', elScores, zoneTable, zonePanneaux), zoneCote));
 
   let couche = null;
   let dernierJournal = -1;
@@ -490,7 +542,7 @@ export function vueTable() {
     if (type === 'attrape') { jouerSon('attrape'); return; }
     // Réveil, échec et endormissement ne concernent que celui qui les subit.
     if (j.type !== 'humain') return;
-    if (type === 'reveil') { eclat(COULEURS_EQUIPE[j.equipe].hex); jouerSon('reveil'); }
+    if (type === 'reveil') { eclat(equipeVue(j.equipe, moteur.cfg).hex); jouerSon('reveil'); }
     else if (type === 'echec') eclat(COULEUR_ECLAT.echec);
     else if (type === 'endormi') {
       eclat(COULEUR_ECLAT.endormi, { secousse: true });
@@ -596,13 +648,13 @@ export function vueTable() {
   function montrerChoixSens(choix) {
     if (!choix || choix.decide || !choix.humain) return;
     attenteSens = true;
-    // « Les Bleus », « Le Vert » : le nom d'équipe s'écrit sans article, et une
-    // phrase en manque. Le Vert est un joueur, les autres sont des équipes.
-    const camps = choix.equipes
-      .map((e) => (e === 'vert' ? 'le Vert' : `les ${COULEURS_EQUIPE[e].nom}`))
-      .join(' et ');
+    // « Les Bleus », « le Vert », « le Cochon rouge » : un nom d'équipe a besoin
+    // de son article dans une phrase, et le verbe suit — un joueur seul reçoit,
+    // une équipe reçoivent.
+    const noms = choix.equipes.map((e) => nomDansPhrase(e, moteur.cfg));
+    const camps = noms.map((n) => n.le).join(' et ');
     const titre = `${camps.charAt(0).toUpperCase()}${camps.slice(1)} `
-      + `${choix.equipes.length === 1 && choix.equipes[0] === 'vert' ? 'reçoit' : 'reçoivent'} les dés`;
+      + `${noms.length === 1 && noms[0].seul ? 'reçoit' : 'reçoivent'} les dés`;
     panneauSens = h('div.voile-carte',
       h('div.carte-annonce',
         h('div.mini.muted', 'Carte de sens'),
@@ -632,14 +684,15 @@ export function vueTable() {
   let panneauTransition = null;
   moteur.onFinManche = (info) => {
     const d = Math.max(300, info.duree / vitesse);
-    const eq = info.vainqueur ? COULEURS_EQUIPE[info.vainqueur] : null;
+    const eq = info.vainqueur ? equipeVue(info.vainqueur, moteur.cfg) : null;
+    const nom = info.vainqueur ? nomDansPhrase(info.vainqueur, moteur.cfg) : null;
     enTransition = true;
     effacerAnnonce();
     if (panneauTransition) panneauTransition.remove();
     panneauTransition = h('div.transition',
       h('div.transition-titre',
-        eq ? h('span', { style: { color: eq.hex } }, eq.nom) : null,
-        eq ? ` remportent la manche ${info.manche}` : `Manche ${info.manche} terminée`),
+        eq ? h('span', { style: { color: eq.hex } }, nom.Le) : null,
+        eq ? ` ${nom.v('remporte', 'remportent')} la manche ${info.manche}` : `Manche ${info.manche} terminée`),
       h('div.transition-suite', 'Manche suivante !'),
       info.carteSuivante
         ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
@@ -889,7 +942,7 @@ export function vueTable() {
         : '';
       const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}`;
       siChange(el, sig, () => {
-        const eq = COULEURS_EQUIPE[j.equipe];
+        const eq = equipeVue(j.equipe, moteur.cfg);
         return [
           h('div.entete',
             h('span.puce', { style: { background: eq.hex } }),
@@ -933,7 +986,10 @@ export function vueTable() {
           return `${e.id}:${s.restants}/${s.total}`;
         }).join(',')
       : '';
-    siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}`, () => (
+    // Le centre change de taille avec ce qu'il porte — une carte plus bavarde,
+    // une rangée de jetons, le Refuge — et le cercle doit lui laisser la place.
+    let centreChange = false;
+    centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}`, () => (
       moteur.carte
         ? h('div.carte-journee',
             h('div.mini.muted', `Manche ${moteur.manche}`),
@@ -948,7 +1004,7 @@ export function vueTable() {
         : null
     ));
 
-    peindreRefuge();
+    centreChange = peindreRefuge() || centreChange;
 
     const reste = Math.max(0, moteur.pioche.length - 1);
     // Le sens ne se lit plus au dos des Tornades : c'est la carte rotation qui
@@ -958,7 +1014,7 @@ export function vueTable() {
     // La carte rotation est posée sur la table dès qu'elle décide du sens.
     const carteDeSens = regleSens === 'perdants';
     const sensPioche = FLECHE(moteur.sens);
-    siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
+    centreChange = siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
       h('div.pioche-pile',
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
           h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
@@ -974,14 +1030,15 @@ export function vueTable() {
             h('div.carte-sens-fleche', sensPioche),
             h('div.carte-sens-nom', 'Carte de sens'))
         : null,
-    ));
+    )) || centreChange;
+    if (centreChange) placerSieges();
 
     const jetons = Object.values(moteur.equipes)
       .map((e) => `${e.id}:${jetonsAffiches(e)}/${e.jetons}:${e.cartes.length}`).join('|');
-    if (siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
+    siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
       const c = equipeVue(e.id, moteur.cfg);
       const acquis = jetonsAffiches(e);
-      return h('div.score-equipe', { class: `equipe-${e.id}` },
+      return h('div.score-equipe', { class: `equipe-${e.id}`, style: { '--couleur-eq': c.hex } },
         // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes
         // les poules, le Vert est le cowboy.
         h('span.score-nom', { style: { color: c.hex } },
@@ -999,7 +1056,7 @@ export function vueTable() {
           })),
         ) : null,
       );
-    }))) placerSieges();
+    }));
   }
 
   /**
@@ -1035,13 +1092,13 @@ export function vueTable() {
    */
   function peindreRefuge() {
     if (!estCompromis(moteur.cfg) || jetonsSurTornade(moteur.cfg)) {
-      if (elRefuge.childNodes.length) vider(elRefuge);
-      return;
+      if (elRefuge.childNodes.length) { vider(elRefuge); return true; }
+      return false;
     }
     const requis = moteur.refugeRequis || 1;
     const equipes = Object.values(moteur.equipes);
     const sig = `refuge-${requis}-${equipes.map((e) => `${e.id}:${e.refuge}:${e.emportes || 0}`).join('|')}`;
-    siChange(elRefuge, sig, () => [
+    return siChange(elRefuge, sig, () => [
       h('div.refuge-titre', 'Refuge'),
       h('div.refuge-equipes', ...equipes.map((e) => {
         const c = equipeVue(e.id, moteur.cfg);
@@ -1100,14 +1157,14 @@ export function vueTable() {
   function panneau(j) {
     const t = toucheDe.get(j.id);
     const lot = j.lots[0];
-    const eq = COULEURS_EQUIPE[j.equipe];
+    const eq = equipeVue(j.equipe, moteur.cfg);
     const alerte = alerteDe(j);
     const roule = lot.des.some((d) => d.roule);
     const libres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule);
     const pose = lot.des.every((d) => d.sym && !d.roule);
     const peutAgir = !j.fige && !moteur.duel;
-    // Plusieurs combinaisons sortent au même jet — grâce au joker le plus souvent :
-    // c'est au joueur de dire laquelle il joue, pendant le temps de constat.
+    // Plusieurs combinaisons sortent au même jet — celle de la carte et une de
+    // base, par exemple : c'est au joueur de dire laquelle il joue.
     const options = (j.departEnAttente && j.departEnAttente.options) || null;
     const enMain = (j.attente && j.attente.combos) || null;
 
@@ -1235,6 +1292,8 @@ export function vueTable() {
       ajouterHistorique({
         date: new Date().toISOString().slice(0, 16).replace('T', ' '),
         joueurs: moteur.joueurs.length,
+        // À trois, le vainqueur est un Cochon : l'historique doit pouvoir le dire.
+        cochons: auxCochons(moteur.cfg),
         vainqueur: r.vainqueur,
         manches: r.manches,
         duree: r.duree,
@@ -1250,7 +1309,7 @@ export function vueTable() {
     // s'ouvre d'elle-même, sur le coup de sifflet final. Un temps d'arrêt court
     // pour lire le nom du vainqueur à la table, puis on tourne la page.
     siChange(couche, `fin-${moteur.vainqueur}`, () => {
-      const eq = moteur.vainqueur ? COULEURS_EQUIPE[moteur.vainqueur] : null;
+      const eq = moteur.vainqueur ? equipeVue(moteur.vainqueur, moteur.cfg) : null;
       return h('div.boite', { style: { borderColor: eq ? eq.hex : 'var(--bord)' } },
         h('div.gros', { style: { color: eq ? eq.hex : 'var(--encre)' } },
           eq ? `${eq.nom} — victoire !` : 'Fin de partie'),

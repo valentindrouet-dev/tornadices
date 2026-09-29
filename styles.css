@@ -317,7 +317,7 @@ label.champ {
   font-size: 12.5px; font-weight: 700; color: var(--encre-doux);
 }
 /* Un menu déroulant refuse par défaut de descendre sous la largeur de sa plus
-   longue option — « Joker éclair/ZzZ » élargissait à lui seul toute la colonne.
+   longue option élargissait à elle seule toute la colonne.
    Il se serre comme le reste ; le texte est de toute façon lisible une fois
    déplié. */
 .champ select, .champ input { min-width: 0; max-width: 100%; }
@@ -636,7 +636,7 @@ label.champ {
 @keyframes entreGauche { from { transform: translateX(-118%) scale(.92); opacity: 0; } }
 @keyframes entreDroite { from { transform: translateX(118%) scale(.92); opacity: 0; } }
 
-/* ── Choix de combinaison (le joker en sert souvent plusieurs) ─────────────── */
+/* ── Choix de combinaison (quand un jet en sert plusieurs) ─────────────────── */
 .choix-combo {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   margin-top: 12px; padding: 10px 12px;
@@ -682,16 +682,29 @@ label.champ {
 }
 .banniere-version span { color: var(--gris); }
 
-/* ── Coins de la table : carte du jour, pioche, scores ────────────────────── */
-.coin { position: absolute; z-index: 3; }
-.coin--carte { left: 0; top: 0; width: 232px; }
-.coin--pioche { right: 0; top: 0; width: 156px; }
-.coin--scores { left: 0; bottom: 0; width: 302px; display: grid; gap: 9px; }
+/* ── Le centre de la table : la carte Tornade, la pioche, la carte de sens ─── */
+/* Posés au milieu du cercle des joueurs, comme sur un vrai plateau. Le bloc
+   rapetisse — `--echelle-centre`, calculée à l'exécution — juste assez pour ne
+   toucher aucun siège quand la place manque. */
+.centre-table {
+  position: absolute; left: 50%; top: 50%; z-index: 3;
+  transform: translate(-50%, -50%) scale(var(--echelle-centre, 1));
+  display: flex; align-items: center; gap: 12px;
+}
+.centre-carte { display: grid; gap: 10px; justify-items: center; }
+.coin { position: static; }
+.coin--carte { width: 220px; }
+.coin--pioche { width: 104px; }
 .coin--echange .carte-journee { animation: carteArrive .55s cubic-bezier(.3, .8, .35, 1); }
+/* La carte suivante vient de la pioche, posée juste à sa droite. */
 @keyframes carteArrive {
-  0% { transform: translate(420px, -30px) rotate(9deg) scale(.82); opacity: 0; }
+  0% { transform: translate(150px, -10px) rotate(9deg) scale(.82); opacity: 0; }
   100% { transform: none; opacity: 1; }
 }
+
+/* Les scores, au-dessus du tapis : ils se lisent, ils ne se jouent pas. */
+.scores-table { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.scores-table .score-equipe { flex: 0 1 auto; }
 
 .pioche-pile { position: relative; height: 74px; }
 .dos-carte {
@@ -729,8 +742,7 @@ label.champ {
 .jeton.on svg { width: 16px; height: 16px; }
 
 /* ── Transition entre deux manches ────────────────────────────────────────── */
-.table-zone--transition .siege,
-.table-zone--transition .coin--scores { opacity: .35; transition: opacity .3s; }
+.table-zone--transition .siege { opacity: .35; transition: opacity .3s; }
 .transition {
   position: absolute;
   left: 50%; top: 50%;
@@ -1134,6 +1146,13 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .badge--bleu { background: #e3f1fc; color: #1d6ea8; border-color: #bfdff5; }
 .badge--jaune { background: #fdf3d8; color: #8f6c05; border-color: #f3e0a6; }
 .badge--vert { background: #e4f5e9; color: #2b7141; border-color: #bfe6cc; }
+/* Un Cochon n'a pas d'équipe : sa couleur arrive par --couleur-eq, et le badge
+   s'en déduit — fond pâle, texte foncé pour rester lisible, même en orange. */
+.badge--cochon {
+  background: color-mix(in srgb, var(--couleur-eq) 14%, #fff);
+  color: color-mix(in srgb, var(--couleur-eq) 70%, #000);
+  border-color: color-mix(in srgb, var(--couleur-eq) 38%, #fff);
+}
 
 @media (max-width: 1080px) {
   /* minmax(0, 1fr) et non 1fr : sans cela une carte au contenu large déborde de
@@ -1230,13 +1249,16 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
     gap: 8px;
   }
   .tapis { display: none; }
-  /* Sur téléphone la table est une colonne : le Refuge y prend sa place, en flux. */
-  .refuge { position: static; transform: none; max-width: none; flex: 1 1 100%; }
-  .coin { position: static; width: auto; }
-  .coin--carte { flex: 1 1 58%; }
+  /* Sur téléphone la table est une colonne : le centre y passe en tête, la carte
+     et la pioche côte à côte, le Refuge dessous. */
+  .centre-table {
+    position: static; transform: none; flex: 1 1 100%;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .centre-carte { flex: 1 1 58%; min-width: 0; justify-items: stretch; }
+  .coin { width: auto; }
   .coin--pioche { flex: 1 1 30%; }
-  .coin--scores { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; }
-  .coin--scores .score-equipe { flex: 1 1 30%; margin: 0; }
+  .scores-table .score-equipe { flex: 1 1 30%; margin: 0; }
   .pioche-pile { height: 60px; }
   .siege {
     position: static;
@@ -1331,7 +1353,7 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 @media (max-width: 520px) {
   /* Les sièges restent à deux par ligne : un par ligne, la table n'en finit pas.
      La carte et la pioche aussi gardent leur place côte à côte. */
-  .coin--scores .score-equipe { flex: 1 1 100%; }
+  .scores-table .score-equipe { flex: 1 1 100%; }
 }
 
 /* ── Apparence des faces ──────────────────────────────────────────────────── */
@@ -1344,7 +1366,9 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 }
 
 /* Emblème d'équipe : les vaches, les poules, le cowboy. */
-.embleme { display: inline-block; flex: none; line-height: 0; }
+/* Seul le Cochon se peint en couleur — les autres emblèmes sont noirs : il prend
+   celle de son joueur là où elle est posée, et la couleur du texte ailleurs. */
+.embleme { display: inline-block; flex: none; line-height: 0; color: var(--couleur-eq, currentColor); }
 .embleme svg { width: 100%; height: 100%; display: block; }
 
 /* La colonne « Réveillé » du tableau des combinaisons : une case, rien de plus. */
@@ -1400,7 +1424,7 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 }
 .texte-carte-grand { font-size: 16px; line-height: 1.45; color: var(--encre-doux); }
 
-/* La Tornade révélée en grand : le même carton que dans le coin de la table,
+/* La Tornade révélée en grand : le même carton qu’au centre de la table,
    à la taille où on le lit vraiment. */
 .carte-annonce--tornade {
   position: relative;
@@ -1525,12 +1549,10 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .tbl-defile .tbl--lots { min-width: 420px; }
 
 /* ── La carte Refuge (mode Compromis) ─────────────────────────────────────────
-   Au milieu du tapis, là où les joueurs posent leurs animaux à couvert : une
-   colonne par équipe, un jeton par animal, et ce que la Tornade du jour demande. */
+   Au centre de la table, sous la carte Tornade, là où les joueurs posent leurs
+   animaux à couvert : une colonne par équipe, un jeton par animal, et ce que la
+   Tornade du jour demande. */
 .refuge {
-  position: absolute; left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
   background: #fff;
   border: 2px solid var(--bord-fort);
   border-radius: 16px;

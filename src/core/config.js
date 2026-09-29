@@ -6,34 +6,11 @@ export const SYMBOLES = {
   vache: { id: 'vache', nom: 'Vache', couleur: '#82dc0a', desc: 'Met un jeton de votre équipe à couvert' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
-  // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.
-  joker: {
-    id: 'joker', nom: 'Joker', couleur: '#f4a11c',
-    joker: ['tornade', 'vache', 'zzz', 'eclair'],
-    desc: 'Prend la face de n’importe quel symbole, sauf celui qui fige le dé',
-  },
-  jokerDouble: {
-    id: 'jokerDouble', nom: 'Joker éclair/ZzZ', couleur: '#c28ef2',
-    joker: ['eclair', 'zzz'],
-    desc: 'Joker limité à l’éclair et au ZzZ',
-  },
   x: { id: 'x', nom: 'X', couleur: '#e2000f', desc: 'Dé bloqué — il ne se relance jamais' },
   vide: { id: 'vide', nom: 'Vide', couleur: '#e6edf4', desc: 'Face neutre' },
 };
 
-export const ORDRE_SYMBOLES = [
-  'tornade', 'vache', 'zzz', 'eclair', 'joker', 'jokerDouble', 'x', 'vide',
-];
-
-/** Un joker est une face qui peut en remplacer d'autres. */
-export function estJoker(symbole) {
-  return !!(SYMBOLES[symbole] && SYMBOLES[symbole].joker);
-}
-
-/** Ce qu'une face peut remplacer — rien pour une face ordinaire. */
-export function remplacements(symbole) {
-  return (SYMBOLES[symbole] && SYMBOLES[symbole].joker) || null;
-}
+export const ORDRE_SYMBOLES = ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'];
 
 /** Une exigence sans aucun dé requis ne vaut rien : elle serait toujours servie. */
 export function exigenceVide(requis) {
@@ -43,43 +20,12 @@ export function exigenceVide(requis) {
 /**
  * La combinaison `requis` est-elle servie par le compte de dés `compte` ?
  *
- * Les faces ordinaires se comptent une par une ; les jokers viennent combler ce
- * qui manque, chacun selon ce qu'il peut prendre. Savoir si les jokers suffisent
- * est un problème d'affectation : on le tranche exactement par la condition de
- * Hall, l'exigence ne portant jamais que sur une poignée de symboles.
+ * Chaque face compte pour elle-même : il faut autant de dés de chaque symbole
+ * que la combinaison en demande.
  */
 export function comboServie(compte, requis) {
-  const reste = { ...compte };
-  const manques = [];
-
   for (const [sym, n] of Object.entries(requis || {})) {
-    if (n <= 0) continue;
-    const pris = Math.min(reste[sym] || 0, n);
-    reste[sym] = (reste[sym] || 0) - pris;
-    if (pris === n) continue;
-    // Rien ne remplace un joker : une exigence en jokers se paie en jokers.
-    if (estJoker(sym)) return false;
-    manques.push({ sym, n: n - pris });
-  }
-  if (!manques.length) return true;
-
-  const jokers = [];
-  for (const [sym, n] of Object.entries(reste)) {
-    if (n > 0 && estJoker(sym)) jokers.push({ n, peut: SYMBOLES[sym].joker });
-  }
-  if (!jokers.length) return false;
-
-  // Condition de Hall : pour tout sous-ensemble de manques, assez de jokers
-  // capables de les couvrir. Le sous-ensemble complet couvre le total.
-  for (let masque = 1; masque < (1 << manques.length); masque++) {
-    let besoin = 0;
-    const vises = [];
-    for (let i = 0; i < manques.length; i++) {
-      if (masque & (1 << i)) { besoin += manques[i].n; vises.push(manques[i].sym); }
-    }
-    let offre = 0;
-    for (const j of jokers) if (j.peut.some((s) => vises.includes(s))) offre += j.n;
-    if (besoin > offre) return false;
+    if (n > 0 && (compte[sym] || 0) < n) return false;
   }
   return true;
 }
@@ -95,7 +41,6 @@ export const SYMBOLE_BLOQUANT = 'x';
 // d'annonce et dans le journal — un même événement, une même couleur.
 export const ALERTES = {
   blocage: 'rouge',
-  echecJokers: 'rouge',
   collision: 'jaune',
   reveil: 'or',
   vache: 'vert',
@@ -210,10 +155,12 @@ export function jetonsSurTornade(cfg) {
 // est jouée et le lot part. La variante rend la main au joueur — il peut
 // relancer par-dessus et viser autre chose.
 //
-// Deux combinaisons échappent toujours au choix, quelle que soit l'option :
-// l'Échec, parce que les dés sont figés et que le lot part de toute façon, et
-// l'Abri, parce que c'est lui qui emporte la manche. La combinaison de la
-// Tornade du jour non plus : elle vaut mieux que tout ce qu'on lui préférerait.
+// Trois combinaisons échappent toujours au choix, quelle que soit l'option :
+// l'Échec, parce que les dés sont figés et que le lot part de toute façon ;
+// l'Abri, parce que c'est lui qui emporte la manche ; et le Réveil — un
+// dormeur qui sort ses soleils se réveille, dans toutes les circonstances. La
+// combinaison de la Tornade du jour non plus : elle vaut mieux que tout ce qu'on
+// lui préférerait.
 export const OPTIONS_COMBO_SERVIE = [
   ['auto', 'Elle s’applique d’office'],
   ['choix', 'On peut relancer par-dessus'],
@@ -223,9 +170,9 @@ export const AIDE_COMBO_SERVIE = {
   auto: 'Règle de base : une combinaison servie est jouée sur-le-champ. L’effet s’applique, puis '
     + 'le lot part vers le voisin — on ne relance jamais par-dessus.',
   choix: 'Vous gardez la main : une combinaison qui sort peut être laissée de côté pour relancer '
-    + 'et viser autre chose. Deux exceptions, qui s’appliquent toujours — l’Échec, parce que les '
-    + 'dés sont figés, et l’Abri, parce qu’il emporte la manche. La combinaison de la Tornade du '
-    + 'jour non plus ne se refuse pas.',
+    + 'et viser autre chose. Trois exceptions, qui s’appliquent toujours — l’Échec, parce que les '
+    + 'dés sont figés, l’Abri, parce qu’il emporte la manche, et le Réveil : un dormeur qui le '
+    + 'sort se réveille. La combinaison de la Tornade du jour non plus ne se refuse pas.',
 };
 
 /** Vrai si toute combinaison servie s'applique d'office — la règle de base. */
@@ -238,9 +185,12 @@ export function comboIneluctable(dispo) {
   if (!dispo) return false;
   // Un échec n'est pas un coup qu'on joue : les dés sont figés, le lot part.
   if (dispo.combo && dispo.combo.echec) return true;
-  if (dispo.id === 'blocage' || dispo.id === 'echecJokers') return true;
+  if (dispo.id === 'blocage') return true;
   // L'Abri emporte la manche, la Tornade du jour vaut mieux que le reste.
   if (dispo.id === 'vache') return true;
+  // Le Réveil s'applique d'office : un dormeur qui sort ses soleils se réveille,
+  // quoi qu'il ait voulu viser et quel que soit le réglage.
+  if (dispo.id === 'reveil') return true;
   return dispo.source === 'journee';
 }
 
@@ -362,6 +312,16 @@ export const CARTE_COCHON = { blocage: { [SYMBOLE_BLOQUANT]: ECHEC_COCHON } };
 
 export const EMBLEME_COCHON = { embleme: 'cochon', emblemeNom: 'Cochons', emblemeUn: 'Cochon' };
 
+// Chaque Cochon a sa couleur : un rouge, un orange, un rose. Ils prennent les
+// trois sièges du jeu dans leur ordre — ceux des Bleus, des Jaunes et du Vert —
+// mais ne gardent rien de ces équipes : ni couleur, ni nom, ni animal. Les
+// règles propres au Vert, elles, restent attachées à son siège.
+export const COCHONS = {
+  bleu: { nom: 'Cochon rouge', hex: '#dc3a37', clair: '#fce4e3' },
+  jaune: { nom: 'Cochon orange', hex: '#f08519', clair: '#fdeedd' },
+  vert: { nom: 'Cochon rose', hex: '#ec6aa2', clair: '#fde7f1' },
+};
+
 /** Vrai si la table se joue aux Cochons : trois joueurs, et la variante en jeu. */
 export function auxCochons(cfg) {
   return !!cfg && Number(cfg.nbJoueurs) === TABLE_COCHONS && cfg.cochons !== false;
@@ -370,14 +330,42 @@ export function auxCochons(cfg) {
 /**
  * L'équipe telle qu'elle se présente à cette table.
  *
- * Les couleurs ne bougent jamais — c'est ce qui dit qui est qui. Aux Cochons,
- * c'est l'animal qui change : les trois joueurs jouent le même, puisqu'aucun
- * n'a d'équipier.
+ * Aux Cochons, tout change à l'œil : l'animal, qui est le même pour les trois
+ * puisqu'aucun n'a d'équipier, et la couleur — rouge, orange ou rose — qui dit
+ * qui est qui. Ailleurs, les Bleus, les Jaunes et le Vert.
  */
 export function equipeVue(equipeId, cfg) {
   const base = COULEURS_EQUIPE[equipeId];
   if (!base) return null;
-  return auxCochons(cfg) ? { ...base, ...EMBLEME_COCHON } : base;
+  if (!auxCochons(cfg)) return base;
+  const cochon = COCHONS[equipeId] || {};
+  return {
+    ...base, ...EMBLEME_COCHON, ...cochon,
+    emblemeNom: cochon.nom || EMBLEME_COCHON.emblemeNom,
+    emblemeUn: cochon.nom || EMBLEME_COCHON.emblemeUn,
+  };
+}
+
+/**
+ * Le nom d'une équipe dans une phrase, et l'accord qui va avec.
+ *
+ * Les Bleus et les Jaunes sont plusieurs : « les Bleus remportent ». Le Vert
+ * joue seul, et chaque Cochon aussi : « le Vert remporte », « le Cochon rouge
+ * remporte ». `v('remporte', 'remportent')` choisit la bonne forme.
+ */
+export function nomDansPhrase(equipeId, cfg) {
+  const e = equipeVue(equipeId, cfg) || { nom: String(equipeId) };
+  const seul = equipeId === 'vert' || auxCochons(cfg);
+  const nom = e.nom;
+  return {
+    nom,
+    seul,
+    le: `${seul ? 'le' : 'les'} ${nom}`,
+    Le: `${seul ? 'Le' : 'Les'} ${nom}`,
+    de: `${seul ? 'du' : 'des'} ${nom}`,
+    a: `${seul ? 'au' : 'aux'} ${nom}`,
+    v: (singulier, pluriel) => (seul ? singulier : pluriel),
+  };
 }
 
 /**
@@ -401,16 +389,14 @@ export function requisPourEquipe(cfg, comboId, requisBase, equipe) {
 }
 
 /**
- * Une combinaison ne peut sortir que si le dé porte les faces qu'elle demande —
- * jokers compris. Sans face joker, « Trois jokers » n'est pas une règle, c'est
- * une ligne morte : autant ne pas l'annoncer à la table.
+ * Une combinaison ne peut sortir que si le dé porte les faces qu'elle demande.
+ * Sans face éclair, l'Attaque n'est pas une règle, c'est une ligne morte :
+ * autant ne pas l'annoncer à la table.
  */
 export function comboPossible(faces, requis) {
   if (!requis || !Object.keys(requis).length) return false;
   const dispo = new Set(faces || []);
-  const jokers = [...dispo].filter((f) => SYMBOLES[f] && SYMBOLES[f].joker);
-  return Object.keys(requis).every((sym) => dispo.has(sym)
-    || jokers.some((j) => (SYMBOLES[j].joker || []).includes(sym)));
+  return Object.keys(requis).every((sym) => dispo.has(sym));
 }
 
 // ── Cartes Tornade : une version par mode de jeu ─────────────────────────────
@@ -538,17 +524,17 @@ export function noteCarteMode(carte, cfg) {
 }
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Le dé officiel : 2 tornades, 1 X, 1 abri, 2 ZzZ. Ni joker ni éclair — les
-// deux faces restent disponibles dans les menus, à poser soi-même.
+// Le dé officiel : 2 tornades, 1 X, 1 abri, 2 ZzZ. Pas d'éclair — la face reste
+// disponible dans les menus, à poser soi-même.
 // Modifiable face par face dans les réglages de partie et dans le Laboratoire.
 export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz'];
 
 /** Le dé de TornaDice a six faces, et ce n'est pas un réglage. */
 export const NB_FACES_DE = FACES_PAR_DEFAUT.length;
 
-// Le dé d'avant, avec joker et éclair : la combinaison Attaque n'est servie que
-// par un dé qui porte des éclairs.
-export const FACES_JOKER_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
+// Un dé à éclair, pour éprouver l'Attaque : elle n'est servie que par un dé qui
+// en porte. Une tornade cède sa place à l'éclair, le reste est le dé officiel.
+export const FACES_ECLAIR = ['tornade', 'eclair', 'x', 'vache', 'zzz', 'zzz'];
 
 // Les faces ont été renommées en v1.3 : la « cloche » est devenue la tornade, et
 // l'« étoile » — la face jamais relançable qui déclenchait la collision — est
@@ -556,6 +542,11 @@ export const FACES_JOKER_ECLAIR = ['tornade', 'joker', 'x', 'zzz', 'vache', 'ecl
 // anciens noms, et rien ne les traduisait : le dé gardait des faces que ni
 // l'affichage ni le moteur ne reconnaissaient, muettes et sans effet.
 export const SYMBOLES_ANCIENS = { cloche: 'tornade', etoile: 'x' };
+
+// Les jokers ont quitté le jeu en v1.70. Une face qui en portait un ne devient
+// pas « vide » — le dé y perdrait une face utile : elle reprend la face
+// officielle de sa place. Une exigence qui en demandait les oublie.
+export const SYMBOLES_RETIRES = ['joker', 'jokerDouble'];
 
 /** Traduit une face enregistrée ; « vide » pour un symbole devenu inconnu. */
 export function assainirSymbole(id) {
@@ -573,7 +564,7 @@ export function assainirSymbole(id) {
  */
 export function assainirFaces(faces) {
   if (!Array.isArray(faces) || !faces.length) return FACES_PAR_DEFAUT.slice();
-  const propres = faces.map(assainirSymbole);
+  const propres = faces.map((f) => (SYMBOLES_RETIRES.includes(f) ? null : assainirSymbole(f)));
   return Array.from({ length: NB_FACES_DE },
     (_, i) => propres[i] || FACES_PAR_DEFAUT[i % FACES_PAR_DEFAUT.length]);
 }
@@ -583,7 +574,7 @@ export function assainirRequis(requis) {
   if (!requis || typeof requis !== 'object') return {};
   const sortie = {};
   for (const [sym, n] of Object.entries(requis)) {
-    if (!n) continue;
+    if (!n || SYMBOLES_RETIRES.includes(sym)) continue;
     const cle = assainirSymbole(sym);
     sortie[cle] = (sortie[cle] || 0) + n;
   }
@@ -711,18 +702,6 @@ export const COMBOS_TORNADE = [
     face: 'toutes',
     obligatoire: true,
     echec: true,
-  },
-  {
-    // Trop de jokers d'un coup et le lot part comme à deux X. C'est le
-    // contrepoids du joker : sans lui, il n'aurait aucun revers.
-    id: 'echecJokers',
-    nom: 'Trois jokers',
-    libelle: 'Trop de jokers : le lot part sans rien tenter',
-    requis: { joker: 3 },
-    face: 'toutes',
-    obligatoire: true,
-    echec: true,
-    optionnelle: 'echecJokers',
   },
 ];
 
@@ -1234,9 +1213,6 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
   // se lit avant tout le reste.
   const mode = modeManche(opts);
   const mep = MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
-  // Règle optionnelle : trois jokers valent un échec. Décochée, la combinaison
-  // disparaît purement et simplement du jeu.
-  const echecJokers = opts.echecJokers !== false;
   // Le dé officiel ne porte pas d'éclair : c'est donc l'Échec qui tente le
   // contact par défaut, sinon l'attrape ne se produirait jamais. Repassez sur
   // « Éclairs » après avoir posé une face éclair sur le dé.
@@ -1246,7 +1222,6 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     desParLot: 4,
     faces: FACES_PAR_DEFAUT.slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
-    echecJokers,
     attrapeSur,
     // Un dormeur ne tend pas la main : l'attrape sur échec demande d'être
     // réveillé. Ne concerne pas les trois éclairs, qui valent dans les deux
@@ -1267,9 +1242,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // ou le Vert seul. Le Vert accompagne l'équipe désignée dans les deux
     // premiers cas, comme au jeu.
     equipeDepart: EQUIPES_DEPART.includes(opts.equipeDepart) ? opts.equipeDepart : 'jaune',
-    combos: COMBOS_TORNADE
-      .filter((c) => !c.optionnelle || opts[c.optionnelle] !== false)
-      .map((c) => ({ ...c, requis: { ...c.requis } })),
+    combos: COMBOS_TORNADE.map((c) => ({ ...c, requis: { ...c.requis } })),
     // Chaque mode a son paquet, et ce sont deux paquets différents : les cartes
     // Journée d'un côté, les Tornades de l'autre. Rien de commun entre les deux.
     cartes: CARTES_TORNADE.map((c) => c.id),
@@ -1345,7 +1318,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
 /**
  * Les symboles qui méritent une colonne dans un tableau de combinaisons : ceux
  * qui sont sur les dés, et ceux qu'une combinaison réclame. Inutile d'afficher
- * le joker double tant que personne ne l'a mis sur une face.
+ * l'éclair tant que personne ne l'a mis sur une face.
  */
 export function symbolesPertinents(cfg) {
   const vus = new Set((cfg.faces || []).filter((s) => s && s !== 'vide'));

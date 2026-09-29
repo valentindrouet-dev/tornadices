@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.69';
+import { h } from './dom.js?v=1.70';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_EMBLEME,
-} from './icons.js?v=1.69';
+} from './icons.js?v=1.70';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
-  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.69';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.69';
+  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS, COCHONS,
+} from '../core/config.js?v=1.70';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.70';
 
 export function vueRegles() {
   return h('div.page',
@@ -95,7 +95,7 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Les symboles du dé'),
       h('div.grille.grille--3',
-        ...['tornade', 'vache', 'zzz', 'x', 'eclair', 'joker'].map((s) => h('div.stat',
+        ...['tornade', 'vache', 'zzz', 'x', 'eclair'].map((s) => h('div.stat',
           h('div.rangee.rangee--serree', pastilleSymbole(s, 30),
             h('strong', nomSymbole(s))),
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
@@ -103,8 +103,8 @@ export function vueRegles() {
       h('p.petit', { style: { marginTop: '12px' } },
         `Le dé officiel porte six faces : deux « ${nomSymbole('tornade')} », un `
         + `« ${nomSymbole('x')} », un « ${nomSymbole('vache')} » et deux « ${nomSymbole('zzz')} ». `
-        + 'L’éclair et le joker n’y sont plus — ils restent disponibles dans les Réglages, '
-        + 'à poser soi-même sur une face pour les essayer.'),
+        + 'L’éclair n’y est plus — il reste disponible dans les Réglages, à poser soi-même '
+        + 'sur une face pour l’essayer.'),
       h('p.mini.muted',
         'Les quatre faces du jeu portent l’habillage officiel : le soleil qui réveille, la grange '
         + 'où l’on s’abrite, la lune du sommeil, la tornade rouge qui fige le dé. Le moteur, lui, '
@@ -123,33 +123,6 @@ export function vueRegles() {
         'Sans face éclair, la combinaison Attaque ne peut pas sortir : c’est donc l’Échec — '
         + `le double « ${nomSymbole('x')} » — qui porte l’attrape par défaut. Posez un éclair sur une face et `
         + 'repassez le déclencheur sur « Éclairs » pour retrouver l’attaque choisie.'),
-    ),
-
-    h('div.carte',
-      h('div.titre-section', 'Le joker'),
-      h('div.rangee', { style: { marginBottom: '12px' } },
-        pastilleSymbole('joker', 46),
-        h('p.petit', { style: { flex: '1', margin: 0 } },
-          `Le joker prend la face de n’importe quel symbole — ${nomSymbole('tornade')}, `
-          + `${nomSymbole('vache')}, ${nomSymbole('zzz')} ou éclair — jamais celle qui fige le dé. `
-          + 'Il valide donc n’importe quelle combinaison, et se garde d’un '
-          + 'lancer à l’autre comme n’importe quel dé utile.'),
-      ),
-      h('p.petit', 'Quand un joker sert plusieurs combinaisons au même jet, c’est le joueur qui '
-        + 'décide laquelle est jouée : la table lui laisse un instant pour trancher, puis joue '
-        + 'la meilleure d’office s’il ne dit rien.'),
-      h('div.encart.encart--info', { style: { marginTop: '12px' } },
-        `Trois jokers d’un coup : c’est un échec, comme deux « ${nomSymbole('x')} ». Le lot part sans rien tenter, `
-        + 'et cet échec l’emporte sur tout ce que les jokers auraient pu servir — sans quoi le '
-        + 'joker n’aurait aucun revers. Règle décochable dans les Réglages de partie.'),
-      h('div.rangee', { style: { marginTop: '14px' } },
-        pastilleSymbole('jokerDouble', 40),
-        h('p.petit', { style: { flex: '1', margin: 0 } },
-          h('strong', nomSymbole('jokerDouble')),
-          ` — un joker limité à l’éclair et au « ${nomSymbole('zzz')} ». `
-          + 'Il n’est pas sur les dés au départ : ajoutez-le face par face dans les Réglages '
-          + 'pour l’essayer. Il ne compte pas dans les trois jokers de l’échec.'),
-      ),
     ),
 
     h('div.carte',
@@ -179,6 +152,10 @@ export function vueRegles() {
       h('div.encart', { style: { marginTop: '10px' } },
         'Une combinaison servie est jouée d’office : on ne relance pas par-dessus. Le lot part '
         + 'vers le voisin, puis l’effet s’applique.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Le Réveil s’applique en toutes circonstances : un dormeur qui sort ses soleils se '
+        + 'réveille, même quand les Réglages permettent de relancer par-dessus une combinaison, et '
+        + 'même quand la carte du jour sort au même jet — il joue la carte, et se réveille avec.'),
     ),
 
     h('div.carte',
@@ -186,7 +163,7 @@ export function vueRegles() {
       h('p.petit', 'Dès qu’une combinaison sort, la zone du joueur s’entoure d’un halo de couleur : '
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
-        ...[[`rouge`, `Échec — deux « ${nomSymbole('x')} » ou trois jokers, le lot part`],
+        ...[[`rouge`, `Échec — deux « ${nomSymbole('x')} », le lot part`],
           ['jaune', 'Trois éclairs — attrape'],
           ['or', `Trois « ${nomSymbole('tornade')} » — réveil`],
           ['vert', `Trois « ${nomSymbole('vache')} » — jeton`],
@@ -238,12 +215,13 @@ export function vueRegles() {
     // difficile pour que l'attrape ne tombe pas à tout bout de champ.
     h('div.carte',
       h('div.titre-section', 'La table à trois — les Cochons'),
-      h('p.petit', 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi. Les couleurs '
-        + 'restent — c’est ce qui dit qui est qui — mais l’animal est le même pour les trois : '
-        + 'chacun reçoit une carte Cochon.'),
-      h('div.rangee', { style: { margin: '12px 0' } },
-        ...[0, 1, 2].map(() => h('span', { style: { width: '30px' }, html: SVG_EMBLEME.cochon })),
-        h('span.petit', 'Trois joueurs, trois Cochons — aucune équipe.'),
+      h('p.petit', 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi, et chacun '
+        + 'reçoit une carte Cochon. Les équipes disparaissent avec leurs couleurs : il y a un '
+        + 'Cochon rouge, un Cochon orange et un Cochon rose.'),
+      h('div.rangee', { style: { margin: '12px 0', gap: '16px' } },
+        ...Object.values(COCHONS).map((c) => h('span.rangee.rangee--serree',
+          h('span', { style: { width: '30px', color: c.hex }, html: SVG_EMBLEME.cochon }),
+          h('strong.petit', { style: { color: c.hex } }, c.nom))),
       ),
       h('p.petit', `Les trois cartes portent la même règle : l’Échec y demande trois « ${nomSymbole('x')} » `
         + 'au lieu de deux. C’est ce qui retarde l’attrape — à trois, chacun est le voisin de tout '
@@ -351,8 +329,8 @@ export function vueRegles() {
       h('p.petit.muted', 'Décochée, la combinaison reprend sa condition d’origine. Le Réveil '
         + 'reste donc réservé au dormeur : sans quoi on ne pourrait plus jamais se réveiller.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'La table n’affiche que les combinaisons que le dé peut produire. Sans face joker, '
-        + '« Trois jokers » n’est pas une règle en sommeil : c’est une ligne morte, et elle '
+        'La table n’affiche que les combinaisons que le dé peut produire. Sans face éclair, '
+        + 'l’Attaque n’est pas une règle en sommeil : c’est une ligne morte, et elle '
         + 'disparaît de la liste.'),
     ),
 

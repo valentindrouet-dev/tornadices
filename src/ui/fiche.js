@@ -12,14 +12,14 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.69';
-import { store } from './store.js?v=1.69';
-import { aller } from './app.js?v=1.69';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.69';
-import { nomSymbole } from './apparence.js?v=1.69';
-import { construireConfig } from './variables.js?v=1.69';
-import { nomActif } from './profils.js?v=1.69';
-import { VERSION } from '../version.js?v=1.69';
+import { h, remplacer } from './dom.js?v=1.70';
+import { store } from './store.js?v=1.70';
+import { aller } from './app.js?v=1.70';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.70';
+import { nomSymbole } from './apparence.js?v=1.70';
+import { construireConfig } from './variables.js?v=1.70';
+import { nomActif } from './profils.js?v=1.70';
+import { VERSION } from '../version.js?v=1.70';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
@@ -27,7 +27,7 @@ import {
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   TABLE_COCHONS, CARTE_COCHON, auxCochons, equipeVue,
-} from '../core/config.js?v=1.69';
+} from '../core/config.js?v=1.70';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -145,7 +145,7 @@ function miseEnPlace(cfg, nb, parEffectif) {
           h('td.num', h('strong', String(n))),
           // À trois, il n'y a pas d'équipe à former : trois joueurs, trois Cochons.
           h('td.petit', auxCochons(c)
-            ? `${n} Cochons, chacun pour soi`
+            ? `${n} Cochons : rouge, orange, rose`
             : vert
               ? `${parEquipe} + ${parEquipe} + le Vert`
               : `${parEquipe} + ${parEquipe}`),
@@ -164,8 +164,8 @@ function miseEnPlace(cfg, nb, parEffectif) {
       + `le ${COULEURS_EQUIPE.vert.emblemeUn}, en vert, qui forme une équipe à lui tout seul.`),
     auxCochons(parEffectif[TABLE_COCHONS])
       ? h('p.fiche-note', reglage(`À ${TABLE_COCHONS} joueurs, chacun joue un Cochon`),
-        ' : personne n’a d’équipier, les couleurs disent seulement qui est qui, et les trois '
-        + 'cartes Cochon demandent un dé rouge de plus à l’Échec — voir les combinaisons.')
+        ' — un rouge, un orange, un rose. Personne n’a d’équipier, et les trois cartes Cochon '
+        + 'demandent un dé rouge de plus à l’Échec — voir les combinaisons.')
       : null,
     h('p.fiche-note',
       reglage(`${depart.nom} prennent les lots à la première manche`),
@@ -249,10 +249,10 @@ function lesCombinaisons(cfg) {
           + 'par-dessus. L’effet s’applique, puis le lot part vers le voisin. Quand plusieurs '
           + 'combinaisons sortent au même jet, c’est au joueur de choisir laquelle il joue.']
         : [reglage('Une combinaison servie peut être laissée de côté'), ' : on relance alors '
-          + 'par-dessus pour viser autre chose. Deux exceptions, qui s’appliquent toujours — '
-          + `« ${nomCombo(cfg, 'vache')} », qui emporte la manche, et l’Échec, dont les dés sont `
-          + 'figés. Quand on joue la combinaison, l’effet s’applique, puis le lot part vers le '
-          + 'voisin.']),
+          + 'par-dessus pour viser autre chose. Trois exceptions, qui s’appliquent toujours — '
+          + `« ${nomCombo(cfg, 'vache')} », qui emporte la manche, l’Échec, dont les dés sont `
+          + `figés, et « ${nomCombo(cfg, 'reveil')} » : un dormeur qui le sort se réveille. Quand `
+          + 'on joue la combinaison, l’effet s’applique, puis le lot part vers le voisin.']),
   );
 }
 
@@ -315,7 +315,8 @@ function leTour(cfg) {
           : 'on la joue ou l’on relance par-dessus'),
         ' : l’effet s’applique, puis le lot part vers le voisin.'),
       h('li', `Chaque manche commence Tornade endormie. Il faut d’abord se réveiller — la `
-        + `combinaison « ${nomCombo(cfg, 'reveil')} » — avant de pouvoir agir sur les autres.`),
+        + `combinaison « ${nomCombo(cfg, 'reveil')} » — avant de pouvoir agir sur les autres. `
+        + 'Elle s’applique en toutes circonstances : un dormeur qui la sort se réveille.'),
       h('li', 'Le sens de circulation ', reglage(TOUR_SENS[sensRotation(cfg)])),
     ),
     sensRotation(cfg) === 'perdants'

@@ -1,7 +1,7 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.69';
-import { CARTES_PAR_ID } from './config.js?v=1.69';
+import { Moteur } from './engine.js?v=1.70';
+import { CARTES_PAR_ID, auxCochons } from './config.js?v=1.70';
 
 // Les deux paquets réunis : une campagne peut porter sur l'un ou sur l'autre.
 const NOM_CARTE = Object.fromEntries(
@@ -134,6 +134,9 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
     // ce numéro change et le Laboratoire écarte les résultats d'avant plutôt
     // que de lire des champs absents.
     schema: SCHEMA_RESULTAT,
+    // La table jouée : à trois, les vainqueurs sont des Cochons, et le compte
+    // rendu doit les nommer ainsi.
+    table: { nbJoueurs: cfg.nbJoueurs, cochons: auxCochons(cfg) },
     nbParties,
     graine,
     calculMs: Date.now() - t0,

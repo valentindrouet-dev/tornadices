@@ -1,9 +1,21 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.69';
+export const VERSION = '1.70';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.70',
+    date: '29/09/2026',
+    notes: [
+      'La carte Tornade est au centre de la table, comme sur un vrai plateau, avec la pioche et la carte de sens posées à côté d’elle. Les joueurs font cercle autour, et le cercle prend désormais toute la largeur : les sièges, qui se chevauchaient à six joueurs sur un écran moyen, ont chacun leur place. Quand elle manque — huit joueurs sur un petit écran — le centre rapetisse juste ce qu’il faut pour ne toucher personne. Les scores passent au-dessus du tapis.',
+      'Le joueur humain est assis en bas de la table, face à l’écran, et non plus en haut. L’anneau tourne autour de lui sans changer d’ordre : ses voisins restent ses voisins, le sens horaire reste horaire. Sur téléphone, il ferme l’anneau par le bas.',
+      'À trois joueurs, les Cochons ont chacun leur couleur : un rouge, un orange, un rose. Les Bleus, les Jaunes et le Vert disparaissent de la table, couleurs comprises — sur les sièges, les scores, la carte Tornade, le journal, le compte rendu, l’historique et le Laboratoire. Le cochon lui-même se peint de la couleur de son joueur.',
+      'Le journal accorde enfin ses verbes : « les Bleus remportent la manche », mais « le Vert remporte » et « le Cochon rouge remporte » — un joueur seul n’est pas une équipe. Le Vert était jusqu’ici conjugué au pluriel.',
+      'Le Réveil s’applique en toutes circonstances : un dormeur qui sort ses soleils se réveille. Avec « On peut relancer par-dessus », il ne se laissait pas de côté comme l’Échec et l’Abri — c’est désormais le cas. Quand un grand lot sert au même jet le Réveil et une autre combinaison de base, plus de choix à faire : c’est le Réveil. Et quand la carte du jour sort avec lui, on joue la carte et l’on se réveille avec.',
+      'Les jokers quittent le jeu : les deux faces joker, la combinaison « Trois jokers », leur règle dans les Règles et leur réglage. Une face qui portait un joker dans un réglage enregistré reprend la face officielle de sa place ; une combinaison qui en demandait les oublie. Deux combinaisons peuvent toujours sortir au même jet — la carte du jour et une de base — et le choix reste au joueur.',
+    ],
+  },
   {
     version: '1.69',
     date: '29/09/2026',

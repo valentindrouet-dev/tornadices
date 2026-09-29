@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.69';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.69';
-import { nomSymbole } from './apparence.js?v=1.69';
-import { store } from './store.js?v=1.69';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.69';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.70';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.70';
+import { nomSymbole } from './apparence.js?v=1.70';
+import { store } from './store.js?v=1.70';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.70';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -17,17 +17,17 @@ import {
   cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-  TABLE_COCHONS, ECHEC_COCHON, auxCochons,
+  TABLE_COCHONS, ECHEC_COCHON, auxCochons, equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.69';
-import { tableauCombos } from './combos.js?v=1.69';
-import { barreProfils, idActif } from './profils.js?v=1.69';
+} from '../core/config.js?v=1.70';
+import { tableauCombos } from './combos.js?v=1.70';
+import { barreProfils, idActif } from './profils.js?v=1.70';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.69';
+} from './variables.js?v=1.70';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.69';
+} from '../core/proba.js?v=1.70';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -262,21 +262,6 @@ function panneauConfig(rafraichir) {
     ),
     h('div.rangee', { style: { marginTop: '18px', marginBottom: '10px' } },
       h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
-      h('button', {
-        class: `chip${cfg.combos.some((c) => c.id === 'echecJokers') ? ' on' : ''}`,
-        title: `Trois jokers d’un coup font partir le lot, comme deux « ${nomSymbole('x')} »`,
-        onclick: () => {
-          const actif = cfg.combos.some((c) => c.id === 'echecJokers');
-          cfg.echecJokers = !actif;
-          // On repart de la liste de référence en gardant les seuils déjà réglés.
-          cfg.combos = configParDefaut(cfg.nbJoueurs, { echecJokers: !actif }).combos
-            .map((c) => {
-              const garde = cfg.combos.find((x) => x.id === c.id);
-              return { ...c, requis: { ...((garde && garde.requis) || c.requis) } };
-            });
-          rafraichir();
-        },
-      }, h('span.case', '✓'), 'Trois jokers = échec'),
     ),
     tableauCombos(cfg, {
       ecrireCombo: (id, requis) => {
@@ -478,6 +463,13 @@ function resultats(r) {
   if (r.erreur) {
     return h('div.carte', h('h3', 'La campagne a échoué'), h('p.petit', r.erreur));
   }
+  // À trois, les équipes sont des Cochons — rouge, orange, rose. Un résultat
+  // d'avant la v1.70 ne dit pas sa table : il garde les noms d'équipe.
+  const table = r.table || {};
+  const vue = (id) => equipeVue(id, table) || COULEURS_EQUIPE[id];
+  const badge = (id, texte, style = {}) => (auxCochons(table) && vue(id)
+    ? h('span.badge.badge--cochon', { style: { ...style, '--couleur-eq': vue(id).hex } }, texte)
+    : h('span.badge', { class: `badge--${id}`, style }, texte));
   const total = r.nbParties;
   const equipes = Object.entries(r.victoires).sort((a, b) => b[1] - a[1]);
   const dm = r.dureeManche || {};
@@ -500,7 +492,7 @@ function resultats(r) {
     h('div.carte',
       h('div.titre-section', 'Victoires par équipe'),
       ...equipes.map(([id, n]) => {
-        const c = COULEURS_EQUIPE[id] || { nom: 'Aucune', hex: '#b8b0a5' };
+        const c = vue(id) || { nom: 'Aucune', hex: '#b8b0a5' };
         return h('div', { style: { marginBottom: '10px' } },
           h('div.rangee', { style: { justifyContent: 'space-between', marginBottom: '4px' } },
             h('strong', c.nom),
@@ -536,8 +528,7 @@ function resultats(r) {
             h('th.num', 'Jetons'), h('th.num', 'Touchés'), h('th.num', 'Subis'))),
           h('tbody', ...r.parSiege.map((s) => h('tr',
             h('td', `Siège ${s.siege + 1}`),
-            h('td', h('span.badge', { class: `badge--${s.equipe}` },
-              (COULEURS_EQUIPE[s.equipe] || {}).nom || '—')),
+            h('td', badge(s.equipe, (vue(s.equipe) || {}).nom || '—')),
             h('td.num', pourcent(s.victoires / total, 0)),
             h('td.num', nombre(s.jetons / total, 2)),
             h('td.num', nombre(s.touches / total, 2)),
@@ -606,9 +597,8 @@ function resultats(r) {
             h('td.num', dureeLongue(c.dureeTotale / Math.max(1, c.jouee))),
             h('td', Object.entries(c.vainqueurs)
               .sort((a, b) => b[1] - a[1])
-              .map(([id, n]) => h('span.badge', {
-                class: `badge--${id}`, style: { marginRight: '4px' },
-              }, `${(COULEURS_EQUIPE[id] || {}).nom || 'aucun'} ${n}`))),
+              .map(([id, n]) => badge(id, `${(vue(id) || {}).nom || 'aucun'} ${n}`,
+                { marginRight: '4px' }))),
           );
         })),
       ),
@@ -659,7 +649,7 @@ function tableauFrequences(objet, total, unite) {
 const LIBELLES = {
   reveil: 'Réveil (3 tornades)', vache: 'Abri', endormir: 'Endormir un voisin',
   collision: 'Attrape (3 éclairs)', blocage: 'Échec (2 X)',
-  echecJokers: 'Échec (3 jokers)', fatigue: 'Fatigue', intensive: 'Intensive',
+  fatigue: 'Fatigue', intensive: 'Intensive',
   sansVent: 'Sans vent', chance: 'Chance', troupeau: 'Troupeau',
   difference: 'Différence', vaillants: 'Vaillants',
 };

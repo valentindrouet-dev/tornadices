@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole, nomSymbole } from './apparence.js?v=1.69';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.70';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -60,37 +60,9 @@ export const COULEUR_FACE = {
   vache: '#82dc0a',
   zzz: '#8ba6f5',
   eclair: '#f9b115',
-  joker: '#f4a11c',
-  jokerDouble: '#8ba6f5',
   x: '#e2000f',
   vide: '#e6edf4',
 };
-
-// Le joker porte les couleurs des quatre symboles qu'il peut prendre — éclair,
-// soleil, grange et lune — et l'étoile par-dessus. Jamais la tornade rouge.
-// Un filet blanc sépare les quarts : deux couleurs voisines s'y liraient sinon
-// comme une seule moitié.
-const FACE_JOKER = svg(`
-  <path d="M50 50 L50 7 A43 43 0 0 0 7 50 Z" fill="${COULEUR_FACE.eclair}"/>
-  <path d="M50 50 L50 7 A43 43 0 0 1 93 50 Z" fill="${COULEUR_FACE.tornade}"/>
-  <path d="M50 50 L93 50 A43 43 0 0 1 50 93 Z" fill="${COULEUR_FACE.vache}"/>
-  <path d="M50 50 L50 93 A43 43 0 0 1 7 50 Z" fill="${COULEUR_FACE.zzz}"/>
-  <path d="M7 50h86M50 7v86" stroke="#fff" stroke-width="2.6"/>
-  <path d="M50 22 L57.2 41.1 L77.6 42 L57.2 54.8 L67 74.5 L50 63.2
-           L33 74.5 L38.4 54.8 L22.4 42 L42.8 41.1 Z"
-    fill="#fff" stroke="${NOIR}" stroke-width="6" stroke-linejoin="round"/>`);
-
-// Le joker double ne remplace que l'éclair et le ZzZ : ses deux moitiés le disent.
-const FACE_JOKER_DOUBLE = svg(`
-  <path d="M50 7 A43 43 0 0 0 50 93 Z" fill="${COULEUR_FACE.eclair}"/>
-  <path d="M50 7 A43 43 0 0 1 50 93 Z" fill="${COULEUR_FACE.zzz}"/>
-  <path d="M50 7 L50 93" stroke="${NOIR}" stroke-width="3.5" opacity=".55"/>
-  <path d="M34 18 L18 50 H28 L24 82 L44 46 H32 Z"
-    fill="${NOIR}" stroke="${NOIR}" stroke-width="5" stroke-linejoin="round"/>
-  <g fill="none" stroke="${NOIR}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M58 30h16L58 52h16"/>
-    <path d="M64 60h13L64 78h13"/>
-  </g>`);
 
 // Face « ? » : le lot vient d'arriver, aucun dé n'a encore été lancé.
 export const SVG_INCONNU = svg(`
@@ -106,20 +78,14 @@ export const SVG_ROULANT = svg(`
     <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c2ccd6"/>
   </radialGradient></defs>`);
 
-export const SVG_SYMBOLE = {
-  ...Object.fromEntries(Object.entries(GLYPHES).map(([id, g]) => [id, face(COULEUR_FACE[id], g)])),
-  // Les jokers ne sont pas « une pastille et un pictogramme » : la face entière
-  // porte le sens, elle est donc dessinée telle quelle.
-  joker: FACE_JOKER,
-  jokerDouble: FACE_JOKER_DOUBLE,
-};
+export const SVG_SYMBOLE = Object.fromEntries(
+  Object.entries(GLYPHES).map(([id, g]) => [id, face(COULEUR_FACE[id], g)]),
+);
 
 // Version sans pastille, pour les usages en aplat (pictogrammes de liste).
-export const SVG_GLYPHE = {
-  ...Object.fromEntries(Object.entries(GLYPHES).map(([id, g]) => [id, svg(g)])),
-  joker: FACE_JOKER,
-  jokerDouble: FACE_JOKER_DOUBLE,
-};
+export const SVG_GLYPHE = Object.fromEntries(
+  Object.entries(GLYPHES).map(([id, g]) => [id, svg(g)]),
+);
 
 // ── Emblèmes d'équipe ────────────────────────────────────────────────────────
 // Les Bleus sont les vaches, les Jaunes les poules, le Vert est le cowboy.
@@ -143,10 +109,14 @@ const GLYPHE_COWBOY = `<g fill="${NOIR}">
 
 // À trois joueurs, chacun joue un Cochon : oreilles pointues et groin rond, pour
 // qu'on ne le prenne pas pour la vache à la taille où il se lit — 15 px au bout
-// d'une rangée de jetons.
-const GLYPHE_COCHON = `<g fill="${NOIR}">
+// d'une rangée de jetons. Il prend la couleur de son joueur — un rouge, un
+// orange, un rose — là où les autres emblèmes restent noirs : à trois, c'est
+// l'animal lui-même qui dit qui est qui.
+const GLYPHE_COCHON = `<g fill="currentColor">
     <path d="M24 20.5 35.5 33 23.5 38.5zM76 20.5 64.5 33l12 5.5z"/>
     <path d="M50 26.5c-17.9 0-31 11.4-31 26.5S32.1 79.5 50 79.5 81 68.1 81 53 67.9 26.5 50 26.5z"/>
+  </g>
+  <g fill="${NOIR}">
     <ellipse cx="35.5" cy="44.5" rx="4.4" ry="5.2" fill="#fff"/>
     <ellipse cx="64.5" cy="44.5" rx="4.4" ry="5.2" fill="#fff"/>
     <circle cx="35.5" cy="45.5" r="2.4"/>
@@ -379,8 +349,6 @@ export function faceDe(symbole, options = {}) {
   } else if (symbole) {
     div.innerHTML = dessinFace(symbole);
     if (verrou) div.title = `${nomSymbole('x')} — ce dé est bloqué, il ne peut plus être relancé`;
-    else if (symbole === 'joker') div.title = 'Joker — il prend la face de votre choix, sauf celle qui fige le dé';
-    else if (symbole === 'jokerDouble') div.title = `Joker limité à l’éclair et au « ${nomSymbole('zzz')} »`;
   } else {
     div.innerHTML = SVG_INCONNU;
     div.title = 'Ce dé n’a pas encore été lancé';

@@ -3,8 +3,8 @@
 import { Moteur } from '../src/core/engine.js';
 import {
   configParDefaut, comboServie, PROFILS_IA, placement, SYMBOLES, FACES_PAR_DEFAUT,
-  // Le dé d'avant, à joker et éclair : les épreuves de l'Attaque en ont besoin.
-  assainirFaces, assainirRequis, assainirConfig, FACES_JOKER_ECLAIR,
+  // Un dé à éclair : les épreuves de l'Attaque en ont besoin.
+  assainirFaces, assainirRequis, assainirConfig, FACES_ECLAIR, SYMBOLES_RETIRES,
   NB_FACES_DE, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
   clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
@@ -15,7 +15,7 @@ import {
   OPTIONS_SENS, sensRotation,
   comboAutomatique, comboIneluctable, comboRefusable, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, jetonsSurTornade,
-  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons, equipeVue,
+  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons, equipeVue, COCHONS, nomDansPhrase,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -26,13 +26,13 @@ import {
 } from '../src/core/proba.js';
 
 /**
- * Configuration sur le dé d'avant — joker et éclair — avec l'Attaque au
+ * Configuration sur un dé à éclair, avec l'Attaque au
  * déclencheur. Le dé officiel n'a plus d'éclair : tout ce qui éprouve l'Attaque
  * doit dire explicitement sur quel dé il tourne.
  */
 function cfgEclair(n = 6, opts = {}) {
   const cfg = configParDefaut(n, { ...opts, attrapeSur: 'eclair' });
-  cfg.faces = FACES_JOKER_ECLAIR.slice();
+  cfg.faces = FACES_ECLAIR.slice();
   return cfg;
 }
 
@@ -164,136 +164,20 @@ console.log('\nProbabilités exactes');
   );
 }
 
-// ── 3 bis. Le joker ──────────────────────────────────────────────────────────
-console.log('\nJokers');
+// ── 3 bis. Plusieurs combinaisons au même jet ────────────────────────────────
+// Sans joker, une face ne compte que pour elle-même. Deux combinaisons peuvent
+// encore sortir ensemble — la carte du jour et une de base, ou deux de base sur
+// un lot assez grand — et c'est ce qu'on éprouve ici.
+console.log('\nPlusieurs combinaisons au même jet');
 {
-  const PEUT = { joker: ['tornade', 'vache', 'zzz', 'eclair'], jokerDouble: ['eclair', 'zzz'] };
-  const FACES_J = ['tornade', 'joker', 'x', 'zzz', 'vache', 'eclair'];
+  verifier('une combinaison se compte face par face',
+    comboServie({ tornade: 3, x: 1 }, { tornade: 3 })
+    && !comboServie({ tornade: 2, vache: 2 }, { tornade: 3 })
+    && comboServie({ x: 2, zzz: 2 }, { x: 2 }));
+  verifier('les jokers ont quitté le jeu',
+    !SYMBOLES.joker && !SYMBOLES.jokerDouble
+    && !COMBOS_TORNADE.some((c) => c.id === 'echecJokers'));
 
-  // Référence indépendante : on essaie toutes les affectations possibles des
-  // jokers, sans aucune théorie — c'est lent, mais indiscutable.
-  function servieForce(compte, requis) {
-    const fixe = {};
-    const des = [];
-    for (const [s, n] of Object.entries(compte)) {
-      for (let i = 0; i < n; i++) {
-        if (PEUT[s]) des.push([s, ...PEUT[s]]);
-        else fixe[s] = (fixe[s] || 0) + 1;
-      }
-    }
-    const atteint = (etat) =>
-      Object.entries(requis).every(([s, n]) => n <= 0 || (etat[s] || 0) >= n);
-    const rec = (k, etat) => {
-      if (k === des.length) return atteint(etat);
-      for (const face of des[k]) {
-        const suiv = { ...etat };
-        suiv[face] = (suiv[face] || 0) + 1;
-        if (rec(k + 1, suiv)) return true;
-      }
-      return false;
-    };
-    return rec(0, fixe);
-  }
-
-  // Toutes les mains de 4 dés sur un jeu de faces qui contient les deux jokers,
-  // contre toutes les exigences du jeu.
-  const SYMS = ['tornade', 'vache', 'zzz', 'eclair', 'joker', 'jokerDouble', 'x'];
-  const EXIGENCES = [
-    { tornade: 3 }, { vache: 3 }, { zzz: 3 }, { eclair: 3 }, { x: 2 }, { joker: 3 },
-    { eclair: 4 }, { vache: 4 }, { tornade: 4 }, { zzz: 4 },
-    { vache: 2, tornade: 2 }, { vache: 2, zzz: 2 },
-    { tornade: 1, vache: 1, zzz: 1, eclair: 1 }, { joker: 2, eclair: 1 },
-  ];
-  let mains = 0, ecarts = 0;
-  const mainsDe = (k, debut, courant) => {
-    if (k === 0) {
-      mains++;
-      for (const requis of EXIGENCES) {
-        if (comboServie(courant, requis) !== servieForce(courant, requis)) ecarts++;
-      }
-      return;
-    }
-    for (let i = debut; i < SYMS.length; i++) {
-      const s = SYMS[i];
-      courant[s] = (courant[s] || 0) + 1;
-      mainsDe(k - 1, i, courant);
-      courant[s]--;
-    }
-  };
-  mainsDe(4, 0, {});
-  verifier(`${mains} mains × ${EXIGENCES.length} exigences : les jokers sont placés au mieux`,
-    ecarts === 0, `${ecarts} désaccord(s) avec l’énumération brute`);
-
-  // Le calcul exact doit rester exact une fois les jokers dans le dé.
-  const D = 4, N = 200000;
-  const ARRETS = [{ requis: { eclair: 3 } }, { requis: { joker: 3 } }];
-  const mcJoker = (requis, estArretForce = false) => {
-    let succes = 0, lancers = 0;
-    for (let g = 0; g < N; g++) {
-      let figes = 0, n = 0;
-      for (;;) {
-        n++;
-        const c = { x: figes };
-        for (let i = 0; i < D - figes; i++) {
-          const f = FACES_J[(Math.random() * FACES_J.length) | 0];
-          c[f] = (c[f] || 0) + 1;
-        }
-        const nouveauxX = (c.x || 0) - figes;
-        const cible = servieForce(c, requis);
-        if (cible && estArretForce) { succes++; break; }
-        if (figes + nouveauxX >= 2) break;
-        if (ARRETS.some((a) => servieForce(c, a.requis))) break;
-        if (cible) { succes++; break; }
-        figes += nouveauxX;
-        if (n > 300) break;
-      }
-      lancers += n;
-    }
-    return { reussite: succes / N, lancersMoyens: lancers / N };
-  };
-
-  for (const [nom, requis, estArretForce] of [
-    ['3 tornades (avec joker)', { tornade: 3 }, false],
-    ['3 abris (avec joker)', { vache: 3 }, false],
-    ['3 jokers — l’échec', { joker: 3 }, true],
-  ]) {
-    const e = courseCombinaison(FACES_J, D, requis, {
-      bloquant: 'x', seuilBloquant: 2, arretsForces: ARRETS, estArretForce,
-    });
-    const m = mcJoker(requis, estArretForce);
-    const dR = Math.abs(e.reussite - m.reussite);
-    const dL = Math.abs(e.lancersMoyens - m.lancersMoyens);
-    verifier(
-      `${nom} — réussite ${(e.reussite * 100).toFixed(2)} % (MC ${(m.reussite * 100).toFixed(2)} %), `
-      + `${e.lancersMoyens.toFixed(2)} lancers (MC ${m.lancersMoyens.toFixed(2)})`,
-      dR < 0.01 && dL < 0.06,
-      `écarts ${dR.toFixed(4)} / ${dL.toFixed(4)}`,
-    );
-  }
-
-  // Ce que le joker change à l'équilibre : il met les quatre symboles à égalité,
-  // et se paie sur le réveil, qui bénéficiait seul de la seconde tornade.
-  const OPTS_J = { bloquant: 'x', seuilBloquant: 2, arretsForces: ARRETS };
-  const OPTS_SANS = { bloquant: 'x', seuilBloquant: 2, arretsForces: [{ requis: { eclair: 3 } }] };
-  const FACES_SANS = ['tornade', 'tornade', 'x', 'zzz', 'vache', 'eclair'];
-  const p = (faces, requis, opts) => courseCombinaison(faces, D, requis, opts).reussite;
-
-  const quatre = ['tornade', 'vache', 'zzz'].map((s) => p(FACES_J, { [s]: 3 }, OPTS_J));
-  verifier(
-    `le joker met les symboles à égalité : ${quatre.map((x) => (x * 100).toFixed(1)).join(' / ')} %`,
-    Math.max(...quatre) - Math.min(...quatre) < 0.005,
-  );
-  const vacheAvant = p(FACES_SANS, { vache: 3 }, OPTS_SANS);
-  const vacheApres = p(FACES_J, { vache: 3 }, OPTS_J);
-  const reveilAvant = p(FACES_SANS, { tornade: 3 }, OPTS_SANS);
-  const reveilApres = p(FACES_J, { tornade: 3 }, OPTS_J);
-  verifier(
-    `trois abris passent de ${(vacheAvant * 100).toFixed(1)} % à ${(vacheApres * 100).toFixed(1)} %, `
-    + `le réveil de ${(reveilAvant * 100).toFixed(1)} % à ${(reveilApres * 100).toFixed(1)} %`,
-    vacheApres > vacheAvant * 3 && reveilApres < reveilAvant,
-  );
-
-  // À la table : trois jokers font partir le lot, et rien d'autre.
   const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
   const poser = (lot, syms) => {
     lot.des.forEach((d, i) => {
@@ -302,30 +186,13 @@ console.log('\nJokers');
     lot.lance = true;
   };
 
-  {
-    const m = new Moteur(configParDefaut(6), spec, 'joker-echec');
-    const j = m.joueurs.find((x) => x.lots.length);
-    poser(j.lots[0], ['joker', 'joker', 'joker', 'vache']);
-    const dispo = m.combosDisponibles(j);
-    verifier('trois jokers servent aussi d’autres combinaisons',
-      dispo.length > 1, dispo.map((d) => d.id).join(','));
-    verifier('… mais c’est l’échec qui est joué',
-      m._comboAJouer(j, dispo).id === 'echecJokers');
-  }
-  {
-    const m = new Moteur(configParDefaut(6, { echecJokers: false }), spec, 'joker-libre');
-    const j = m.joueurs.find((x) => x.lots.length);
-    poser(j.lots[0], ['joker', 'joker', 'joker', 'vache']);
-    const choisi = m._comboAJouer(j, m.combosDisponibles(j));
-    verifier('règle décochée : trois jokers servent la combinaison voulue',
-      choisi && choisi.id !== 'echecJokers', choisi ? choisi.id : 'aucune');
-  }
-
   // La carte du jour ne se discute pas : elle est jouée sans proposer le choix.
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
     const cfg = configParDefaut(6);
-    // « Journée intensive » : 2 tornades + 2 abris, servies par deux jokers.
+    // « Journée intensive » : 2 tornades + 2 abris. Avec trois tornades sur un
+    // lot de cinq dés, le réveil est servi au même jet.
+    cfg.desParLot = 5;
     cfg.cartes = ['intensive'];
     // Un paquet voulu exactement tel quel : on dit ce qu'il avait sous les yeux,
     // sinon les cartes arrivées depuis le rejoindraient.
@@ -334,7 +201,7 @@ console.log('\nJokers');
     const m = new Moteur(cfg, humains, 'carte-office');
     const j = m.joueurs[0];
     if (!j.lots.length) j.lots.push(m._nouveauLot());
-    poser(j.lots[0], ['tornade', 'tornade', 'joker', 'joker']);
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'vache', 'vache']);
     const dispo = m.combosDisponibles(j);
     verifier(`la carte et le réveil sont servis au même jet (${dispo.map((d) => d.id).join(', ')})`,
       dispo.length > 1 && dispo.some((d) => d.source === 'journee'));
@@ -344,27 +211,77 @@ console.log('\nJokers');
       && j.departEnAttente.dispo.source === 'journee');
   }
 
-  // Le joueur humain tranche entre les combinaisons que le joker lui sert.
+  // Le joueur humain tranche entre deux combinaisons servies au même jet —
+  // réveillé : il n'a plus de soleils à jouer, l'Abri et l'Attaque se disputent.
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
-    const m = new Moteur(cfgEclair(), humains, 'joker-choix');
+    const cfg = cfgEclair();
+    cfg.desParLot = 6;
+    const m = new Moteur(cfg, humains, 'double-choix');
     const j = m.joueurs[0];
+    j.eveille = true;
     if (!j.lots.length) j.lots.push(m._nouveauLot());
-    poser(j.lots[0], ['joker', 'joker', 'eclair', 'tornade']);
+    poser(j.lots[0], ['vache', 'vache', 'vache', 'eclair', 'eclair', 'eclair']);
     m._finLancer(j, []);
     const options = j.departEnAttente && j.departEnAttente.options;
     verifier('deux combinaisons servies : le choix est offert',
       !!options && options.length === 2, options ? options.map((o) => o.id).join(',') : 'aucune');
     verifier('le défaut suit la priorité du moteur',
       j.departEnAttente.dispo.id === 'collision');
-    verifier('le joueur peut lui préférer le réveil',
-      m.choisirCombo(0, 'reveil') && j.departEnAttente.dispo.id === 'reveil'
+    verifier('le joueur peut lui préférer l’Abri',
+      m.choisirCombo(0, 'vache') && j.departEnAttente.dispo.id === 'vache'
       && j.departEnAttente.motif === 'combo');
+  }
+
+  // Le Réveil s'applique en toutes circonstances : un dormeur qui sort ses
+  // soleils se réveille, sans qu'on lui demande rien.
+  {
+    const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
+    const cfg = cfgEclair();
+    cfg.desParLot = 6;
+    const m = new Moteur(cfg, humains, 'reveil-office');
+    const j = m.joueurs[0];
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'eclair', 'eclair', 'eclair']);
+    const dispo = m.combosDisponibles(j);
+    verifier(`le Réveil et l’Attaque sortent au même jet (${dispo.map((d) => d.id).join(', ')})`,
+      dispo.some((d) => d.id === 'reveil') && dispo.some((d) => d.id === 'collision'));
+    m._finLancer(j, []);
+    verifier('aucun choix n’est proposé : c’est le Réveil qui est joué',
+      j.departEnAttente && !j.departEnAttente.options
+      && j.departEnAttente.dispo.id === 'reveil');
     m.avancerJusqua(m.now + 5000);
-    // On mesure le réveil joué, pas l'état final : un voisin peut le rendormir
-    // dans la seconde — les profils pénibles ne s'en privent pas.
-    verifier('c’est bien le réveil qui a été joué',
-      j.stats.combos.reveil === 1 && j.stats.reveils === 1 && !j.stats.combos.collision);
+    verifier('et le joueur s’est bien réveillé',
+      j.stats.combos.reveil === 1 && j.stats.reveils === 1);
+  }
+  // Même avec le droit de relancer par-dessus : le Réveil ne se laisse pas.
+  {
+    const cfg = configParDefaut(6, { comboServie: 'choix' });
+    const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
+    const m = new Moteur(cfg, humains, 'reveil-choix');
+    const j = m.joueurs[0];
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'zzz']);
+    m._finLancer(j, []);
+    verifier('« on peut relancer par-dessus » : le Réveil part quand même d’office',
+      !j.attente && j.departEnAttente && j.departEnAttente.dispo.id === 'reveil');
+  }
+  // Et quand la carte du jour sort au même jet, on la joue — et l'on se réveille.
+  {
+    const cfg = configParDefaut(6);
+    cfg.cartes = ['vaillants'];
+    cfg.cartesVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.melangerCartes = false;
+    const m = new Moteur(cfg, spec, 'reveil-carte');
+    const j = m.joueurs.find((x) => x.lots.length) || m.joueurs[0];
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'tornade']);
+    const choisi = m._comboAJouer(j, m.combosDisponibles(j));
+    verifier('la carte du jour est jouée, le Réveil l’accompagne',
+      choisi && choisi.source === 'journee' && choisi.reveilAussi === true);
+    j.eveille = false;
+    m._effetCombo(j, { id: 'x', source: 'journee', combo: { effet: 'rien' }, reveilAussi: true });
+    verifier('le dormeur se réveille avec la carte', j.eveille === true);
   }
 }
 
@@ -781,14 +698,26 @@ console.log('\nLe dé du jeu');
   // Le type de dé n'est plus réglable : un d8 ou un d10 enregistré du temps où
   // il l'était reviendrait sans aucun moyen d'en sortir.
   verifier('un d8 enregistré revient à six faces',
-    assainirFaces(['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'joker']).length === 6);
+    assainirFaces(['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'eclair']).length === 6);
   verifier('un d10 aussi, et il garde ses six premières faces',
-    assainirFaces(['joker', 'eclair', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'joker', 'x', 'vache'])
-      .join(',') === 'joker,eclair,x,vache,zzz,zzz');
+    assainirFaces(['eclair', 'eclair', 'x', 'vache', 'zzz', 'zzz', 'tornade', 'eclair', 'x', 'vache'])
+      .join(',') === 'eclair,eclair,x,vache,zzz,zzz');
   verifier('un dé trop court est complété par la répartition officielle',
-    assainirFaces(['joker', 'joker']).join(',') === 'joker,joker,x,vache,zzz,zzz');
+    assainirFaces(['eclair', 'eclair']).join(',') === 'eclair,eclair,x,vache,zzz,zzz');
   verifier('une configuration enregistrée passe par le même filtre',
-    assainirConfig({ nbJoueurs: 6, faces: FACES_JOKER_ECLAIR.concat(['x', 'x']) }).faces.length === 6);
+    assainirConfig({ nbJoueurs: 6, faces: FACES_ECLAIR.concat(['x', 'x']) }).faces.length === 6);
+
+  // Les jokers ont quitté le jeu : une face qui en portait un reprend la face
+  // officielle de sa place, et une exigence qui en demandait les oublie.
+  verifier('un joker enregistré sur le dé reprend la face officielle de sa place',
+    assainirFaces(['tornade', 'joker', 'x', 'vache', 'jokerDouble', 'zzz']).join(',')
+      === FACES_PAR_DEFAUT.join(','));
+  verifier('une exigence en jokers les oublie',
+    JSON.stringify(assainirRequis({ tornade: 2, joker: 1 })) === JSON.stringify({ tornade: 2 }));
+  verifier('les réglages enregistrés perdent la règle des trois jokers',
+    !assainirConfig({ nbJoueurs: 6, echecJokers: true }).combos.some((c) => c.id === 'echecJokers'));
+  verifier('les deux jokers sont bien ceux que le jeu retire',
+    SYMBOLES_RETIRES.join(',') === 'joker,jokerDouble');
 
   // Et le dé du jeu mène bien une campagne à terme.
   {
@@ -1084,16 +1013,9 @@ console.log('\nCombinaisons possibles sur le dé');
     comboPossible(officiel, { tornade: 3 }));
   verifier('sans face éclair, l’Attaque ne peut pas sortir',
     !comboPossible(officiel, { eclair: 3 }));
-  verifier('sans face joker, « trois jokers » non plus',
-    !comboPossible(officiel, { joker: 3 }));
-  verifier('sur le dé à joker, l’éclair redevient possible — le joker le remplace',
-    comboPossible(FACES_JOKER_ECLAIR, { eclair: 3 })
-    && comboPossible(['tornade', 'joker', 'x', 'vache', 'zzz', 'zzz'], { eclair: 2 }));
+  verifier('sur un dé à éclair, l’Attaque redevient possible',
+    comboPossible(FACES_ECLAIR, { eclair: 3 }));
   verifier('une exigence vide n’est jamais « possible »', !comboPossible(officiel, {}));
-  // Le joker double ne remplace que l'éclair et le ZzZ : il ne sauve pas la vache.
-  verifier('un joker limité ne couvre que ce qu’il peut prendre',
-    comboPossible(['jokerDouble', 'x', 'tornade'], { eclair: 1 })
-    && !comboPossible(['jokerDouble', 'x', 'tornade'], { vache: 1 }));
 }
 
 // ── 3 septies bis quater. Un paquet de cartes par mode de jeu ────────────────
@@ -1900,17 +1822,20 @@ console.log('\nCombinaison servie : d’office, ou au choix');
   {
     const cfg = configParDefaut(6, { comboServie: 'choix' });
     cfg.comboServie = 'choix';
-    const inevitables = ['vache', 'blocage', 'echecJokers']
+    const inevitables = ['vache', 'blocage']
       .map((id) => ({ id, combo: { id, echec: id !== 'vache' } }));
     verifier('l’Abri et les échecs ne se refusent jamais',
       inevitables.every((d) => comboIneluctable(d) && !comboRefusable(cfg, d)));
     verifier('la combinaison de la Tornade du jour non plus',
       comboIneluctable({ id: 'spMega', source: 'journee' }));
-    verifier('le Réveil, l’Endormi et l’Attrape se refusent',
-      ['reveil', 'endormir', 'collision']
+    verifier('l’Endormi et l’Attrape se refusent',
+      ['endormir', 'collision']
         .every((id) => !comboIneluctable({ id, combo: { id } })
           && comboRefusable(cfg, { id, combo: { id } })));
-    verifier('mais jamais sous la règle de base',
+    verifier('le Réveil jamais : un dormeur qui le sort se réveille',
+      comboIneluctable({ id: 'reveil', combo: { id: 'reveil' } })
+      && !comboRefusable(cfg, { id: 'reveil', combo: { id: 'reveil' } }));
+    verifier('et rien ne se refuse sous la règle de base',
       ['reveil', 'endormir'].every((id) => !comboRefusable(configParDefaut(6), { id, combo: { id } })));
   }
 
@@ -2231,7 +2156,7 @@ console.log('\nLes jetons sur la carte Tornade');
       const demarrer = m._demarrerManche.bind(m);
       m._demarrerManche = (premiere) => { sortis = new Map(); renvois = new Map(); demarrer(premiere); };
       m.onJournal = (e) => {
-        const r = /renvoie un jeton des (\S+) dans la Tornade/.exec(e.texte || '');
+        const r = /renvoie un jeton (?:des|du) (.+) dans la Tornade/.exec(e.texte || '');
         const id = r && idParNom[r[1]];
         if (id) { renvois.set(id, (renvois.get(id) || 0) + 1); renvoyes++; }
       };
@@ -2310,8 +2235,33 @@ console.log('\nLa table à trois — les Cochons');
   // L'animal : trois Cochons à trois joueurs, les équipes partout ailleurs.
   verifier('à trois joueurs, les trois jouent un Cochon',
     ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).embleme === 'cochon'));
-  verifier('et la couleur ne bouge pas — c’est elle qui dit qui est qui',
-    ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).hex === COULEURS_EQUIPE[e].hex));
+  verifier('un Cochon rouge, un orange, un rose — les couleurs d’équipe s’en vont',
+    ['bleu', 'jaune', 'vert'].map((e) => equipeVue(e, c3).nom).join(',')
+      === 'Cochon rouge,Cochon orange,Cochon rose'
+    && ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).hex === COCHONS[e].hex
+      && equipeVue(e, c3).hex !== COULEURS_EQUIPE[e].hex)
+    && new Set(Object.values(COCHONS).map((c) => c.hex)).size === 3);
+  verifier('carte décochée, les trois joueurs retrouvent leurs équipes',
+    equipeVue('bleu', { ...c3, cochons: false }).hex === COULEURS_EQUIPE.bleu.hex);
+
+  // Le journal accorde le verbe : un Cochon joue seul, le Vert aussi.
+  verifier('« le Cochon rouge remporte », « les Bleus remportent », « le Vert remporte »',
+    `${nomDansPhrase('bleu', c3).Le} ${nomDansPhrase('bleu', c3).v('remporte', 'remportent')}`
+      === 'Le Cochon rouge remporte'
+    && `${nomDansPhrase('bleu', c4).Le} ${nomDansPhrase('bleu', c4).v('remporte', 'remportent')}`
+      === 'Les Bleus remportent'
+    && `${nomDansPhrase('vert', configParDefaut(5)).le} ${nomDansPhrase('vert', configParDefaut(5)).v('remporte', 'remportent')}`
+      === 'le Vert remporte');
+  {
+    const m = new Moteur(c3, spec(3), 'cochon-journal');
+    m.jouerJusquAuBout();
+    const lignes = m.journal.map((e) => e.texte || '');
+    verifier('à trois, le journal parle des Cochons, jamais des Bleus ni des Jaunes',
+      lignes.some((t) => /Cochon (rouge|orange|rose)/.test(t))
+      && !lignes.some((t) => /\b(Bleus|Jaunes)\b/.test(t)));
+    verifier('et ne met jamais un Cochon au pluriel',
+      !lignes.some((t) => /Cochon (rouge|orange|rose) (remportent|gagnent|prennent|volent)/.test(t)));
+  }
   verifier('à six joueurs, chacun garde le sien',
     equipeVue('bleu', configParDefaut(6)).embleme === 'vache'
     && equipeVue('vert', configParDefaut(6)).embleme === 'cowboy');
