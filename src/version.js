@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.80';
+export const VERSION = '1.81';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.81',
+    date: '29/09/2026',
+    notes: [
+      'Les dés qui arrivent dans votre plateau de lancer entrent par le côté où est assis le joueur qui vous les passe, et ceux qui partent sortent du côté du voisin qui les reçoit — à gauche ou à droite selon la table, et non plus toujours dans le même sens.',
+      'Les dés qui tournent ne sont plus coupés : la rangée masquait tout ce qui dépassait de sa hauteur, et un dé qui bascule déborde de sa case. Ils tournent désormais en entier dans le plateau, avec un peu plus d’écart entre eux.',
+    ],
+  },
   {
     version: '1.80',
     date: '29/09/2026',

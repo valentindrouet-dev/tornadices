@@ -675,19 +675,25 @@ label.champ {
 /* Le plateau du bas : même chose, les dés cèdent avant le cadre. Ils ne
    descendent pas sous 34 px — en dessous on ne lit plus la face, mieux vaut
    alors laisser la rangée défiler. */
+/* La rangée ne coupe rien : un dé qui tourne balaie en diagonale bien plus que
+   sa case, et une rangée qui masquait ses bords le tranchait en haut et en bas.
+   C'est le plateau, avec sa marge, qui borde ; l'écart entre dés leur laisse la
+   place de tourner sans se chevaucher. */
 .des-panneau {
-  display: flex; gap: 6px;
-  max-width: 100%; overflow-x: auto; overflow-y: hidden;
+  display: flex; gap: 14px;
+  max-width: 100%; overflow: visible;
 }
 .des-panneau .de { flex: 0 1 auto; min-width: 34px; height: auto; aspect-ratio: 1; }
 .des-panneau--fantome {
   position: absolute; top: 19px; left: 23px; right: 23px;
   pointer-events: none;
 }
-.zone-des--droite .des-panneau--fantome { animation: sortDroite .42s cubic-bezier(.4, 0, .8, .5) forwards; }
-.zone-des--droite .des-panneau--entree { animation: entreGauche .42s cubic-bezier(.2, .6, .3, 1); }
-.zone-des--gauche .des-panneau--fantome { animation: sortGauche .42s cubic-bezier(.4, 0, .8, .5) forwards; }
-.zone-des--gauche .des-panneau--entree { animation: entreDroite .42s cubic-bezier(.2, .6, .3, 1); }
+/* Le lot qui part sort du côté du voisin qui le reçoit ; celui qui arrive entre
+   par le côté de celui qui l'a passé. */
+.zone-des--sort-droite .des-panneau--fantome { animation: sortDroite .42s cubic-bezier(.4, 0, .8, .5) forwards; }
+.zone-des--sort-gauche .des-panneau--fantome { animation: sortGauche .42s cubic-bezier(.4, 0, .8, .5) forwards; }
+.zone-des--entre-gauche .des-panneau--entree { animation: entreGauche .42s cubic-bezier(.2, .6, .3, 1); }
+.zone-des--entre-droite .des-panneau--entree { animation: entreDroite .42s cubic-bezier(.2, .6, .3, 1); }
 @keyframes sortDroite { to { transform: translateX(118%) scale(.92); opacity: 0; } }
 @keyframes sortGauche { to { transform: translateX(-118%) scale(.92); opacity: 0; } }
 @keyframes entreGauche { from { transform: translateX(-118%) scale(.92); opacity: 0; } }
@@ -1481,13 +1487,13 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   /* ── Les dés prennent toute la largeur ───────────────────────────────────── */
   /* Et les boutons gardent leur place : à largeur fixe, un libellé qui change
      ne les fait plus glisser sous le doigt. */
-  .panneau-humain .zone-des { flex: 1 1 100%; padding: 10px 12px; border-radius: 16px; }
-  .panneau-humain .des-panneau { display: flex; gap: 8px; width: 100%; }
+  .panneau-humain .zone-des { flex: 1 1 100%; padding: 14px 16px; border-radius: 16px; }
+  .panneau-humain .des-panneau { display: flex; gap: 12px; width: 100%; }
   .panneau-humain .des-panneau .de {
     flex: 1 1 0; width: auto; height: auto; aspect-ratio: 1;
     min-width: 0; border-radius: 14px; padding: 6px;
   }
-  .des-panneau--fantome { left: 12px; right: 12px; top: 10px; }
+  .des-panneau--fantome { left: 16px; right: 16px; top: 14px; }
   .panneau-humain .pousse, .aide-clavier { display: none; }
   .panneau-humain .rangee > .btn { flex: 1 1 0; min-width: 0; }
   .choix-combo .combo-btn { flex: 1 1 100%; justify-content: center; }

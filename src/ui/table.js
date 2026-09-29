@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.80';
+import { h, remplacer, duree, vider } from './dom.js?v=1.81';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.80';
-import { Moteur } from '../core/engine.js?v=1.80';
+} from './icons.js?v=1.81';
+import { Moteur } from '../core/engine.js?v=1.81';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.80';
-import { ajouterHistorique } from './store.js?v=1.80';
-import { enregistrerPartie } from './resultats.js?v=1.80';
-import { aller } from './app.js?v=1.80';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.80';
-import { nomSymbole } from './apparence.js?v=1.80';
+} from '../core/config.js?v=1.81';
+import { ajouterHistorique } from './store.js?v=1.81';
+import { enregistrerPartie } from './resultats.js?v=1.81';
+import { aller } from './app.js?v=1.81';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.81';
+import { nomSymbole } from './apparence.js?v=1.81';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.80';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.80';
+} from './illustrations.js?v=1.81';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.81';
 
 let moteur = null;
 let vitesse = 1;
@@ -944,6 +944,23 @@ export function vueTable() {
     return Array.from({ length: Math.min(4, moteur.cfg.desParLot) }, () => ({ sym: null }));
   }
 
+  /**
+   * De quel côté de l'écran est assis un autre joueur, vu depuis le siège de
+   * `j` : « gauche » ou « droite ». Deux sièges l'un au-dessus de l'autre — au
+   * téléphone, en colonne — rendent le côté par défaut.
+   */
+  function coteDe(j, autreId, defaut) {
+    const a = elSieges[j.id];
+    const b = elSieges[autreId];
+    if (!a || !b || a === b) return defaut;
+    const ra = a.getBoundingClientRect();
+    const rb = b.getBoundingClientRect();
+    const dx = (rb.left + rb.width / 2) - (ra.left + ra.width / 2);
+    const dy = (rb.top + rb.height / 2) - (ra.top + ra.height / 2);
+    if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 0.5) return defaut;
+    return dx < 0 ? 'gauche' : 'droite';
+  }
+
   /** Les dés du joueur, avec la glissade quand le lot vient d'être remplacé. */
   function zoneDesPanneau(j, lot, peutAgir) {
     const rangee = h('div.des-panneau',
@@ -963,9 +980,13 @@ export function vueTable() {
     dernierLot.set(j.id, { id: lot.id, des: lot.des.map((d) => d.sym) });
 
     if (avant && avant.id !== lot.id) {
-      // Le lot précédent sort du côté où il part, le nouveau entre de l'autre.
-      const vers = moteur.sens > 0 ? 'droite' : 'gauche';
-      zone.classList.add(`zone-des--${vers}`);
+      // Le lot précédent sort du côté du voisin qui le reçoit ; le nouveau entre
+      // par le côté de celui qui l'a passé — à l'écran, là où il est assis.
+      const sortie = coteDe(j, moteur._suivant(j).id, moteur.sens > 0 ? 'droite' : 'gauche');
+      const entree = lot.venuDe != null
+        ? coteDe(j, lot.venuDe, sortie === 'droite' ? 'gauche' : 'droite')
+        : (sortie === 'droite' ? 'gauche' : 'droite');
+      zone.classList.add(`zone-des--sort-${sortie}`, `zone-des--entre-${entree}`);
       rangee.classList.add('des-panneau--entree');
       const fantome = h('div.des-panneau.des-panneau--fantome',
         ...avant.des.map((sym) => faceDe(sym, { taille: 'grand' })));

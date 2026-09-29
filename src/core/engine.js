@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.80';
+import { makeRng } from './rng.js?v=1.81';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.80';
+} from './config.js?v=1.81';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -1061,6 +1061,8 @@ export class Moteur {
     const k = this.transits.findIndex((t) => t.id === transitId);
     if (k < 0) return;
     const t = this.transits.splice(k, 1)[0];
+    // D'où vient le lot : la table le fait entrer par le côté de celui qui l'a passé.
+    t.lot.venuDe = t.de;
     // La manche s'est terminée pendant le vol : le lot n'a plus de raison d'être.
     if (this.termine || this.transition) return;
     const q = this.joueurs[t.vers];
