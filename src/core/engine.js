@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.83';
+import { makeRng } from './rng.js?v=1.84';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,12 +18,12 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.83';
+} from './config.js?v=1.84';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
 const SYMBOLE_DE_COMBO = {
-  reveil: 'tornade', vache: 'vache', endormir: 'zzz', collision: 'eclair',
+  reveil: 'tornade', vache: 'vache', endormir: 'zzz', blocage: 'x',
 };
 
 // ── File de priorité (tas binaire) ────────────────────────────────────────────
@@ -303,8 +303,8 @@ export class Moteur {
   // d'amont. Choisir le sens, c'est donc choisir sa proie et son prédateur.
 
   /**
-   * Le goût d'un joueur pour l'attrape, entre 0 et 1 — la part de l'éclair dans
-   * ce qu'il vise une fois réveillé. L'Équilibré emprunte trois styles à tour de
+   * Le goût d'un joueur pour l'attrape, entre 0 et 1 — la part du X, celui de
+   * l'Échec qui porte l'attrape, dans ce qu'il vise une fois réveillé. L'Équilibré emprunte trois styles à tour de
    * rôle : c'est leur moyenne qui le décrit, pas celui du lot en cours.
    * Un humain ne se laisse pas prévoir : on le suppose à mi-chemin.
    */
@@ -319,7 +319,7 @@ export class Moteur {
     for (const s of styles) {
       const vise = (s.vise && s.vise.eveille) || {};
       const somme = Object.values(vise).reduce((a, b) => a + b, 0);
-      total += somme ? (vise.eclair || 0) / somme : 0;
+      total += somme ? (vise.x || 0) / somme : 0;
     }
     return total / styles.length;
   }
@@ -331,7 +331,7 @@ export class Moteur {
    * Trois choses comptent, et ce sont celles que l'on peut lire à la table :
    * l'adresse de celui qui attrape, l'esquive de celui qu'on attrape, et le
    * goût de chacun pour le contact — un voisin d'amont qui ne cherche que
-   * l'éclair n'est pas le même danger qu'un joueur qui court à l'abri. On
+   * l'Échec n'est pas le même danger qu'un joueur qui court à l'abri. On
    * ajoute une base à ce goût : une combinaison servie est jouée d'office, même
    * par qui ne la visait pas.
    */
@@ -590,7 +590,7 @@ export class Moteur {
   }
 
   /**
-   * Symbole que réclame la combinaison portant l'attrape — l'éclair par défaut.
+   * Symbole que réclame la combinaison portant l'attrape — le X de l'Échec.
    * C'est celui qu'une IA agressive vise, et qui ne vaut rien sans cible.
    */
   _symboleAttrape() {
@@ -616,10 +616,10 @@ export class Moteur {
       ? (PROFILS_IA[this.rng.pick(j.profil.styles)] || j.profil)
       : j.profil;
 
-    // Deux envies sont écartées : celles que le dé ne peut pas produire — avec le
-    // dé officiel, sans éclair, un Agressif chercherait l'éclair jusqu'à
-    // épuisement — et l'attrape quand le voisin a les mains vides. Reste le coup
-    // utile du moment pour qui ne visait plus rien.
+    // Deux envies sont écartées : celles que le dé ne peut pas produire — sur un
+    // dé réglé sans X, un Agressif chercherait le X jusqu'à épuisement — et
+    // l'attrape quand le voisin a les mains vides. Reste le coup utile du moment
+    // pour qui ne visait plus rien.
     const attrape = cible ? null : this._symboleAttrape();
     const brut = Object.entries((source.vise && source.vise[etat]) || {});
     const retenu = brut.filter(([sym]) => sym !== attrape && this._deProduit(sym));
@@ -677,13 +677,6 @@ export class Moteur {
       if (combo.face === 'endormie' && j.eveille) continue;
       if (combo.face === 'active' && !j.eveille) continue;
       if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
-      // On n'attrape que ce qui existe : si le voisin a les mains vides, les
-      // trois éclairs ne valent rien et le lot reste en main.
-      // En mode « Échecs », c'est l'Échec qui porte l'attrape : l'Attaque reste
-      // réglable dans le tableau mais ne se joue plus — sans quoi elle coûterait
-      // le lot sans rien tenter.
-      if (combo.id === 'collision' && this.cfg.attrapeSur === 'echec') continue;
-      if (combo.id === 'collision' && !this._suivant(j).lots.length) continue;
       out.push({
         id: combo.id, source: 'tornade',
         combo: requis === combo.requis ? combo : { ...combo, requis },
@@ -754,7 +747,7 @@ export class Moteur {
     const opt = d.options.find((o) => o.id === comboId);
     if (!opt) return false;
     d.dispo = opt;
-    d.motif = opt.id === 'collision' ? 'attrape' : 'combo';
+    d.motif = 'combo';
     d.options = null;
     if (this.onEtatChange) this.onEtatChange();
     return true;
@@ -766,7 +759,7 @@ export class Moteur {
    */
   _noterCombo(j, d) {
     const base = { vache: 100, reveil: 90, endormir: 70 }[d.id] ?? 10;
-    const sym = { reveil: 'tornade', vache: 'vache', endormir: 'zzz', collision: 'eclair' }[d.id];
+    const sym = SYMBOLE_DE_COMBO[d.id];
     if (!sym || j.type === 'humain') return base;
     const source = this._styleCourant(j);
     const etat = j.eveille ? 'eveille' : 'endormi';
@@ -918,16 +911,14 @@ export class Moteur {
   }
 
   /**
-   * Le lot part-il en tentant d'attraper ? C'est la combinaison désignée dans les
-   * Réglages qui porte le contact — l'Attaque par défaut, l'Échec si on l'a
-   * choisi — quels que soient les dés qu'on lui a réglés.
+   * Le lot part-il en tentant d'attraper ? C'est l'Échec qui porte le contact,
+   * quels que soient les dés qu'on lui a réglés. Il part de toute façon ; il
+   * n'attrape que si le joueur suivant tient un lot — et, règle décochable, si
+   * l'on est réveillé.
    */
   _attrapeAuDepart(j, choisi) {
     if (choisi.id !== comboDeclencheur(this.cfg)) return false;
-    // L'Attaque n'existe que pour attraper : elle n'a jamais eu besoin d'être
-    // réveillée. L'Échec, lui, part de toute façon — d'où la règle décochable
-    // « il faut être réveillé », qui ne concerne que ce mode-là.
-    if (choisi.id === 'blocage' && this.cfg.attrapeEveille !== false && !j.eveille) return false;
+    if (this.cfg.attrapeEveille !== false && !j.eveille) return false;
     return this._suivant(j).lots.length > 0;
   }
 

@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.83';
-import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.83';
+import { VERSION } from '../version.js?v=1.84';
+import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.84';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle
@@ -35,7 +35,6 @@ export const ILLUSTRATIONS_EQUIPES = {
       taille: [1434, 1948],
       nom: 'Poules — Tornade endormie',
       combos: { reveil: { tornade: 3 }, blocage: { x: 2 } },
-      attrapeSur: 'echec',
     },
   },
 };
@@ -74,10 +73,7 @@ export function illustrationEquipe(cfg, equipe, etat, jouables) {
   if (auxCochons(cfg)) return null;
   const illu = ILLUSTRATIONS_EQUIPES[equipe] && ILLUSTRATIONS_EQUIPES[equipe][etat];
   if (!illu) return null;
-  if (illu.attrapeSur && cfg.attrapeSur !== illu.attrapeSur) return null;
-  // L'Attaque n'est pas jouée quand c'est l'Échec qui porte l'attrape : la table
-  // l'affiche « hors jeu », la carte imprimée n'a pas à la montrer.
-  const enJeu = jouables.filter((c) => !(c.id === 'collision' && cfg.attrapeSur === 'echec'));
+  const enJeu = jouables;
   const imprimees = Object.keys(illu.combos);
   if (enJeu.length !== imprimees.length) return null;
   const fideles = enJeu.every((c) => illu.combos[c.id]

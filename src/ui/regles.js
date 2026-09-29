@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.83';
+import { h } from './dom.js?v=1.84';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_EMBLEME,
-} from './icons.js?v=1.83';
+} from './icons.js?v=1.84';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS, COCHONS,
-} from '../core/config.js?v=1.83';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.83';
+} from '../core/config.js?v=1.84';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.84';
 
 /** Où sort une carte d'animal. */
 const TABLES_ANIMAL = {
@@ -53,8 +53,8 @@ export function vueRegles() {
         + 'est impair. Plusieurs lots de dés circulent en même temps autour de la table. Celui '
         + 'qui tient un lot le relance aussi vite et aussi souvent qu’il veut, jusqu’à sortir une '
         + `combinaison… ou jusqu’à ce que deux « ${nomSymbole('x')} » figent ses dés et lui `
-        + 'fassent rendre le lot. '
-        + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
+        + 'fassent rendre le lot — l’Échec : il le passe alors en tentant d’attraper son '
+        + 'voisin au passage.'),
       h('p.petit.muted', 'Une équipe remporte la manche en sortant de la tornade tous ses jetons. '
         + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
         + 'Le sens de circulation s’inverse à chaque manche — deux autres façons d’en décider '
@@ -103,16 +103,14 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Les symboles du dé'),
       h('div.grille.grille--3',
-        ...['tornade', 'vache', 'zzz', 'x', 'eclair'].map((s) => h('div.stat',
+        ...['tornade', 'vache', 'zzz', 'x'].map((s) => h('div.stat',
           h('div.rangee.rangee--serree', pastilleSymbole(s, 30),
             h('strong', nomSymbole(s))),
           h('div.sous', { style: { marginTop: '6px' } }, SYMBOLES[s].desc))),
       ),
       h('p.petit', { style: { marginTop: '12px' } },
         `Le dé officiel porte six faces : deux « ${nomSymbole('tornade')} », un `
-        + `« ${nomSymbole('x')} », un « ${nomSymbole('vache')} » et deux « ${nomSymbole('zzz')} ». `
-        + 'L’éclair n’y est plus — il reste disponible dans les Réglages, à poser soi-même '
-        + 'sur une face pour l’essayer.'),
+        + `« ${nomSymbole('x')} », un « ${nomSymbole('vache')} » et deux « ${nomSymbole('zzz')} ».`),
       h('p.mini.muted',
         'Les quatre faces du jeu portent l’habillage officiel : le soleil qui réveille, la grange '
         + 'où l’on s’abrite, la lune du sommeil, la tornade rouge qui fige le dé. Le moteur, lui, '
@@ -127,10 +125,6 @@ export function vueRegles() {
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Le dé du jeu est et reste le d6 : six faces, ni plus ni moins. Ce qu’elles portent, en '
         + 'revanche, se change une à une dans les Réglages — c’est là que se fait l’équilibrage.'),
-      h('div.encart', { style: { marginTop: '10px' } },
-        'Sans face éclair, la combinaison Attaque ne peut pas sortir : c’est donc l’Échec — '
-        + `le double « ${nomSymbole('x')} » — qui porte l’attrape par défaut. Posez un éclair sur une face et `
-        + 'repassez le déclencheur sur « Éclairs » pour retrouver l’attaque choisie.'),
     ),
 
     h('div.carte',
@@ -172,7 +166,6 @@ export function vueRegles() {
         + 'on repère d’un coup d’œil ce qui se passe autour de la table, sans lire les dés.'),
       h('div.rangee',
         ...[[`rouge`, `Échec — deux « ${nomSymbole('x')} », le lot part`],
-          ['jaune', 'Trois éclairs — attrape'],
           ['or', `Trois « ${nomSymbole('tornade')} » — réveil`],
           ['vert', `Trois « ${nomSymbole('vache')} » — jeton`],
           ['nuit', `Trois « ${nomSymbole('zzz')} » — endormi`]].map(([c, texte]) =>
@@ -186,37 +179,32 @@ export function vueRegles() {
 
     h('div.carte',
       h('div.titre-section', 'L’attrape'),
-      h('p.petit', 'Trois éclairs : passez le lot au joueur suivant et tentez de toucher ses dés '
+      h('p.petit', `C’est l’Échec qui la déclenche : deux « ${nomSymbole('x')} » figent vos dés, `
+        + 'votre lot part vers le joueur suivant — et vous tentez au passage de toucher ses dés '
         + 'ou la main qui les tient. Si vous le touchez, son tour est interrompu, il passe '
         + 'immédiatement son lot, et vous sortez un de vos jetons de la tornade.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, les trois '
-        + 'éclairs ne valent rien. Il ne se passe rien, vous gardez votre lot et vous pouvez '
-        + 'continuer à relancer.'),
+        'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, l’Échec reste '
+        + 'un échec sec — votre lot part, sans rien tenter.'),
       h('p.mini.muted', 'À la table virtuelle, l’attrape ouvre une fenêtre de réflexe : '
         + 'le toucheur appuie pour toucher, la cible pour retirer sa main. Entre IA, elle se '
         + 'résout à l’adresse et à l’esquive de chacun.'),
       h('div.encart.encart--info', { style: { marginTop: '12px' } },
         'Variante réglable dans les Réglages : un contact réussi peut emporter la manche '
         + 'entière. Elle devient alors une course à l’attrape plutôt qu’une course aux abris — '
-        + 'mais il faut toujours toucher, les trois éclairs seuls ne suffisent jamais.'),
+        + 'mais il faut toujours toucher, l’Échec seul ne suffit jamais.'),
     ),
 
     h('div.carte',
-      h('div.titre-section', 'Qui porte l’attrape'),
-      h('p.petit', 'Deux combinaisons peuvent tenter le contact, et les Réglages disent '
-        + 'laquelle : « Éclairs » désigne l’Attaque — la règle de base — et « Échecs » désigne '
-        + 'l’Échec. Ce sont bien les combinaisons qui décident des dés : réglez la ligne du '
-        + `tableau, et le déclencheur suit, qu’il demande trois éclairs ou deux « ${nomSymbole('x')} ».`),
-      h('p.petit.muted', 'En mode « Échecs », on ne choisit plus d’attaquer : on attaque à chaque '
-        + 'fois que le hasard le permet, et l’échec cesse d’être une pure perte. L’Attaque, elle, '
-        + 'reste réglable dans le tableau mais ne se joue plus — sans quoi elle coûterait le lot '
-        + 'sans rien tenter. La liste des combinaisons de la table le rappelle.'),
+      h('div.titre-section', 'L’Échec porte l’attrape'),
+      h('p.petit', 'On ne choisit pas d’attaquer : on attaque chaque fois que le hasard le '
+        + 'permet, et l’échec cesse d’être une pure perte. Ce sont les dés de l’Échec qui '
+        + `décident — deux « ${nomSymbole('x')} » au départ, ou ce que la ligne Échec du tableau `
+        + 'demande dans les Réglages.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
         'Un dormeur ne tend pas la main : Tornade endormie, l’Échec reste un échec sec, on '
         + 'passe le lot sans tenter le contact. Il faut s’être réveillé pour attraper au '
-        + 'passage — règle décochable dans les Réglages. Elle ne touche pas l’Attaque, '
-        + 'qui vaut dans les deux états.'),
+        + 'passage — règle décochable dans les Réglages.'),
     ),
 
     // La table à trois : trois joueurs seuls, trois Cochons, et un Échec plus
@@ -331,9 +319,8 @@ export function vueRegles() {
       h('p.petit.muted', 'Décochée, la combinaison reprend sa condition d’origine. Le Réveil '
         + 'reste donc réservé au dormeur : sans quoi on ne pourrait plus jamais se réveiller.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'La table n’affiche que les combinaisons que le dé peut produire. Sans face éclair, '
-        + 'l’Attaque n’est pas une règle en sommeil : c’est une ligne morte, et elle '
-        + 'disparaît de la liste.'),
+        'La table n’affiche que les combinaisons que le dé peut produire : une ligne qui '
+        + 'réclame une face absente du dé est une ligne morte, et elle disparaît de la liste.'),
     ),
 
     h('div.carte',

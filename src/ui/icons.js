@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole, nomSymbole } from './apparence.js?v=1.83';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.84';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -43,9 +43,6 @@ const GLYPHES = {
       <path d="M58 41h21L58 65h21" stroke-width="8.6"/>
       <path d="M44 70h17L44 87h17" stroke-width="7"/>
     </g>`,
-  // Éclair — passez votre lot et tentez d'attraper le joueur suivant
-  eclair: `<path d="M58 14 L28 55 H47 L41 87 L72 45 H53 Z"
-      fill="${NOIR}" stroke="${NOIR}" stroke-width="7" stroke-linejoin="round"/>`,
   // X — ce dé est bloqué, il ne se relance jamais
   x: `<path d="M33 33 67 67M67 33 33 67" stroke="${NOIR}" stroke-width="13.5" stroke-linecap="round"/>`,
   // Face neutre
@@ -59,7 +56,6 @@ export const COULEUR_FACE = {
   tornade: '#f0951c',
   vache: '#82dc0a',
   zzz: '#8ba6f5',
-  eclair: '#f9b115',
   x: '#e2000f',
   vide: '#e6edf4',
 };

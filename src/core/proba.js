@@ -2,12 +2,11 @@
 //
 // Deux niveaux de lecture :
 //  1. la loi d'un lancer isolé (multinomiale) ;
-//  2. la course entre la combinaison recherchée et les deux façons de perdre le
-//     lot : deux X — qui se figent et ne se relancent jamais — ou trois éclairs,
-//     qui forcent la tentative d'attrape. Chaîne de Markov absorbante sur le
-//     nombre de X déjà figés.
+//  2. la course entre la combinaison recherchée et la façon de perdre le lot :
+//     deux X — qui se figent et ne se relancent jamais — font l'Échec. Chaîne de
+//     Markov absorbante sur le nombre de X déjà figés.
 
-import { comboServie } from './config.js?v=1.83';
+import { comboServie } from './config.js?v=1.84';
 
 const facto = [1];
 function fact(n) {

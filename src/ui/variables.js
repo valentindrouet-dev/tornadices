@@ -3,43 +3,42 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.83';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.83';
-import { store } from './store.js?v=1.83';
-import { aller } from './app.js?v=1.83';
-import { lancerPartie } from './table.js?v=1.83';
+import { h, remplacer, telecharger } from './dom.js?v=1.84';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.84';
+import { store } from './store.js?v=1.84';
+import { aller } from './app.js?v=1.84';
+import { lancerPartie } from './table.js?v=1.84';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
-  OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarte, migrerPaquet,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, aideVariance,
-  NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
+  NOMBRES_JOUEURS, lotsPour, lotsOfficiels, JOUEURS_MIN, JOUEURS_MAX,
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.83';
-import { tableauCombos, editeurCases } from './combos.js?v=1.83';
-import { illustrationCarte } from './illustrations.js?v=1.83';
+} from '../core/config.js?v=1.84';
+import { tableauCombos, editeurCases } from './combos.js?v=1.84';
+import { illustrationCarte } from './illustrations.js?v=1.84';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.83';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.83';
-import { randomSeed } from '../core/rng.js?v=1.83';
-import { reglagesJoueurs } from './accueil.js?v=1.83';
+} from './apparence.js?v=1.84';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.84';
+import { randomSeed } from '../core/rng.js?v=1.84';
+import { reglagesJoueurs } from './accueil.js?v=1.84';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.83';
+} from './profils.js?v=1.84';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -144,6 +143,32 @@ export function variables() {
 }
 
 /**
+ * Les nombres de joueurs proposés : de `joueursMin` à `joueursMax`, réglés dans
+ * les Réglages, dans les bornes que le jeu sait mettre en place (3 à 8).
+ */
+export function bornesJoueurs(v = variables()) {
+  const borne = (x, defaut) => {
+    const n = Math.round(Number(x));
+    return Number.isFinite(n) ? Math.min(JOUEURS_MAX, Math.max(JOUEURS_MIN, n)) : defaut;
+  };
+  const min = borne(v.joueursMin, JOUEURS_MIN);
+  const max = Math.max(min, borne(v.joueursMax, JOUEURS_MAX));
+  return { min, max };
+}
+
+/** La liste des effectifs proposés, du plus petit au plus grand. */
+export function nombresJoueursPermis(v = variables()) {
+  const { min, max } = bornesJoueurs(v);
+  return NOMBRES_JOUEURS.filter((n) => n >= min && n <= max);
+}
+
+/** Un nombre de joueurs ramené dans les bornes réglées. */
+export function joueursDansBornes(n, v = variables()) {
+  const { min, max } = bornesJoueurs(v);
+  return Math.min(max, Math.max(min, Math.round(Number(n)) || max));
+}
+
+/**
  * Configuration complète d'une partie : défauts du nombre de joueurs + réglages
  * — ceux en vigueur, ou ceux qu'on lui donne (les Règles officielles).
  */
@@ -152,7 +177,6 @@ export function construireConfig(nbJoueurs, reglages = variables()) {
   // reprend sous la clé du paquet unique.
   const v = migrerPaquet(reglages);
   const cfg = configParDefaut(nbJoueurs, {
-    attrapeSur: v.attrapeSur,
     lotsCumules: v.lotsCumules,
     // Le mode change la mise en place par défaut (quatre cartes) : il doit être
     // connu avant que les valeurs du tableau officiel ne soient posées.
@@ -210,11 +234,13 @@ export function construireConfig(nbJoueurs, reglages = variables()) {
 // les sons ou l'apparence des faces n'en sont pas — y toucher ne fait pas
 // quitter les Règles officielles.
 const OPTIONS_PAR_REGLE = {
-  modeManche: OPTIONS_MANCHE, attrapeSur: OPTIONS_DECLENCHEUR, attrapeGagneManche: OPTIONS_ATTRAPE,
+  modeManche: OPTIONS_MANCHE, attrapeGagneManche: OPTIONS_ATTRAPE,
   equipeDepart: OPTIONS_EQUIPE_DEPART, sensRotation: OPTIONS_SENS,
   comboServie: OPTIONS_COMBO_SERVIE, placeJetons: OPTIONS_PLACE_JETONS,
 };
 const REGLES_DU_JEU = [
+  ['joueursMin', 'Joueurs au minimum', (c) => bornesJoueurs(c).min],
+  ['joueursMax', 'Joueurs au maximum', (c) => bornesJoueurs(c).max],
   ['modeManche', 'Façon de jouer une manche'],
   ['desParLot', 'Dés par lot'],
   ['faces', 'Faces du dé', (c) => c.faces.join(' · ')],
@@ -225,7 +251,6 @@ const REGLES_DU_JEU = [
   ['cartesPourGagner', 'Cartes pour gagner'],
   ['cartesVert', 'Cartes du Vert', (c) => (c.nbJoueurs % 2 ? c.cartesVert : null)],
   ['placeJetons', 'Où sont les jetons'],
-  ['attrapeSur', 'Ce qui déclenche l’attrape'],
   ['attrapeEveille', 'Il faut être réveillé pour attraper'],
   ['attrapeGagneManche', 'Ce que rapporte l’attrape'],
   ['lotsCumules', 'Deux lots qui se rencontrent', (c) => (c.lotsCumules ? 'Ils s’empilent' : 'Le lot en cours est poussé')],
@@ -783,9 +808,6 @@ export function vueVariables() {
           + `1 « ${nomSymbole('vache')} », 2 « ${nomSymbole('zzz')} ». Le symbole qui fige le dé `
           + 'ne se relance jamais. Le dé a six faces, et c’est un réglage du jeu qui ne bouge '
           + 'plus ; chaque face, elle, se change une à une dans les menus ci-dessous.',
-          'Pas d’éclair au départ : posez-le vous-même sur une face pour l’essayer. Sans face '
-          + 'éclair, la combinaison Attaque ne peut pas sortir — passez le déclencheur sur '
-          + '« Échecs » pour garder une attrape.',
         ]),
         // Le nombre de dés d'un lot tient en deux chiffres : il n'a pas besoin
         // d'une ligne à lui. Les six faces du dé se posent à côté, sur la même,
@@ -851,32 +873,23 @@ export function vueVariables() {
           rafraichir: dessiner,
         }),
 
-        // Les trois réglages de l'attrape se lisent ensemble : ce qui la
-        // déclenche, ce qu'elle rapporte, et ce que devient le lot qu'on tenait.
-        // Les séparer en trois cartes obligeait à faire l'aller-retour.
+        // Les réglages de l'attrape se lisent ensemble : qui peut la tenter, ce
+        // qu'elle rapporte, et ce que devient le lot qu'on tenait. C'est
+        // toujours l'Échec qui la déclenche.
         h('div.grille.grille--4', { style: { gap: '18px', marginTop: '18px' } },
           h('div',
-            titreAide('Ce qui déclenche l’attrape', [
-              AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair'],
-              cfg.attrapeSur === 'echec'
-                ? (cfg.attrapeEveille !== false
-                  ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter '
-                    + 'le contact. Il faut s’être réveillé pour attraper au passage.'
-                  : 'L’attrape sur Échec vaut même endormi : chaque Échec tente le contact, dès '
-                    + 'que le voisin a un lot.')
-                : 'La case « Il faut être réveillé » ne concerne que l’attrape sur Échec — '
-                  + 'l’Attaque vaut dans les deux états.',
-              'Dans les deux cas, on n’attrape que ce qui existe : si le joueur suivant a les '
-              + 'mains vides, il ne se passe rien.',
+            titreAide('L’attrape, sur l’Échec', [
+              'C’est la combinaison « Échec » qui tente le contact : elle fait partir le lot, et si '
+              + 'le joueur suivant tient un lot, on l’attrape au passage. Deux X au départ, ou ce '
+              + 'que vous réglez dans le tableau des combinaisons.',
+              cfg.attrapeEveille !== false
+                ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter le '
+                  + 'contact. Il faut s’être réveillé pour attraper au passage.'
+                : 'L’attrape vaut même endormi : chaque Échec tente le contact, dès que le voisin '
+                  + 'a un lot.',
+              'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, il ne se '
+              + 'passe rien.',
             ]),
-            h('div.segment.segment--plein',
-              ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
-                class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
-                // Le dé ne bouge plus : les deux combinaisons restent réglables
-                // dans le tableau, et c'est là qu'on décide de leurs dés.
-                onclick: () => { ecrire('attrapeSur', id); dessiner(); },
-              }, lib)),
-            ),
             h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
               h('button', {
                 class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
@@ -1040,6 +1053,35 @@ export function vueVariables() {
             class: `chip${suivreTableau ? ' on' : ''}`,
             onclick: () => { ecrire('suivreTableau', !suivreTableau); dessiner(); },
           }, h('span.case', '✓'), 'Suivre le tableau officiel'),
+        ),
+        // Les tables proposées à l'accueil : de combien à combien de joueurs.
+        h('div.rangee', { style: { gap: '12px', marginBottom: '12px', alignItems: 'flex-end' } },
+          ...(() => {
+            const { min, max } = bornesJoueurs(v);
+            const borne = (libelle, cle, valeur) => h('label.champ', { style: { flex: '0 1 160px' } },
+              libelle,
+              h('input', {
+                type: 'number', value: valeur, min: JOUEURS_MIN, max: JOUEURS_MAX, step: 1,
+                onchange: (e) => {
+                  const x = Math.min(JOUEURS_MAX, Math.max(JOUEURS_MIN, Math.round(Number(e.target.value)) || valeur));
+                  ecrire(cle, x);
+                  // Le minimum ne passe pas le maximum : l'autre borne suit.
+                  const b = bornesJoueurs(variables());
+                  if (cle === 'joueursMin' && x > b.max) ecrire('joueursMax', x);
+                  if (cle === 'joueursMax' && x < b.min) ecrire('joueursMin', x);
+                  // La table en cours de composition reste dans les bornes.
+                  store.set('nbJoueurs', joueursDansBornes(store.get('nbJoueurs', 6)));
+                  dessiner();
+                },
+              }));
+            return [
+              borne('Joueurs au minimum', 'joueursMin', min),
+              borne('Joueurs au maximum', 'joueursMax', max),
+              h('div.mini.muted', { style: { flex: '1 1 220px', paddingBottom: '8px' } },
+                `L’accueil propose les tables de ${min} à ${max} joueurs. Le jeu sait se mettre `
+                + `en place de ${JOUEURS_MIN} à ${JOUEURS_MAX}.`),
+            ];
+          })(),
         ),
         h('div.grille.grille--4', { style: { gap: '12px' } },
           // Sans les points, plus rien ne se retourne : les deux compteurs de

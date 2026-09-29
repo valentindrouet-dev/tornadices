@@ -5,12 +5,11 @@ export const SYMBOLES = {
   tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
   vache: { id: 'vache', nom: 'Vache', couleur: '#82dc0a', desc: 'Met un jeton de votre équipe à couvert' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
-  eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
   x: { id: 'x', nom: 'X', couleur: '#e2000f', desc: 'Dé bloqué — il ne se relance jamais' },
   vide: { id: 'vide', nom: 'Vide', couleur: '#e6edf4', desc: 'Face neutre' },
 };
 
-export const ORDRE_SYMBOLES = ['tornade', 'vache', 'zzz', 'eclair', 'x', 'vide'];
+export const ORDRE_SYMBOLES = ['tornade', 'vache', 'zzz', 'x', 'vide'];
 
 /** Une exigence sans aucun dé requis ne vaut rien : elle serait toujours servie. */
 export function exigenceVide(requis) {
@@ -41,35 +40,20 @@ export const SYMBOLE_BLOQUANT = 'x';
 // d'annonce et dans le journal — un même événement, une même couleur.
 export const ALERTES = {
   blocage: 'rouge',
-  collision: 'jaune',
   reveil: 'or',
   vache: 'vert',
   endormir: 'nuit',
 };
 
-// Laquelle des deux combinaisons porte l'attrape. Ce sont bien les combinaisons
-// qui décident des dés : changez « Attaque » dans le tableau et le déclencheur
-// suit, quel que soit le nombre d'éclairs ou de X qu'on y met.
-export const COMBO_DECLENCHEUR = { eclair: 'collision', echec: 'blocage' };
-
-export const OPTIONS_DECLENCHEUR = [
-  ['eclair', 'Éclairs'],
-  ['echec', 'Échecs'],
-];
+// La combinaison qui porte l'attrape : l'Échec, toujours. Le lot part, et si le
+// joueur suivant tient un lot, on tente de l'attraper au passage. Ce sont bien
+// les dés de l'Échec qui décident — deux X, ou ce qu'on a réglé au tableau.
+export const COMBO_ATTRAPE = 'blocage';
 
 /** Identifiant de la combinaison qui tente le contact. */
-export function comboDeclencheur(cfg) {
-  return COMBO_DECLENCHEUR[(cfg && cfg.attrapeSur) === 'echec' ? 'echec' : 'eclair'];
+export function comboDeclencheur() {
+  return COMBO_ATTRAPE;
 }
-
-export const AIDE_DECLENCHEUR = {
-  eclair: 'Règle de base : c’est la combinaison « Attaque » qui passe le lot et tente le '
-    + 'contact — trois éclairs au départ, mais réglez la ligne Attaque du tableau et le '
-    + 'déclencheur suit. L’Échec, lui, fait partir le lot sans rien tenter.',
-  echec: 'C’est la combinaison « Échec » qui tente le contact : elle fait partir le lot comme '
-    + 'd’habitude, mais si le joueur suivant tient un lot, on l’attrape au passage. Deux X au '
-    + 'départ, trois si vous le décidez dans le tableau. L’Attaque, elle, ne se joue plus.',
-};
 
 // Trois façons de jouer une manche.
 //
@@ -389,9 +373,9 @@ export function requisPourEquipe(cfg, comboId, requisBase, equipe) {
 }
 
 /**
- * Une combinaison ne peut sortir que si le dé porte les faces qu'elle demande.
- * Sans face éclair, l'Attaque n'est pas une règle, c'est une ligne morte :
- * autant ne pas l'annoncer à la table.
+ * Une combinaison ne peut sortir que si le dé porte les faces qu'elle demande :
+ * une ligne qui réclame une face absente du dé est une ligne morte, et la table
+ * ne l'annonce pas.
  */
 export function comboPossible(faces, requis) {
   if (!requis || !Object.keys(requis).length) return false;
@@ -556,17 +540,13 @@ export function noteCarte(carte, cfg) {
 }
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
-// Le dé officiel : 2 tornades, 1 X, 1 abri, 2 ZzZ. Pas d'éclair — la face reste
-// disponible dans les menus, à poser soi-même.
+// Le dé officiel : 2 tornades, 1 X, 1 abri, 2 ZzZ.
 // Modifiable face par face dans les réglages de partie et dans le Laboratoire.
 export const FACES_PAR_DEFAUT = ['tornade', 'tornade', 'x', 'vache', 'zzz', 'zzz'];
 
 /** Le dé de TornaDice a six faces, et ce n'est pas un réglage. */
 export const NB_FACES_DE = FACES_PAR_DEFAUT.length;
 
-// Un dé à éclair, pour éprouver l'Attaque : elle n'est servie que par un dé qui
-// en porte. Une tornade cède sa place à l'éclair, le reste est le dé officiel.
-export const FACES_ECLAIR = ['tornade', 'eclair', 'x', 'vache', 'zzz', 'zzz'];
 
 // Les faces ont été renommées en v1.3 : la « cloche » est devenue la tornade, et
 // l'« étoile » — la face jamais relançable qui déclenchait la collision — est
@@ -575,10 +555,10 @@ export const FACES_ECLAIR = ['tornade', 'eclair', 'x', 'vache', 'zzz', 'zzz'];
 // l'affichage ni le moteur ne reconnaissaient, muettes et sans effet.
 export const SYMBOLES_ANCIENS = { cloche: 'tornade', etoile: 'x' };
 
-// Les jokers ont quitté le jeu en v1.70. Une face qui en portait un ne devient
-// pas « vide » — le dé y perdrait une face utile : elle reprend la face
-// officielle de sa place. Une exigence qui en demandait les oublie.
-export const SYMBOLES_RETIRES = ['joker', 'jokerDouble'];
+// Les jokers ont quitté le jeu en v1.70, l'éclair en v1.84. Une face qui en
+// portait un ne devient pas « vide » — le dé y perdrait une face utile : elle
+// reprend la face officielle de sa place. Une exigence qui en demandait les oublie.
+export const SYMBOLES_RETIRES = ['joker', 'jokerDouble', 'eclair'];
 
 /** Traduit une face enregistrée ; « vide » pour un symbole devenu inconnu. */
 export function assainirSymbole(id) {
@@ -631,10 +611,13 @@ export function assainirConfig(brut) {
   // joueurs date d'avant la v1.49 et doit revenir dans les bornes.
   sortie.nbJoueurs = bornerJoueurs(sortie.nbJoueurs);
   sortie.faces = assainirFaces(cfg.faces);
-  // « Manche gagnée dès les 3 éclairs » n'existe pas dans le jeu : un réglage
+  // « Manche gagnée dès la combinaison » n'existe pas dans le jeu : un réglage
   // qui la porte encore retombe sur la variante voisine, celle où il faut
   // toucher pour emporter la manche.
   if (cfg.attrapeGagneManche === 'combo') sortie.attrapeGagneManche = 'touche';
+  // Le déclencheur de l'attrape n'est plus un réglage depuis la v1.84 : c'est
+  // toujours l'Échec.
+  delete sortie.attrapeSur;
   // Une équipe de départ inconnue — ou aucune, avant la v1.34 — retombe sur la
   // règle du jeu plutôt que de laisser la manche sans porteur.
   if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
@@ -658,7 +641,8 @@ export function assainirConfig(brut) {
   }
   // On repart de la liste de référence et l'on y pose les seuils enregistrés :
   // une combinaison apparue depuis — ou disparue d'une configuration ancienne,
-  // comme l'Attaque au Laboratoire — revient au lieu de manquer sans bruit.
+  // d'une configuration ancienne — revient au lieu de manquer sans bruit ; une
+  // combinaison retirée du jeu, comme l'Attaque aux éclairs, n'y revient pas.
   const enregistrees = new Map(
     (Array.isArray(cfg.combos) ? cfg.combos : []).map((c) => [c.id, c]),
   );
@@ -721,17 +705,9 @@ export const COMBOS_TORNADE = [
     obligatoire: false,
   },
   {
-    id: 'collision',
-    nom: 'Attrape',
-    libelle: 'Passez votre lot et tentez d’attraper le joueur suivant',
-    requis: { eclair: 3 },
-    face: 'toutes',
-    obligatoire: true,
-  },
-  {
     id: 'blocage',
     nom: 'Échec',
-    libelle: 'Deux dés figés : le lot part sans rien tenter',
+    libelle: 'Deux dés figés : le lot part, et l’on tente d’attraper le joueur suivant',
     requis: { x: 2 },
     face: 'toutes',
     obligatoire: true,
@@ -1070,17 +1046,19 @@ export const PROFILS_IA = {
   },
   agressif: {
     id: 'agressif', nom: 'Agressif',
-    vise: { endormi: { eclair: 3, tornade: 1 }, eveille: { eclair: 3, vache: 1 } },
+    // L'attrape passe par l'Échec, qui demande d'être réveillé : endormi, il
+    // se réveille ; réveillé, il cherche les X trois lots sur quatre.
+    vise: { endormi: { tornade: 1 }, eveille: { x: 3, vache: 1 } },
     lancersAvantPasse: 9, ecartLancers: 3, peur: 0.3,
     reflexe: 690, ecartReflexe: 180, adresse: 0.68, esquive: 0.55, erreur: 0.04,
     desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et court à l’abri le reste du temps.',
   },
   tresAgressif: {
     id: 'tresAgressif', nom: 'Très agressif', court: 'T. agressif',
-    vise: { endormi: { eclair: 1 }, eveille: { eclair: 1 } },
+    vise: { endormi: { tornade: 1 }, eveille: { x: 1 } },
     lancersAvantPasse: 14, ecartLancers: 4, peur: 0.12,
     reflexe: 620, ecartReflexe: 160, adresse: 0.74, esquive: 0.5, erreur: 0.06,
-    desc: 'Ne cherche que les éclairs, et garde le lot jusqu’à les avoir.',
+    desc: 'Se réveille, puis ne cherche plus que les X de l’Échec pour attraper.',
   },
   penible: {
     id: 'penible', nom: 'Pénible',
@@ -1111,8 +1089,8 @@ export const PROFILS_IA = {
     // Vise n'importe lequel des quatre symboles, y compris celui qui ne lui sert
     // à rien — l'abri en dormant, la tornade une fois réveillé.
     vise: {
-      endormi: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
-      eveille: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
+      endormi: { tornade: 1, vache: 1, zzz: 1, x: 1 },
+      eveille: { tornade: 1, vache: 1, zzz: 1, x: 1 },
     },
     bevue: 0.35,   // et une fois sur trois, il garde le mauvais dé
     lancersAvantPasse: 6, ecartLancers: 5, peur: 0.5,
@@ -1161,19 +1139,13 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
   // se lit avant tout le reste.
   const mode = modeManche(opts);
   const mep = MISE_EN_PLACE[nbJoueurs] || MISE_EN_PLACE[6];
-  // Le dé officiel ne porte pas d'éclair : c'est donc l'Échec qui tente le
-  // contact par défaut, sinon l'attrape ne se produirait jamais. Repassez sur
-  // « Éclairs » après avoir posé une face éclair sur le dé.
-  const attrapeSur = opts.attrapeSur === 'eclair' ? 'eclair' : 'echec';
   return {
     nbJoueurs,
     desParLot: 4,
     faces: FACES_PAR_DEFAUT.slice(),
     symboleBloquant: SYMBOLE_BLOQUANT,
-    attrapeSur,
     // Un dormeur ne tend pas la main : l'attrape sur échec demande d'être
-    // réveillé. Ne concerne pas les trois éclairs, qui valent dans les deux
-    // états. Décochable dans les Réglages.
+    // réveillé. Décochable dans les Réglages.
     attrapeEveille: opts.attrapeEveille !== false,
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.
@@ -1261,8 +1233,7 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
 
 /**
  * Les symboles qui méritent une colonne dans un tableau de combinaisons : ceux
- * qui sont sur les dés, et ceux qu'une combinaison réclame. Inutile d'afficher
- * l'éclair tant que personne ne l'a mis sur une face.
+ * qui sont sur les dés, et ceux qu'une combinaison réclame.
  */
 export function symbolesPertinents(cfg) {
   const vus = new Set((cfg.faces || []).filter((s) => s && s !== 'vide'));

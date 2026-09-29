@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.83';
+export const VERSION = '1.84';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.84',
+    date: '29/09/2026',
+    notes: [
+      'Les éclairs quittent le jeu. C’est toujours l’Échec qui déclenche l’attrape : deux X figent les dés, le lot part, et si le joueur suivant tient un lot on tente de l’attraper au passage. La combinaison « Attaque » (trois éclairs), la face éclair et le réglage « Ce qui déclenche l’attrape » disparaissent des Réglages, du Laboratoire, de la table, de la Fiche et des Règles. Reste la case « Il faut être réveillé ».',
+      'Un réglage enregistré avec une face éclair la voit reprendre la face officielle de sa place ; une exigence en éclairs les oublie.',
+      'Les IA agressives cherchent désormais les X de l’Échec pour attraper — une fois réveillées, et seulement quand le voisin tient un lot.',
+      'Dans les Réglages, « Mise en place » règle le nombre de joueurs au minimum et au maximum (de 3 à 8) : l’accueil ne propose que ces tables-là. Ces bornes font partie des Règles officielles.',
+    ],
+  },
   {
     version: '1.83',
     date: '29/09/2026',

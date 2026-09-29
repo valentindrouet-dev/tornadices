@@ -12,14 +12,14 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.83';
-import { store } from './store.js?v=1.83';
-import { aller } from './app.js?v=1.83';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.83';
-import { nomSymbole } from './apparence.js?v=1.83';
-import { construireConfig } from './variables.js?v=1.83';
-import { nomActif } from './profils.js?v=1.83';
-import { VERSION } from '../version.js?v=1.83';
+import { h, remplacer } from './dom.js?v=1.84';
+import { store } from './store.js?v=1.84';
+import { aller } from './app.js?v=1.84';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.84';
+import { nomSymbole } from './apparence.js?v=1.84';
+import { construireConfig } from './variables.js?v=1.84';
+import { nomActif } from './profils.js?v=1.84';
+import { VERSION } from '../version.js?v=1.84';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, refugePour, carteALaTable,
@@ -27,7 +27,7 @@ import {
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   TABLE_COCHONS, CARTE_COCHON, auxCochons, equipeVue,
-} from '../core/config.js?v=1.83';
+} from '../core/config.js?v=1.84';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -267,8 +267,8 @@ function difference(cfg, combo) {
  *
  * Le libellé de référence décrit la règle de base. Trois choses le changent : la
  * façon de jouer une manche — l'Abri ne sauve plus rien en Immédiat, il prend la
- * manche —, l'endroit où sont les jetons, et le réglage du déclencheur, qui donne
- * à l'Échec ou à l'Attaque la tentative de contact. Une fiche qui recopierait le
+ * manche —, l'endroit où sont les jetons, et l'Échec, qui porte la tentative de
+ * contact. Une fiche qui recopierait le
  * libellé d'origine décrirait une autre partie que celle qu'on va jouer.
  */
 function effetCombo(cfg, c) {
@@ -411,10 +411,10 @@ function lAttrape(cfg, mode) {
   const emporte = attrapeEmporteManche(cfg);
   return section(estCompromis(cfg) ? 'La collision' : 'L’attrape',
     h('p', 'C’est la combinaison ',
-      reglage(`« ${decl ? decl.nom : 'Attaque'} »`),
+      reglage(`« ${decl ? decl.nom : 'Échec'} »`),
       ' qui la déclenche : le lot part vers le voisin, et vous tentez de toucher sa main au '
       + 'passage. Il peut retirer la sienne à temps.',
-      cfg.attrapeSur === 'echec' && cfg.attrapeEveille !== false
+      cfg.attrapeEveille !== false
         ? [' ', reglage('Il faut être réveillé pour tenter le contact'), '.'] : ''),
     h('p', 'Le contact ne se tente que si le joueur suivant tient un lot : sur une main vide, il '
       + 'n’y a rien à attraper.'),

@@ -1,14 +1,14 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.83';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.83';
-import { nomSymbole } from './apparence.js?v=1.83';
-import { store } from './store.js?v=1.83';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.83';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.84';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.84';
+import { nomSymbole } from './apparence.js?v=1.84';
+import { store } from './store.js?v=1.84';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.84';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
-  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarte,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, lotsPour,
@@ -19,15 +19,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, auxCochons, equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.83';
-import { tableauCombos } from './combos.js?v=1.83';
-import { barreProfils, idActif } from './profils.js?v=1.83';
+} from '../core/config.js?v=1.84';
+import { tableauCombos } from './combos.js?v=1.84';
+import { barreProfils, idActif } from './profils.js?v=1.84';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.83';
+} from './variables.js?v=1.84';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.83';
+} from '../core/proba.js?v=1.84';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -352,24 +352,16 @@ function panneauConfig(rafraichir) {
       ]
       : null,
 
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
-    h('div.segment',
-      ...OPTIONS_DECLENCHEUR.map(([id, lib]) => h('button', {
-        class: (cfg.attrapeSur || 'eclair') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        // Les deux combinaisons restent en place : le réglage ne fait que
-        // désigner celle qui porte le contact.
-        onclick: () => { cfg.attrapeSur = id; rafraichir(); },
-      }, lib)),
-    ),
+    // C'est toujours l'Échec qui tente l'attrape ; reste à savoir s'il faut être
+    // réveillé pour le faire.
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'L’attrape, sur l’Échec'),
     h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
       h('button', {
         class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
-        title: 'Un dormeur ne tend pas la main — ne concerne que l’attrape sur échec',
+        title: 'Un dormeur ne tend pas la main',
         onclick: () => { cfg.attrapeEveille = cfg.attrapeEveille === false; rafraichir(); },
       }, h('span.case', '✓'), 'Il faut être réveillé'),
     ),
-    h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_DECLENCHEUR[cfg.attrapeSur || 'eclair']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
     h('div.segment',
@@ -648,7 +640,7 @@ function tableauFrequences(objet, total, unite) {
 
 const LIBELLES = {
   reveil: 'Réveil (3 tornades)', vache: 'Abri', endormir: 'Endormir un voisin',
-  collision: 'Attrape (3 éclairs)', blocage: 'Échec (2 X)',
+  blocage: 'Échec (2 X)',
   // Les combinaisons des cartes Tornade, sous le nom de leur carte.
   spMega: 'Méga Tornade', spSommeil: 'Tornade du Sommeil', spFurieuse: 'Tornade Furieuse',
 };

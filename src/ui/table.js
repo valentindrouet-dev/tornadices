@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.83';
+import { h, remplacer, duree, vider } from './dom.js?v=1.84';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.83';
-import { Moteur } from '../core/engine.js?v=1.83';
+} from './icons.js?v=1.84';
+import { Moteur } from '../core/engine.js?v=1.84';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.83';
-import { ajouterHistorique } from './store.js?v=1.83';
-import { enregistrerPartie } from './resultats.js?v=1.83';
-import { aller } from './app.js?v=1.83';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.83';
-import { nomSymbole } from './apparence.js?v=1.83';
+} from '../core/config.js?v=1.84';
+import { ajouterHistorique } from './store.js?v=1.84';
+import { enregistrerPartie } from './resultats.js?v=1.84';
+import { aller } from './app.js?v=1.84';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.84';
+import { nomSymbole } from './apparence.js?v=1.84';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.83';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.83';
+} from './illustrations.js?v=1.84';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.84';
 
 let moteur = null;
 let vitesse = 1;
@@ -80,10 +80,10 @@ const surMobile = () => window.innerWidth <= 860;
 
 /**
  * Couleur d'alerte à afficher autour de la zone d'un joueur. Elle suit ce que le
- * moteur juge jouable : trois éclairs sans voisin à attraper n'annoncent rien.
+ * moteur juge jouable.
  */
 function alerteDesCombos(dispo) {
-  for (const id of ['blocage', 'collision', 'reveil', 'vache', 'endormir']) {
+  for (const id of ['blocage', 'reveil', 'vache', 'endormir']) {
     if (dispo.some((d) => d.id === id)) return ALERTES[id];
   }
   return null;
@@ -550,18 +550,12 @@ export function vueTable() {
     h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
       suiteSymboles(requisPourEquipe(moteur.cfg, c.id, c.requis, equipeLue), 20)),
     h('div.mini', { style: { flex: '1' } }, c.nom,
-      // Le rappel dit laquelle des deux combinaisons porte le contact —
-      // et que l'autre, en mode « Échecs », ne se joue plus.
-      moteur.cfg.attrapeSur === 'echec' && c.id === 'blocage'
-        ? h('span.muted', ' · tente l’attrape')
-        : null,
-      moteur.cfg.attrapeSur === 'echec' && c.id === 'collision'
-        ? h('span.muted', ' · hors jeu dans ce mode')
-        : null),
+      // Le rappel dit quelle combinaison porte le contact : l'Échec.
+      c.id === 'blocage' ? h('span.muted', ' · tente l’attrape') : null),
   );
 
   // Une combinaison que le dé ne peut pas produire n'est pas une règle, c'est
-  // une ligne morte : sans face éclair, l'Attaque n'a rien à faire là.
+  // une ligne morte, qu'on ne montre pas à la table.
   const jouables = moteur.cfg.combos.filter((c) => comboPossible(moteur.cfg.faces, c.requis));
   const listeCombos = (titre, etat) => {
     const dedans = jouables.filter((c) => c.face === 'toutes' || c.face === etat);

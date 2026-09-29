@@ -1,26 +1,27 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.83';
-import { store } from './store.js?v=1.83';
-import { aller } from './app.js?v=1.83';
-import { eveillerSons } from './sons.js?v=1.83';
-import { lancerPartie, partieEnCours } from './table.js?v=1.83';
+import { h, remplacer } from './dom.js?v=1.84';
+import { store } from './store.js?v=1.84';
+import { aller } from './app.js?v=1.84';
+import { eveillerSons } from './sons.js?v=1.84';
+import { lancerPartie, partieEnCours } from './table.js?v=1.84';
 import {
   construireConfig, variables, ecrireLots, ecrireCartes,
+  nombresJoueursPermis, joueursDansBornes,
   ecartsAuxOfficielles,
-} from './variables.js?v=1.83';
+} from './variables.js?v=1.84';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
   OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.83';
-import { nomSymbole } from './apparence.js?v=1.83';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.83';
-import { randomSeed } from '../core/rng.js?v=1.83';
+} from '../core/config.js?v=1.84';
+import { nomSymbole } from './apparence.js?v=1.84';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.84';
+import { randomSeed } from '../core/rng.js?v=1.84';
 import {
   reglagesCourants, enregistrerReglages, ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.83';
+} from './profils.js?v=1.84';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -55,7 +56,8 @@ export function reglagesJoueurs(nb) {
 export function vueAccueil() {
   // Une table enregistree a neuf joueurs date d'avant la v1.49 : on la ramene
   // dans les bornes plutot que de proposer un effectif qui n'existe plus.
-  let nb = bornerJoueurs(store.get('nbJoueurs', 6));
+  // Et la ramène dans les bornes réglées : de combien à combien de joueurs.
+  let nb = joueursDansBornes(bornerJoueurs(store.get('nbJoueurs', 6)));
   let joueurs = reglagesJoueurs(nb);
 
   const racine = h('div.page.page-accueil');
@@ -148,7 +150,7 @@ export function vueAccueil() {
     return h('div.carte.carte-joueurs',
       h('div.titre-section', 'Joueurs'),
       h('div.rangee', { style: { marginBottom: '16px' } },
-        h('div.segment', ...NOMBRES_JOUEURS.map((n) => h('button', {
+        h('div.segment', ...nombresJoueursPermis().map((n) => h('button', {
           class: n === nb ? 'on' : '',
           // Les noms et les rôles déjà saisis sont gardés : on les enregistre
           // avant de recomposer la table à son nouvel effectif.
