@@ -1,23 +1,23 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.74';
-import { store } from './store.js?v=1.74';
-import { aller } from './app.js?v=1.74';
-import { eveillerSons } from './sons.js?v=1.74';
-import { lancerPartie, partieEnCours } from './table.js?v=1.74';
+import { h, remplacer } from './dom.js?v=1.75';
+import { store } from './store.js?v=1.75';
+import { aller } from './app.js?v=1.75';
+import { eveillerSons } from './sons.js?v=1.75';
+import { lancerPartie, partieEnCours } from './table.js?v=1.75';
 import {
   construireConfig, variables, ecrireLots, ecrireCartes,
-} from './variables.js?v=1.74';
+} from './variables.js?v=1.75';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
   OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.74';
-import { nomSymbole } from './apparence.js?v=1.74';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.74';
-import { randomSeed } from '../core/rng.js?v=1.74';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.74';
+} from '../core/config.js?v=1.75';
+import { nomSymbole } from './apparence.js?v=1.75';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.75';
+import { randomSeed } from '../core/rng.js?v=1.75';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.75';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -31,21 +31,6 @@ function ecrireReglage(cle, valeur) {
   const v = { ...reglagesCourants() };
   v[cle] = valeur;
   enregistrerReglages(v);
-}
-
-// Les couleurs du titre sont celles des équipes : bleu et jaune en alternance,
-// et les deux lettres du centre en vert, comme le joueur solo au milieu de la table.
-// Bleu et jaune alternent d'un bout à l'autre — les deux équipes — et le centre
-// du mot revient au Vert, seul au milieu : une lettre quand le mot en compte un
-// nombre impair, deux quand il en compte un nombre pair.
-function titreColore(mot) {
-  const lettres = mot.split('');
-  const milieu = (lettres.length - 1) / 2;
-  return lettres.map((c, i) => {
-    const vert = Math.abs(i - milieu) < 0.6;
-    const classe = vert ? 'l-vert' : (i % 2 === 0 ? 'l-bleu' : 'l-jaune');
-    return h('span', { class: classe }, c);
-  });
 }
 
 export function reglagesJoueurs(nb) {
@@ -96,7 +81,9 @@ export function vueAccueil() {
     const nbHumains = joueurs.filter((j) => j.type === 'humain').length;
 
     remplacer(racine,
-      h('h1.titre-jeu', ...titreColore('TORNADICE')),
+      h('h1.titre-jeu', h('img', {
+        src: 'assets/logo-tornadice.png', alt: 'TornaDice', width: 539, height: 376,
+      })),
       // Les deux noms en gras : ce sont eux que l'on vient lire, pas la mention.
       h('p', { style: { textAlign: 'center', color: 'var(--gris)', marginBottom: '2px' } },
         'Un jeu de ', h('strong', 'Sylvain Bonnafous')),

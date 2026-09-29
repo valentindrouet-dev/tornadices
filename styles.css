@@ -33,13 +33,22 @@
 /* La police du jeu — celle des cartes Tornade et des cartes d'équipe
    imprimées. Une seule graisse : on la prend telle quelle, sans gras ni
    italique de synthèse. Elle n'a pas les guillemets ni l'apostrophe
-   typographiques, qui retombent sur la police de secours. */
+   typographiques, qui retombent sur la police de secours.
+   Ses métriques sont fausses : elle se déclare haute de 0,84 em, mais ses
+   capitales montent à 1,34 em et à 1,65 em avec un accent — d'où des lignes qui
+   se chevauchent et des titres rognés. On la ramène à 60 % (ses capitales font
+   alors 0,8 em, comme une police d'affiche ordinaire) et on lui donne la hauteur
+   qu'elle occupe vraiment, accents compris. */
 @font-face {
   font-family: "Heroes Legend";
   src: url("assets/fonts/heroes-legend.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
+  size-adjust: 60%;
+  ascent-override: 100%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }
 :root {
   --police-jeu: "Heroes Legend", "Arial Black", "Helvetica Neue", Inter, sans-serif;
@@ -96,8 +105,9 @@ a { color: var(--accent-fonce); }
   margin: 0 auto;
 }
 .marque { display: flex; align-items: center; gap: 11px; margin-right: 4px; }
-.marque svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .10)); }
-.marque .logo { display: flex; }
+/* Le logo imprimé du jeu tient lieu de marque. */
+/* L'image a des marges transparentes : on les mange pour ne pas grandir la barre. */
+.marque .logo-titre { display: block; height: 62px; width: auto; margin: -10px 0; }
 /* Marque et numéro de version sont des boutons, mais ne doivent pas en avoir
    l'air : ni fond, ni bordure, ni décalage au clic — seulement le curseur et un
    contour au focus clavier. */
@@ -105,18 +115,11 @@ a { color: var(--accent-fonce); }
   border: 0; background: none; padding: 0; margin-right: 4px;
   font: inherit; color: inherit; cursor: pointer;
 }
-.marque--lien:hover .nom { color: var(--accent-fonce); }
+.marque--lien:hover .logo-titre { filter: brightness(1.06); }
 .pastille-version { cursor: pointer; }
 .pastille-version:hover { background: var(--accent-bord); }
 .marque--lien:focus-visible, .pastille-version:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 3px;
-}
-.marque .nom {
-  font-family: var(--police-jeu);
-  font-weight: 400; font-synthesis: none;
-  font-size: 21px;
-  letter-spacing: .12em;
-  white-space: nowrap;
 }
 .pastille-version {
   background: var(--accent-clair);
@@ -451,7 +454,7 @@ label.champ {
   75% { transform: translate(calc(-50% + 6px), -50%); }
 }
 .siege .entete {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13.5px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 16px;
   font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; letter-spacing: .01em;
 }
 /* Le nom est dans la police du jeu ; ce qui l'accompagne reste en texte courant. */
@@ -750,9 +753,12 @@ label.champ {
    noir, filet noué d'une spirale, texte en grandes capitales, nuages qui montent
    des coins. Tout est en `em` : au centre de la table la carte fait 10 px de
    police — 244 px de large — et quand on la retourne, on la grandit d'un trait. */
+/* Au format du carton imprimé (1432 × 1948) : une carte, en portrait. */
 .carte-tornade {
   font-size: 10px;
-  width: 24.4em;
+  width: 22em;
+  aspect-ratio: 1432 / 1948;
+  display: flex; flex-direction: column;
   background: var(--tornade-orange);
   border-radius: 1.6em;
   padding: .7em;
@@ -763,7 +769,7 @@ label.champ {
   background: var(--tornade-creme);
   border-radius: 1.1em;
   padding: 0 1.1em 1.1em;
-  min-height: 19em;
+  flex: 1 1 auto; min-height: 0;
   display: flex; flex-direction: column; align-items: center;
 }
 .carte-tornade-bandeau {
@@ -778,12 +784,15 @@ label.champ {
   line-height: .95; letter-spacing: .01em; text-align: center;
   text-shadow: 0 .08em 0 rgba(120, 30, 5, .3);
 }
-.carte-tornade-bandeau .l1 { font-size: 2.3em; }
-.carte-tornade-bandeau .l2 { font-size: 1.3em; margin-top: .15em; }
+/* Chaque ligne du titre tient sur la largeur du bandeau : elle se resserre à
+   l'affichage si le mot est long (carte-tornade.js). */
+.carte-tornade-bandeau .l1, .carte-tornade-bandeau .l2 { display: block; white-space: nowrap; }
+.carte-tornade-bandeau .l1 { font-size: 3.6em; }
+.carte-tornade-bandeau .l2 { font-size: 2.1em; margin-top: .05em; }
 /* Un premier mot plus long que « Tornade » se resserre pour tenir dans le
    bandeau : « 1ère Journée », « Mini-Tornade ». */
-.carte-tornade-bandeau--moyen .l1 { font-size: 1.3em; }
-.carte-tornade-bandeau--long .l1 { font-size: 1.15em; line-height: 1.1; }
+.carte-tornade-bandeau--moyen .l1 { font-size: 2.6em; }
+.carte-tornade-bandeau--long .l1 { font-size: 2.1em; }
 .carte-tornade-des { display: flex; gap: .4em; justify-content: center; margin: .1em 0 .8em; }
 .carte-tornade-de {
   background: #fff; border: .22em solid #1c1410; border-radius: .6em;
@@ -801,10 +810,15 @@ label.champ {
 .carte-tornade-texte {
   font-family: var(--police-jeu);
   font-weight: 400; font-style: normal; font-synthesis: none; text-transform: uppercase;
-  font-size: 1.3em; line-height: 1.25; color: #221812;
-  text-align: center; margin: 0 0 .7em;
-  overflow-wrap: anywhere;
+  font-size: 2.4em; line-height: 1.12; color: #221812;
+  text-align: center; margin: 0 0 .3em;
+  /* Le texte occupe la place libre de la carte, centré, et se resserre à
+     l'affichage jusqu'à y tenir sans couper un mot (carte-tornade.js). */
+  flex: 1 1 0; min-height: 0; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
+.carte-tornade-texte-in { display: block; }
 .carte-tornade-texte .accent { color: var(--tornade-rouge); }
 .carte-tornade-nuages {
   position: absolute; left: 0; right: 0; bottom: 0; height: 3.4em;
@@ -827,7 +841,7 @@ label.champ {
 .carte-tornade .tornade-jetons-embleme .embleme { width: 2em !important; height: 2em !important; }
 
 /* Retournée en début de manche : la même carte, en grand. */
-.carte-annonce--dessinee .carte-tornade { font-size: min(14px, 3.4vw, 2vh); margin: 0 auto; }
+.carte-annonce--dessinee .carte-tornade { font-size: min(14px, 3.4vw, 1.9vh); margin: 0 auto; }
 
 /* Les scores, au-dessus du tapis : ils se lisent, ils ne se jouent pas. */
 .scores-table { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
@@ -858,7 +872,7 @@ label.champ {
   padding: 8px 12px;
   box-shadow: var(--ombre);
 }
-.score-nom { font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; font-size: 16px; letter-spacing: .02em; }
+.score-nom { font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; font-size: 19px; letter-spacing: .02em; }
 .score-cartes {
   font-weight: 850; font-size: 14px;
   background: var(--fond-doux); border: 1px solid var(--bord);
@@ -1237,17 +1251,8 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 }
 .encart--info { border-left-color: var(--jaune); background: #fffbef; }
 
-.titre-jeu {
-  text-align: center;
-  font-family: var(--police-jeu);
-  font-size: clamp(38px, 6.4vw, 64px);
-  font-weight: 400; font-synthesis: none;
-  letter-spacing: .12em;
-  margin: 26px 0 6px;
-}
-.titre-jeu .l-bleu { color: #2b93de; }
-.titre-jeu .l-jaune { color: #e0a70f; }
-.titre-jeu .l-vert { color: var(--vert); }
+.titre-jeu { text-align: center; margin: 14px 0 4px; line-height: 0; }
+.titre-jeu img { width: min(440px, 84vw); height: auto; }
 
 .onglets { display: flex; gap: 22px; border-bottom: 1px solid var(--bord); margin-bottom: 20px; }
 .onglets button {
@@ -1311,7 +1316,7 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   /* ── Barre du haut : une seule ligne, le reste derrière trois traits ─────── */
   .barre { flex-wrap: nowrap; gap: 8px; position: relative; }
   .barre .marque:first-child { flex: none; }
-  .marque .nom { font-size: 15px; letter-spacing: .1em; }
+  .marque .logo-titre { height: 50px; margin: -8px 0; }
   .lien-accueil { display: inline-flex; }
   .burger {
     display: flex; flex-direction: column; justify-content: center; gap: 4.5px;
@@ -1471,17 +1476,10 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 @media (max-width: 400px) {
   .barre { padding: 10px 12px 8px; gap: 6px; }
   .marque { gap: 7px; margin-right: 0; }
-  .marque svg { width: 28px; height: 28px; }
-  .marque .nom { font-size: 13px; letter-spacing: .06em; }
+  .marque .logo-titre { height: 44px; margin: -7px 0; }
   .pastille-version { padding: 2px 8px; font-size: 11.5px; }
   .lien-accueil { padding: 7px 11px; font-size: 13px; }
   .burger { width: 40px; height: 36px; }
-  .titre-jeu { font-size: clamp(27px, 8.4vw, 44px); letter-spacing: .1em; }
-}
-
-/* En dessous, le nom écrit cède la place : le logo suffit à identifier le site. */
-@media (max-width: 340px) {
-  .marque .nom { display: none; }
 }
 
 @media (max-width: 520px) {
@@ -1831,4 +1829,4 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .badge--bleu, .badge--jaune, .badge--vert, .badge--cochon {
   font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; letter-spacing: .02em;
 }
-.badge--bleu, .badge--jaune, .badge--vert, .badge--cochon { font-size: 12px; }
+.badge--bleu, .badge--jaune, .badge--vert, .badge--cochon { font-size: 14px; }

@@ -11,8 +11,8 @@
 // plus grande, quand on la retourne en début de manche — il suffit de changer la
 // taille de police du bloc.
 
-import { h } from './dom.js?v=1.74';
-import { pastilleSymbole } from './icons.js?v=1.74';
+import { h } from './dom.js?v=1.75';
+import { pastilleSymbole } from './icons.js?v=1.75';
 
 /**
  * Le titre sur deux lignes, comme sur le carton : « Tornade du Sommeil » donne
@@ -60,7 +60,7 @@ export function carteTornadeDessinee(carte, { requis = null, texte = null, jeton
   for (const [sym, n] of Object.entries(requis || {})) {
     for (let i = 0; i < n; i++) des.push(h('span.carte-tornade-de', pastilleSymbole(sym, 22)));
   }
-  return h('div.carte-tornade',
+  const el = h('div.carte-tornade',
     h('div.carte-tornade-panneau',
       // « TORNADE » tient en grand ; un premier mot plus long se resserre pour
       // rester dans le bandeau.
@@ -71,9 +71,69 @@ export function carteTornadeDessinee(carte, { requis = null, texte = null, jeton
         h('span.l1', l1), l2 ? h('span.l2', l2) : null),
       des.length ? h('div.carte-tornade-des', ...des) : null,
       h('div.carte-tornade-filet', { html: SPIRALE }),
-      h('div.carte-tornade-texte', texte || carte.texte),
+      h('div.carte-tornade-texte', h('span.carte-tornade-texte-in', texte || carte.texte)),
       jetons ? h('div.carte-tornade-jetons', jetons) : null,
       h('div.carte-tornade-nuages', { html: NUAGES }),
     ),
   );
+  planifierAjustement(el);
+  return el;
+}
+
+// ── Le texte à la taille de la carte ─────────────────────────────────────────
+// Une carte a une taille fixe ; ses titres et ses textes, non. Chaque ligne du
+// titre se resserre pour tenir dans le bandeau, et le texte descend jusqu'à
+// tenir dans la place libre sans couper un mot. On mesure la carte telle
+// qu'elle est posée : il faut donc qu'elle soit dans la page.
+
+const px = (el, prop) => parseFloat(getComputedStyle(el)[prop]) || 0;
+
+/** Ajuste une carte posée dans la page ; rend false si elle ne l'est pas encore. */
+export function ajusterCarte(carte) {
+  if (!carte.isConnected || !carte.offsetWidth) return false;
+  const panneau = carte.querySelector('.carte-tornade-panneau');
+  const bandeau = carte.querySelector('.carte-tornade-bandeau');
+  if (panneau && bandeau) {
+    const place = panneau.clientWidth - px(panneau, 'paddingLeft') - px(panneau, 'paddingRight')
+      - px(bandeau, 'paddingLeft') - px(bandeau, 'paddingRight');
+    for (const ligne of bandeau.querySelectorAll('.l1, .l2')) {
+      ligne.style.fontSize = '';
+      const besoin = ligne.scrollWidth;
+      if (besoin > place) ligne.style.fontSize = `${px(ligne, 'fontSize') * (place / besoin) * 0.98}px`;
+    }
+  }
+  const boite = carte.querySelector('.carte-tornade-texte');
+  const texte = boite && boite.firstElementChild;
+  if (texte) {
+    boite.style.fontSize = '';
+    let taille = px(boite, 'fontSize');
+    const plancher = taille * 0.35;
+    const deborde = () => texte.offsetHeight > boite.clientHeight + 1 || texte.scrollWidth > boite.clientWidth + 1;
+    for (let k = 0; k < 24 && deborde() && taille > plancher; k++) {
+      taille *= 0.94;
+      boite.style.fontSize = `${taille}px`;
+    }
+  }
+  return true;
+}
+
+function planifierAjustement(carte, essais = 0) {
+  requestAnimationFrame(() => {
+    if (!ajusterCarte(carte) && essais < 30) planifierAjustement(carte, essais + 1);
+  });
+  // La police du jeu arrive parfois après la carte : on reprend quand elle est là.
+  if (essais === 0 && document.fonts && document.fonts.status !== 'loaded') {
+    document.fonts.ready.then(() => ajusterCarte(carte));
+  }
+}
+
+// La fenêtre change de taille : les cartes aussi, quand elles se mesurent en vw.
+let attenteRedim = 0;
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => {
+    clearTimeout(attenteRedim);
+    attenteRedim = setTimeout(() => {
+      for (const c of document.querySelectorAll('.carte-tornade')) ajusterCarte(c);
+    }, 120);
+  });
 }

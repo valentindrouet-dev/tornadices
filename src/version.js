@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.74';
+export const VERSION = '1.75';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.75',
+    date: '29/09/2026',
+    notes: [
+      'Le logo imprimé de TornaDice remplace le titre : en grand sur l’accueil, et dans l’en-tête de chaque page.',
+      'Les cartes Tornade ont le format d’une carte : en portrait, aux proportions du carton imprimé — au centre de la table comme quand on la retourne.',
+      'La police Heroes Legend ne déborde plus. Elle annonçait des lettres hautes de 0,84 em, mais ses capitales montent à 1,34 em et à 1,65 em avec un accent : les lignes se chevauchaient et les titres étaient rognés. Elle est désormais ramenée à la taille d’une police d’affiche ordinaire, avec la hauteur qu’elle occupe vraiment.',
+      'Le texte d’une carte s’ajuste à sa carte : chaque ligne du titre se resserre pour tenir dans le bandeau, et le texte descend jusqu’à tenir dans la place libre, sans jamais couper un mot en deux (« supplémentaire », « immédiatement »).',
+    ],
+  },
   {
     version: '1.74',
     date: '29/09/2026',

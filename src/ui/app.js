@@ -1,17 +1,16 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.74';
-import { SVG_LOGO } from './icons.js?v=1.74';
-import { VERSION } from '../version.js?v=1.74';
-import { vueAccueil } from './accueil.js?v=1.74';
-import { vueTable, partieEnCours } from './table.js?v=1.74';
-import { vueLabo } from './labo.js?v=1.74';
-import { vueVariables } from './variables.js?v=1.74';
-import { vueHistorique } from './historique.js?v=1.74';
-import { vueVersions } from './versions.js?v=1.74';
-import { vueRegles } from './regles.js?v=1.74';
-import { vueResultats } from './resultats.js?v=1.74';
-import { vueFiche } from './fiche.js?v=1.74';
+import { h, remplacer } from './dom.js?v=1.75';
+import { VERSION } from '../version.js?v=1.75';
+import { vueAccueil } from './accueil.js?v=1.75';
+import { vueTable, partieEnCours } from './table.js?v=1.75';
+import { vueLabo } from './labo.js?v=1.75';
+import { vueVariables } from './variables.js?v=1.75';
+import { vueHistorique } from './historique.js?v=1.75';
+import { vueVersions } from './versions.js?v=1.75';
+import { vueRegles } from './regles.js?v=1.75';
+import { vueResultats } from './resultats.js?v=1.75';
+import { vueFiche } from './fiche.js?v=1.75';
 
 const ROUTES = {
   '': vueAccueil,
@@ -74,8 +73,9 @@ function barre() {
     h('button.marque.marque--lien', {
       type: 'button', title: 'Retour à l’accueil', onclick: () => aller('/'),
     },
-      h('span.logo', { html: SVG_LOGO }),
-      h('span.nom', 'TORNADICE'),
+      h('img.logo-titre', {
+        src: 'assets/logo-tornadice.png', alt: 'TornaDice', width: 539, height: 376,
+      }),
     ),
     h('button.pastille-version', {
       type: 'button', title: 'Journal des versions', onclick: () => aller('/versions'),
