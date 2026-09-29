@@ -10,15 +10,15 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.67';
+import { makeRng } from './rng.js?v=1.68';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide, estJoker, remplacements,
   comboDeclencheur, attrapeEmporteManche,
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-  comboRefusable, comboIneluctable,
-} from './config.js?v=1.67';
+  comboRefusable, comboIneluctable, jetonsSurTornade,
+} from './config.js?v=1.68';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -217,8 +217,9 @@ export class Moteur {
       j.departEnAttente = null;
       j.objectif = null;
     }
-    // Les jetons repartent à zéro : chaque manche est une course neuve. En
-    // Compromis, c'est l'Abri qu'on vide — les jetons posés y sont repris.
+    // Les jetons repartent à zéro : chaque manche est une course neuve. Ceux qui
+    // sont en jeu reviennent sur la carte Tornade — ou face cachée devant leur
+    // équipe, selon l'endroit réglé.
     for (const e of Object.values(this.equipes)) { e.retournes = 0; e.refuge = 0; e.emportes = 0; }
     // Ce que la Tornade du jour demande de mettre à l'Abri, une fois pour la
     // manche : la carte ne changera plus d'ici la fin.
@@ -1234,7 +1235,11 @@ export class Moteur {
         const cible = this._meilleureCible(j);
         if (cible) {
           cible.retournes = Math.max(0, cible.retournes - 1);
-          this._log(`${j.nom} recache un jeton des ${this._nomEquipe(cible.id)}.`, 'combo', j.id);
+          // Un jeton sauvé retourne dans la tornade — ou repart face cachée
+          // devant son équipe, selon l'endroit où se jouent les jetons.
+          this._log(jetonsSurTornade(this.cfg)
+            ? `${j.nom} renvoie un jeton des ${this._nomEquipe(cible.id)} dans la Tornade.`
+            : `${j.nom} recache un jeton des ${this._nomEquipe(cible.id)}.`, 'combo', j.id);
         }
         break;
       }
@@ -1289,10 +1294,58 @@ export class Moteur {
     return { bleu: 'Bleus', jaune: 'Jaunes', vert: 'Vert' }[id] || id;
   }
 
+  /**
+   * Où en est une équipe sur les jetons : combien sont en jeu, combien elle en a
+   * mis à couvert, combien il en reste dans la tornade.
+   *
+   * Un seul endroit le sait, pour le moteur comme pour la table. Le compte des
+   * jetons en jeu dépend du mode — tout le stock de l'équipe avec les jetons, ce
+   * que la Tornade du jour retient en Compromis — et jamais de l'endroit où ils
+   * sont posés : « Où sont les jetons » ne change que le geste.
+   */
+  suiviJetons(equipeId) {
+    const e = this.equipes[equipeId];
+    if (!e) return { total: 0, faits: 0, restants: 0 };
+    const total = estCompromis(this.cfg)
+      ? Math.min(this.refugeRequis || 1, this.cfg.jetonsRefuge || 3)
+      : e.jetons;
+    const faits = estCompromis(this.cfg) ? (e.refuge || 0) : (e.retournes || 0);
+    return { total, faits, restants: Math.max(0, total - faits) };
+  }
+
+  /**
+   * Ce que l'Abri vient de faire, dit selon l'endroit où sont les jetons : on en
+   * sort un de la carte Tornade, ou on le retourne devant son équipe.
+   */
+  _texteAbri(j, n, suivi) {
+    const eq = this._nomEquipe(j.equipe);
+    const combien = n > 1 ? `${n} jetons` : 'un jeton';
+    const titre = n > 1 ? `${n} abris` : 'Abri';
+    if (jetonsSurTornade(this.cfg)) {
+      const reste = suivi.restants === 0 ? 'plus aucun des siens dedans'
+        : suivi.restants === 1 ? 'il lui en reste un dedans'
+          : `il lui en reste ${suivi.restants} dedans`;
+      return {
+        journal: `${j.nom} sort ${combien} de la Tornade — ${eq} : ${reste}.`,
+        annonce: `${titre} ! ${eq} ${suivi.restants} dans la Tornade`,
+      };
+    }
+    if (estCompromis(this.cfg)) {
+      return {
+        journal: `${j.nom} met ${combien} à l’Abri — ${eq} ${suivi.faits}/${suivi.total}.`,
+        annonce: `${titre} ! ${eq} ${suivi.faits}/${suivi.total}`,
+      };
+    }
+    return {
+      journal: `${j.nom} retourne ${n} jeton${n > 1 ? 's' : ''} — ${eq} ${suivi.faits}/${suivi.total}.`,
+      annonce: `${titre} ! ${eq} ${suivi.faits}/${suivi.total}`,
+    };
+  }
+
   _retournerJeton(j, n = 1, source = 'vache') {
-    // Compromis : le jeton ne se retourne pas, il se pose à l'Abri. Quand
-    // l'équipe y a mis tout ce que la Tornade du jour demande, elle emporte la
-    // manche sur-le-champ — ses animaux sont à couvert.
+    // Compromis : le compte ne va pas jusqu'au stock de l'équipe, mais jusqu'à ce
+    // que la Tornade du jour demande. Quand elle y est, elle emporte la manche
+    // sur-le-champ — ses animaux sont à couvert.
     if (estCompromis(this.cfg)) { this._poserAuRefuge(j, n, source); return; }
     // Manche « immédiat » : rien ne se compte. La combinaison qui aurait
     // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
@@ -1318,27 +1371,23 @@ export class Moteur {
     j.stats.jetonsRetournes += gagnes;
     if (gagnes > 0) {
       j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + gagnes;
-      // Le jeton part de la zone du joueur et rejoint le compteur de son équipe.
+      // Le jeton quitte la carte Tornade pour la main du joueur — ou, s'il était
+      // resté devant son équipe, il rejoint le compteur de celle-ci.
       if (this.onJeton) this.onJeton(j.id, j.equipe, gagnes, source);
-      this._log(
-        `${j.nom} retourne ${gagnes} jeton${gagnes > 1 ? 's' : ''} — ${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}.`,
-        'jeton', j.id,
-      );
-      this._annoncer(
-        `${gagnes > 1 ? gagnes + ' abris' : 'Abri'} ! `
-        + `${this._nomEquipe(j.equipe)} ${eq.retournes}/${eq.jetons}`,
-        'vert', j.id,
-      );
+      const dit = this._texteAbri(j, gagnes, this.suiviJetons(j.equipe));
+      this._log(dit.journal, 'jeton', j.id);
+      this._annoncer(dit.annonce, 'vert', j.id);
     }
     if (eq.retournes >= eq.jetons) this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
   }
 
   /**
-   * Compromis : poser des jetons de sa couleur sur la carte Refuge.
+   * Compromis : mettre à couvert des jetons de sa couleur.
    *
-   * La Tornade du jour dit combien il en faut — de un à trois. Poser le dernier
-   * demandé emporte la manche sur-le-champ. Une équipe ne peut pas en poser plus
-   * qu'elle n'en a : trois, par défaut.
+   * La Tornade du jour dit combien il en faut — de un à trois. Le dernier emporte
+   * la manche sur-le-champ. Une équipe ne peut pas en sauver plus qu'elle n'en a :
+   * trois, par défaut. Selon « Où sont les jetons », on les sort de la carte
+   * Tornade ou on les pose sur la carte Refuge ; le compte est le même.
    */
   _poserAuRefuge(j, n = 1, source = 'vache') {
     // Une collision réussie ne passe pas par ici : elle emporte la manche
@@ -1355,15 +1404,9 @@ export class Moteur {
     j.stats.jetonsRetournes += poses;
     j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + poses;
     if (this.onJeton) this.onJeton(j.id, j.equipe, poses, source);
-    this._log(
-      `${j.nom} met ${poses > 1 ? poses + ' jetons' : 'un jeton'} à l’Abri — `
-      + `${this._nomEquipe(j.equipe)} ${eq.refuge}/${plafond}.`,
-      'jeton', j.id,
-    );
-    this._annoncer(
-      `Abri ! ${this._nomEquipe(j.equipe)} ${eq.refuge}/${plafond}`,
-      'vert', j.id,
-    );
+    const dit = this._texteAbri(j, poses, this.suiviJetons(j.equipe));
+    this._log(dit.journal, 'jeton', j.id);
+    this._annoncer(dit.annonce, 'vert', j.id);
     if (eq.refuge >= plafond) this._finManche(j.equipe, { joueur: j, raison: 'refuge' });
   }
 
@@ -1380,7 +1423,9 @@ export class Moteur {
       // manche. On garde le nom du fautif, la page de résultats le dit.
       if (e.retournes >= e.jetons) { this._finManche(e.id, { raison: 'incident', cible: j }); return; }
     }
-    this._log(`Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
+    this._log(jetonsSurTornade(this.cfg)
+      ? `Incident : les équipes adverses de ${j.nom} sortent un jeton de la Tornade.`
+      : `Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
 
   /**
@@ -1429,9 +1474,13 @@ export class Moteur {
       case 'vache':
         return 'en sortant l’Abri';
       case 'refuge':
-        return 'en mettant ses animaux à l’Abri';
+        return jetonsSurTornade(this.cfg)
+          ? 'en sortant ses animaux de la Tornade'
+          : 'en mettant ses animaux à l’Abri';
       case 'jetons':
-        return 'en retournant le dernier jeton';
+        return jetonsSurTornade(this.cfg)
+          ? 'en sortant son dernier jeton de la Tornade'
+          : 'en retournant le dernier jeton';
       case 'attrape':
         if (!cause.cible) return 'à l’attrape';
         return estCompromis(this.cfg)

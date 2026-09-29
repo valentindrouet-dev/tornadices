@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.67';
-export const BUILD_DATE = '2026-08-27';
+export const VERSION = '1.68';
+export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.68',
+    date: '24/08/2026',
+    notes: [
+      'Les jetons en jeu ne restent plus devant leur équipe : ils sont posés sur la carte Tornade, au milieu de la table — ce sont vos animaux pris dedans. Chaque combinaison Abri en sort un, et l’équipe qui a sorti tous les siens remporte la manche. La table le montre sur la carte elle-même, une rangée par équipe, et le jeton sauvé s’envole de la carte vers celui qui vient de le sortir.',
+      'Le compte ne bouge pas d’un chiffre : avec les jetons c’est toujours tout le stock de l’équipe, en Compromis toujours ce que la Tornade du jour retient, de un à trois carte par carte. Jouées à la même graine, 80 parties donnent exactement le même vainqueur, le même nombre de manches et la même durée aux deux places — ce qui change est le geste, et ce qu’on lit à la table.',
+      'L’ancienne place reste réglable : « Où sont les jetons », dans la mise en place des Réglages et au Laboratoire, les laisse devant chaque équipe, face cachée, où l’Abri les retourne un à un. En Compromis, c’est alors la carte Refuge qui revient au centre du tapis. L’Immédiat, qui ne compte aucun jeton, est insensible au réglage.',
+      'Tout ce qui parlait de jetons retournés se dit désormais du geste qu’on fait : le journal, le bandeau d’annonce, le compte rendu de fin de partie, les Règles et la fiche imprimée.',
+      'Réparé au passage : une couleur d’équipe posée à même un élément ne prenait pas — les propriétés personnalisées ne s’écrivent pas comme les autres styles, et la nôtre se perdait sans bruit. La carte Refuge du Compromis montrait donc ses trois colonnes de la même couleur, et le compte rendu de fin de partie aussi. Les trois équipes s’y reconnaissent de nouveau.',
+    ],
+  },
   {
     version: '1.67',
     date: '24/08/2026',

@@ -12,21 +12,21 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.67';
-import { store } from './store.js?v=1.67';
-import { aller } from './app.js?v=1.67';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.67';
-import { nomSymbole } from './apparence.js?v=1.67';
-import { construireConfig } from './variables.js?v=1.67';
-import { nomActif } from './profils.js?v=1.67';
-import { VERSION } from '../version.js?v=1.67';
+import { h, remplacer } from './dom.js?v=1.68';
+import { store } from './store.js?v=1.68';
+import { aller } from './app.js?v=1.68';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.68';
+import { nomSymbole } from './apparence.js?v=1.68';
+import { construireConfig } from './variables.js?v=1.68';
+import { nomActif } from './profils.js?v=1.68';
+import { VERSION } from '../version.js?v=1.68';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
-  REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.67';
+  REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
+} from '../core/config.js?v=1.68';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -244,15 +244,16 @@ function difference(cfg, combo) {
 /**
  * Ce que fait une combinaison, dans CETTE partie.
  *
- * Le libellé de référence décrit la règle de base. Deux choses le changent : la
- * façon de jouer une manche — l'Abri ne retourne plus rien en Immédiat, il pose
- * un jeton en Compromis — et le réglage du déclencheur, qui donne à l'Échec ou
- * à l'Attaque la tentative de contact. Une fiche qui recopierait le libellé
- * d'origine décrirait une autre partie que celle qu'on va jouer.
+ * Le libellé de référence décrit la règle de base. Trois choses le changent : la
+ * façon de jouer une manche — l'Abri ne sauve plus rien en Immédiat, il prend la
+ * manche —, l'endroit où sont les jetons, et le réglage du déclencheur, qui donne
+ * à l'Échec ou à l'Attaque la tentative de contact. Une fiche qui recopierait le
+ * libellé d'origine décrirait une autre partie que celle qu'on va jouer.
  */
 function effetCombo(cfg, c) {
   if (c.id === 'vache') {
     if (estImmediat(cfg)) return 'Vous remportez la manche sur-le-champ';
+    if (jetonsSurTornade(cfg)) return 'Sortez un jeton de votre équipe de la Tornade';
     if (estCompromis(cfg)) return 'Posez un jeton de votre couleur sur le Refuge';
     return 'Retournez un jeton de votre équipe';
   }
@@ -262,7 +263,9 @@ function effetCombo(cfg, c) {
       ? (estCompromis(cfg)
         ? 'un jeton adverse part dans la tornade et vous remportez la manche'
         : 'vous remportez la manche')
-      : 'vous retournez un jeton de votre équipe';
+      : (jetonsSurTornade(cfg)
+        ? 'vous sortez un jeton de votre équipe de la Tornade'
+        : 'vous retournez un jeton de votre équipe');
     const base = c.echec
       ? 'Le lot part, et vous tentez d’attraper le joueur suivant'
       : 'Passez votre lot et tentez d’attraper le joueur suivant';
@@ -319,7 +322,20 @@ function nomCombo(cfg, id) {
 
 function gagnerLaManche(cfg, mode) {
   const abri = nomCombo(cfg, 'vache');
+  const surTornade = jetonsSurTornade(cfg);
   if (estJeton(cfg)) {
+    if (surTornade) {
+      return section('Gagner une manche',
+        h('p', reglage('Les jetons de chaque équipe sont posés sur la carte Tornade'),
+          ' : ce sont vos animaux pris dedans. Leur nombre dépend de l’effectif, voir la mise '
+          + 'en place.'),
+        h('p', reglage(`Chaque combinaison « ${abri} » sort un jeton de votre équipe de la carte`),
+          '. La manche revient à la première équipe qui a sorti tous les siens — ils sont à '
+          + 'couvert.'),
+        h('p.fiche-note', 'Les jetons reviennent sur la carte à chaque manche : chaque manche est '
+          + 'une course indépendante.'),
+      );
+    }
     return section('Gagner une manche',
       h('p', reglage(`Chaque combinaison « ${abri} » retourne un jeton de votre équipe`),
         '. La manche revient à la première équipe qui a retourné tous les siens — leur nombre '
@@ -333,6 +349,23 @@ function gagnerLaManche(cfg, mode) {
       h('p', reglage(`Le premier joueur qui sort « ${abri} », réveillé, arrête la manche `
         + 'sur-le-champ'), ' : son équipe prend la carte Tornade en cours. Aucun jeton n’est '
         + 'compté.'),
+    );
+  }
+  if (surTornade) {
+    return section('Gagner une manche',
+      h('p', reglage('Les jetons en jeu sont posés sur la carte Tornade'),
+        ` : elle indique combien de jetons de votre couleur elle retient — de 1 à `
+        + `${cfg.jetonsRefuge}, carte par carte. `,
+        reglage(`Chaque combinaison « ${abri} » en sort un`), '.'),
+      h('p', reglage('Deux façons de prendre la manche :')),
+      h('ul.fiche-liste',
+        h('li', 'sortir le dernier jeton demandé — vos animaux sont à l’abri, la manche est à '
+          + 'vous sur-le-champ ;'),
+        h('li', 'réussir une collision — vous renvoyez un jeton de l’adversaire dans la tornade, '
+          + 'et la manche est à vous de la même façon.'),
+      ),
+      h('p.fiche-note', `Chaque équipe a ${cfg.jetonsRefuge} jetons de sa couleur, et la carte `
+        + 'reprend les siens au début de chaque manche.'),
     );
   }
   return section('Gagner une manche',
@@ -367,7 +400,9 @@ function lAttrape(cfg, mode) {
       ? (estCompromis(cfg)
         ? 'Un contact réussi envoie un jeton adverse dans la tornade et emporte la manche.'
         : 'Un contact réussi emporte la manche entière.')
-      : 'Un contact réussi interrompt le voisin et retourne un jeton de votre équipe.')),
+      : (jetonsSurTornade(cfg)
+        ? 'Un contact réussi interrompt le voisin et sort un jeton de votre équipe de la Tornade.'
+        : 'Un contact réussi interrompt le voisin et retourne un jeton de votre équipe.'))),
   );
 }
 
@@ -385,7 +420,9 @@ function lesCartes(cfg, mode) {
     tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
         h('th', 'Carte'),
-        estCompromis(cfg) ? h('th.num', 'Au Refuge') : null,
+        estCompromis(cfg)
+          ? h('th.num', jetonsSurTornade(cfg) ? 'Jetons retenus' : 'Au Refuge')
+          : null,
         h('th', 'Combinaison'),
         h('th', 'Effet'))),
       h('tbody', ...cartes.map((c) => {

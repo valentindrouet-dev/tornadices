@@ -19,7 +19,16 @@ export function h(tag, ...reste) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k === 'class') { for (const c of String(v).split(/\s+/)) if (c) el.classList.add(c); }
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    // Une propriété personnalisée — « --couleur-eq » — ne s'écrit pas comme les
+    // autres : `style['--x'] = …` ne pose rien du tout, et la couleur d'équipe
+    // passée ainsi se perdait sans bruit. On la pose à part, par `setProperty`.
+    else if (k === 'style' && typeof v === 'object') {
+      for (const [prop, val] of Object.entries(v)) {
+        if (val == null) continue;
+        if (prop.startsWith('--')) el.style.setProperty(prop, val);
+        else el.style[prop] = val;
+      }
+    }
     else if (k === 'html') el.innerHTML = v;
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
     else if (k === 'data' && typeof v === 'object') { for (const [d, dv] of Object.entries(v)) el.dataset[d] = dv; }

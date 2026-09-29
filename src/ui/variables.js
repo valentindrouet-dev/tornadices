@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.67';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.67';
-import { store } from './store.js?v=1.67';
-import { aller } from './app.js?v=1.67';
-import { lancerPartie } from './table.js?v=1.67';
+import { h, remplacer } from './dom.js?v=1.68';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.68';
+import { store } from './store.js?v=1.68';
+import { aller } from './app.js?v=1.68';
+import { lancerPartie } from './table.js?v=1.68';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -22,19 +22,20 @@ import {
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.67';
-import { tableauCombos, editeurCases } from './combos.js?v=1.67';
+  OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
+} from '../core/config.js?v=1.68';
+import { tableauCombos, editeurCases } from './combos.js?v=1.68';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.67';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.67';
-import { randomSeed } from '../core/rng.js?v=1.67';
-import { reglagesJoueurs } from './accueil.js?v=1.67';
+} from './apparence.js?v=1.68';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.68';
+import { randomSeed } from '../core/rng.js?v=1.68';
+import { reglagesJoueurs } from './accueil.js?v=1.68';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.67';
+} from './profils.js?v=1.68';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -899,6 +900,32 @@ export function vueVariables() {
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
         ),
 
+        // Où les jetons attendent : sur la carte Tornade, d'où chaque Abri en
+        // sort un, ou devant leur équipe, où il les retourne. Le compte ne change
+        // pas — c'est le geste, et ce que la table montre.
+        titreAide('Où sont les jetons', [
+          AIDE_PLACE_JETONS[jetonsSurTornade(cfg) ? 'tornade' : 'equipe'],
+          estImmediat(cfg)
+            ? 'Immédiat ne compte aucun jeton — le premier Abri prend la manche : ce réglage n’y '
+              + 'change rien. Il vaut pour les deux autres façons de jouer.'
+            : '',
+          estCompromis(cfg) && jetonsSurTornade(cfg)
+            ? 'Compromis : ce que la Tornade du jour demande, c’est ce qu’elle retient. Les '
+              + 'sortir tous emporte la manche — de un à trois, réglable carte par carte dans '
+              + '« Cartes Tornade en jeu ».'
+            : '',
+          'Le nombre d’Abris à réussir est le même dans les deux cas : rien ne bouge à '
+          + 'l’équilibrage, seule la table se lit autrement — sur la carte, ou aux compteurs.',
+        ]),
+        h('div.rangee.rangee--serree',
+          h('div.segment',
+            ...OPTIONS_PLACE_JETONS.map(([id, lib]) => h('button', {
+              class: (jetonsSurTornade(cfg) ? 'tornade' : 'equipe') === id ? 'on' : '',
+              onclick: () => { ecrire('placeJetons', id); dessiner(); },
+            }, lib)),
+          ),
+        ),
+
         // Les cartes pour gagner ne sont pas un nombre : elles dépendent du
         // nombre de joueurs, et le Vert — seul contre deux équipes — a le sien.
         tableauCartes(nb, modeManche(cfg), dessiner),
@@ -1009,7 +1036,8 @@ export function vueVariables() {
                       type: 'number', value: refugePour(cfg, c),
                       min: 1, max: cfg.jetonsRefuge || 3, step: 1,
                       title: `Sous « ${c.court} », il faut mettre ce nombre de jetons de sa `
-                        + 'couleur à l’Abri pour prendre la manche.',
+                        + 'couleur à l’Abri pour prendre la manche'
+                        + (jetonsSurTornade(cfg) ? ' — c’est ce qu’elle retient.' : '.'),
                       onchange: (e) => {
                         ecrire('refugeCartes', {
                           ...(v.refugeCartes || {}),
@@ -1075,7 +1103,7 @@ export function vueVariables() {
       h('div.carte',
         titreAide('Sons', [
           'Quatre sons ponctuent la partie : la sonnerie du réveil, le ronflement de '
-          + 'l’endormissement, le meuglement d’un Abri retourné et l’alarme d’une attrape.',
+          + 'l’endormissement, le meuglement d’un Abri réussi et l’alarme d’une attrape.',
           'Le réveil et le ronflement ne sonnent que pour vous — à six autour de la table, ils '
           + 'sonneraient sans arrêt. L’Abri se fête pour tout le monde, et l’alarme prévient la '
           + 'table entière.',

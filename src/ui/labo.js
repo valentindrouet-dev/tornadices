@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.67';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.67';
-import { nomSymbole } from './apparence.js?v=1.67';
-import { store } from './store.js?v=1.67';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.67';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.68';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.68';
+import { nomSymbole } from './apparence.js?v=1.68';
+import { store } from './store.js?v=1.68';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.68';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -13,18 +13,20 @@ import {
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
-  NOM_MODE, modeManche, estJeton, estCompromis, refugePour, cartesPour, cartesVertPour,
+  NOM_MODE, modeManche, estJeton, estImmediat, estCompromis, refugePour,
+  cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
+  OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.67';
-import { tableauCombos } from './combos.js?v=1.67';
-import { barreProfils, idActif } from './profils.js?v=1.67';
+} from '../core/config.js?v=1.68';
+import { tableauCombos } from './combos.js?v=1.68';
+import { barreProfils, idActif } from './profils.js?v=1.68';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.67';
+} from './variables.js?v=1.68';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.67';
+} from '../core/proba.js?v=1.68';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -139,7 +141,7 @@ function ongletSimulation(rafraichir) {
 function accueilLabo() {
   return h('div.carte',
     h('p', 'Lancez une campagne pour obtenir la distribution des durées, le taux de victoire '
-      + 'de chaque équipe, la fréquence de chaque combinaison, l’origine des jetons retournés '
+      + 'de chaque équipe, la fréquence de chaque combinaison, l’origine des jetons mis à couvert '
       + 'et l’avantage éventuel de la place à table.'),
     h('p.petit.muted', 'Les IA jouent exactement les règles réglées à gauche : modifiez une '
       + 'valeur, relancez, comparez. La graine rend chaque campagne reproductible.'),
@@ -324,6 +326,21 @@ function panneauConfig(rafraichir) {
     ),
     h('div.mini.muted', { style: { marginTop: '6px' } },
       AIDE_SENS[sensRotation(cfg)]),
+
+    // Où sont les jetons ne change pas le compte des Abris : la campagne le
+    // vérifie plutôt que de le supposer.
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Où sont les jetons'),
+    h('div.segment',
+      ...OPTIONS_PLACE_JETONS.map(([id, lib]) => h('button', {
+        class: (jetonsSurTornade(cfg) ? 'tornade' : 'equipe') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => { cfg.placeJetons = id; rafraichir(); },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } },
+      estImmediat(cfg)
+        ? 'Immédiat ne compte aucun jeton : ce réglage n’y change rien.'
+        : AIDE_PLACE_JETONS[jetonsSurTornade(cfg) ? 'tornade' : 'equipe']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',
@@ -531,7 +548,7 @@ function resultats(r) {
           + 'mélanger écraserait leur fréquence réelle.'),
       ),
       h('div.carte',
-        h('div.titre-section', 'Origine des jetons retournés'),
+        h('div.titre-section', 'Origine des jetons mis à couvert'),
         tableauFrequences(r.jetonsParSource, total, 'par partie'),
         h('p.mini.muted', 'Si les collisions dominent, la course aux abris perd son rôle moteur.'),
       ),

@@ -3,7 +3,7 @@
 
 export const SYMBOLES = {
   tornade: { id: 'tornade', nom: 'Tornade', couleur: '#a8dcf2', desc: 'Réveille votre Tornade' },
-  vache: { id: 'vache', nom: 'Vache', couleur: '#82dc0a', desc: 'Retourne un jeton de votre équipe' },
+  vache: { id: 'vache', nom: 'Vache', couleur: '#82dc0a', desc: 'Met un jeton de votre équipe à couvert' },
   zzz: { id: 'zzz', nom: 'ZzZ', couleur: '#c28ef2', desc: 'Endort un de vos voisins' },
   eclair: { id: 'eclair', nom: 'Éclair', couleur: '#f9b115', desc: 'Passez le lot et tentez d’attraper' },
   // `joker` : liste des symboles que la face peut prendre. Jamais le X, qui fige.
@@ -128,8 +128,10 @@ export const AIDE_DECLENCHEUR = {
 
 // Trois façons de jouer une manche.
 //
-// « jeton » — la règle de base : chaque équipe retourne ses jetons Abri un à
-// un, et la manche revient à celle qui les a tous retournés.
+// « jeton » — la règle de base : chaque équipe met ses jetons Abri à couvert un
+// à un, et la manche revient à celle qui les a tous sauvés. Où ils se trouvent
+// en attendant — sur la carte Tornade, ou devant leur équipe — est un réglage à
+// part : voyez « Où sont les jetons », plus bas.
 //
 // « immediat » — on ne compte plus rien : il faut se réveiller puis sortir la
 // combinaison Abri, et le premier qui y arrive arrête la manche sur-le-champ.
@@ -139,9 +141,9 @@ export const AIDE_DECLENCHEUR = {
 //
 // « compromis » — entre les deux. Chaque équipe a ses jetons, et la carte
 // Tornade en cours dit combien il faut en mettre à l'Abri pour prendre la
-// manche : de un à trois, carte par carte. Poser le dernier demandé l'emporte
-// aussitôt — vos animaux sont à couvert. Une collision réussie l'emporte
-// également : vous envoyez valser un adversaire dans la tornade.
+// manche : de un à trois, carte par carte. Le dernier l'emporte aussitôt — vos
+// animaux sont à couvert. Une collision réussie l'emporte également : vous
+// envoyez valser un adversaire dans la tornade.
 export const MODES_MANCHE = ['jeton', 'immediat', 'compromis'];
 
 export const OPTIONS_MANCHE = [
@@ -154,8 +156,8 @@ export const OPTIONS_MANCHE = [
 export const NOM_MODE = Object.fromEntries(OPTIONS_MANCHE);
 
 export const AIDE_MANCHE = {
-  jeton: 'Règle de base : chaque Abri retourne un jeton de votre équipe, et la manche revient '
-    + 'à la première équipe qui a retourné les siens. Le compteur de jetons est en jeu.',
+  jeton: 'Règle de base : chaque Abri met un jeton de votre équipe à couvert, et la manche '
+    + 'revient à la première équipe qui a sauvé tous les siens. Le compteur de jetons est en jeu.',
   immediat: 'Immédiat : on se réveille aux tornades, puis on cherche l’Abri. Le '
     + 'premier joueur qui le sort arrête la manche sur-le-champ — son équipe prend la carte '
     + 'Tornade, et la manche suivante commence. Une attrape réussie emporte la manche de la '
@@ -163,10 +165,44 @@ export const AIDE_MANCHE = {
     + 'vainqueur, quatre en général.',
   compromis: 'Compromis : chaque équipe a trois jetons de sa couleur, et la carte Tornade en '
     + 'cours dit combien il faut en mettre à l’Abri pour prendre la manche — de un à trois, '
-    + 'réglable carte par carte. Chaque combinaison Abri en pose un ; poser le dernier demandé '
-    + 'emporte la manche sur-le-champ. Une collision réussie l’emporte aussi : le jeton de '
-    + 'l’adversaire part dans la tornade, et la manche est à vous. Cinq cartes pour gagner.',
+    + 'réglable carte par carte. Chaque combinaison Abri en sauve un ; le dernier emporte la '
+    + 'manche sur-le-champ. Une collision réussie l’emporte aussi : le jeton de l’adversaire '
+    + 'part dans la tornade, et la manche est à vous. Cinq cartes pour gagner.',
 };
+
+// ── Où sont les jetons ───────────────────────────────────────────────────────
+//
+// Les jetons en jeu sont posés sur la carte Tornade elle-même : ce sont les
+// animaux pris dedans. Chaque combinaison Abri en sort un, et l'équipe qui a
+// sorti tous les siens emporte la manche — ils sont tous à couvert.
+//
+// Le compte ne change pas — autant d'Abris qu'il y a de jetons en jeu — mais le
+// geste s'inverse : on vide la tornade au lieu de remplir son camp, et les trois
+// équipes se lisent sur une même carte. L'ancienne place, devant chaque équipe,
+// reste réglable : c'est à elle qu'on compare.
+//
+// « Immédiat » ne compte aucun jeton, le premier Abri prenant la manche : le
+// réglage n'y change rien.
+export const OPTIONS_PLACE_JETONS = [
+  ['tornade', 'Sur la carte Tornade'],
+  ['equipe', 'Devant chaque équipe'],
+];
+
+export const NOM_PLACE_JETONS = Object.fromEntries(OPTIONS_PLACE_JETONS);
+
+export const AIDE_PLACE_JETONS = {
+  tornade: 'Les jetons en jeu sont posés sur la carte Tornade : ce sont vos animaux pris dans la '
+    + 'tornade. Chaque combinaison Abri en sort un de la carte, et l’équipe qui a sorti tous les '
+    + 'siens emporte la manche — ils sont tous à couvert.',
+  equipe: 'L’ancienne place : chaque équipe garde ses jetons devant elle, face cachée, et l’Abri '
+    + 'les retourne un à un. La manche revient à la première équipe qui a retourné tous les '
+    + 'siens. Le compte est le même ; la carte Tornade, elle, reste nue.',
+};
+
+/** Vrai si les jetons en jeu sont posés sur la carte Tornade — la règle du jeu. */
+export function jetonsSurTornade(cfg) {
+  return (cfg && cfg.placeJetons) !== 'equipe';
+}
 
 // ── Ce qu'on fait d'une combinaison servie ───────────────────────────────────
 //
@@ -289,7 +325,8 @@ export const OPTIONS_ATTRAPE = [
 ];
 
 export const AIDE_ATTRAPE = {
-  non: 'Règle de base : un contact réussi interrompt le voisin et retourne un jeton de votre équipe.',
+  non: 'Règle de base : un contact réussi interrompt le voisin et met un jeton de votre équipe à '
+    + 'couvert, comme un Abri.',
   touche: 'Vous passez le lot et tentez le contact — s’il réussit, votre équipe remporte la '
     + 'manche sur-le-champ. Sans les points, c’est le réglage de départ : il n’y a plus de jeton '
     + 'à prendre, et l’attrape devient l’autre moyen de prendre une manche, avec l’Abri.',
@@ -537,6 +574,9 @@ export function assainirConfig(cfg) {
   // retombe sur ce que le mode faisait jusqu'ici.
   sortie.sensRotation = sensRotation(sortie);
   sortie.comboServie = comboAutomatique(sortie) ? 'auto' : 'choix';
+  // Où sont les jetons en jeu : sur la carte Tornade — la règle du jeu, et ce
+  // que lit un réglage enregistré avant la v1.68 — ou devant chaque équipe.
+  sortie.placeJetons = jetonsSurTornade(sortie) ? 'tornade' : 'equipe';
   // Compromis : de un à trois jetons demandés, jamais zéro ni davantage.
   sortie.jetonsRefuge = Math.min(6, Math.max(1, Math.round(Number(cfg.jetonsRefuge) || 3)));
   if (cfg.refugeCartes && typeof cfg.refugeCartes === 'object') {
@@ -1216,6 +1256,9 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
       : 'perdants',
     // Une combinaison servie est jouée d'office : c'est la règle de base.
     comboServie: opts.comboServie === 'choix' ? 'choix' : 'auto',
+    // Les jetons en jeu sont posés sur la carte Tornade, et chaque Abri en sort
+    // un. L'ancienne place — devant chaque équipe, face cachée — reste réglable.
+    placeJetons: opts.placeJetons === 'equipe' ? 'equipe' : 'tornade',
     // Compromis : les jetons de sa couleur qu'une équipe peut mettre à l'Abri.
     jetonsRefuge: 3,
     // Le Vert joue seul contre deux équipes : son objectif se règle à part.

@@ -14,6 +14,7 @@ import {
   cartesPour, cartesVertPour, cartesOfficielles,
   OPTIONS_SENS, sensRotation,
   comboAutomatique, comboIneluctable, comboRefusable, REGLE_CARTES_DEUX_ETATS,
+  OPTIONS_PLACE_JETONS, jetonsSurTornade,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -2112,6 +2113,161 @@ console.log('\nLe sens de rotation');
         && (r.raisons.cartes || 0) + (r.raisons.pioche || 0) === 40,
         JSON.stringify(r.raisons));
     }
+  }
+}
+
+// ── 3 septies sexies. Les jetons posés sur la carte Tornade ─────────────────
+// Les jetons en jeu sont sur la carte Tornade, et chaque Abri en sort un. Le
+// compte des Abris à réussir ne change pas — c'est le geste, et ce qu'on lit à
+// la table. Ces épreuves vérifient les deux : que le réglage dit bien où ils
+// sont, et qu'il ne déplace pas un seul chiffre de la partie.
+console.log('\nLes jetons sur la carte Tornade');
+{
+  const spec6 = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+
+  // Le réglage, et ce qu'il devient dans une configuration.
+  const cfg = configParDefaut(6);
+  verifier('les jetons sont sur la carte Tornade par défaut',
+    cfg.placeJetons === 'tornade' && jetonsSurTornade(cfg));
+  verifier('l’ancienne place reste réglable',
+    !jetonsSurTornade(configParDefaut(6, { placeJetons: 'equipe' })));
+  verifier('une valeur inconnue retombe sur la carte Tornade',
+    jetonsSurTornade(configParDefaut(6, { placeJetons: 'nulle part' })));
+  verifier('un réglage enregistré sans le champ lit la règle du jeu',
+    assainirConfig({ nbJoueurs: 6 }).placeJetons === 'tornade');
+  verifier('et un réglage qui garde l’ancienne place la garde',
+    assainirConfig({ nbJoueurs: 6, placeJetons: 'equipe' }).placeJetons === 'equipe');
+  verifier('les deux options du menu, et deux seulement',
+    OPTIONS_PLACE_JETONS.length === 2
+    && OPTIONS_PLACE_JETONS.map(([id]) => id).join(',') === 'tornade,equipe');
+
+  // Ce que la carte porte : tout le stock de l'équipe avec les jetons, ce que la
+  // Tornade du jour retient en Compromis, rien du tout en Immédiat.
+  {
+    const m = new Moteur(cfg, spec6, 'tornade-suivi');
+    const eq = Object.values(m.equipes)[0];
+    const s0 = m.suiviJetons(eq.id);
+    verifier(`la carte retient les ${eq.jetons} jetons de l’équipe`,
+      s0.total === eq.jetons && s0.restants === eq.jetons && s0.faits === 0);
+    eq.retournes = 1;
+    const s1 = m.suiviJetons(eq.id);
+    verifier('un Abri en sort un', s1.restants === eq.jetons - 1 && s1.faits === 1);
+    verifier('une équipe inconnue ne retient rien', m.suiviJetons('rose').total === 0);
+  }
+  {
+    const cc = configParDefaut(6, { modeManche: 'compromis' });
+    const m = new Moteur(cc, spec6, 'tornade-suivi-compromis');
+    const eq = Object.values(m.equipes)[0];
+    verifier(`Compromis : la Tornade en retient ${m.refugeRequis}, pas les ${eq.jetons} du stock`,
+      m.suiviJetons(eq.id).total === refugePour(cc, m.carte)
+      && m.suiviJetons(eq.id).total === m.refugeRequis);
+  }
+
+  // Le cœur de l'affaire : le réglage ne touche à aucun chiffre. Même graine,
+  // même partie — seul le journal se dit autrement.
+  {
+    let identiques = 0, differences = [];
+    for (let g = 0; g < 40; g++) {
+      for (const mode of ['jeton', 'compromis']) {
+        const surCarte = new Moteur(configParDefaut(6, { modeManche: mode }), spec6, `place-${mode}-${g}`)
+          .jouerJusquAuBout();
+        const devant = new Moteur(
+          configParDefaut(6, { modeManche: mode, placeJetons: 'equipe' }), spec6, `place-${mode}-${g}`,
+        ).jouerJusquAuBout();
+        const meme = surCarte.vainqueur === devant.vainqueur
+          && surCarte.manches === devant.manches
+          && surCarte.duree === devant.duree;
+        if (meme) identiques++;
+        else differences.push(`${mode}-${g}`);
+      }
+    }
+    verifier(`80 parties jouées aux deux places : ${identiques} identiques`,
+      identiques === 80, differences.slice(0, 3).join(', '));
+  }
+
+  // Ce que la table et le journal en disent.
+  {
+    const lignes = (opts) => {
+      const m = new Moteur(configParDefaut(6, opts), spec6, 'place-journal');
+      const annonces = [];
+      m.onAnnonce = (texte) => annonces.push(texte);
+      m.jouerJusquAuBout();
+      return { jetons: m.journal.filter((e) => e.type === 'jeton'), annonces, moteur: m };
+    };
+    const carte = lignes({});
+    const devant = lignes({ placeJetons: 'equipe' });
+    verifier(`${carte.jetons.length} Abris annoncés : tous sortent un jeton de la Tornade`,
+      carte.jetons.length > 0 && carte.jetons.every((e) => /de la Tornade/.test(e.texte)));
+    verifier(`${devant.jetons.length} Abris à l’ancienne : tous retournent un jeton`,
+      devant.jetons.length > 0 && devant.jetons.every((e) => /retourne \d+ jeton/.test(e.texte)));
+    verifier('la table annonce ce qui reste dans la Tornade',
+      carte.annonces.some((t) => /Abri ! .+ \d+ dans la Tornade/.test(t)));
+    verifier('la manche gagnée se dit du geste qu’on a fait',
+      carte.moteur._motifVictoire({ raison: 'jetons' }) === 'en sortant son dernier jeton de la Tornade'
+      && devant.moteur._motifVictoire({ raison: 'jetons' }) === 'en retournant le dernier jeton');
+    verifier('et en Compromis de même',
+      new Moteur(configParDefaut(6, { modeManche: 'compromis' }), spec6, 'x')
+        ._motifVictoire({ raison: 'refuge' }) === 'en sortant ses animaux de la Tornade'
+      && new Moteur(configParDefaut(6, { modeManche: 'compromis', placeJetons: 'equipe' }), spec6, 'x')
+        ._motifVictoire({ raison: 'refuge' }) === 'en mettant ses animaux à l’Abri');
+  }
+
+  // La manche se prend en vidant sa rangée, et jamais avant.
+  {
+    let fautes = 0, prises = 0, tropSortis = 0, sorties = 0, renvoyes = 0;
+    for (let g = 0; g < 40; g++) {
+      const m = new Moteur(cfg, spec6, `tornade-vide-${g}`);
+      // Combien de jetons chaque équipe a vu sortir dans la manche en cours : le
+      // moteur ne doit jamais en annoncer plus que la carte n'en retenait.
+      let sortis = new Map();
+      // La « Journée sans vent » renvoie un jeton adverse dans la Tornade : une
+      // manche peut donc en voir sortir plus que la carte n'en retenait, mais
+      // jamais plus que ce qui y est entré.
+      let renvois = new Map();
+      const idParNom = Object.fromEntries(
+        Object.keys(m.equipes).map((id) => [m._nomEquipe(id), id]),
+      );
+      const demarrer = m._demarrerManche.bind(m);
+      m._demarrerManche = (premiere) => { sortis = new Map(); renvois = new Map(); demarrer(premiere); };
+      m.onJournal = (e) => {
+        const r = /renvoie un jeton des (\S+) dans la Tornade/.exec(e.texte || '');
+        const id = r && idParNom[r[1]];
+        if (id) { renvois.set(id, (renvois.get(id) || 0) + 1); renvoyes++; }
+      };
+      m.onJeton = (pid, equipe, n) => {
+        sorties += n;
+        const cumul = (sortis.get(equipe) || 0) + n;
+        sortis.set(equipe, cumul);
+        if (cumul > m.suiviJetons(equipe).total + (renvois.get(equipe) || 0)) tropSortis++;
+      };
+      const finir = m._finManche.bind(m);
+      m._finManche = (equipeId, cause = {}) => {
+        if (equipeId && cause.raison === 'jetons') {
+          prises++;
+          // Une manche prise au dernier jeton : la rangée de l'équipe est vide.
+          if (m.suiviJetons(equipeId).restants !== 0) fautes++;
+        }
+        finir(equipeId, cause);
+      };
+      m.jouerJusquAuBout();
+    }
+    verifier(`${prises} manches prises au dernier jeton, rangée vide à chaque fois`,
+      prises > 0 && fautes === 0);
+    verifier(`${sorties} jetons sortis, jamais plus que la Tornade n’en avait`,
+      sorties > 0 && tropSortis === 0);
+    verifier(`et ${renvoyes} jetons renvoyés dans la Tornade par la « Journée sans vent »`,
+      renvoyes > 0);
+  }
+
+  // Immédiat ne compte aucun jeton : le réglage n'y change rien.
+  {
+    const si = configParDefaut(6, { modeManche: 'immediat' });
+    const surCarte = new Moteur(si, spec6, 'place-immediat').jouerJusquAuBout();
+    const devant = new Moteur(
+      configParDefaut(6, { modeManche: 'immediat', placeJetons: 'equipe' }), spec6, 'place-immediat',
+    ).jouerJusquAuBout();
+    verifier('Immédiat : la même partie aux deux places',
+      surCarte.vainqueur === devant.vainqueur && surCarte.manches === devant.manches);
   }
 }
 

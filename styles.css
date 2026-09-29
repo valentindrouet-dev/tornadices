@@ -545,6 +545,40 @@ label.champ {
    cartes d'une rangée se lisent alors sur une même ligne. */
 .carte-journee > .rangee:last-child { margin-top: auto !important; }
 
+/* ── Les jetons pris dans la tornade ──────────────────────────────────────────
+   Les jetons en jeu sont posés sur la carte Tornade elle-même : une rangée par
+   équipe, un jeton par animal encore dedans, l'emblème de l'équipe au bout.
+   Chaque Abri en sort un, et l'équipe qui a vidé sa rangée emporte la manche —
+   c'est donc la carte, et non le compteur des scores, qui porte la manche. */
+.tornade-jetons {
+  margin: 0 12px;
+  padding: 6px 0 4px;
+  border-top: 2px solid rgba(232, 84, 31, .28);
+}
+.tornade-jetons-titre {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--tornade-orange-fonce);
+  margin-bottom: 4px;
+}
+.tornade-jetons-eq { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+.tornade-jeton {
+  width: 17px; height: 17px; border-radius: 50%; flex: none;
+  border: 2px dashed rgba(42, 28, 20, .22);
+  background: rgba(255, 255, 255, .5);
+  display: grid; place-items: center;
+  transition: background .18s, border-color .18s;
+}
+.tornade-jeton.on {
+  border-style: solid;
+  border-color: var(--couleur-eq, var(--accent));
+  background: var(--couleur-eq, var(--accent));
+}
+.tornade-jeton.on svg { width: 11px; height: 11px; display: block; color: #fff; }
+.tornade-jetons-embleme {
+  margin-left: auto; display: flex; align-items: center;
+  color: var(--couleur-eq, var(--gris));
+}
+
 /* ── Alertes de combinaison ───────────────────────────────────────────────── */
 /* La zone de jeu du joueur s'entoure d'un halo dès que la combinaison sort. */
 [data-alerte] { border-color: var(--c-alerte); animation: halo 1s ease-in-out infinite; }

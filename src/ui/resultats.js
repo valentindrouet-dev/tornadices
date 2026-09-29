@@ -12,20 +12,20 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.67';
-import { store } from './store.js?v=1.67';
-import { aller } from './app.js?v=1.67';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.67';
+} from './dom.js?v=1.68';
+import { store } from './store.js?v=1.68';
+import { aller } from './app.js?v=1.68';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.68';
 import {
-  COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche,
-} from '../core/config.js?v=1.67';
+  COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
+} from '../core/config.js?v=1.68';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
  * produit par une version antérieure est écarté plutôt que lu de travers — la
  * leçon de la v1.36, où un champ absent emportait une page entière.
  */
-export const SCHEMA_PARTIE = 2;
+export const SCHEMA_PARTIE = 3;
 
 const CLE = 'dernierePartie';
 
@@ -44,6 +44,8 @@ export function enregistrerPartie(moteur) {
     contexte: {
       // La façon de jouer la manche : trois modes depuis la v1.50.
       mode: modeManche(cfg),
+      // Où étaient les jetons : la manche ne s'est pas gagnée du même geste.
+      placeJetons: jetonsSurTornade(cfg) ? 'tornade' : 'equipe',
       nbJoueurs: moteur.joueurs.length,
       cartesPourGagner: cfg.cartesPourGagner,
       jetons: cfg.jetons,
@@ -111,8 +113,16 @@ const RAISON = {
   incident: 'sur la bourde d’un adversaire',
 };
 
-function raisonManche(m, mode) {
+// Les jetons posés sur la carte Tornade ne se retournent pas, on les en sort :
+// les deux façons de finir une manche aux jetons se disent autrement.
+const RAISON_TORNADE = {
+  refuge: 'en sortant ses animaux de la Tornade',
+  jetons: 'en sortant son dernier jeton de la Tornade',
+};
+
+function raisonManche(m, mode, surTornade = false) {
   if (!m.raison) return '—';
+  if (surTornade && RAISON_TORNADE[m.raison]) return RAISON_TORNADE[m.raison];
   if (m.raison === 'attrape') {
     if (!m.cible) return 'à la collision';
     // En Compromis, la collision envoie un jeton adverse dans la tornade : ce
@@ -249,7 +259,10 @@ function tableauJoueurs(joueurs, ctx, parJoueur, dureePartie) {
         h('th', 'Joueur'),
         h('th.num', { title: 'Manches conclues par ce joueur' }, 'Manches'),
         avecJetons
-          ? h('th.num', { title: ctx.mode === 'compromis' ? 'Jetons mis à l’Abri' : 'Jetons retournés' },
+          ? h('th.num', {
+              title: ctx.placeJetons !== 'equipe' ? 'Jetons sortis de la Tornade'
+                : ctx.mode === 'compromis' ? 'Jetons mis à l’Abri' : 'Jetons retournés',
+            },
               ctx.mode === 'compromis' ? 'À l’Abri' : 'Jetons')
           : null,
         h('th.num', 'Lancers'),
@@ -359,7 +372,7 @@ function suite(requis) {
   return el;
 }
 
-/** Les cinq façons de retourner un jeton, telles que le moteur les nomme. */
+/** Les cinq façons de mettre un jeton à couvert, telles que le moteur les nomme. */
 const NOM_SOURCE = {
   vache: 'L’Abri',
   collision: 'Une attrape réussie',
@@ -413,7 +426,7 @@ function dérouléManches(manches, ctx) {
             ? h('span.rangee.rangee--serree',
                 h('span.badge', { class: `badge--${m.vainqueur}` }, m.nomJoueur))
             : h('span.mini.muted', eq ? eq.nom : '—')),
-          h('td.petit', raisonManche(m, ctx.mode)),
+          h('td.petit', raisonManche(m, ctx.mode, ctx.placeJetons !== 'equipe')),
           h('td.petit', carte
             ? h('span', carte.court || carte.nom, m.compte ? null : h('span.mini.muted', ' · défaussée'))
             : h('span.mini.muted', '—')),
@@ -446,6 +459,7 @@ function csv(r, ctx) {
   l.push(`manches;${r.manches}`);
   l.push(`duree_s;${Math.round((r.duree || 0) / 1000)}`);
   l.push(`mode;${ctx.mode || 'jeton'}`);
+  l.push(`place_jetons;${ctx.placeJetons || 'tornade'}`);
   l.push('');
   l.push('joueur;equipe;siege;type;profil;jetons;lancers;combinaisons;attrapes_tentees;'
     + 'attrapes_reussies;subies;reveils;endormi;erreurs;temps_avec_lot_s');

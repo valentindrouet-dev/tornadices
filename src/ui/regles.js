@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.67';
+import { h } from './dom.js?v=1.68';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.67';
+} from './icons.js?v=1.68';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.67';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.67';
+} from '../core/config.js?v=1.68';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.68';
 
 export function vueRegles() {
   return h('div.page',
@@ -47,7 +47,7 @@ export function vueRegles() {
         + `combinaison… ou jusqu’à ce que deux « ${nomSymbole('x')} » figent ses dés et lui `
         + 'fassent rendre le lot. '
         + 'Trois éclairs, et il le passe en tentant d’attraper son voisin au passage.'),
-      h('p.petit.muted', 'Une équipe remporte la manche en retournant tous ses jetons Abri. '
+      h('p.petit.muted', 'Une équipe remporte la manche en sortant de la tornade tous ses jetons. '
         + 'La première à réunir le nombre requis de cartes Tornade gagne la partie. '
         + 'Le sens de circulation s’inverse à chaque manche — deux autres façons d’en décider '
         + 'sont décrites plus bas.'),
@@ -65,6 +65,31 @@ export function vueRegles() {
               : `L’équipe ${e.nom.toLowerCase()}.`),
         )),
       ),
+    ),
+
+    // Où sont les jetons pendant la manche : sur la carte Tornade. C'est la
+    // première chose qu'on voit de la table, et le sens de tout le reste.
+    h('div.carte',
+      h('div.titre-section', 'Les jetons, pris dans la tornade'),
+      h('p', 'Les jetons en jeu ne restent pas devant leur équipe : ils sont posés sur la carte '
+        + 'Tornade, au milieu de la table. Ce sont vos animaux pris dedans, et les trois équipes '
+        + 'y ont les leurs, chacune de sa couleur.'),
+      h('p', 'Chaque combinaison Abri en sort un de la carte : un animal de plus à couvert. '
+        + 'L’équipe qui a sorti tous les siens remporte la manche sur-le-champ — la tornade n’a '
+        + 'plus rien à elle.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Combien de jetons sont en jeu dépend de la façon de jouer : avec les jetons, c’est tout '
+        + 'le stock de l’équipe — de deux à quatre selon l’effectif ; en Compromis, c’est ce que '
+        + 'la Tornade du jour retient, de un à trois. L’Immédiat, lui, n’en met aucun : le premier '
+        + 'Abri prend la manche.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Variante des Réglages : les jetons restent devant chaque équipe, face cachée, et l’Abri '
+        + 'les retourne un à un — l’ancienne place. Le nombre d’Abris à réussir est le même, la '
+        + 'carte Tornade reste nue, et chacun suit son propre compteur au lieu de lire la même '
+        + 'carte.'),
+      h('p.petit.muted', { style: { marginTop: '10px' } },
+        'Les jetons reviennent sur la carte au début de chaque manche : une manche est une course '
+        + 'indépendante, jamais un cumul de la précédente.'),
     ),
 
     h('div.carte',
@@ -143,7 +168,7 @@ export function vueRegles() {
       h('div.rangee', { style: { marginTop: '14px' } },
         h('span', { html: SVG_TORNADE_ENDORMIE, style: { width: '30px', color: 'var(--gris-clair)' } }),
         h('span.petit', 'Chaque manche commence Tornade endormie : il faut d’abord se réveiller '
-          + 'aux tornades avant de pouvoir retourner un jeton aux abris.'),
+          + 'aux tornades avant de pouvoir sortir un jeton de la tornade.'),
         h('span', { html: SVG_TORNADE_EVEILLEE, style: { width: '30px', color: 'var(--bleu)' } }),
       ),
       h('div.encart', { style: { marginTop: '14px' } },
@@ -170,7 +195,7 @@ export function vueRegles() {
       ),
       h('p.petit', { style: { marginTop: '14px' } },
         'Les moments qui comptent s’annoncent en toutes lettres au centre de la table : '
-        + 'un réveil, un endormissement, un Abri retourné, une attrape réussie. '
+        + 'un réveil, un endormissement, un jeton sorti de la tornade, une attrape réussie. '
         + 'Et le journal garde la combinaison finale de chaque tour, avec son issue.'),
     ),
 
@@ -178,7 +203,7 @@ export function vueRegles() {
       h('div.titre-section', 'L’attrape'),
       h('p.petit', 'Trois éclairs : passez le lot au joueur suivant et tentez de toucher ses dés '
         + 'ou la main qui les tient. Si vous le touchez, son tour est interrompu, il passe '
-        + 'immédiatement son lot, et vous retournez un de vos jetons.'),
+        + 'immédiatement son lot, et vous sortez un de vos jetons de la tornade.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, les trois '
         + 'éclairs ne valent rien. Il ne se passe rien, vous gardez votre lot et vous pouvez '
@@ -371,16 +396,20 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'La version « Compromis »'),
       h('p.petit', 'La troisième façon de jouer une manche, et un entre-deux : les jetons '
-        + 'reviennent, mais ils ne se retournent plus — ils se posent. Une carte Refuge, commune '
-        + 'à toute la table, accueille les animaux que chaque équipe met à couvert.'),
-      h('p.petit', 'Chaque équipe a trois jetons de sa couleur. La Tornade en cours dit combien '
-        + 'il faut en mettre à l’Abri pour prendre la manche — de un à trois, indiqué sur la '
-        + 'carte. Chaque combinaison Abri en pose un de plus.'),
+        + 'reviennent, mais ce n’est plus tout le stock de l’équipe qui est en jeu — c’est la '
+        + 'Tornade du jour qui dit combien elle en retient.'),
+      h('p.petit', 'Chaque équipe a trois jetons de sa couleur. La Tornade en cours en retient de '
+        + 'un à trois, indiqué sur la carte, et il faut les sortir tous pour prendre la manche. '
+        + 'Chaque combinaison Abri en sort un.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'Deux façons de prendre la manche, et deux seulement : poser le dernier jeton demandé — '
+        'Deux façons de prendre la manche, et deux seulement : sortir le dernier jeton demandé — '
         + 'vos animaux sont à couvert, la manche est à vous sur-le-champ — ou réussir une '
-        + 'collision, qui envoie valser un jeton adverse dans la tornade et emporte la manche de '
+        + 'collision, qui renvoie un jeton adverse dans la tornade et emporte la manche de '
         + 'la même façon.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Avec les jetons laissés devant les équipes — la variante de « Où sont les jetons » — ce '
+        + 'mode se joue à l’envers : une carte Refuge est posée au milieu de la table, et chaque '
+        + 'Abri y pose un jeton au lieu d’en sortir un de la Tornade. Le compte est le même.'),
       h('p.petit.muted', { style: { marginTop: '10px' } },
         `Le reste tient sans changer : le dé, les combinaisons, le rythme, les « ${nomSymbole('x')} » qui figent, la `
         + 'façon dont se décide le sens de rotation. C’est le nombre de cartes qui fait '
@@ -415,7 +444,7 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Les sons de la table'),
       h('p.petit', 'Quatre sons ponctuent la partie : la sonnerie quand vous vous réveillez, '
-        + 'le ronflement quand on vous rendort, le meuglement d’un Abri retourné — le vôtre '
+        + 'le ronflement quand on vous rendort, le meuglement d’un Abri réussi — le vôtre '
         + 'ou celui d’un autre — et l’alarme dès qu’une attrape est tentée, où que ce soit.'),
       h('p.petit.muted', 'Le réveil et le ronflement ne sonnent que pour vous : à six autour de '
         + 'la table, ils sonneraient sans arrêt. Le bouton 🔊 de l’en-tête les coupe en cours de '
@@ -427,7 +456,7 @@ export function vueRegles() {
       h('ul.petit',
         h('li', `Relancer un « ${nomSymbole('x')} » par mégarde : le joueur passe son lot.`),
         h('li', 'Lancer les dés au lieu de les passer, ou ne pas passer après une attrape : '
-          + 'les équipes adverses retournent un jeton.'),
+          + 'les équipes adverses sortent un jeton de la tornade.'),
         h('li', 'Un dé tombe, un imprévu survient : mettez le jeu en pause.'),
       ),
     ),
