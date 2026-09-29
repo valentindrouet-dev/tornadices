@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.76';
+export const VERSION = '1.77';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.77',
+    date: '29/09/2026',
+    notes: [
+      'La carte de sens imprimée remplace la flèche : posée à côté de la pioche sur la face du sens en cours — flèches dans le sens des aiguilles d’une montre, ou dans l’autre —, en petit à la révélation de chaque manche et entre deux manches.',
+      'Quand c’est à vous de décider, la fenêtre montre la carte telle qu’elle est posée, et chaque bouton la face qu’elle aura : « Garder » la face actuelle, « Retourner » l’autre.',
+    ],
+  },
   {
     version: '1.76',
     date: '29/09/2026',

@@ -1638,16 +1638,17 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* La carte de sens : posée à côté de la pioche, elle indique le sens de
    circulation et ne bouge qu'entre deux manches, quand les perdants la
    retournent. Elle prend la place de la flèche du dos, qui n'a plus cours. */
-.carte-sens {
-  margin: 10px auto 0;
-  width: 62px; padding: 7px 4px 5px;
-  background: #fff; border: 2px solid var(--accent-bord); border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(20, 55, 95, .18);
-  text-align: center;
+.carte-sens { margin: 10px auto 0; width: 84px; text-align: center; }
+/* La carte de sens imprimée, telle quelle : on n'arrondit que ses coins. */
+.carte-sens-img, .carte-sens-mini, .carte-sens-grande {
+  display: block; height: auto; border-radius: 7%/5%;
+  box-shadow: 0 2px 8px rgba(20, 55, 95, .22);
 }
-.carte-sens-fleche {
-  font-size: 30px; font-weight: 800; line-height: 1; color: var(--accent-fonce);
-}
+.carte-sens-img { width: 100%; }
+.carte-sens-mini { width: auto; height: 38px; flex: none; border-radius: 4px; }
+.carte-sens-grande { width: min(200px, 44vw, 30vh); margin: 4px auto 12px; }
+.btn--sens { display: inline-flex; align-items: center; gap: 8px; padding-left: 8px; }
+.btn--sens .carte-sens-mini { height: 30px; box-shadow: none; }
 .carte-sens-nom {
   font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
   color: var(--gris); margin-top: 2px;

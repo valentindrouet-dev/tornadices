@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.76';
-import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.76';
+import { VERSION } from '../version.js?v=1.77';
+import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.77';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle
@@ -101,4 +101,17 @@ export const JETONS_IMPRIMES = {
 export function jetonImprime(cfg, equipe) {
   if (auxCochons(cfg)) return null;
   return JETONS_IMPRIMES[equipe] || null;
+}
+
+// ── La carte de sens imprimée ────────────────────────────────────────────────
+// Ses deux faces : les flèches tournent dans le sens des aiguilles d'une montre
+// sur l'une, dans l'autre sens sur l'autre. On la retourne pour changer de sens.
+export const CARTES_SENS = {
+  horaire: { src: 'assets/sens/horaire.webp', largeur: 1340, hauteur: 1852 },
+  antihoraire: { src: 'assets/sens/antihoraire.webp', largeur: 1318, hauteur: 1828 },
+};
+
+/** La face de la carte de sens qui dit ce sens-là (1 : horaire, -1 : antihoraire). */
+export function faceCarteSens(sens) {
+  return sens > 0 ? CARTES_SENS.horaire : CARTES_SENS.antihoraire;
 }

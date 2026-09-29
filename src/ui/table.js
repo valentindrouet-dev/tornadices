@@ -4,24 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.76';
+import { h, remplacer, duree, vider } from './dom.js?v=1.77';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.76';
-import { Moteur } from '../core/engine.js?v=1.76';
+} from './icons.js?v=1.77';
+import { Moteur } from '../core/engine.js?v=1.77';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.76';
-import { ajouterHistorique } from './store.js?v=1.76';
-import { enregistrerPartie } from './resultats.js?v=1.76';
-import { aller } from './app.js?v=1.76';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.76';
-import { nomSymbole } from './apparence.js?v=1.76';
-import { illustrationCarte, illustrationEquipe, jetonImprime } from './illustrations.js?v=1.76';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.76';
+} from '../core/config.js?v=1.77';
+import { ajouterHistorique } from './store.js?v=1.77';
+import { enregistrerPartie } from './resultats.js?v=1.77';
+import { aller } from './app.js?v=1.77';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.77';
+import { nomSymbole } from './apparence.js?v=1.77';
+import {
+  illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
+} from './illustrations.js?v=1.77';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.77';
 
 let moteur = null;
 let vitesse = 1;
@@ -702,8 +704,15 @@ export function vueTable() {
       || PRIORITE_ALERTE.indexOf(couleur) < PRIORITE_ALERTE.indexOf(cur.couleur);
     if (remplace) alertesRetenues.set(pid, { couleur, fin: moteur.now + duree });
   };
-  const FLECHE = (s) => (s > 0 ? '↻' : '↺');
   const NOM_TOUR = (s) => (s > 0 ? 'horaire' : 'antihoraire');
+  // La carte de sens imprimée, sur la face qui dit ce sens-là.
+  const imageSens = (s, classe = 'img.carte-sens-img') => {
+    const f = faceCarteSens(s);
+    return h(classe, {
+      src: f.src, width: f.largeur, height: f.hauteur, draggable: 'false',
+      alt: `Carte de sens : ${NOM_TOUR(s)}`,
+    });
+  };
 
   /**
    * Ce que la table dit du sens, une fois la carte tranchée. Quand ceux qui
@@ -713,7 +722,7 @@ export function vueTable() {
   function blocChoixSens(choix) {
     if (!choix || !choix.decide) return null;
     return h('div.transition-sens',
-      h('span.transition-sens-fleche', FLECHE(moteur.sens)),
+      imageSens(moteur.sens, 'img.carte-sens-mini'),
       h('span', choix.inverse
         ? `Carte de sens retournée — manche suivante en sens ${NOM_TOUR(moteur.sens)}`
         : `Carte de sens laissée — manche suivante en sens ${NOM_TOUR(moteur.sens)}`),
@@ -750,6 +759,7 @@ export function vueTable() {
       h('div.carte-annonce',
         h('div.mini.muted', 'Carte de sens'),
         h('h2', { style: { margin: '6px 0 10px' } }, titre),
+        imageSens(choix.sens, 'img.carte-sens-grande'),
         h('div.texte-carte-grand',
           'Gardez le sens de circulation, ou retournez la carte pour l’inverser. '
           + 'On n’attrape que son voisin d’aval — changer de sens, c’est changer '
@@ -757,10 +767,10 @@ export function vueTable() {
         h('div.rangee.rangee--serree', {
           style: { justifyContent: 'center', marginTop: '16px' },
         },
-          h('button.btn', { onclick: () => fermerSens(false) },
-            `Garder ${FLECHE(choix.sens)} ${NOM_TOUR(choix.sens)}`),
-          h('button.btn.btn--primaire', { onclick: () => fermerSens(true) },
-            `Retourner ${FLECHE(-choix.sens)} ${NOM_TOUR(-choix.sens)}`),
+          h('button.btn.btn--sens', { onclick: () => fermerSens(false) },
+            imageSens(choix.sens, 'img.carte-sens-mini'), `Garder : ${NOM_TOUR(choix.sens)}`),
+          h('button.btn.btn--primaire.btn--sens', { onclick: () => fermerSens(true) },
+            imageSens(-choix.sens, 'img.carte-sens-mini'), `Retourner : ${NOM_TOUR(-choix.sens)}`),
         ),
         h('div.mini.muted', { style: { marginTop: '16px' } },
           'Espace pour garder le sens — sans réponse, la carte reste en place.'),
@@ -846,7 +856,6 @@ export function vueTable() {
     // Le sens annoncé est celui de la manche qui commence — sous la règle des
     // dos de cartes, il vient du dos de la carte SUIVANTE, pas de celle qu'on
     // retourne. Montrer la flèche de la carte révélée dirait le contraire.
-    const fleche = FLECHE(moteur.sens);
     // La carte imprimée, quand on l'a : c'est elle qu'on retourne à la table.
     const imprimee = illustrationCarte(moteur.cfg, carte);
     panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
@@ -858,7 +867,7 @@ export function vueTable() {
               alt: `${carte.nom} — ${carte.texte}`,
             }),
             h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
-              h('span.fleche-sens', fleche),
+              imageSens(moteur.sens, 'img.carte-sens-mini'),
               h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
             h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
           )
@@ -871,7 +880,7 @@ export function vueTable() {
               texte: texteCarte(carte.texte),
             }),
             h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
-              h('span.fleche-sens', fleche),
+              imageSens(moteur.sens, 'img.carte-sens-mini'),
               h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
             h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
           ),
@@ -1126,7 +1135,6 @@ export function vueTable() {
     const regleSens = sensRotation(moteur.cfg);
     // La carte rotation est posée sur la table dès qu'elle décide du sens.
     const carteDeSens = regleSens === 'perdants';
-    const sensPioche = FLECHE(moteur.sens);
     centreChange = siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
       h('div.pioche-pile',
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
@@ -1140,7 +1148,7 @@ export function vueTable() {
             title: `Carte de sens : ${NOM_TOUR(moteur.sens)}. Les perdants de la manche `
               + 'peuvent la retourner.',
           },
-            h('div.carte-sens-fleche', sensPioche),
+            imageSens(moteur.sens),
             h('div.carte-sens-nom', 'Carte de sens'))
         : null,
     )) || centreChange;
