@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.85';
+export const VERSION = '1.86';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.86',
+    date: '29/09/2026',
+    notes: [
+      'Les noms par défaut des joueurs se règlent dans les Réglages, carte « Noms des joueurs » : un nom par place autour de la table, qu’un humain ou une IA l’occupe. Ils valent partout — accueil, table, Laboratoire. « Noms d’origine » les rend.',
+      'Renommer un joueur sur l’accueil reste possible : ce nom-là est gardé, les autres places suivent le réglage.',
+      'L’accueil n’affiche plus le bloc « Réglages de la partie » : tout se règle dans la page Réglages. Il ne reste que la composition de la table, centrée, et le bouton « Réglages ».',
+    ],
+  },
   {
     version: '1.85',
     date: '29/09/2026',

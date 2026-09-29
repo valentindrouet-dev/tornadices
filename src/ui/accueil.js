@@ -1,41 +1,22 @@
-// Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
-// le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
+// Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
+// partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=1.85';
-import { store } from './store.js?v=1.85';
-import { aller } from './app.js?v=1.85';
-import { eveillerSons } from './sons.js?v=1.85';
-import { lancerPartie, partieEnCours } from './table.js?v=1.85';
+import { h, remplacer } from './dom.js?v=1.86';
+import { store } from './store.js?v=1.86';
+import { aller } from './app.js?v=1.86';
+import { eveillerSons } from './sons.js?v=1.86';
+import { lancerPartie, partieEnCours } from './table.js?v=1.86';
 import {
-  construireConfig, variables, ecrireLots, ecrireCartes, ecrireJetons,
-  nombresJoueursPermis, joueursDansBornes,
-  ecartsAuxOfficielles,
-} from './variables.js?v=1.85';
+  construireConfig, variables, nombresJoueursPermis, joueursDansBornes,
+  ecartsAuxOfficielles, nomParDefaut, NOMS_ORIGINE,
+} from './variables.js?v=1.86';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
-  OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
-  modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.85';
-import { nomSymbole } from './apparence.js?v=1.85';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.85';
-import { randomSeed } from '../core/rng.js?v=1.85';
-import {
-  reglagesCourants, enregistrerReglages, ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.85';
-
-const NOMS = [
-  'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
-];
-
-/** Les valeurs qui décrochent du tableau officiel dès qu'on y touche. */
-const CHAMPS_TABLEAU = ['jetons', 'jetonsVert', 'cartesPourGagner'];
-
-/** Écrit un réglage de partie, comme le ferait la page Réglages. */
-function ecrireReglage(cle, valeur) {
-  const v = { ...reglagesCourants() };
-  v[cle] = valeur;
-  enregistrerReglages(v);
-}
+  bornerJoueurs,
+} from '../core/config.js?v=1.86';
+import { emblemeEquipe } from './icons.js?v=1.86';
+import { randomSeed } from '../core/rng.js?v=1.86';
+import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.86';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
@@ -43,8 +24,15 @@ export function reglagesJoueurs(nb) {
   const out = [];
   for (let i = 0; i < nb; i++) {
     const s = (enregistres && enregistres[i]) || {};
+    // Un nom changé ici reste le sien ; sinon la place prend le nom réglé. Un
+    // enregistrement d'avant la v1.86 n'a pas la marque : un nom qui n'est pas
+    // celui d'origine de sa place a forcément été choisi.
+    const defaut = nomParDefaut(i);
+    const perso = s.nomPerso === true
+      || (s.nomPerso === undefined && !!s.nom && s.nom !== NOMS_ORIGINE[i]);
     out.push({
-      nom: s.nom || NOMS[i] || `Joueur ${i + 1}`,
+      nom: perso && s.nom ? s.nom : defaut,
+      nomPerso: perso && !!s.nom,
       type: s.type || (i === 0 ? 'humain' : 'ia'),
       profil: profilIA(s.profil).id,
       equipe: sieges[i],
@@ -103,7 +91,9 @@ export function vueAccueil() {
 
       bandeauOfficielles(),
 
-      h('div.grille.grille--2', carteJoueurs(), carteApercu()),
+      // Les réglages de la partie se font tous dans la page Réglages : l'accueil
+      // ne compose plus que la table.
+      h('div.accueil-joueurs', carteJoueurs()),
 
       h('div.rangee.actions-accueil', { style: { justifyContent: 'center', marginTop: '26px' } },
         h('button.btn.btn--primaire.btn--grand', { onclick: demarrer }, 'Commencer la partie'),
@@ -184,7 +174,13 @@ export function vueAccueil() {
       }),
       h('input', {
         type: 'text', value: j.nom, style: { flex: '1 1 auto', minWidth: '80px' },
-        oninput: (e) => { j.nom = e.target.value; },
+        oninput: (e) => {
+          const i = joueurs.indexOf(j);
+          const defaut = nomParDefaut(i);
+          const x = e.target.value.trim();
+          j.nom = x || defaut;
+          j.nomPerso = !!x && x !== defaut;
+        },
       }),
       h('select', {
         onchange: (e) => {
@@ -213,96 +209,7 @@ export function vueAccueil() {
    * d'une partie — le mode, les lots, les cartes — n'a pas à faire changer de
    * page : on le règle, on lance. La page Réglages garde le reste.
    */
-  function carteApercu() {
-    const cfg = construireConfig(nb);
-    const compte = {};
-    for (const f of cfg.faces) compte[f] = (compte[f] || 0) + 1;
 
-    const champ = (libelle, valeur, cle, opts = {}) => h('tr',
-      h('td.petit', libelle),
-      h('td.num', h('input.champ-mini', {
-        type: 'number', value: valeur,
-        min: opts.min ?? 1, max: opts.max ?? 99, step: 1,
-        onchange: (e) => {
-          let x = Number(e.target.value);
-          if (!isFinite(x)) return;
-          x = Math.min(opts.max ?? 99, Math.max(opts.min ?? 1, x));
-          // Depuis l'accueil, une valeur réglée vaut quel que soit le nombre de
-          // joueurs : changer d'effectif ne doit pas la faire sauter. Le réglage
-          // ligne par ligne reste possible dans les Réglages.
-          if (cle === 'lots') {
-            for (const n of NOMBRES_JOUEURS) ecrireLots(n, x);
-          } else if (cle === 'jetons' || cle === 'jetonsVert') {
-            for (const n of NOMBRES_JOUEURS) ecrireJetons(n, x, cle === 'jetonsVert');
-          } else if (cle === 'cartesPourGagner' || cle === 'cartesVert') {
-            for (const n of NOMBRES_JOUEURS) ecrireCartes(modeManche(cfg), n, x, cle === 'cartesVert');
-          } else {
-            ecrireReglage(cle, x);
-            // Toucher une valeur de mise en place, c'est quitter le tableau
-            // officiel — comme dans les Réglages, sans case à décocher d'abord.
-            if (CHAMPS_TABLEAU.includes(cle)) ecrireReglage('suivreTableau', false);
-          }
-          dessiner();
-        },
-      })),
-    );
-
-    return h('div.carte.carte-apercu',
-      h('div.rangee', { style: { marginBottom: '14px' } },
-        h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Réglages de la partie'),
-        h('button.btn.btn--petit', { onclick: () => { sauver(); aller('/reglages'); } },
-          'Tous les réglages'),
-      ),
-
-      // Le mode de jeu se change ici : c'est le réglage qui change le plus la
-      // partie, et le plus souvent essayé d'une partie à l'autre.
-      h('div.segment', { style: { marginBottom: '14px', width: '100%' } },
-        ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
-          class: modeManche(cfg) === id ? 'on' : '',
-          style: { flex: '1 1 0', minWidth: '0', fontSize: '12.5px' },
-          onclick: () => { ecrireReglage('modeManche', id); dessiner(); },
-        }, lib)),
-      ),
-
-      h('div.rangee.rangee--serree', { style: { marginBottom: '12px' } },
-        ...cfg.faces.map((f) => pastilleSymbole(f, 34)),
-      ),
-      h('div.petit.muted', { style: { marginBottom: '14px' } },
-        Object.entries(compte)
-          .map(([sym, n]) => `${n} ${nomSymbole(sym)}`)
-          .join(' · ')
-        + ` — ${cfg.desParLot} dés par lot`),
-      h('table.tbl',
-        h('tbody',
-          champ('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
-          champ('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 12 }),
-          estJeton(cfg)
-            ? champ('Jetons par équipe', cfg.jetons, 'jetons', { min: 1, max: 12 })
-            : null,
-          // Compromis : les jetons de sa couleur qu'on met à l'Abri.
-          estCompromis(cfg)
-            ? champ('Jetons à l’Abri', cfg.jetonsRefuge, 'jetonsRefuge', { min: 1, max: 6 })
-            : null,
-          nb % 2 && estJeton(cfg)
-            ? champ('Jetons du Vert', cfg.jetonsVert, 'jetonsVert', { min: 1, max: 12 })
-            : null,
-          champ('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner', { min: 1, max: 12 }),
-          nb % 2
-            ? champ('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner, 'cartesVert',
-                { min: 1, max: 12 })
-            : null,
-          ligneApercu('Cartes Tornade en jeu',
-            `${cartesEnJeu(cfg).length} sur ${cartesDuJeu().length}`),
-          ligneApercu('Lancer / constat / passage',
-            `${cfg.dureeLancer} · ${cfg.dureeConstat} · ${cfg.dureePassage} ms`),
-        ),
-      ),
-    );
-  }
-
-  function ligneApercu(libelle, valeur) {
-    return h('tr', h('td.petit', libelle), h('td.num.petit', { style: { fontWeight: '700' } }, valeur));
-  }
 
   dessiner();
   return racine;

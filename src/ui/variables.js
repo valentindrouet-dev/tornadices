@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.85';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.85';
-import { store } from './store.js?v=1.85';
-import { aller } from './app.js?v=1.85';
-import { lancerPartie } from './table.js?v=1.85';
+import { h, remplacer, telecharger } from './dom.js?v=1.86';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.86';
+import { store } from './store.js?v=1.86';
+import { aller } from './app.js?v=1.86';
+import { lancerPartie } from './table.js?v=1.86';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -23,22 +23,22 @@ import {
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.85';
-import { tableauCombos, editeurCases } from './combos.js?v=1.85';
-import { illustrationCarte } from './illustrations.js?v=1.85';
+} from '../core/config.js?v=1.86';
+import { tableauCombos, editeurCases } from './combos.js?v=1.86';
+import { illustrationCarte } from './illustrations.js?v=1.86';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.85';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.85';
-import { randomSeed } from '../core/rng.js?v=1.85';
-import { reglagesJoueurs } from './accueil.js?v=1.85';
+} from './apparence.js?v=1.86';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.86';
+import { randomSeed } from '../core/rng.js?v=1.86';
+import { reglagesJoueurs } from './accueil.js?v=1.86';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.85';
+} from './profils.js?v=1.86';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -179,6 +179,56 @@ export function ecrireCartes(mode, nbJoueurs, valeur, vert = false) {
 
 export function variables() {
   return reglagesCourants();
+}
+
+// ── Les noms des joueurs ─────────────────────────────────────────────────────
+// Un nom par place autour de la table, qu'un humain ou une IA l'occupe. Ils se
+// règlent dans les Réglages et valent partout : l'accueil, la table, le
+// Laboratoire. Un nom changé sur l'accueil reste à lui ; les autres suivent.
+
+export const NOMS_ORIGINE = ['Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna'];
+
+/** Les noms par défaut des huit places, tels que réglés. */
+export function nomsJoueurs(v = variables()) {
+  const regles = Array.isArray(v.nomsJoueurs) ? v.nomsJoueurs : [];
+  return NOMS_ORIGINE.map((d, i) => {
+    const n = typeof regles[i] === 'string' ? regles[i].trim() : '';
+    return n || d;
+  });
+}
+
+/** Le nom par défaut d'une place. */
+export function nomParDefaut(i, v = variables()) {
+  return nomsJoueurs(v)[i] || `Joueur ${i + 1}`;
+}
+
+function carteNoms(rafraichir) {
+  const noms = nomsJoueurs();
+  const modifies = noms.some((n, i) => n !== NOMS_ORIGINE[i]);
+  return h('div.carte',
+    titreAide('Noms des joueurs', [
+      'Le nom que porte chaque place autour de la table, qu’un humain ou une IA l’occupe. '
+      + 'Ils valent partout : à l’accueil, à la table et dans les campagnes du Laboratoire.',
+      'Un nom changé à l’accueil pour une partie reste le sien ; les autres places suivent '
+      + 'ces noms-ci.',
+    ],
+      modifies
+        ? h('button.btn.btn--petit', {
+            onclick: () => { ecrire('nomsJoueurs', undefined); rafraichir(); },
+          }, 'Noms d’origine')
+        : null),
+    h('div.grille.grille--4', { style: { gap: '10px' } },
+      ...noms.map((nom, i) => h('label.champ', `Place ${i + 1}${i === 0 ? ' (vous, par défaut)' : ''}`,
+        h('input', {
+          type: 'text', value: nom, maxLength: 20, placeholder: NOMS_ORIGINE[i],
+          onchange: (e) => {
+            const liste = nomsJoueurs().slice();
+            liste[i] = e.target.value.trim() || NOMS_ORIGINE[i];
+            ecrire('nomsJoueurs', liste);
+            rafraichir();
+          },
+        })))),
+  );
 }
 
 /**
@@ -1406,6 +1456,9 @@ export function vueVariables() {
           }),
         ),
       ),
+
+      // ── Noms des joueurs ──────────────────────────────────────────────────
+      carteNoms(dessiner),
 
       // ── Apparence des faces ───────────────────────────────────────────────
       // Le pouvoir ne bouge pas : c'est le même symbole pour le moteur, avec la

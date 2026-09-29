@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.85';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.85';
-import { nomSymbole } from './apparence.js?v=1.85';
-import { store } from './store.js?v=1.85';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.85';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.86';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.86';
+import { nomSymbole } from './apparence.js?v=1.86';
+import { store } from './store.js?v=1.86';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.86';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -19,15 +19,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, auxCochons, equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.85';
-import { tableauCombos } from './combos.js?v=1.85';
-import { barreProfils, idActif } from './profils.js?v=1.85';
+} from '../core/config.js?v=1.86';
+import { tableauCombos } from './combos.js?v=1.86';
+import { barreProfils, idActif } from './profils.js?v=1.86';
 import {
-  construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.85';
+  construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
+} from './variables.js?v=1.86';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.85';
+} from '../core/proba.js?v=1.86';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -168,7 +168,7 @@ function panneauConfig(rafraichir) {
     // On rend l'écran d'attente avant de bloquer le fil principal.
     setTimeout(() => {
       const spec = Array.from({ length: cfg.nbJoueurs }, (_, i) => ({
-        nom: `J${i + 1}`, type: 'ia', profil: etat.profils[i] || 'equilibre',
+        nom: nomParDefaut(i), type: 'ia', profil: etat.profils[i] || 'equilibre',
       }));
       try {
         etat.resultat = lancerCampagne(cfg, spec, etat.graine, etat.nbParties);
@@ -235,8 +235,10 @@ function panneauConfig(rafraichir) {
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Profils des joueurs'),
     h('div', { style: { display: 'grid', gap: '6px' } },
       ...Array.from({ length: cfg.nbJoueurs }, (_, i) => h('div.rangee.rangee--serree',
-        h('span.badge', { class: `badge--${sieges[i]}`, style: { width: '54px', textAlign: 'center' } },
-          `J${i + 1}`),
+        h('span.badge', {
+          class: `badge--${sieges[i]}`,
+          style: { width: '96px', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+        }, nomParDefaut(i)),
         h('select', {
           style: { flex: '1' },
           onchange: (e) => { etat.profils[i] = e.target.value; rafraichir(); },

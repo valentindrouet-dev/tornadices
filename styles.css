@@ -176,6 +176,8 @@ a { color: var(--accent-fonce); }
 }
 
 .grille { display: grid; gap: 16px; }
+/* L'accueil ne compose plus que la table : la carte des joueurs, seule, au centre. */
+.accueil-joueurs { max-width: 760px; margin: 0 auto; }
 /* Dans une grille, l'écart vient de `gap` : la marge qu'une carte prend sous la
    précédente, en pile, décalerait la seconde colonne vers le bas. */
 .grille > .carte + .carte { margin-top: 0; }
