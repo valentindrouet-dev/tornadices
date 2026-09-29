@@ -4,24 +4,24 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.75';
+import { h, remplacer, duree, vider } from './dom.js?v=1.76';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.75';
-import { Moteur } from '../core/engine.js?v=1.75';
+} from './icons.js?v=1.76';
+import { Moteur } from '../core/engine.js?v=1.76';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.75';
-import { ajouterHistorique } from './store.js?v=1.75';
-import { enregistrerPartie } from './resultats.js?v=1.75';
-import { aller } from './app.js?v=1.75';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.75';
-import { nomSymbole } from './apparence.js?v=1.75';
-import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.75';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.75';
+} from '../core/config.js?v=1.76';
+import { ajouterHistorique } from './store.js?v=1.76';
+import { enregistrerPartie } from './resultats.js?v=1.76';
+import { aller } from './app.js?v=1.76';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.76';
+import { nomSymbole } from './apparence.js?v=1.76';
+import { illustrationCarte, illustrationEquipe, jetonImprime } from './illustrations.js?v=1.76';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.76';
 
 let moteur = null;
 let vitesse = 1;
@@ -96,6 +96,14 @@ function alerteDesCombos(dispo) {
  * reste une simple phrase dans la configuration.
  */
 const MOTS_EN_AVANT = /(cartes? Tornade|Cow-?boy|Vaches|Poules|manche suivante)/gi;
+
+/** Le jeton d'une équipe : son image imprimée, ou le jeton dessiné à défaut. */
+function dessinJeton(cfg, equipe) {
+  const src = jetonImprime(cfg, equipe);
+  return src
+    ? `<img class="jeton-img" src="${src}" alt="" draggable="false" width="74" height="74">`
+    : SVG_SYMBOLE.vache;
+}
 
 function texteCarte(txt) {
   const frag = document.createDocumentFragment();
@@ -461,7 +469,7 @@ export function vueTable() {
       const cible = surCarte ? cadreSiege : cadreCase;
       const x0 = depart.left + depart.width / 2;
       const y0 = depart.top + depart.height / 2;
-      const el = h('div.jeton-vol', { html: SVG_SYMBOLE.vache });
+      const el = h('div.jeton-vol', { html: dessinJeton(moteur.cfg, equipeId) });
       // Taille et position posées en dur : un jeton sans feuille de style ne doit
       // pas pouvoir s'étaler sur toute la table.
       Object.assign(el.style, { position: 'absolute', width: '32px', height: '32px' });
@@ -1047,7 +1055,7 @@ export function vueTable() {
             ? h('div.siege-jetons', { title: pile ? `${pile} jeton${pile > 1 ? 's' : ''} sauvé${pile > 1 ? 's' : ''}` : '' },
                 ...Array.from({ length: pile }, (_, k) => h('span.siege-jeton', {
                   class: vientDeSePoser && k === pile - 1 ? 'siege-jeton--arrive' : '',
-                  html: SVG_SYMBOLE.vache,
+                  html: dessinJeton(moteur.cfg, j.equipe),
                 })))
             : null,
           h('div.entete',
@@ -1157,7 +1165,7 @@ export function vueTable() {
         estJeton(moteur.cfg) && !jetonsSurCarte() ? h('div.suivi-jetons',
           ...Array.from({ length: e.jetons }, (_, k) => h('div', {
             class: `jeton${k < acquis ? ' on' : ''}${k === acquis - 1 ? ' jeton--arrive' : ''}`,
-            html: k < acquis ? SVG_SYMBOLE.vache : '',
+            html: k < acquis ? dessinJeton(moteur.cfg, e.id) : '',
           })),
         ) : null,
       );
@@ -1166,8 +1174,9 @@ export function vueTable() {
 
   /**
    * Les jetons posés sur la carte Tornade : une rangée par équipe, un jeton par
-   * animal encore pris dedans, l'emblème de l'équipe en bout de rangée. Chaque
-   * Abri en fait sortir un ; l'équipe qui a vidé la sienne emporte la manche.
+   * animal encore pris dedans — le jeton dit l'équipe, rien ne s'y ajoute.
+   * Chaque Abri en fait sortir un ; l'équipe qui a vidé la sienne emporte la
+   * manche.
    */
   function blocJetonsCarte() {
     return h('div.tornade-jetons',
@@ -1179,10 +1188,9 @@ export function vueTable() {
           // de la rangée, et la case vidée se voit à sa place.
           ...Array.from({ length: s.total }, (_, k) => h('div', {
             class: `tornade-jeton tornade-jeton--${e.id}${k < s.restants ? ' on' : ''}`,
-            html: k < s.restants ? SVG_SYMBOLE.vache : '',
+            html: k < s.restants ? dessinJeton(moteur.cfg, e.id) : '',
+            title: c.emblemeNom,
           })),
-          h('span.tornade-jetons-embleme', { title: c.emblemeNom },
-            emblemeEquipe(c.embleme, 20)),
         );
       }),
     );
@@ -1210,7 +1218,7 @@ export function vueTable() {
           h('div.refuge-jetons',
             ...Array.from({ length: requis }, (_, k) => h('div', {
               class: `refuge-jeton${k < e.refuge ? ' on' : ''}`,
-              html: k < e.refuge ? SVG_SYMBOLE.vache : '',
+              html: k < e.refuge ? dessinJeton(moteur.cfg, e.id) : '',
             }))),
           h('div.refuge-nom', c.emblemeNom));
       })),

@@ -12,14 +12,14 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.75';
-import { store } from './store.js?v=1.75';
-import { aller } from './app.js?v=1.75';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.75';
-import { nomSymbole } from './apparence.js?v=1.75';
-import { construireConfig } from './variables.js?v=1.75';
-import { nomActif } from './profils.js?v=1.75';
-import { VERSION } from '../version.js?v=1.75';
+import { h, remplacer } from './dom.js?v=1.76';
+import { store } from './store.js?v=1.76';
+import { aller } from './app.js?v=1.76';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.76';
+import { nomSymbole } from './apparence.js?v=1.76';
+import { construireConfig } from './variables.js?v=1.76';
+import { nomActif } from './profils.js?v=1.76';
+import { VERSION } from '../version.js?v=1.76';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, refugePour, carteALaTable,
@@ -27,7 +27,7 @@ import {
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   TABLE_COCHONS, CARTE_COCHON, auxCochons, equipeVue,
-} from '../core/config.js?v=1.75';
+} from '../core/config.js?v=1.76';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>

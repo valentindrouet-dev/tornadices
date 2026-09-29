@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.75';
-import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.75';
+import { VERSION } from '../version.js?v=1.76';
+import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.76';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle
@@ -85,4 +85,20 @@ export function illustrationEquipe(cfg, equipe, etat, jouables) {
   return fideles
     ? { src: adresse(illu.src), nom: illu.nom, largeur: illu.taille[0], hauteur: illu.taille[1] }
     : null;
+}
+
+// ── Les jetons imprimés ──────────────────────────────────────────────────────
+// Un jeton par animal : la vache des Bleus, la poule des Jaunes, le cow-boy du
+// Vert. À la table à trois, chacun joue un Cochon : ces jetons-là n'y sont pas,
+// et l'on garde le jeton dessiné, aux couleurs des Cochons.
+export const JETONS_IMPRIMES = {
+  bleu: 'assets/jetons/vache.png',
+  jaune: 'assets/jetons/poule.png',
+  vert: 'assets/jetons/cowboy.png',
+};
+
+/** L'image du jeton d'une équipe, ou null quand il n'y en a pas à cette table. */
+export function jetonImprime(cfg, equipe) {
+  if (auxCochons(cfg)) return null;
+  return JETONS_IMPRIMES[equipe] || null;
 }

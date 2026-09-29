@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.75';
+export const VERSION = '1.76';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.76',
+    date: '29/09/2026',
+    notes: [
+      'Les jetons imprimés remplacent les jetons dessinés : la vache pour les Bleus, la poule pour les Jaunes, le cow-boy pour le Vert. On les retrouve sur la carte Tornade, au-dessus du siège de qui les a sauvés, pendant leur vol, au score et au Refuge.',
+      'Sur la carte Tornade, seuls les jetons sont posés : l’emblème ajouté en bout de rangée disparaît, le jeton suffit à dire l’équipe. Les jetons y sont aussi un peu plus gros.',
+      'À la table à trois, où chacun joue un Cochon, les jetons restent dessinés aux couleurs des Cochons, en attendant leur image.',
+    ],
+  },
   {
     version: '1.75',
     date: '29/09/2026',

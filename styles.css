@@ -831,7 +831,7 @@ label.champ {
 .carte-tornade .tornade-jetons { margin: 0; padding: 0; border: 0; display: grid; gap: .45em; }
 .carte-tornade .tornade-jetons-eq { justify-content: center; gap: .4em; margin: 0; }
 .carte-tornade .tornade-jeton {
-  width: 3.1em; height: 3.1em;
+  width: 3.6em; height: 3.6em;
   border-width: .22em;
   box-shadow: 0 .12em .35em rgba(60, 20, 5, .25);
 }
@@ -1051,6 +1051,12 @@ label.champ {
   animation: volJeton var(--duree, 850ms) cubic-bezier(.32, .04, .24, 1) both;
 }
 .jeton-vol svg { width: 21px; height: 21px; display: block; }
+/* Les jetons imprimés : le disque de l'image est le jeton, sans cadre autour. */
+.jeton-img { width: 100%; height: 100%; display: block; border-radius: 50%; }
+.siege-jeton:has(> .jeton-img), .jeton.on:has(> .jeton-img), .tornade-jeton.on:has(> .jeton-img),
+.refuge-jeton.on:has(> .jeton-img), .jeton-vol:has(> .jeton-img) {
+  background: none; border: 0; padding: 0;
+}
 @keyframes volJeton {
   0%   { transform: translate(-50%, -50%) scale(.45); opacity: 0; }
   14%  { transform: translate(-50%, -50%) scale(1.22); opacity: 1; }
