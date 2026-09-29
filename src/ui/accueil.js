@@ -1,27 +1,27 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.84';
-import { store } from './store.js?v=1.84';
-import { aller } from './app.js?v=1.84';
-import { eveillerSons } from './sons.js?v=1.84';
-import { lancerPartie, partieEnCours } from './table.js?v=1.84';
+import { h, remplacer } from './dom.js?v=1.85';
+import { store } from './store.js?v=1.85';
+import { aller } from './app.js?v=1.85';
+import { eveillerSons } from './sons.js?v=1.85';
+import { lancerPartie, partieEnCours } from './table.js?v=1.85';
 import {
-  construireConfig, variables, ecrireLots, ecrireCartes,
+  construireConfig, variables, ecrireLots, ecrireCartes, ecrireJetons,
   nombresJoueursPermis, joueursDansBornes,
   ecartsAuxOfficielles,
-} from './variables.js?v=1.84';
+} from './variables.js?v=1.85';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
   OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.84';
-import { nomSymbole } from './apparence.js?v=1.84';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.84';
-import { randomSeed } from '../core/rng.js?v=1.84';
+} from '../core/config.js?v=1.85';
+import { nomSymbole } from './apparence.js?v=1.85';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.85';
+import { randomSeed } from '../core/rng.js?v=1.85';
 import {
   reglagesCourants, enregistrerReglages, ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.84';
+} from './profils.js?v=1.85';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -232,6 +232,8 @@ export function vueAccueil() {
           // ligne par ligne reste possible dans les Réglages.
           if (cle === 'lots') {
             for (const n of NOMBRES_JOUEURS) ecrireLots(n, x);
+          } else if (cle === 'jetons' || cle === 'jetonsVert') {
+            for (const n of NOMBRES_JOUEURS) ecrireJetons(n, x, cle === 'jetonsVert');
           } else if (cle === 'cartesPourGagner' || cle === 'cartesVert') {
             for (const n of NOMBRES_JOUEURS) ecrireCartes(modeManche(cfg), n, x, cle === 'cartesVert');
           } else {

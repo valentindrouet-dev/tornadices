@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.84';
+export const VERSION = '1.85';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.85',
+    date: '29/09/2026',
+    notes: [
+      'Les jetons par manche — ceux qu’on pose sur la carte Tornade — se règlent par nombre de joueurs, comme les lots et les cartes pour gagner : dans les Réglages, « Mise en place », un tableau « Jetons par manche » porte une colonne par effectif, une ligne pour une équipe et une pour le joueur Vert (aux effectifs impairs). « Tableau officiel » remet les valeurs de départ.',
+      'La case « Suivre le tableau officiel » disparaît : elle ne servait qu’aux deux compteurs de jetons, que le tableau remplace. Un ancien réglage qui s’en était décroché retrouve sa valeur dans toutes les colonnes.',
+      'Réglés depuis l’accueil, « Jetons par équipe » et « Jetons du Vert » valent pour tous les effectifs, comme les lots et les cartes.',
+    ],
+  },
   {
     version: '1.84',
     date: '29/09/2026',

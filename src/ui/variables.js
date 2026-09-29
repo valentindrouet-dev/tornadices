@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.84';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.84';
-import { store } from './store.js?v=1.84';
-import { aller } from './app.js?v=1.84';
-import { lancerPartie } from './table.js?v=1.84';
+import { h, remplacer, telecharger } from './dom.js?v=1.85';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.85';
+import { store } from './store.js?v=1.85';
+import { aller } from './app.js?v=1.85';
+import { lancerPartie } from './table.js?v=1.85';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -16,33 +16,72 @@ import {
   cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, aideVariance,
-  NOMBRES_JOUEURS, lotsPour, lotsOfficiels, JOUEURS_MIN, JOUEURS_MAX,
+  NOMBRES_JOUEURS, lotsPour, lotsOfficiels, JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs,
   cartesPour, cartesVertPour, cartesOfficielles, cartesParDefaut,
   MODES_MANCHE, NOM_MODE, modeManche, estImmediat, estCompromis, estJeton, refugePour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.84';
-import { tableauCombos, editeurCases } from './combos.js?v=1.84';
-import { illustrationCarte } from './illustrations.js?v=1.84';
+} from '../core/config.js?v=1.85';
+import { tableauCombos, editeurCases } from './combos.js?v=1.85';
+import { illustrationCarte } from './illustrations.js?v=1.85';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.84';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.84';
-import { randomSeed } from '../core/rng.js?v=1.84';
-import { reglagesJoueurs } from './accueil.js?v=1.84';
+} from './apparence.js?v=1.85';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.85';
+import { randomSeed } from '../core/rng.js?v=1.85';
+import { reglagesJoueurs } from './accueil.js?v=1.85';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.84';
+} from './profils.js?v=1.85';
 
-// « lots » n'est plus de la partie : il a son propre tableau, une ligne par
-// nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
-const CHAMPS_MISE_EN_PLACE = ['jetons', 'jetonsVert'];
+/**
+ * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
+ * et ceux du joueur Vert, qui joue seul contre deux équipes. Ce sont eux qu'on
+ * pose sur la carte Tornade au début de chaque manche.
+ *
+ * Avant la v1.85 un seul nombre valait pour toutes les tables, et seulement une
+ * fois décochée la case « Suivre le tableau officiel » : il remplit alors toutes
+ * les colonnes, comme il valait partout.
+ */
+function tableJetonsDe(v, cleTable, cleAncienne, officiel) {
+  const table = Object.fromEntries(NOMBRES_JOUEURS.map((n) => [n, officiel(n)]));
+  const enregistre = v[cleTable];
+  if (enregistre && typeof enregistre === 'object') {
+    for (const n of NOMBRES_JOUEURS) {
+      const x = Number(enregistre[n]);
+      if (Number.isFinite(x) && x >= 1) table[n] = Math.min(12, Math.round(x));
+    }
+    return table;
+  }
+  if (v.suivreTableau === false && Number(v[cleAncienne]) >= 1) {
+    for (const n of NOMBRES_JOUEURS) table[n] = Math.min(12, Math.round(Number(v[cleAncienne])));
+  }
+  return table;
+}
+export function tableJetons(v = variables()) {
+  return tableJetonsDe(v, 'jetonsParJoueurs', 'jetons', (n) => infosMiseEnPlace(n).jetons);
+}
+export function tableJetonsVert(v = variables()) {
+  return tableJetonsDe(v, 'jetonsVertParJoueurs', 'jetonsVert', (n) => infosMiseEnPlace(n).jetonsVert);
+}
+
+/** Écrit une colonne du tableau des jetons — celle d'une équipe, ou du Vert. */
+export function ecrireJetons(nbJoueurs, valeur, vert = false) {
+  const cle = vert ? 'jetonsVertParJoueurs' : 'jetonsParJoueurs';
+  const table = vert ? tableJetonsVert() : tableJetons();
+  table[nbJoueurs] = Math.min(12, Math.max(1, Math.round(Number(valeur) || 1)));
+  const v = variables();
+  v[cle] = table;
+  // L'ancien nombre unique ne doit pas ressurgir derrière le tableau.
+  delete v[vert ? 'jetonsVert' : 'jetons'];
+  enregistrerReglages(v);
+}
 
 /**
  * Le tableau des lots en jeu, une ligne par nombre de joueurs.
@@ -195,11 +234,16 @@ export function construireConfig(nbJoueurs, reglages = variables()) {
     // Même chose pour les cartes : elles se lisent par ligne, plus bas.
     if (cle === 'cartesPourGagner' || cle === 'cartesVert') continue;
     if (cle === 'cartesParMode' || cle === 'cartesVertParMode') continue;
-    if (v.suivreTableau !== false && CHAMPS_MISE_EN_PLACE.includes(cle)) continue;
+    // Et les jetons par manche.
+    if (['jetons', 'jetonsVert', 'jetonsParJoueurs', 'jetonsVertParJoueurs'].includes(cle)) continue;
     cfg[cle] = Array.isArray(val) ? val.slice() : val;
   }
   // Combien de lots tournent, à cet effectif-là : la ligne du tableau.
   cfg.lots = lotsPour(tableLots(v), nbJoueurs);
+  // Les jetons par manche, à cet effectif : ceux d'une équipe, et ceux du Vert.
+  const n = bornerJoueurs(nbJoueurs);
+  cfg.jetons = tableJetons(v)[n];
+  cfg.jetonsVert = tableJetonsVert(v)[n];
   // Et combien de cartes il faut pour gagner — le Vert ayant la sienne, il joue
   // seul contre deux équipes.
   const mode = modeManche(cfg);
@@ -636,6 +680,68 @@ function tableauCartes(nbCourant, mode, rafraichir) {
 }
 
 /**
+ * Le tableau des jetons par manche : une colonne par nombre de joueurs, une
+ * ligne pour une équipe et une pour le joueur Vert.
+ */
+function tableauJetons(nbCourant, cfg, rafraichir) {
+  const equipes = tableJetons();
+  const vert = tableJetonsVert();
+  const officiel = (n) => infosMiseEnPlace(n);
+  const surMesure = NOMBRES_JOUEURS.some((n) => equipes[n] !== officiel(n).jetons
+    || (n % 2 === 1 && vert[n] !== officiel(n).jetonsVert));
+  const inutiles = !estJeton(cfg);
+  const champ = (n, valeur, estVert) => h('input.champ-mini', {
+    type: 'number', value: valeur, min: 1, max: 12, step: 1,
+    title: estVert
+      ? `Jetons du joueur Vert à ${n} joueurs — officiel : ${officiel(n).jetonsVert}`
+      : `Jetons d’une équipe à ${n} joueurs — officiel : ${officiel(n).jetons}`,
+    onchange: (e) => { ecrireJetons(n, e.target.value, estVert); rafraichir(); },
+  });
+  const col = (n) => ({ class: n === nbCourant ? 'col-courante' : '' });
+  return h('div', { style: { marginTop: '16px', opacity: inutiles ? '.55' : '1' } },
+    h('div.rangee', { style: { marginBottom: '8px' } },
+      h('div.titre-section', { style: { margin: 0 } }, 'Jetons par manche, par nombre de joueurs'),
+      h('div.pousse'),
+      surMesure
+        ? h('button.btn.btn--petit', {
+            title: 'Remettre les jetons des équipes et du Vert aux valeurs du tableau officiel',
+            onclick: () => {
+              const v = variables();
+              delete v.jetonsParJoueurs;
+              delete v.jetonsVertParJoueurs;
+              delete v.jetons;
+              delete v.jetonsVert;
+              enregistrerReglages(v);
+              rafraichir();
+            },
+          }, 'Tableau officiel')
+        : null,
+    ),
+    h('div.tbl-defile', h('table.tbl.tbl--lots',
+      h('thead', h('tr',
+        h('th', 'Joueurs'),
+        ...NOMBRES_JOUEURS.map((n) => h('th.num', col(n), String(n))))),
+      h('tbody',
+        h('tr',
+          h('td', 'Une équipe'),
+          ...NOMBRES_JOUEURS.map((n) => h('td.num', col(n), champ(n, equipes[n], false)))),
+        h('tr',
+          h('td', 'Le joueur Vert'),
+          // Le Vert n'existe qu'à nombre impair.
+          ...NOMBRES_JOUEURS.map((n) => h('td.num', col(n),
+            n % 2 === 1 ? champ(n, vert[n], true) : h('span.mini.muted', '—')))),
+      ))),
+    h('p.mini.muted', { style: { marginTop: '8px' } },
+      inutiles
+        ? 'Ces jetons ne servent qu’à la façon de jouer « Jeton » : en Immédiat et en '
+          + 'Compromis, ils restent au tableau sans effet.'
+        : `Les jetons posés sur la carte Tornade au début de chaque manche. La colonne en `
+          + `relief est celle de votre table — ${nbCourant} joueurs ; le Vert, seul contre deux `
+          + 'équipes, a sa propre ligne aux effectifs impairs.'),
+  );
+}
+
+/**
  * Le tableau des lots : une ligne par nombre de joueurs, éditable.
  *
  * @param {number} nbCourant  l'effectif choisi sur l'accueil — sa ligne est
@@ -701,7 +807,6 @@ export function vueVariables() {
     const v = variables();
     const cfg = construireConfig(nb);
     const mep = infosMiseEnPlace(nb);
-    const suivreTableau = v.suivreTableau !== false;
 
     const num = (libelle, valeur, cle, opts = {}) => h('label.champ', libelle,
       h('input', {
@@ -713,9 +818,6 @@ export function vueVariables() {
           if (!isFinite(x)) return;
           x = Math.min(opts.max ?? 99999, Math.max(opts.min ?? 0, x));
           ecrire(cle, x);
-          // Toucher une valeur du tableau officiel, c'est le quitter : inutile
-          // d'exiger de décocher la case d'abord, personne ne le devinait.
-          if (CHAMPS_MISE_EN_PLACE.includes(cle)) ecrire('suivreTableau', false);
           dessiner();
         },
       }),
@@ -1031,8 +1133,8 @@ export function vueVariables() {
               + 'à l’Abri. Les compteurs de jetons de la règle de base ne servent plus, leurs '
               + 'champs restent grisés ; on joue en cinq cartes par défaut.'
             : '',
-          'Toutes ces valeurs se règlent à la main : en modifier une décroche le tableau '
-          + 'officiel. Recocher « Suivre le tableau officiel » les remet toutes d’aplomb.',
+          'Les jetons par manche se règlent table par table, pour les équipes comme pour le '
+          + 'Vert : « Tableau officiel » les remet d’aplomb.',
           nb % 2
             ? 'Le Vert joue seul contre deux équipes : « Cartes du Vert » règle son objectif à '
               + 'part, pour l’alléger ou l’alourdir sans toucher aux Bleus ni aux Jaunes. Laissez '
@@ -1049,10 +1151,6 @@ export function vueVariables() {
           'Manches maximum est un garde-fou : une partie qui l’atteint est comptée comme '
           + 'interrompue, jamais comme gagnée.',
         ],
-          h('button', {
-            class: `chip${suivreTableau ? ' on' : ''}`,
-            onclick: () => { ecrire('suivreTableau', !suivreTableau); dessiner(); },
-          }, h('span.case', '✓'), 'Suivre le tableau officiel'),
         ),
         // Les tables proposées à l'accueil : de combien à combien de joueurs.
         h('div.rangee', { style: { gap: '12px', marginBottom: '12px', alignItems: 'flex-end' } },
@@ -1084,12 +1182,6 @@ export function vueVariables() {
           })(),
         ),
         h('div.grille.grille--4', { style: { gap: '12px' } },
-          // Sans les points, plus rien ne se retourne : les deux compteurs de
-          // jetons n'ont plus d'effet, autant le montrer.
-          num('Jetons Bleu / Jaune', cfg.jetons, 'jetons',
-            { min: 1, max: 12, disabled: !estJeton(cfg) }),
-          num('Jetons du Vert', cfg.jetonsVert, 'jetonsVert',
-            { min: 1, max: 12, disabled: !estJeton(cfg) }),
           // Compromis : les jetons de sa couleur qu'une équipe peut mettre à
           // l'Abri — le plafond de ce qu'une Tornade peut demander.
           estCompromis(cfg)
@@ -1097,6 +1189,9 @@ export function vueVariables() {
             : null,
           num('Manches maximum', cfg.manchesMax, 'manchesMax', { min: 1, max: 200 }),
         ),
+
+        // Les jetons par manche : une colonne par nombre de joueurs, et le Vert.
+        tableauJetons(nb, cfg, dessiner),
 
         // Où les jetons attendent : sur la carte Tornade, d'où chaque Abri en
         // sort un, ou devant leur équipe, où il les retourne. Le compte ne change
