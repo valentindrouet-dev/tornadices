@@ -419,21 +419,32 @@ label.champ {
 /* Les jetons qu'un joueur a sortis de la tornade, posés au-dessus de son siège
    jusqu'à la fin de la manche. Hors du flux : le siège garde sa taille. */
 .siege-jetons {
-  position: absolute; left: 50%; bottom: calc(100% + 5px);
+  position: absolute; left: 50%; bottom: calc(100% + 12px);
   transform: translateX(-50%);
-  display: flex; gap: 4px; pointer-events: none;
+  display: flex; pointer-events: none;
 }
+/* Les jetons sauvés se chevauchent un peu, comme une pile posée sur la table :
+   quatre tiennent encore dans la largeur d'un siège. */
+.siege-jeton + .siege-jeton { margin-left: -12px; }
 .siege-jeton {
-  width: 24px; height: 24px; border-radius: 50%;
+  width: 46px; height: 46px; border-radius: 50%; flex: none;
   background: var(--couleur-eq, var(--accent));
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(20, 55, 95, .3);
   display: grid; place-items: center;
 }
+/* Pas la place au-dessus : la pile se range sur le côté du siège, en colonne. */
+.siege[data-pile="gauche"] .siege-jetons, .siege[data-pile="droite"] .siege-jetons {
+  bottom: auto; top: 50%; transform: translateY(-50%); flex-direction: column;
+}
+.siege[data-pile="gauche"] .siege-jetons { left: auto; right: calc(100% + 12px); }
+.siege[data-pile="droite"] .siege-jetons { left: calc(100% + 12px); }
+.siege[data-pile="gauche"] .siege-jeton + .siege-jeton,
+.siege[data-pile="droite"] .siege-jeton + .siege-jeton { margin-left: 0; margin-top: -12px; }
 /* Seul le jeton qui vient de se poser s'annonce : le siège se repeint à chaque
    lancer, la pile ne doit pas clignoter pour autant. */
 .siege-jeton--arrive { animation: jetonArrive .5s ease-out; }
-.siege-jeton svg { width: 16px; height: 16px; display: block; }
+.siege-jeton svg { width: 30px; height: 30px; display: block; }
 .siege {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -740,7 +751,7 @@ label.champ {
 .centre-carte { display: grid; gap: 10px; justify-items: center; }
 .coin { position: static; }
 .coin--carte { width: auto; }
-.coin--pioche { width: 104px; }
+.coin--pioche { width: 132px; }
 .coin--echange .carte-tornade { animation: carteArrive .55s cubic-bezier(.3, .8, .35, 1); }
 /* La carte suivante vient de la pioche, posée juste à sa droite. */
 @keyframes carteArrive {
@@ -847,13 +858,18 @@ label.champ {
 .scores-table { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
 .scores-table .score-equipe { flex: 0 1 auto; }
 
-.pioche-pile { position: relative; height: 74px; }
+/* La pioche : des cartes Tornade face cachée, au format de la carte et au dos
+   rouge. */
+.pioche-pile { position: relative; width: 84px; height: 116px; margin: 0 auto; }
 .dos-carte {
-  position: absolute; inset: 0 26px 0 0;
-  border-radius: 10px;
-  background: repeating-linear-gradient(135deg, #3d9bdd, #3d9bdd 7px, #2f8ccd 7px, #2f8ccd 14px);
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(20, 60, 110, .22);
+  position: absolute; left: 0; bottom: 0;
+  width: 76px; aspect-ratio: 1432 / 1948;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 220, 190, .28) 0 18%, transparent 19%),
+    repeating-linear-gradient(135deg, #d8332c, #d8332c 6px, #c02721 6px, #c02721 12px);
+  border: 3px solid #fff3e4;
+  box-shadow: 0 0 0 1.5px #b3241f, 0 2px 6px rgba(90, 20, 10, .3);
 }
 .pioche-nb {
   position: absolute; right: 0; bottom: -4px;
@@ -1287,6 +1303,12 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .badge--vert { background: #e4f5e9; color: #2b7141; border-color: #bfe6cc; }
 /* Un Cochon n'a pas d'équipe : sa couleur arrive par --couleur-eq, et le badge
    s'en déduit — fond pâle, texte foncé pour rester lisible, même en orange. */
+/* Sur l'accueil, les cartouches d'équipe ont tous la même largeur : « Cochon
+   rose » ne doit pas paraître plus petit que « Cochon orange ». */
+.badge--joueur {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  width: 150px; flex: none; white-space: nowrap; box-sizing: border-box;
+}
 .badge--cochon {
   background: color-mix(in srgb, var(--couleur-eq) 14%, #fff);
   color: color-mix(in srgb, var(--couleur-eq) 70%, #000);
@@ -1424,7 +1446,9 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   /* Nombre impair de joueurs : le siège du bas de l'anneau prend la largeur. */
   .siege--large { flex: 1 1 100%; }
   /* Les sièges sont en flux : la pile de jetons sauvés passe en tête du siège. */
-  .siege-jetons { position: static; transform: none; justify-content: center; margin-bottom: 4px; }
+  .siege-jetons { position: static; transform: none; justify-content: center; margin-bottom: 6px; }
+  .siege-jeton { width: 36px; height: 36px; }
+  .siege-jeton + .siege-jeton { margin-left: -9px; }
   .siege-jetons:empty { display: none; }
 
   /* L'annonce se pose SUR le haut de la zone du joueur : au-dessus, elle
@@ -1638,17 +1662,17 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* La carte de sens : posée à côté de la pioche, elle indique le sens de
    circulation et ne bouge qu'entre deux manches, quand les perdants la
    retournent. Elle prend la place de la flèche du dos, qui n'a plus cours. */
-.carte-sens { margin: 10px auto 0; width: 84px; text-align: center; }
+.carte-sens { margin: 12px auto 0; width: 124px; text-align: center; }
 /* La carte de sens imprimée, telle quelle : on n'arrondit que ses coins. */
 .carte-sens-img, .carte-sens-mini, .carte-sens-grande {
   display: block; height: auto; border-radius: 7%/5%;
   box-shadow: 0 2px 8px rgba(20, 55, 95, .22);
 }
 .carte-sens-img { width: 100%; }
-.carte-sens-mini { width: auto; height: 38px; flex: none; border-radius: 4px; }
-.carte-sens-grande { width: min(200px, 44vw, 30vh); margin: 4px auto 12px; }
+.carte-sens-mini { width: auto; height: 56px; flex: none; border-radius: 5px; }
+.carte-sens-grande { width: min(260px, 56vw, 34vh); margin: 4px auto 12px; }
 .btn--sens { display: inline-flex; align-items: center; gap: 8px; padding-left: 8px; }
-.btn--sens .carte-sens-mini { height: 30px; box-shadow: none; }
+.btn--sens .carte-sens-mini { height: 40px; box-shadow: none; }
 .carte-sens-nom {
   font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
   color: var(--gris); margin-top: 2px;

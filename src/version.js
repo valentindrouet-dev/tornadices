@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.77';
+export const VERSION = '1.78';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.78',
+    date: '29/09/2026',
+    notes: [
+      'La carte de sens s’affiche plus grande à côté de la pioche, à la révélation des manches et dans la fenêtre du choix.',
+      'La pioche a la forme d’une pile de cartes Tornade face cachée : au format de la carte, avec un dos rouge. Le nombre de cartes restantes est sur la pile.',
+      'Sur l’accueil, les cartouches des trois Cochons — et ceux des autres équipes — ont tous la même largeur.',
+      'Les jetons sauvés par un joueur sont bien plus gros et se posent au-dessus de son siège, à distance, sans toucher sa boîte. Quand un autre siège est trop près au-dessus — sur les côtés, à huit joueurs —, la pile passe sur le côté du siège. Celle du joueur du bas se pose sur le côté d’emblée, pour laisser la place à la carte Tornade.',
+    ],
+  },
   {
     version: '1.77',
     date: '29/09/2026',

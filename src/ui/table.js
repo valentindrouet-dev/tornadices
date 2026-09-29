@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.77';
+import { h, remplacer, duree, vider } from './dom.js?v=1.78';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.77';
-import { Moteur } from '../core/engine.js?v=1.77';
+} from './icons.js?v=1.78';
+import { Moteur } from '../core/engine.js?v=1.78';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.77';
-import { ajouterHistorique } from './store.js?v=1.77';
-import { enregistrerPartie } from './resultats.js?v=1.77';
-import { aller } from './app.js?v=1.77';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.77';
-import { nomSymbole } from './apparence.js?v=1.77';
+} from '../core/config.js?v=1.78';
+import { ajouterHistorique } from './store.js?v=1.78';
+import { enregistrerPartie } from './resultats.js?v=1.78';
+import { aller } from './app.js?v=1.78';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.78';
+import { nomSymbole } from './apparence.js?v=1.78';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.77';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.77';
+} from './illustrations.js?v=1.78';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.78';
 
 let moteur = null;
 let vitesse = 1;
@@ -247,6 +247,7 @@ export function vueTable() {
     const zh = zoneTable.clientHeight;
     if (!zw || !zh || surMobile()) {
       elCentre.style.removeProperty('--echelle-centre');
+      for (const el of elSieges) delete el.dataset.pile;
       return;
     }
 
@@ -255,7 +256,7 @@ export function vueTable() {
     const haut = elSieges[0]?.offsetHeight || 130;
     // Au-dessus de chaque siège, la place des jetons qu'il a sauvés : le cercle
     // descend d'autant, pour que la pile du siège du haut reste sur la table.
-    const pile = jetonsSurCarte() ? 30 : 0;
+    const pile = jetonsSurCarte() ? 60 : 0;
     const cx = zw / 2;
     const cy = zh / 2 + pile / 2;
     const rx = Math.max(60, zw / 2 - larg / 2 - marge);
@@ -264,8 +265,7 @@ export function vueTable() {
     CENTRE.x = 50;
     CENTRE.y = (cy / zh) * 100;
 
-    const cadres = [];
-    elSieges.forEach((el, i) => {
+    const sieges = elSieges.map((el, i) => {
       const a = (Math.PI / 2) + ((i - siegeBas) * 2 * Math.PI) / n;
       const x = cx + rx * Math.cos(a);
       const y = cy + ry * Math.sin(a);
@@ -275,8 +275,37 @@ export function vueTable() {
       el.style.top = `${positions[i].y}%`;
       const l = el.offsetWidth || larg;
       const t = el.offsetHeight || haut;
-      cadres.push({ x0: x - l / 2, x1: x + l / 2, y0: y - t / 2 - pile, y1: y + t / 2 });
+      return { x, x0: x - l / 2, x1: x + l / 2, y0: y - t / 2, y1: y + t / 2 };
     });
+
+    // La pile de jetons sauvés se pose au-dessus du siège, sans le toucher. À
+    // huit, les sièges des côtés se suivent de trop près : la pile passe alors
+    // sur le côté. Le siège du bas la met sur le côté d'emblée — au-dessus de
+    // lui, c'est la place de la carte Tornade. La réserve vaut pour quatre jetons
+    // au-dessus, trois en colonne sur le côté.
+    const cadres = sieges.map((s) => ({ ...s }));
+    if (pile) {
+      const libre = (r, soi) => r.x0 >= 0 && r.x1 <= zw && r.y0 >= 0 && r.y1 <= zh
+        && sieges.every((s) => s === soi
+          || r.x1 <= s.x0 || s.x1 <= r.x0 || r.y1 <= s.y0 || s.y1 <= r.y0);
+      const LARGE = 150;
+      const COTE = 60;
+      const COLONNE = 116;
+      sieges.forEach((s, i) => {
+        const mi = (s.y0 + s.y1) / 2;
+        const zones = {
+          haut: { x0: s.x - LARGE / 2, x1: s.x + LARGE / 2, y0: s.y0 - pile, y1: s.y0 },
+          droite: { x0: s.x1, x1: s.x1 + COTE, y0: mi - COLONNE / 2, y1: mi + COLONNE / 2 },
+          gauche: { x0: s.x0 - COTE, x1: s.x0, y0: mi - COLONNE / 2, y1: mi + COLONNE / 2 },
+        };
+        const dehors = s.x >= cx ? 'droite' : 'gauche';
+        const dedans = dehors === 'droite' ? 'gauche' : 'droite';
+        const ordre = i === siegeBas ? ['droite', 'gauche', 'haut'] : ['haut', dehors, dedans];
+        const choix = ordre.find((o) => libre(zones[o], s)) || 'haut';
+        elSieges[i].dataset.pile = choix;
+        cadres.push(zones[choix]);
+      });
+    }
 
     if (elTapis) {
       elTapis.style.left = `${((cx - rx) / zw) * 100}%`;
@@ -354,6 +383,8 @@ export function vueTable() {
   placerSieges();
   const suiviTaille = new ResizeObserver(() => placerSieges());
   suiviTaille.observe(zoneTable);
+  // Un siège grandit quand un lot lui arrive : la place de sa pile se recalcule.
+  for (const el of elSieges) suiviTaille.observe(el);
   window.addEventListener('resize', placerSieges);
 
   // Le lot traverse la table : sans cela on ne voit pas les dés changer de main.
@@ -1136,13 +1167,14 @@ export function vueTable() {
     // La carte rotation est posée sur la table dès qu'elle décide du sens.
     const carteDeSens = regleSens === 'perdants';
     centreChange = siChange(elPioche, `pioche-${reste}-${moteur.sens}-${regleSens}`, () => h('div.pioche',
-      h('div.pioche-pile',
+      h('div.pioche-pile', {
+        title: reste > 1 ? `${reste} tornades restantes` : reste === 1 ? '1 tornade restante' : 'pile épuisée',
+      },
         ...Array.from({ length: Math.min(4, Math.max(1, reste)) }, (_, k) =>
           h('div.dos-carte', { style: { transform: `translate(${k * 3}px, ${-k * 3}px)` } })),
         reste ? h('div.pioche-nb', reste) : h('div.pioche-nb.pioche-nb--vide', '0'),
       ),
-      h('div.mini.muted', { style: { marginTop: '8px', textAlign: 'center' } },
-        reste > 1 ? `${reste} tornades restantes` : reste === 1 ? '1 tornade restante' : 'pile épuisée'),
+
       carteDeSens
         ? h('div.carte-sens', {
             title: `Carte de sens : ${NOM_TOUR(moteur.sens)}. Les perdants de la manche `
