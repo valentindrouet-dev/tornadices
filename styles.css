@@ -30,14 +30,29 @@
   --ombre-forte: 0 2px 6px rgba(20, 55, 95, .09), 0 18px 44px rgba(30, 90, 150, .13);
 }
 
+/* La police du jeu — celle des cartes Tornade et des cartes d'équipe
+   imprimées. Une seule graisse : on la prend telle quelle, sans gras ni
+   italique de synthèse. Elle n'a pas les guillemets ni l'apostrophe
+   typographiques, qui retombent sur la police de secours. */
+@font-face {
+  font-family: "Heroes Legend";
+  src: url("assets/fonts/heroes-legend.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --police-jeu: "Heroes Legend", "Arial Black", "Helvetica Neue", Inter, sans-serif;
+  --police-texte: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
 * { box-sizing: border-box; }
 
 html, body { height: 100%; }
 
 body {
   margin: 0;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--police-texte);
   font-size: 15px;
   line-height: 1.5;
   color: var(--encre);
@@ -60,6 +75,7 @@ body::before {
 }
 
 h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -.02em; }
+h1, h2 { font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; letter-spacing: .03em; }
 h1 { font-size: 32px; }
 h2 { font-size: 22px; }
 h3 { font-size: 17px; }
@@ -96,9 +112,10 @@ a { color: var(--accent-fonce); }
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
 .marque .nom {
-  font-weight: 900;
-  font-size: 19px;
-  letter-spacing: .18em;
+  font-family: var(--police-jeu);
+  font-weight: 400; font-synthesis: none;
+  font-size: 21px;
+  letter-spacing: .12em;
   white-space: nowrap;
 }
 .pastille-version {
@@ -433,7 +450,12 @@ label.champ {
   25% { transform: translate(calc(-50% - 6px), -50%); }
   75% { transform: translate(calc(-50% + 6px), -50%); }
 }
-.siege .entete { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13.5px; }
+.siege .entete {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13.5px;
+  font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; letter-spacing: .01em;
+}
+/* Le nom est dans la police du jeu ; ce qui l'accompagne reste en texte courant. */
+.siege .entete .badge, .siege .badge-lots { font-family: var(--police-texte); font-weight: 800; }
 .siege .puce { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .etat-tornade {
   display: flex; align-items: center; gap: 7px;
@@ -483,8 +505,11 @@ label.champ {
   border-radius: calc(var(--de-siege, 36px) * .28);
 }
 .siege .profil-siege {
-  font-size: 10.5px; font-weight: 600; color: var(--gris); white-space: nowrap;
-  flex: none;
+  font-family: var(--police-texte); font-size: 10.5px; font-weight: 600; color: var(--gris);
+  white-space: nowrap;
+  /* Sur sa propre ligne, sous le nom : la police du jeu est large, les deux ne
+     tiennent plus côte à côte. */
+  order: 9; flex: 0 0 100%; padding-left: 16px; margin-top: -3px;
 }
 .siege .badge-lots {
   background: var(--accent-clair); color: #10557f; border-radius: 999px;
@@ -748,8 +773,8 @@ label.champ {
   background: var(--tornade-orange);
   border-radius: 0 0 2.2em 2.2em;
   color: #fff6ec;
-  font-family: "Arial Black", "Helvetica Neue", Inter, sans-serif;
-  font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-family: var(--police-jeu);
+  font-weight: 400; font-style: normal; font-synthesis: none; text-transform: uppercase;
   line-height: .95; letter-spacing: .01em; text-align: center;
   text-shadow: 0 .08em 0 rgba(120, 30, 5, .3);
 }
@@ -757,8 +782,8 @@ label.champ {
 .carte-tornade-bandeau .l2 { font-size: 1.3em; margin-top: .15em; }
 /* Un premier mot plus long que « Tornade » se resserre pour tenir dans le
    bandeau : « 1ère Journée », « Mini-Tornade ». */
-.carte-tornade-bandeau--moyen .l1 { font-size: 1.65em; }
-.carte-tornade-bandeau--long .l1 { font-size: 1.3em; line-height: 1.1; }
+.carte-tornade-bandeau--moyen .l1 { font-size: 1.3em; }
+.carte-tornade-bandeau--long .l1 { font-size: 1.15em; line-height: 1.1; }
 .carte-tornade-des { display: flex; gap: .4em; justify-content: center; margin: .1em 0 .8em; }
 .carte-tornade-de {
   background: #fff; border: .22em solid #1c1410; border-radius: .6em;
@@ -774,9 +799,9 @@ label.champ {
 }
 .carte-tornade-filet svg { width: 2.1em; height: 2.1em; flex: none; }
 .carte-tornade-texte {
-  font-family: "Arial Black", "Helvetica Neue", Inter, sans-serif;
-  font-weight: 900; font-style: italic; text-transform: uppercase;
-  font-size: 1.5em; line-height: 1.12; color: #221812;
+  font-family: var(--police-jeu);
+  font-weight: 400; font-style: normal; font-synthesis: none; text-transform: uppercase;
+  font-size: 1.3em; line-height: 1.25; color: #221812;
   text-align: center; margin: 0 0 .7em;
   overflow-wrap: anywhere;
 }
@@ -833,7 +858,7 @@ label.champ {
   padding: 8px 12px;
   box-shadow: var(--ombre);
 }
-.score-nom { font-weight: 850; font-size: 15.5px; }
+.score-nom { font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; font-size: 16px; letter-spacing: .02em; }
 .score-cartes {
   font-weight: 850; font-size: 14px;
   background: var(--fond-doux); border: 1px solid var(--bord);
@@ -1214,9 +1239,10 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 
 .titre-jeu {
   text-align: center;
+  font-family: var(--police-jeu);
   font-size: clamp(38px, 6.4vw, 64px);
-  font-weight: 900;
-  letter-spacing: .16em;
+  font-weight: 400; font-synthesis: none;
+  letter-spacing: .12em;
   margin: 26px 0 6px;
 }
 .titre-jeu .l-bleu { color: #2b93de; }
@@ -1800,3 +1826,9 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 /* Ce qui vient d'un réglage, et peut donc changer d'une version à l'autre. */
 .fiche-reglage { font-weight: 800; color: #10233a; }
 
+/* Les noms d'équipe, partout où ils s'affichent, dans la police du jeu. */
+.refuge-nom, .panneau-humain strong, .tornade-jetons-eq, .siege-annonce,
+.badge--bleu, .badge--jaune, .badge--vert, .badge--cochon {
+  font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; letter-spacing: .02em;
+}
+.badge--bleu, .badge--jaune, .badge--vert, .badge--cochon { font-size: 12px; }

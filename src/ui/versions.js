@@ -1,7 +1,7 @@
 // Journal des versions.
 
-import { h } from './dom.js?v=1.73';
-import { CHANGELOG, VERSION, BUILD_DATE } from '../version.js?v=1.73';
+import { h } from './dom.js?v=1.74';
+import { CHANGELOG, VERSION, BUILD_DATE } from '../version.js?v=1.74';
 
 export function vueVersions() {
   return h('div.page',

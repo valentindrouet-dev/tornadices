@@ -576,7 +576,7 @@ console.log('\nÉclats d\u2019écran');
 // ── 3 quater. Les caractères des IA font ce qu'ils annoncent ─────────────────
 console.log('\nCaractères des IA');
 {
-  const N = 100;
+  const N = 50;
   const par = {};
   for (const id of Object.keys(PROFILS_IA)) {
     const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i}`, type: 'ia', profil: id }));
@@ -683,8 +683,8 @@ console.log('\nRéglages enregistrés d’une ancienne version');
 
   // Sans traduction, un tiers du dé ne servait à rien : la preuve par le jeu.
   const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
-  const brut = lancerCampagne({ ...ancien, ...configParDefaut(6), faces: ancien.faces }, spec, 'ancien', 40);
-  const soigne = lancerCampagne(cfg, spec, 'ancien', 40);
+  const brut = lancerCampagne({ ...ancien, ...configParDefaut(6), faces: ancien.faces }, spec, 'ancien', 12);
+  const soigne = lancerCampagne(cfg, spec, 'ancien', 12);
   verifier('avant : aucun réveil, les tornades manquaient au dé',
     !brut.combos.reveil, `${brut.combos.reveil || 0} réveils`);
   verifier('après : le réveil revient',

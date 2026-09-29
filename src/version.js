@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.73';
+export const VERSION = '1.74';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.74',
+    date: '29/09/2026',
+    notes: [
+      'La police du jeu, Heroes Legend — celle des cartes Tornade et des cartes d’équipe imprimées —, est dans l’interface : le titre, les cartes Tornade dessinées (bandeau et texte), les noms d’équipe au score, sur les sièges, au Refuge et dans les badges. Le texte courant reste en Inter, plus lisible en petit.',
+      'La police est près de deux fois plus large qu’Arial Black : le texte des cartes se resserre pour que « supplémentaire » et « immédiatement » tiennent sur une ligne, et le caractère d’une IA passe sous son nom sur le siège.',
+      'La suite de vérifications tourne en 20 s au lieu de 28 : les campagnes des caractères d’IA et des anciens réglages sont plus courtes, sans toucher aux duels qui ont besoin du nombre.',
+    ],
+  },
   {
     version: '1.73',
     date: '29/09/2026',
