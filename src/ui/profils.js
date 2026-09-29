@@ -12,8 +12,9 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.82';
-import { store } from './store.js?v=1.82';
+import { h } from './dom.js?v=1.83';
+import { store } from './store.js?v=1.83';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.83';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -63,6 +64,50 @@ export const PROFILS_INTEGRES = [
 
 const INTEGRES_PAR_ID = Object.fromEntries(PROFILS_INTEGRES.map((p) => [p.id, p]));
 
+// ── Les Règles officielles ───────────────────────────────────────────────────
+// Un réglage livré comme les autres, en tête de liste — sauf que son contenu se
+// valide depuis les Réglages. La validation faite dans ce navigateur l'emporte
+// sur le fichier du site, tant que celui-ci n'est pas plus récent.
+
+export const ID_OFFICIELLES = 'officielles';
+const CLE_OFFICIELLES = 'reglesOfficielles';
+
+/** Les Règles officielles en vigueur : `{ valideeLe, variables }`. */
+export function reglesOfficielles() {
+  const locales = store.get(CLE_OFFICIELLES, null);
+  const site = REGLES_OFFICIELLES;
+  if (locales && locales.variables && typeof locales.variables === 'object'
+    && (!site.valideeLe || String(locales.valideeLe) > String(site.valideeLe))) return locales;
+  return site;
+}
+
+/** Fait des réglages donnés les Règles officielles, dans ce navigateur. */
+export function validerReglesOfficielles(v) {
+  const regles = {
+    valideeLe: new Date().toISOString(),
+    variables: JSON.parse(JSON.stringify(v && typeof v === 'object' ? v : {})),
+  };
+  store.set(CLE_OFFICIELLES, regles);
+  // Le réglage « Règles officielles » repart de ce qui vient d'être validé.
+  retablirIntegre(ID_OFFICIELLES);
+  return regles;
+}
+
+/** Le fichier du site qui les rend officielles pour tout le monde. */
+export function fichierReglesOfficielles(regles = reglesOfficielles()) {
+  return '// Les Règles officielles de TornaDice — fichier exporté depuis les Réglages.\n'
+    + '// Il remplace src/core/regles-officielles.js : une fois publié, ces règles\n'
+    + '// sont les Règles officielles de tous les visiteurs du site.\n\n'
+    + `export const REGLES_OFFICIELLES = ${JSON.stringify(regles, null, 2)};\n`;
+}
+
+function profilOfficiel() {
+  return {
+    id: ID_OFFICIELLES, nom: 'Règles officielles', integre: true,
+    variables: reglesOfficielles().variables,
+  };
+}
+
 /** Ce qu'on a modifié par-dessus les réglages livrés, par identifiant. */
 function modificationsIntegrees() {
   const o = store.get(CLE_INTEGRES, {});
@@ -71,7 +116,7 @@ function modificationsIntegrees() {
 
 /** Vrai si ce réglage est livré avec le jeu — il ne se renomme ni ne s'efface. */
 export function estIntegre(id) {
-  return !!INTEGRES_PAR_ID[id];
+  return id === ID_OFFICIELLES || !!INTEGRES_PAR_ID[id];
 }
 
 /** Vrai si un réglage livré a été modifié ici — on peut alors y revenir. */
@@ -96,12 +141,14 @@ export function profils() {
   const miens = Array.isArray(l) ? l.filter((p) => p && typeof p === 'object' && p.id) : [];
   // Un réglage à vous ne peut pas porter l'identifiant d'un réglage livré : le
   // second l'emporterait, et l'on ne saurait plus lequel on modifie.
-  return [...PROFILS_INTEGRES, ...miens.filter((p) => !estIntegre(p.id))];
+  return [profilOfficiel(), ...PROFILS_INTEGRES, ...miens.filter((p) => !estIntegre(p.id))];
 }
 
 /** L'identifiant du réglage sélectionné, ou `null` pour « Par défaut ». */
 export function idActif() {
-  const id = store.get(CLE_ACTIF, null);
+  // Un visiteur qui n'a encore rien choisi joue les Règles officielles ;
+  // « Par défaut » choisi un jour reste choisi (la clé vaut alors `null`).
+  const id = store.get(CLE_ACTIF, ID_OFFICIELLES);
   if (!id) return null;
   // Un réglage supprimé dans un autre onglet ne doit pas laisser la page
   // pointer dans le vide : on retombe sur « Par défaut ».
@@ -133,7 +180,8 @@ export function reglagesCourants() {
   if (estIntegre(id)) {
     const mien = modificationsIntegrees()[id];
     if (mien && typeof mien === 'object') return mien;
-    return JSON.parse(JSON.stringify(INTEGRES_PAR_ID[id].variables));
+    const livre = id === ID_OFFICIELLES ? profilOfficiel() : INTEGRES_PAR_ID[id];
+    return JSON.parse(JSON.stringify(livre.variables));
   }
   const p = profils().find((x) => x.id === id);
   return p && p.variables && typeof p.variables === 'object' ? p.variables : {};

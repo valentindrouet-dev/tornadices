@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.82';
+export const VERSION = '1.83';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.83',
+    date: '29/09/2026',
+    notes: [
+      'Les Règles officielles : le corpus de référence de TornaDice — façon de jouer, dés et faces, lots, jetons, cartes pour gagner, combinaisons, paquet de Tornades et leurs combinaisons. Elles forment un réglage livré, en tête des Réglages enregistrés, et un visiteur qui n’a rien choisi joue avec elles.',
+      'Dans les Réglages, « Valider comme Règles officielles » fait des réglages en cours les Règles officielles (un second clic confirme). Le bloc dit si les réglages en cours sont officiels, et sinon en quoi ils s’en écartent, règle par règle.',
+      'Sur l’accueil, « Attention, vous ne jouez pas avec les règles officielles ! » s’affiche dès que la partie qu’on s’apprête à lancer s’en écarte, avec la liste des écarts et un bouton pour revenir aux Règles officielles. Le rythme de la table, le caractère des IA, les sons et l’apparence des faces n’en font pas partie : y toucher ne déclenche pas l’alerte.',
+      'Valider rend les règles officielles dans le navigateur où l’on valide. Pour tous les visiteurs du site, le lien « téléchargez leur fichier » produit regles-officielles.js, à publier à la place de src/core/regles-officielles.js.',
+    ],
+  },
   {
     version: '1.82',
     date: '29/09/2026',

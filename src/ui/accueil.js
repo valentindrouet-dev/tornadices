@@ -1,23 +1,26 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.82';
-import { store } from './store.js?v=1.82';
-import { aller } from './app.js?v=1.82';
-import { eveillerSons } from './sons.js?v=1.82';
-import { lancerPartie, partieEnCours } from './table.js?v=1.82';
+import { h, remplacer } from './dom.js?v=1.83';
+import { store } from './store.js?v=1.83';
+import { aller } from './app.js?v=1.83';
+import { eveillerSons } from './sons.js?v=1.83';
+import { lancerPartie, partieEnCours } from './table.js?v=1.83';
 import {
   construireConfig, variables, ecrireLots, ecrireCartes,
-} from './variables.js?v=1.82';
+  ecartsAuxOfficielles,
+} from './variables.js?v=1.83';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
   OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.82';
-import { nomSymbole } from './apparence.js?v=1.82';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.82';
-import { randomSeed } from '../core/rng.js?v=1.82';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.82';
+} from '../core/config.js?v=1.83';
+import { nomSymbole } from './apparence.js?v=1.83';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.83';
+import { randomSeed } from '../core/rng.js?v=1.83';
+import {
+  reglagesCourants, enregistrerReglages, ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
+} from './profils.js?v=1.83';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -96,6 +99,8 @@ export function vueAccueil() {
               '▸ Reprendre la partie en cours'))
         : null,
 
+      bandeauOfficielles(),
+
       h('div.grille.grille--2', carteJoueurs(), carteApercu()),
 
       h('div.rangee.actions-accueil', { style: { justifyContent: 'center', marginTop: '26px' } },
@@ -111,6 +116,29 @@ export function vueAccueil() {
             `${nbHumains} joueurs humains partagent le même écran. TornaDice se joue en simultané : `
             + 'chacun agit depuis son propre panneau, en bas de la table. À deux mains sur un clavier '
             + 'cela reste jouable, au-delà mieux vaut confier les autres sièges à des IA.')
+        : null,
+    );
+  }
+
+  // Le bandeau des Règles officielles : il ne se montre que quand la partie
+  // qu'on s'apprête à lancer s'en écarte, et dit en quoi.
+  function bandeauOfficielles() {
+    const ecarts = ecartsAuxOfficielles(nb);
+    if (!ecarts.length) return null;
+    const montres = ecarts.slice(0, 6);
+    return h('div.encart.encart--officielles',
+      h('div.rangee',
+        h('strong.encart-titre', 'Attention, vous ne jouez pas avec les règles officielles !'),
+        h('div.pousse'),
+        h('button.btn.btn--petit', {
+          title: 'Passer sur le réglage « Règles officielles », tel qu’il a été validé',
+          onclick: () => { retablirIntegre(ID_OFFICIELLES); selectionnerProfil(ID_OFFICIELLES); dessiner(); },
+        }, 'Jouer avec les règles officielles'),
+      ),
+      h('ul.ecarts-officielles', ...montres.map((e) => h('li',
+        h('strong', e.libelle), ` : ${e.jouee} `, h('span.muted', `(officiel : ${e.officielle})`)))),
+      ecarts.length > montres.length
+        ? h('div.mini.muted', `… et ${ecarts.length - montres.length} autre${ecarts.length - montres.length > 1 ? 's' : ''} écart${ecarts.length - montres.length > 1 ? 's' : ''}, détaillés dans les Réglages.`)
         : null,
     );
   }

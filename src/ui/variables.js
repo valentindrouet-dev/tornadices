@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.82';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.82';
-import { store } from './store.js?v=1.82';
-import { aller } from './app.js?v=1.82';
-import { lancerPartie } from './table.js?v=1.82';
+import { h, remplacer, telecharger } from './dom.js?v=1.83';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.83';
+import { store } from './store.js?v=1.83';
+import { aller } from './app.js?v=1.83';
+import { lancerPartie } from './table.js?v=1.83';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -24,20 +24,22 @@ import {
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.82';
-import { tableauCombos, editeurCases } from './combos.js?v=1.82';
-import { illustrationCarte } from './illustrations.js?v=1.82';
+} from '../core/config.js?v=1.83';
+import { tableauCombos, editeurCases } from './combos.js?v=1.83';
+import { illustrationCarte } from './illustrations.js?v=1.83';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.82';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.82';
-import { randomSeed } from '../core/rng.js?v=1.82';
-import { reglagesJoueurs } from './accueil.js?v=1.82';
+} from './apparence.js?v=1.83';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.83';
+import { randomSeed } from '../core/rng.js?v=1.83';
+import { reglagesJoueurs } from './accueil.js?v=1.83';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.82';
+  reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
+  ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
+} from './profils.js?v=1.83';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -141,11 +143,14 @@ export function variables() {
   return reglagesCourants();
 }
 
-/** Configuration complète d'une partie : défauts du nombre de joueurs + réglages. */
-export function construireConfig(nbJoueurs) {
+/**
+ * Configuration complète d'une partie : défauts du nombre de joueurs + réglages
+ * — ceux en vigueur, ou ceux qu'on lui donne (les Règles officielles).
+ */
+export function construireConfig(nbJoueurs, reglages = variables()) {
   // Un paquet réglé avant la v1.73 était rangé sous la clé de son mode : on le
   // reprend sous la clé du paquet unique.
-  const v = migrerPaquet(variables());
+  const v = migrerPaquet(reglages);
   const cfg = configParDefaut(nbJoueurs, {
     attrapeSur: v.attrapeSur,
     lotsCumules: v.lotsCumules,
@@ -197,6 +202,159 @@ export function construireConfig(nbJoueurs) {
     }
   }
   return cfg;
+}
+
+// ── Écarts aux Règles officielles ────────────────────────────────────────────
+// Ce qui fait la règle du jeu : la mise en place, les dés, les combinaisons,
+// les cartes et la façon de jouer. Le rythme de la table, le caractère des IA,
+// les sons ou l'apparence des faces n'en sont pas — y toucher ne fait pas
+// quitter les Règles officielles.
+const OPTIONS_PAR_REGLE = {
+  modeManche: OPTIONS_MANCHE, attrapeSur: OPTIONS_DECLENCHEUR, attrapeGagneManche: OPTIONS_ATTRAPE,
+  equipeDepart: OPTIONS_EQUIPE_DEPART, sensRotation: OPTIONS_SENS,
+  comboServie: OPTIONS_COMBO_SERVIE, placeJetons: OPTIONS_PLACE_JETONS,
+};
+const REGLES_DU_JEU = [
+  ['modeManche', 'Façon de jouer une manche'],
+  ['desParLot', 'Dés par lot'],
+  ['faces', 'Faces du dé', (c) => c.faces.join(' · ')],
+  ['lots', 'Lots en jeu'],
+  ['jetons', 'Jetons par équipe', (c) => (estJeton(c) ? c.jetons : null)],
+  ['jetonsVert', 'Jetons du Vert', (c) => (estJeton(c) && c.nbJoueurs % 2 ? c.jetonsVert : null)],
+  ['jetonsRefuge', 'Jetons à l’Abri', (c) => (estCompromis(c) ? c.jetonsRefuge : null)],
+  ['cartesPourGagner', 'Cartes pour gagner'],
+  ['cartesVert', 'Cartes du Vert', (c) => (c.nbJoueurs % 2 ? c.cartesVert : null)],
+  ['placeJetons', 'Où sont les jetons'],
+  ['attrapeSur', 'Ce qui déclenche l’attrape'],
+  ['attrapeEveille', 'Il faut être réveillé pour attraper'],
+  ['attrapeGagneManche', 'Ce que rapporte l’attrape'],
+  ['lotsCumules', 'Deux lots qui se rencontrent', (c) => (c.lotsCumules ? 'Ils s’empilent' : 'Le lot en cours est poussé')],
+  ['comboServie', 'Quand une combinaison sort'],
+  ['sensRotation', 'Sens de rotation'],
+  ['equipeDepart', 'Qui commence'],
+  ['cochons', 'Carte Cochon à trois joueurs', (c) => (c.nbJoueurs === 3 ? c.cochons : null)],
+  ['combosAsymetriques', 'Combinaisons du Vert à part', (c) => (c.nbJoueurs % 2 ? c.combosAsymetriques : null)],
+  ['melangerCartes', 'Pile de Tornades mélangée'],
+  ['cartes', 'Cartes Tornade en jeu', (c) => `${cartesEnJeu(c).length} cartes`, (c) => cartesEnJeu(c).join(',')],
+  ['combosCartesTornade', 'Combinaisons des cartes Tornade', (c) => c.combosCartesTornade],
+  ['refugeCartes', 'Jetons à l’Abri par carte', (c) => (estCompromis(c) ? c.refugeCartes : null)],
+  ['combosVert', 'Combinaisons du Vert', (c) => (c.nbJoueurs % 2 && c.combosAsymetriques ? c.combosVert : null)],
+  ['combosCochon', 'Combinaisons du Cochon', (c) => (auxCochons(c) ? c.combosCochon : null)],
+];
+
+// Une valeur écrite toujours de la même façon, clés triées : deux réglages
+// égaux ne doivent pas différer par l'ordre où ils ont été saisis.
+function stable(x) {
+  if (Array.isArray(x)) return `[${x.map(stable).join(',')}]`;
+  if (x && typeof x === 'object') {
+    return `{${Object.keys(x).sort().map((k) => `${k}:${stable(x[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(x ?? null);
+}
+
+function enClair(cle, x) {
+  if (x === true) return 'oui';
+  if (x === false) return 'non';
+  if (x === null || x === undefined) return '—';
+  const o = OPTIONS_PAR_REGLE[cle] && OPTIONS_PAR_REGLE[cle].find(([id]) => id === x);
+  if (o) return o[1];
+  if (typeof x === 'object') return Object.keys(x).length ? 'réglées' : 'celles des cartes';
+  return String(x);
+}
+
+const texteRequis = (r) => Object.entries(r || {}).filter(([, n]) => n > 0)
+  .map(([s, n]) => `${n} ${nomSymbole(s)}`).join(' + ') || '—';
+
+/**
+ * Ce qui, à cet effectif, s'écarte des Règles officielles : une ligne par règle,
+ * avec la valeur jouée et la valeur officielle.
+ */
+export function ecartsAuxOfficielles(nb, reglages = variables()) {
+  const a = construireConfig(nb, reglages);
+  const o = construireConfig(nb, reglesOfficielles().variables);
+  const ecarts = [];
+  for (const [cle, libelle, lire = (c) => c[cle], comparer = lire] of REGLES_DU_JEU) {
+    if (stable(comparer(a)) === stable(comparer(o))) continue;
+    // Une règle qui n'existe que d'un côté — les jetons d'équipe, quand l'un
+    // joue avec et l'autre en Immédiat — suit d'un autre écart, déjà listé.
+    if (lire(a) === null || lire(o) === null) continue;
+    ecarts.push({ cle, libelle, jouee: enClair(cle, lire(a)), officielle: enClair(cle, lire(o)) });
+  }
+  for (const co of o.combos) {
+    const ca = a.combos.find((c) => c.id === co.id);
+    if (!ca) continue;
+    if (stable(ca.requis) === stable(co.requis) && ca.face === co.face) continue;
+    ecarts.push({
+      cle: `combo-${co.id}`, libelle: `Combinaison « ${co.nom} »`,
+      jouee: texteRequis(ca.requis), officielle: texteRequis(co.requis),
+    });
+  }
+  return ecarts;
+}
+
+/**
+ * Le bloc des Règles officielles, en tête des Réglages : où l'on en est, et le
+ * bouton qui fait des réglages en cours les Règles officielles.
+ */
+function carteOfficielles(nb, apres) {
+  const regles = reglesOfficielles();
+  const ecarts = ecartsAuxOfficielles(nb);
+  const date = regles.valideeLe
+    ? new Date(regles.valideeLe).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+    : null;
+
+  // Valider remplace les Règles officielles : on demande confirmation d'un
+  // second clic, comme pour supprimer un réglage.
+  const valider = h('button.btn.btn--primaire.btn--petit', 'Valider comme Règles officielles');
+  let arme = false;
+  valider.onclick = () => {
+    if (!arme) {
+      arme = true;
+      valider.textContent = 'Confirmer : ces réglages deviennent les Règles officielles';
+      valider.classList.add('btn--arme');
+      setTimeout(() => {
+        arme = false;
+        valider.textContent = 'Valider comme Règles officielles';
+        valider.classList.remove('btn--arme');
+      }, 5000);
+      return;
+    }
+    validerReglesOfficielles(migrerPaquet(variables()));
+    apres();
+  };
+
+  return h('div.carte.carte--officielles', { class: ecarts.length ? 'carte--hors-officielles' : '' },
+    h('div.rangee',
+      h('div.titre-section', { style: { margin: 0 } }, 'Règles officielles'),
+      h('div.pousse'),
+      ecarts.length
+        ? h('button.btn.btn--petit', {
+            title: 'Passer sur le réglage « Règles officielles », tel qu’il a été validé',
+            onclick: () => { retablirIntegre(ID_OFFICIELLES); selectionnerProfil(ID_OFFICIELLES); apres(); },
+          }, 'Revenir aux Règles officielles')
+        : null,
+      valider,
+    ),
+    ecarts.length
+      ? h('div', { style: { marginTop: '10px' } },
+          h('p.petit', { style: { margin: '0 0 6px', fontWeight: '700', color: 'var(--rouge)' } },
+            `Ces réglages s’écartent des Règles officielles à ${nb} joueurs :`),
+          h('ul.ecarts-officielles', ...ecarts.map((e) => h('li',
+            h('strong', e.libelle), ` : ${e.jouee} `, h('span.muted', `(officiel : ${e.officielle})`)))))
+      : h('p.petit', { style: { margin: '10px 0 0', color: 'var(--vert-fonce, #2b7141)', fontWeight: '700' } },
+          `✓ Ces réglages sont les Règles officielles, à ${nb} joueurs.`),
+    h('p.mini.muted', { style: { marginTop: '10px' } },
+      date ? `Règles officielles validées le ${date}. ` : 'Aucune règle validée : les Règles officielles sont les réglages par défaut du jeu. ',
+      'Valider les rend officielles tout de suite dans ce navigateur. Pour qu’elles le soient '
+      + 'pour tous les visiteurs du site, ',
+      h('a', {
+        href: '#', onclick: (e) => {
+          e.preventDefault();
+          telecharger('regles-officielles.js', fichierReglesOfficielles(), 'text/javascript;charset=utf-8');
+        },
+      }, 'téléchargez leur fichier'),
+      ' et publiez-le à la place de src/core/regles-officielles.js.'),
+  );
 }
 
 /**
@@ -561,6 +719,7 @@ export function vueVariables() {
       // Au-dessus de tout le reste : de quels réglages parle la page. Changer
       // de réglage enregistré change tout d'un coup, ici et au Laboratoire.
       barreProfils(() => { reporterAuLabo(); dessiner(); }),
+      carteOfficielles(nb, () => { reporterAuLabo(); dessiner(); }),
 
       // ── Mode de jeu et sens de rotation ───────────────────────────────────
       // Les deux premiers réglages de la page, côte à côte : ils changent la
