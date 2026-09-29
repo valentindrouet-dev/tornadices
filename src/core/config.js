@@ -942,7 +942,7 @@ export const CARTES_SANS_POINTS = [
     refuge: 2,
     court: 'Tornade du Sommeil',
     nom: 'Tornade du Sommeil',
-    texte: 'Vous endormez vos deux voisins',
+    texte: 'Vous endormez vos 2 voisins',
     combo: { id: 'spSommeil', requis: { zzz: 4 }, effet: 'endormirVoisins' },
     effetPassif: null,
   },

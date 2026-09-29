@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.70';
+export const VERSION = '1.71';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.71',
+    date: '29/09/2026',
+    notes: [
+      'Les cartes imprimées arrivent dans l’interface. La Tornade du Sommeil se montre telle qu’elle est sur le carton : au centre de la table, avec les jetons pris dans la tornade posés dessous, en grand quand on la retourne en début de manche, et en vignette dans le paquet des Réglages — un clic l’ouvre en grand.',
+      'La carte des Poules, face endormie, prend la place de la liste « Combinaisons (Endormi) » quand vous jouez les Poules : trois soleils pour le Réveil, deux tornades rouges pour « Passe ou Rattrape ».',
+      'Une carte imprimée n’est montrée que tant qu’elle dit la règle en vigueur. Qu’on règle autrement sa combinaison dans les Réglages, que l’attrape passe aux éclairs, qu’on joue à trois où personne n’est plus une Poule — et l’interface revient au dessin, qui suit toujours les réglages.',
+      'La Tornade du Sommeil reprend le texte de son carton : « Vous endormez vos 2 voisins ».',
+    ],
+  },
   {
     version: '1.70',
     date: '29/09/2026',

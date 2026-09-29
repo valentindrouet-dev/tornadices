@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.70';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.70';
-import { store } from './store.js?v=1.70';
-import { aller } from './app.js?v=1.70';
-import { lancerPartie } from './table.js?v=1.70';
+import { h, remplacer } from './dom.js?v=1.71';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.71';
+import { store } from './store.js?v=1.71';
+import { aller } from './app.js?v=1.71';
+import { lancerPartie } from './table.js?v=1.71';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -24,19 +24,20 @@ import {
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.70';
-import { tableauCombos, editeurCases } from './combos.js?v=1.70';
+} from '../core/config.js?v=1.71';
+import { tableauCombos, editeurCases } from './combos.js?v=1.71';
+import { illustrationCarte } from './illustrations.js?v=1.71';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.70';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.70';
-import { randomSeed } from '../core/rng.js?v=1.70';
-import { reglagesJoueurs } from './accueil.js?v=1.70';
+} from './apparence.js?v=1.71';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.71';
+import { randomSeed } from '../core/rng.js?v=1.71';
+import { reglagesJoueurs } from './accueil.js?v=1.71';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.70';
+} from './profils.js?v=1.71';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -1057,6 +1058,14 @@ export function vueVariables() {
                   },
                 }, h('span.case', '✓'), c.court),
                 h('div.pousse'),
+                // La carte imprimée, en vignette — tant qu'elle dit la combinaison
+                // réglée ici. Un clic l'ouvre en grand.
+                illustrationCarte(cfg, c)
+                  ? h('a.vignette-carte', {
+                      href: illustrationCarte(cfg, c).src, target: '_blank', rel: 'noopener',
+                      title: 'Voir la carte imprimée',
+                    }, h('img', { src: illustrationCarte(cfg, c).src, alt: c.nom }))
+                  : null,
               ),
               h('div.petit', { style: { marginTop: '8px' } }, c.texte),
               note ? h('div.mini.muted', { style: { marginTop: '6px' } }, note) : null,

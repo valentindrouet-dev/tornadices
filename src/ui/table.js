@@ -4,22 +4,23 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.70';
+import { h, remplacer, duree, vider } from './dom.js?v=1.71';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.70';
-import { Moteur } from '../core/engine.js?v=1.70';
+} from './icons.js?v=1.71';
+import { Moteur } from '../core/engine.js?v=1.71';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.70';
-import { ajouterHistorique } from './store.js?v=1.70';
-import { enregistrerPartie } from './resultats.js?v=1.70';
-import { aller } from './app.js?v=1.70';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.70';
-import { nomSymbole } from './apparence.js?v=1.70';
+} from '../core/config.js?v=1.71';
+import { ajouterHistorique } from './store.js?v=1.71';
+import { enregistrerPartie } from './resultats.js?v=1.71';
+import { aller } from './app.js?v=1.71';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.71';
+import { nomSymbole } from './apparence.js?v=1.71';
+import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.71';
 
 let moteur = null;
 let vitesse = 1;
@@ -467,6 +468,17 @@ export function vueTable() {
   const listeCombos = (titre, etat) => {
     const dedans = jouables.filter((c) => c.face === 'toutes' || c.face === etat);
     if (!dedans.length) return null;
+    // La carte imprimée de l'équipe, quand elle dit exactement ce que la table
+    // joue : c'est celle qu'on a sous les yeux sur une vraie table.
+    const illu = illustrationEquipe(moteur.cfg, equipeLue, etat, dedans);
+    if (illu) {
+      return h('div.carte',
+        h('div.titre-section', titre),
+        h('img.carte-equipe-imprimee', {
+          src: illu.src, alt: illu.nom, title: illu.nom, width: illu.largeur, height: illu.hauteur,
+        }),
+      );
+    }
     return h('div.carte',
       h('div.titre-section', titre),
       h('div', { style: { display: 'grid', gap: '8px' } }, ...dedans.map(ligneCombo)),
@@ -756,25 +768,39 @@ export function vueTable() {
     // dos de cartes, il vient du dos de la carte SUIVANTE, pas de celle qu'on
     // retourne. Montrer la flèche de la carte révélée dirait le contraire.
     const fleche = FLECHE(moteur.sens);
+    // La carte imprimée, quand on l'a : c'est elle qu'on retourne à la table.
+    const imprimee = illustrationCarte(moteur.cfg, carte);
     panneauCarte = h('div.voile-carte', { onclick: fermerCarte },
-      h('div.carte-annonce.carte-annonce--tornade',
-        h('div.mini.muted', `Manche ${manche}`),
-        h('h2', { style: { margin: '6px 0 10px' } }, carte.nom),
-        h('div.texte-carte-grand', texteCarte(carte.texte)),
-        carte.combo
-          ? h('div', { style: { marginTop: '14px' } },
-              h('div.mini.muted', { style: { marginBottom: '6px' } }, 'Combinaison de la carte'),
-              h('div.rangee.rangee--serree', { style: { justifyContent: 'center' } },
-                suiteSymboles(requisCarte(moteur.cfg, carte.combo), 34)))
-          : h('div.mini.muted', { style: { marginTop: '14px' } },
-              'Aucune combinaison — la carte agit d’elle-même.'),
-        h('div.rangee.rangee--serree', {
-          style: { justifyContent: 'center', marginTop: '14px' },
-        },
-          h('span.fleche-sens', fleche),
-          h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
-        h('div.mini.muted', { style: { marginTop: '16px' } }, 'Espace ou clic pour continuer'),
-      ),
+      imprimee
+        ? h('div.carte-annonce.carte-annonce--imprimee',
+            h('div.mini.muted', `Manche ${manche}`),
+            h('img.carte-annonce-img', {
+              src: imprimee.src, width: imprimee.largeur, height: imprimee.hauteur,
+              alt: `${carte.nom} — ${carte.texte}`,
+            }),
+            h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
+                h('span.fleche-sens', fleche),
+              h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
+            h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
+          )
+        : h('div.carte-annonce.carte-annonce--tornade',
+          h('div.mini.muted', `Manche ${manche}`),
+          h('h2', { style: { margin: '6px 0 10px' } }, carte.nom),
+          h('div.texte-carte-grand', texteCarte(carte.texte)),
+          carte.combo
+            ? h('div', { style: { marginTop: '14px' } },
+                h('div.mini.muted', { style: { marginBottom: '6px' } }, 'Combinaison de la carte'),
+                h('div.rangee.rangee--serree', { style: { justifyContent: 'center' } },
+                  suiteSymboles(requisCarte(moteur.cfg, carte.combo), 34)))
+            : h('div.mini.muted', { style: { marginTop: '14px' } },
+                'Aucune combinaison — la carte agit d’elle-même.'),
+          h('div.rangee.rangee--serree', {
+            style: { justifyContent: 'center', marginTop: '14px' },
+          },
+            h('span.fleche-sens', fleche),
+            h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
+          h('div.mini.muted', { style: { marginTop: '16px' } }, 'Espace ou clic pour continuer'),
+        ),
     );
     racine.appendChild(panneauCarte);
     // Personne pour appuyer — une table d'IA, un écran qu'on regarde de loin :
@@ -989,8 +1015,22 @@ export function vueTable() {
     // Le centre change de taille avec ce qu'il porte — une carte plus bavarde,
     // une rangée de jetons, le Refuge — et le cercle doit lui laisser la place.
     let centreChange = false;
-    centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}`, () => (
-      moteur.carte
+    // La carte imprimée, quand on l'a et qu'elle dit encore vrai ; le dessin sinon.
+    const imprimee = illustrationCarte(moteur.cfg, moteur.carte);
+    elCarte.classList.toggle('coin--imprimee', !!imprimee);
+    centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}|${imprimee ? imprimee.src : ''}`, () => (
+      moteur.carte && imprimee
+        ? h('div.carte-imprimee',
+            // Les dimensions réservent la place avant le chargement ; le cercle
+            // se recalcule quand même à l'arrivée de l'image, par sûreté.
+            h('img', {
+              src: imprimee.src, width: imprimee.largeur, height: imprimee.hauteur,
+              alt: `${moteur.carte.nom} — ${moteur.carte.texte}`,
+              onload: () => placerSieges(),
+            }),
+            surCarte ? blocJetonsCarte() : null,
+          )
+        : moteur.carte
         ? h('div.carte-journee',
             h('div.mini.muted', `Manche ${moteur.manche}`),
             h('div.nom-carte', moteur.carte.nom),

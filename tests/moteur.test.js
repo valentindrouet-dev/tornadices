@@ -22,6 +22,9 @@ import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // décrivent est du jeu : il se vérifie ici comme le reste.
 import { PROFILS_INTEGRES } from '../src/ui/profils.js';
 import {
+  illustrationCarte, illustrationEquipe, ILLUSTRATIONS_CARTES, ILLUSTRATIONS_EQUIPES,
+} from '../src/ui/illustrations.js';
+import {
   courseCombinaison, courseAvecGarde, probaLancerUnique, loiDuDe,
 } from '../src/core/proba.js';
 
@@ -1574,7 +1577,7 @@ console.log('\nRéglage livré « Vichy »');
   cfg.nbJoueurs = 6;
   verifier('la Tornade du Sommeil endort les deux voisins',
     CARTES_PAR_ID.spSommeil.combo.effet === 'endormirVoisins'
-    && /endormez vos deux voisins/i.test(CARTES_PAR_ID.spSommeil.texte));
+    && /endormez vos 2 voisins/i.test(CARTES_PAR_ID.spSommeil.texte));
 
   // La combinaison d'une carte se réalise dans les deux états : c'est ce qui la
   // distingue des combinaisons de base, dont la plupart demandent d'être
@@ -2321,6 +2324,50 @@ console.log('\nLa table à trois — les Cochons');
       }
     }
   }
+}
+
+// ── 3 septies octies. Les cartes imprimées ──────────────────────────────────
+// Une illustration n'est montrée que tant qu'elle dit la règle en vigueur : la
+// combinaison imprimée doit être celle que le jeu réclame.
+console.log('\nLes cartes imprimées');
+{
+  const { existsSync } = await import('node:fs');
+  const cc = configParDefaut(6, { modeManche: 'compromis' });
+  const sommeil = CARTES_PAR_ID.spSommeil;
+  const illu = illustrationCarte(cc, sommeil);
+  verifier('la Tornade du Sommeil a sa carte imprimée', !!illu && /tornade-du-sommeil\.webp/.test(illu.src));
+  verifier('et ses dimensions, pour réserver la place avant le chargement',
+    illu && illu.largeur === 1432 && illu.hauteur === 1948);
+  verifier('le texte de la carte est celui qu’elle imprime', sommeil.texte === 'Vous endormez vos 2 voisins');
+  verifier('sa combinaison réglée autrement, on revient au dessin',
+    illustrationCarte({ ...cc, combosCartesCompromis: { spSommeil: { zzz: 3 } } }, sommeil) === null);
+  verifier('une carte sans image n’en a pas', illustrationCarte(cc, CARTES_PAR_ID.spFurieuse) === null);
+  const chemins = [
+    ...Object.values(ILLUSTRATIONS_CARTES).map((x) => x.src),
+    ...Object.values(ILLUSTRATIONS_EQUIPES).flatMap((e) => Object.values(e).map((x) => x.src)),
+  ];
+  verifier(`${chemins.length} images déclarées, toutes présentes dans le dépôt`,
+    chemins.every((c) => existsSync(new URL(`../${c}`, import.meta.url))));
+  verifier('chaque carte déclarée existe dans le jeu',
+    Object.keys(ILLUSTRATIONS_CARTES).every((id) => CARTES_PAR_ID[id]));
+
+  // La carte des Poules, face endormie : Réveil et Échec qui tente l'attrape.
+  const c6 = configParDefaut(6);
+  const endormie = (cfg) => cfg.combos.filter((c) => (c.face === 'toutes' || c.face === 'endormie')
+    && comboPossible(cfg.faces, c.requis));
+  verifier('les Poules endormies ont leur carte',
+    !!illustrationEquipe(c6, 'jaune', 'endormie', endormie(c6)));
+  verifier('les Vaches pas encore', !illustrationEquipe(c6, 'bleu', 'endormie', endormie(c6)));
+  const eclair = configParDefaut(6, { attrapeSur: 'eclair' });
+  verifier('si l’Échec ne porte plus l’attrape, la carte ne dit plus vrai',
+    !illustrationEquipe(eclair, 'jaune', 'endormie', endormie(eclair)));
+  const c3 = configParDefaut(3);
+  verifier('à trois joueurs, personne n’est une Poule',
+    !illustrationEquipe(c3, 'jaune', 'endormie', endormie(c3)));
+  const abriEndormi = configParDefaut(6);
+  abriEndormi.combos = abriEndormi.combos.map((c) => (c.id === 'vache' ? { ...c, face: 'toutes' } : c));
+  verifier('un Abri jouable en dormant n’est pas sur la carte : on revient à la liste',
+    !illustrationEquipe(abriEndormi, 'jaune', 'endormie', endormie(abriEndormi)));
 }
 
 // ── 3 octies. Jamais deux lots en main, contrôlé après chaque événement ──────
