@@ -1,10 +1,10 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.71';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.71';
-import { COULEURS_EQUIPE, equipeVue, auxCochons } from '../core/config.js?v=1.71';
-import { aller } from './app.js?v=1.71';
-import { dernierePartie } from './resultats.js?v=1.71';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.72';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.72';
+import { COULEURS_EQUIPE, equipeVue, auxCochons } from '../core/config.js?v=1.72';
+import { aller } from './app.js?v=1.72';
+import { dernierePartie } from './resultats.js?v=1.72';
 
 /**
  * Le vainqueur d'une partie de l'historique. À trois joueurs il s'agit d'un

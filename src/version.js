@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.71';
+export const VERSION = '1.72';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.72',
+    date: '29/09/2026',
+    notes: [
+      'La carte Tornade du centre de la table est dessinée comme le carton imprimé : le bandeau orange qui porte le titre — « TORNADE » en grand, le reste dessous —, les dés de la combinaison chacun dans sa case cerclée de noir, le filet noué d’une spirale, le texte en grandes capitales et les nuages qui montent des coins. Elle suit toujours les réglages. Quand on la retourne en début de manche, c’est la même carte, en grand — sauf si l’on a son image imprimée.',
+      'Les jetons pris dans la tornade sont posés sur la carte elle-même, en grand. Quand un joueur en sauve un, le jeton s’envole de la carte et va se poser au-dessus de son siège, où il reste jusqu’à la fin de la manche : on voit d’un coup d’œil qui a mis quoi à couvert. Si la « Journée sans vent » en renvoie un dans la tornade, c’est la plus grosse pile de l’équipe qui le rend.',
+      'La barre de lancer ne s’affiche plus quand on n’a pas de dés à jouer. Entre deux manches, les lots repartent au centre — le moteur ne les retirait des mains qu’au départ de la manche suivante, et la barre restait là avec les dés de la manche finie ; les sièges, eux aussi, les montraient encore. Elle s’efface aussi le temps que la carte se révèle ou que la carte de sens attende sa décision.',
+      'Les lots de 5 dés tiennent sur une ligne dans les sièges. La taille des dés était calculée pour 176 px de large, le siège n’en offre que 173 : le cinquième passait à la ligne. Sur téléphone, les dés se partagent la largeur du siège.',
+      'Sur téléphone, les bulles d’annonce au-dessus des sièges de droite ne dépassent plus de l’écran.',
+    ],
+  },
   {
     version: '1.71',
     date: '29/09/2026',

@@ -4,23 +4,24 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.71';
+import { h, remplacer, duree, vider } from './dom.js?v=1.72';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.71';
-import { Moteur } from '../core/engine.js?v=1.71';
+} from './icons.js?v=1.72';
+import { Moteur } from '../core/engine.js?v=1.72';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.71';
-import { ajouterHistorique } from './store.js?v=1.71';
-import { enregistrerPartie } from './resultats.js?v=1.71';
-import { aller } from './app.js?v=1.71';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.71';
-import { nomSymbole } from './apparence.js?v=1.71';
-import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.71';
+} from '../core/config.js?v=1.72';
+import { ajouterHistorique } from './store.js?v=1.72';
+import { enregistrerPartie } from './resultats.js?v=1.72';
+import { aller } from './app.js?v=1.72';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.72';
+import { nomSymbole } from './apparence.js?v=1.72';
+import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.72';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.72';
 
 let moteur = null;
 let vitesse = 1;
@@ -57,7 +58,10 @@ const TOUCHES = [
 // Couleurs des éclats d'écran : la vache pour tous, l'échec et le sommeil pour soi.
 /** Le côté d'un dé de siège, en pixels, pour un lot de `n` dés. */
 function tailleDeSiege(n) {
-  const utile = 176;   // largeur intérieure d'un siège
+  // Largeur intérieure d'un siège : 196 px, moins 2 × 10 px de marge et 2 × 1,5 px
+  // de bordure — 173 px. On en garde une de côté : à 176, cinq dés de 32 px
+  // passaient à la ligne.
+  const utile = 172;
   const ecart = 4;     // l'espace entre deux dés
   const mini = 26;     // en dessous, la face ne se lit plus
   const nb = Math.max(1, Math.min(12, n || 4));
@@ -239,13 +243,16 @@ export function vueTable() {
     const marge = 12;
     const larg = elSieges[0]?.offsetWidth || 196;
     const haut = elSieges[0]?.offsetHeight || 130;
+    // Au-dessus de chaque siège, la place des jetons qu'il a sauvés : le cercle
+    // descend d'autant, pour que la pile du siège du haut reste sur la table.
+    const pile = jetonsSurCarte() ? 30 : 0;
     const cx = zw / 2;
-    const cy = zh / 2;
+    const cy = zh / 2 + pile / 2;
     const rx = Math.max(60, zw / 2 - larg / 2 - marge);
-    const ry = Math.max(60, zh / 2 - haut / 2 - 6);
+    const ry = Math.max(60, zh / 2 - haut / 2 - 6 - pile / 2);
 
     CENTRE.x = 50;
-    CENTRE.y = 50;
+    CENTRE.y = (cy / zh) * 100;
 
     const cadres = [];
     elSieges.forEach((el, i) => {
@@ -258,7 +265,7 @@ export function vueTable() {
       el.style.top = `${positions[i].y}%`;
       const l = el.offsetWidth || larg;
       const t = el.offsetHeight || haut;
-      cadres.push({ x0: x - l / 2, x1: x + l / 2, y0: y - t / 2, y1: y + t / 2 });
+      cadres.push({ x0: x - l / 2, x1: x + l / 2, y0: y - t / 2 - pile, y1: y + t / 2 });
     });
 
     if (elTapis) {
@@ -272,23 +279,35 @@ export function vueTable() {
     const w = elCentre.offsetWidth;
     const hc = elCentre.offsetHeight;
     const jeu = 8;
-    const degage = (k) => cadres.every((c) => {
+    const degage = (k, dy) => cadres.every((c) => {
       const x0 = cx - (w * k) / 2 - jeu;
       const x1 = cx + (w * k) / 2 + jeu;
-      const y0 = cy - (hc * k) / 2 - jeu;
-      const y1 = cy + (hc * k) / 2 + jeu;
+      const y0 = cy + dy - (hc * k) / 2 - jeu;
+      const y1 = cy + dy + (hc * k) / 2 + jeu;
       return x1 <= c.x0 || c.x1 <= x0 || y1 <= c.y0 || c.y1 <= y0;
     });
-    let echelle = 1;
-    if (!degage(1)) {
+    // La plus grande échelle qui passe, à une hauteur donnée.
+    const plusGrande = (dy) => {
+      if (degage(1, dy)) return 1;
       let bas = 0.5;
       let haut2 = 1;
       for (let t = 0; t < 12; t++) {
         const milieu = (bas + haut2) / 2;
-        if (degage(milieu)) bas = milieu; else haut2 = milieu;
+        if (degage(milieu, dy)) bas = milieu; else haut2 = milieu;
       }
-      echelle = bas;
+      return bas;
+    };
+    // Le centre n'est pas tenu au milieu exact : la pile de jetons du siège du bas
+    // mord sur la place, et quelques pixels plus haut la carte peut rester plus
+    // grande. On essaie de petits décalages et l'on garde le meilleur.
+    let echelle = plusGrande(0);
+    let decalage = 0;
+    for (let dy = -48; dy <= 48 && echelle < 1; dy += 4) {
+      const k = plusGrande(dy);
+      if (k > echelle + 0.004) { echelle = k; decalage = dy; }
     }
+    CENTRE.y = ((cy + decalage) / zh) * 100;
+    elCentre.style.top = `${CENTRE.y}%`;
     elCentre.style.setProperty('--echelle-centre', echelle.toFixed(3));
   }
 
@@ -388,11 +407,40 @@ export function vueTable() {
   const jetonsEnVol = new Map();
   const jetonsAffiches = (e) => Math.max(0, e.retournes - (jetonsEnVol.get(e.id) || 0));
 
+  // Les jetons sauvés par chaque joueur pendant la manche. Sortis de la carte
+  // Tornade, ils vont se poser au-dessus de son siège et y restent jusqu'à la
+  // manche suivante, où ils retournent tous dans la tornade. Un jeton encore en
+  // vol ne compte pas : il apparaît au-dessus du siège quand il s'y pose.
+  const jetonsSauves = new Map();   // pid → jetons posés ou en route
+  const volsVersSiege = new Map();  // pid → jetons encore en l'air
+  const pilesVues = new Map();      // pid → ce que le siège montrait au dernier coup
+  const jetonsAuSiege = (pid) => Math.max(0, (jetonsSauves.get(pid) || 0) - (volsVersSiege.get(pid) || 0));
+
+  /**
+   * Garde les piles des sièges d'accord avec la carte : une équipe ne peut pas
+   * avoir plus de jetons au-dessus de ses sièges qu'elle n'en a sortis de la
+   * tornade. Quand la « Journée sans vent » en renvoie un dedans, c'est la plus
+   * grosse pile de l'équipe qui le rend.
+   */
+  function accorderPiles() {
+    for (const e of Object.values(moteur.equipes)) {
+      const faits = moteur.suiviJetons(e.id).faits;
+      const membres = moteur.joueurs.filter((j) => j.equipe === e.id);
+      let somme = membres.reduce((t, j) => t + (jetonsSauves.get(j.id) || 0), 0);
+      while (somme > faits) {
+        const plus = membres.reduce((a, b) => ((jetonsSauves.get(b.id) || 0) > (jetonsSauves.get(a.id) || 0) ? b : a));
+        jetonsSauves.set(plus.id, Math.max(0, (jetonsSauves.get(plus.id) || 0) - 1));
+        somme--;
+      }
+    }
+  }
+
   function volJeton(pid, equipeId, nombre = 1) {
     const siege = elSieges[pid];
     if (!siege) return;
     const zone = zoneTable.getBoundingClientRect();
     const surCarte = jetonsSurCarte();
+    if (surCarte) jetonsSauves.set(pid, (jetonsSauves.get(pid) || 0) + nombre);
     // Le jeton part de la carte et rejoint le joueur, ou part du joueur et rejoint
     // le compteur : dans les deux cas, un bout du trajet est le siège du joueur et
     // l'autre une case, celle qui se vide ou celle qui se remplit.
@@ -403,7 +451,9 @@ export function vueTable() {
     const defaut = surCarte
       ? elCarte
       : (elScores.querySelector(`.score-equipe.equipe-${equipeId}`) || elScores);
-    const cadreSiege = siege.getBoundingClientRect();
+    // Sur la carte, le jeton vole jusqu'à la pile posée au-dessus du siège.
+    const cadreSiege = (surCarte && siege.querySelector('.siege-jetons')
+      ? siege.querySelector('.siege-jetons') : siege).getBoundingClientRect();
 
     for (let k = 0; k < nombre; k++) {
       const cadreCase = (cases[k] || defaut).getBoundingClientRect();
@@ -421,14 +471,18 @@ export function vueTable() {
       el.style.setProperty('--dy', `${cible.top + cible.height / 2 - y0}px`);
       el.style.setProperty('--duree', `${Math.max(220, 850 / vitesse)}ms`);
       el.style.animationDelay = `${(k * 200) / vitesse}ms`;
-      // Sur la carte, la case s'est déjà vidée : rien à retenir au compteur.
-      if (!surCarte) jetonsEnVol.set(equipeId, (jetonsEnVol.get(equipeId) || 0) + 1);
+      // Sur la carte, la case s'est déjà vidée : c'est la pile du siège qui
+      // attend le jeton. Devant l'équipe, c'est le compteur.
+      if (surCarte) volsVersSiege.set(pid, (volsVersSiege.get(pid) || 0) + 1);
+      else jetonsEnVol.set(equipeId, (jetonsEnVol.get(equipeId) || 0) + 1);
       zoneTable.appendChild(el);
       // On écoute la fin réelle de l'animation, pas une minuterie : en pause le
       // vol se fige, et le compteur doit se figer avec lui.
       el.addEventListener('animationend', () => {
         el.remove();
-        if (!surCarte) {
+        if (surCarte) {
+          volsVersSiege.set(pid, Math.max(0, (volsVersSiege.get(pid) || 0) - 1));
+        } else {
           jetonsEnVol.set(equipeId, Math.max(0, (jetonsEnVol.get(equipeId) || 0) - 1));
         }
       }, { once: true });
@@ -437,6 +491,9 @@ export function vueTable() {
 
   function viderJetonsEnVol() {
     jetonsEnVol.clear();
+    // Nouvelle manche : tous les jetons retournent dans la tornade.
+    jetonsSauves.clear();
+    volsVersSiege.clear();
     for (const el of zoneTable.querySelectorAll('.jeton-vol')) el.remove();
   }
 
@@ -597,6 +654,20 @@ export function vueTable() {
     }
     annonces.set(cle, el);
     zoneTable.appendChild(el);
+    // Au-dessus d'un siège du bord, la bulle dépasserait de l'écran : on la
+    // ramène dedans, à 6 px du bord, sans la décoller de son siège plus que
+    // nécessaire.
+    // On mesure la boîte elle-même, pas son dessin : l'animation d'entrée la
+    // tient encore rétrécie au moment où l'on regarde.
+    if (surSiege) {
+      const zoneG = zoneTable.getBoundingClientRect().left;
+      const x = parseFloat(el.style.left);
+      const gauche = zoneG + x - el.offsetWidth / 2;
+      const droite = gauche + el.offsetWidth;
+      const bord = document.documentElement.clientWidth - 6;
+      const decale = droite > bord ? bord - droite : (gauche < 6 ? 6 - gauche : 0);
+      if (decale) el.style.left = `${x + decale}px`;
+    }
 
     // Une victoire de manche reste plus longtemps : c'est une phrase à lire,
     // pas un éclat à apercevoir.
@@ -779,28 +850,23 @@ export function vueTable() {
               alt: `${carte.nom} — ${carte.texte}`,
             }),
             h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
-                h('span.fleche-sens', fleche),
+              h('span.fleche-sens', fleche),
               h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
             h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
           )
-        : h('div.carte-annonce.carte-annonce--tornade',
-          h('div.mini.muted', `Manche ${manche}`),
-          h('h2', { style: { margin: '6px 0 10px' } }, carte.nom),
-          h('div.texte-carte-grand', texteCarte(carte.texte)),
-          carte.combo
-            ? h('div', { style: { marginTop: '14px' } },
-                h('div.mini.muted', { style: { marginBottom: '6px' } }, 'Combinaison de la carte'),
-                h('div.rangee.rangee--serree', { style: { justifyContent: 'center' } },
-                  suiteSymboles(requisCarte(moteur.cfg, carte.combo), 34)))
-            : h('div.mini.muted', { style: { marginTop: '14px' } },
-                'Aucune combinaison — la carte agit d’elle-même.'),
-          h('div.rangee.rangee--serree', {
-            style: { justifyContent: 'center', marginTop: '14px' },
-          },
-            h('span.fleche-sens', fleche),
-            h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
-          h('div.mini.muted', { style: { marginTop: '16px' } }, 'Espace ou clic pour continuer'),
-        ),
+        // Sans image imprimée, la carte dessinée comme le carton, en grand : le
+        // même dessin qu'au centre de la table.
+        : h('div.carte-annonce.carte-annonce--imprimee.carte-annonce--dessinee',
+            h('div.mini.muted', `Manche ${manche}`),
+            carteTornadeDessinee(carte, {
+              requis: carte.combo ? requisCarte(moteur.cfg, carte.combo) : null,
+              texte: texteCarte(carte.texte),
+            }),
+            h('div.rangee.rangee--serree', { style: { justifyContent: 'center', marginTop: '12px' } },
+              h('span.fleche-sens', fleche),
+              h('span.mini.muted', `Manche jouée en sens ${NOM_TOUR(moteur.sens)}`)),
+            h('div.mini.muted', { style: { marginTop: '10px' } }, 'Espace ou clic pour continuer'),
+          ),
     );
     racine.appendChild(panneauCarte);
     // Personne pour appuyer — une table d'IA, un écran qu'on regarde de loin :
@@ -950,12 +1016,15 @@ export function vueTable() {
   }
 
   function peindreSieges() {
+    if (jetonsSurCarte()) accorderPiles();
     moteur.joueurs.forEach((j, i) => {
       const el = elSieges[i];
-      const lot = j.lots[0];
+      // Entre deux manches, les dés sont repartis au centre : le siège n'en
+      // montre plus, même si le moteur ne les a pas encore retirés des mains.
+      const lot = enTransition ? null : j.lots[0];
       const recent = touchesRecentes.get(j.id);
       const secoue = recent != null && moteur.now - recent < 600;
-      el.classList.toggle('siege--porteur', j.lots.length > 0);
+      el.classList.toggle('siege--porteur', !!lot);
       el.classList.toggle('siege--touche', secoue);
       el.classList.toggle('siege--endormi', !j.eveille);
       el.classList.toggle('siege--eveille', j.eveille);
@@ -966,10 +1035,21 @@ export function vueTable() {
       const des = lot
         ? lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',')
         : '';
-      const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}`;
+      // Les jetons qu'il a sortis de la tornade, posés au-dessus de son siège.
+      const pile = jetonsSurCarte() ? jetonsAuSiege(j.id) : -1;
+      const vientDeSePoser = pile > (pilesVues.get(j.id) || 0);
+      pilesVues.set(j.id, Math.max(0, pile));
+      const sig = `${j.lots.length}|${j.eveille}|${j.fige}|${des}|${pile}`;
       siChange(el, sig, () => {
         const eq = equipeVue(j.equipe, moteur.cfg);
         return [
+          pile >= 0
+            ? h('div.siege-jetons', { title: pile ? `${pile} jeton${pile > 1 ? 's' : ''} sauvé${pile > 1 ? 's' : ''}` : '' },
+                ...Array.from({ length: pile }, (_, k) => h('span.siege-jeton', {
+                  class: vientDeSePoser && k === pile - 1 ? 'siege-jeton--arrive' : '',
+                  html: SVG_SYMBOLE.vache,
+                })))
+            : null,
           h('div.entete',
             h('span.puce', { style: { background: eq.hex } }),
             h('span', {
@@ -1016,31 +1096,16 @@ export function vueTable() {
     // une rangée de jetons, le Refuge — et le cercle doit lui laisser la place.
     let centreChange = false;
     // La carte imprimée, quand on l'a et qu'elle dit encore vrai ; le dessin sinon.
-    const imprimee = illustrationCarte(moteur.cfg, moteur.carte);
-    elCarte.classList.toggle('coin--imprimee', !!imprimee);
-    centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}|${imprimee ? imprimee.src : ''}`, () => (
-      moteur.carte && imprimee
-        ? h('div.carte-imprimee',
-            // Les dimensions réservent la place avant le chargement ; le cercle
-            // se recalcule quand même à l'arrivée de l'image, par sûreté.
-            h('img', {
-              src: imprimee.src, width: imprimee.largeur, height: imprimee.hauteur,
-              alt: `${moteur.carte.nom} — ${moteur.carte.texte}`,
-              onload: () => placerSieges(),
-            }),
-            surCarte ? blocJetonsCarte() : null,
-          )
-        : moteur.carte
-        ? h('div.carte-journee',
-            h('div.mini.muted', `Manche ${moteur.manche}`),
-            h('div.nom-carte', moteur.carte.nom),
-            h('div.texte-carte', texteCarte(moteur.carte.texte)),
-            moteur.carte.combo
-              ? h('div.rangee.rangee--serree', { style: { marginTop: '7px' } },
-                  suiteSymboles(requisCarte(moteur.cfg, moteur.carte.combo), 21))
-              : null,
-            surCarte ? blocJetonsCarte() : null,
-          )
+    // La carte du centre est dessinée comme le carton imprimé — bandeau, dés,
+    // filet, texte en grand — et suit les réglages. Les jetons pris dans la
+    // tornade s'y posent en grand, par-dessus.
+    centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}`, () => (
+      moteur.carte
+        ? carteTornadeDessinee(moteur.carte, {
+            requis: moteur.carte.combo ? requisCarte(moteur.cfg, moteur.carte.combo) : null,
+            texte: texteCarte(moteur.carte.texte),
+            jetons: surCarte ? blocJetonsCarte() : null,
+          })
         : null
     ));
 
@@ -1106,7 +1171,6 @@ export function vueTable() {
    */
   function blocJetonsCarte() {
     return h('div.tornade-jetons',
-      h('div.tornade-jetons-titre', 'Pris dans la tornade'),
       ...Object.values(moteur.equipes).map((e) => {
         const s = moteur.suiviJetons(e.id);
         const c = equipeVue(e.id, moteur.cfg);
@@ -1118,7 +1182,7 @@ export function vueTable() {
             html: k < s.restants ? SVG_SYMBOLE.vache : '',
           })),
           h('span.tornade-jetons-embleme', { title: c.emblemeNom },
-            emblemeEquipe(c.embleme, 15)),
+            emblemeEquipe(c.embleme, 20)),
         );
       }),
     );
@@ -1177,7 +1241,13 @@ export function vueTable() {
   }
 
   function peindrePanneaux() {
-    const actifs = humains.filter((j) => j.lots.length);
+    // La barre de lancer n'a lieu d'être que si l'on a des dés à jouer. Entre
+    // deux manches, les lots sont repartis au centre de la table — le moteur ne
+    // les retire des mains qu'au départ de la manche suivante — et pendant que la
+    // carte se révèle ou que la carte de sens attend sa décision, personne ne
+    // lance rien : la barre s'efface.
+    const horsJeu = enTransition || !!carteEnAttente || attenteSens || moteur.termine;
+    const actifs = horsJeu ? [] : humains.filter((j) => j.lots.length);
     const sig = actifs.map((j) => {
       const lot = j.lots[0];
       const des = lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',');
