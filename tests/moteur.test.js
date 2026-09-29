@@ -2492,5 +2492,25 @@ console.log('\nCampagne du Laboratoire');
     `${(r.duree.medianeMs / 60000).toFixed(1)} min`);
 }
 
+// ── Le journal montre d'abord les dés de la combinaison ─────────────────────
+console.log('\nJournal : les dés de la combinaison d’abord');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const m = new Moteur(configParDefaut(6), spec, 'journal-ordre');
+  verifier('Réveil : les trois tornades en tête, les autres derrière',
+    m._desOrdonnes(['x', 'tornade', 'zzz', 'tornade', 'tornade'], { tornade: 3 }).join(',')
+      === 'tornade,tornade,tornade,x,zzz');
+  verifier('sans combinaison, l’ordre du lancer est gardé',
+    m._desOrdonnes(['x', 'zzz', 'vache'], null).join(',') === 'x,zzz,vache');
+  m.jouerJusquAuBout();
+  const tours = m.journal.filter((e) => e.type === 'tour' && /Réveil/.test(e.issue || ''));
+  verifier(`${tours.length} réveils au journal, chacun ouvert par ses tornades`,
+    tours.length > 0 && tours.every((e) => e.des.slice(0, 3).every((d) => d === 'tornade')));
+  const tEchec = m.journal.filter((e) => e.type === 'tour' && /Échec/.test(e.issue || ''));
+  verifier(`${tEchec.length} Échecs au journal, attrape comprise, ouverts par leurs deux X`,
+    tEchec.some((e) => /attrape/.test(e.issue))
+    && tEchec.every((e) => e.des[0] === 'x' && e.des[1] === 'x'));
+}
+
 console.log(echecs ? `\n${echecs} vérification(s) en échec.\n` : '\nToutes les vérifications passent.\n');
 process.exit(echecs ? 1 : 0);

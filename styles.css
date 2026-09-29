@@ -1125,7 +1125,7 @@ label.champ {
 .jauge-duel div { height: 100%; background: var(--rouge); transition: width .06s linear; }
 
 /* Journal */
-.journal { max-height: 420px; overflow-y: auto; display: grid; gap: 2px; }
+.journal { max-height: 640px; overflow-y: auto; display: grid; gap: 2px; }
 .journal .ligne { font-size: 12.5px; padding: 3px 0; border-bottom: 1px dashed #e7eff7; }
 .journal .ligne:last-child { border-bottom: 0; }
 .journal .t { color: var(--gris-clair); font-variant-numeric: tabular-nums; margin-right: 6px; font-size: 11.5px; }

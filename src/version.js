@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.78';
+export const VERSION = '1.79';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.79',
+    date: '29/09/2026',
+    notes: [
+      'Dans le journal, les dés d’un tour montrent d’abord ceux qui font la combinaison jouée — les trois soleils d’un Réveil, les deux X d’un Échec, attrape comprise —, puis les autres.',
+      'Le bloc « Carte du jour » quitte le panneau de droite — la carte se lit au centre de la table — et le journal prend sa place, plus haut.',
+    ],
+  },
   {
     version: '1.78',
     date: '29/09/2026',

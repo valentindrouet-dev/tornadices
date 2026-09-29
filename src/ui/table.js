@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.78';
+import { h, remplacer, duree, vider } from './dom.js?v=1.79';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.78';
-import { Moteur } from '../core/engine.js?v=1.78';
+} from './icons.js?v=1.79';
+import { Moteur } from '../core/engine.js?v=1.79';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.78';
-import { ajouterHistorique } from './store.js?v=1.78';
-import { enregistrerPartie } from './resultats.js?v=1.78';
-import { aller } from './app.js?v=1.78';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.78';
-import { nomSymbole } from './apparence.js?v=1.78';
+} from '../core/config.js?v=1.79';
+import { ajouterHistorique } from './store.js?v=1.79';
+import { enregistrerPartie } from './resultats.js?v=1.79';
+import { aller } from './app.js?v=1.79';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.79';
+import { nomSymbole } from './apparence.js?v=1.79';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.78';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.78';
+} from './illustrations.js?v=1.79';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.79';
 
 let moteur = null;
 let vitesse = 1;
@@ -588,21 +588,7 @@ export function vueTable() {
     // peut faire réveillé. À la table, c'est la question qu'on se pose.
     listeCombos('Combinaisons (Endormi)', 'endormie'),
     listeCombos('Combinaisons (Réveillé)', 'active'),
-    h('div.carte',
-      h('div.titre-section', 'Carte du jour'),
-      moteur.carte && moteur.carte.combo
-        // L'exigence affichée est celle que le moteur applique — celle des
-        // Réglages, pas la référence de la carte. Lire `combo.requis` en direct
-        // montrait la combinaison d'origine quoi qu'on ait réglé.
-        ? ligneCombo({
-            ...moteur.carte.combo,
-            requis: requisCarte(moteur.cfg, moteur.carte.combo),
-            nom: moteur.carte.court,
-          })
-        : h('div.mini.muted', 'Cette carte n’ouvre aucune combinaison.'),
-      h('p.mini.muted', { style: { marginTop: '10px' } },
-        'Dès qu’une combinaison sort, elle est jouée : le lot part et l’effet s’applique.'),
-    ),
+    // La carte du jour se lit au centre de la table : le journal prend sa place.
     h('div.carte', h('div.titre-section', 'Journal'), zoneJournal),
   );
 

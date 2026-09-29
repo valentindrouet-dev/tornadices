@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.78';
+import { makeRng } from './rng.js?v=1.79';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.78';
+} from './config.js?v=1.79';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -1002,12 +1002,30 @@ export class Moteur {
     }
 
     this._log(j.nom, 'tour', j.id, {
-      des: desFinaux,
+      des: this._desOrdonnes(desFinaux, (motif === 'combo' || motif === 'attrape') && dispo && dispo.combo
+        ? dispo.combo.requis : null),
       issue: this._issueDuTour(motif, dispo),
       couleur: this._couleurDuTour(motif, dispo),
       reussi: motif === 'combo' && dispo && dispo.id !== 'blocage',
     });
     return q;
+  }
+
+  /**
+   * Les dés d'un tour, dans l'ordre où le journal les montre : d'abord ceux qui
+   * font la combinaison jouée, symbole par symbole, puis les autres.
+   */
+  _desOrdonnes(des, requis) {
+    if (!requis) return des;
+    const autres = des.slice();
+    const servent = [];
+    for (const [sym, n] of Object.entries(requis)) {
+      for (let k = 0; k < n; k++) {
+        const i = autres.indexOf(sym);
+        if (i >= 0) servent.push(autres.splice(i, 1)[0]);
+      }
+    }
+    return [...servent, ...autres];
   }
 
   /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
