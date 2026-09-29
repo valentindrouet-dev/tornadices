@@ -12,22 +12,22 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.72';
-import { store } from './store.js?v=1.72';
-import { aller } from './app.js?v=1.72';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.72';
-import { nomSymbole } from './apparence.js?v=1.72';
-import { construireConfig } from './variables.js?v=1.72';
-import { nomActif } from './profils.js?v=1.72';
-import { VERSION } from '../version.js?v=1.72';
+import { h, remplacer } from './dom.js?v=1.73';
+import { store } from './store.js?v=1.73';
+import { aller } from './app.js?v=1.73';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.73';
+import { nomSymbole } from './apparence.js?v=1.73';
+import { construireConfig } from './variables.js?v=1.73';
+import { nomActif } from './profils.js?v=1.73';
+import { VERSION } from '../version.js?v=1.73';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
-  cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
+  cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, refugePour, carteALaTable,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   TABLE_COCHONS, CARTE_COCHON, auxCochons, equipeVue,
-} from '../core/config.js?v=1.72';
+} from '../core/config.js?v=1.73';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -428,16 +428,22 @@ function lAttrape(cfg, mode) {
   );
 }
 
+/** Où sort une carte d'animal — la fiche vaut pour toutes les tables. */
+const TABLES_ANIMAL = {
+  vache: 'Pas à trois joueurs, où chacun est un Cochon.',
+  poule: 'Pas à trois joueurs, où chacun est un Cochon.',
+  cowboy: 'À cinq et à sept joueurs, avec le joueur Vert.',
+  cochon: 'À trois joueurs seulement.',
+};
+
 function lesCartes(cfg, mode) {
   const enJeu = new Set(cartesEnJeu(cfg));
-  const cartes = cartesDuMode(cfg).filter((c) => enJeu.has(c.id));
+  const cartes = cartesDuJeu().filter((c) => enJeu.has(c.id));
   if (!cartes.length) return null;
   return section(`Les cartes Tornade — ${cartes.length} en jeu`,
     h('p.fiche-note',
-      estJeton(cfg)
-        ? 'Une carte par manche, retournée au début. Elle change la manche qui commence.'
-        : 'Une carte par manche : on la révèle, on la joue. L’équipe qui remporte la manche la '
-          + 'prend dans sa pile — c’est ainsi qu’on gagne la partie.'),
+      'Une carte par manche : on la révèle, on la joue. L’équipe qui remporte la manche la '
+      + 'prend dans sa pile — c’est ainsi qu’on gagne la partie.'),
     h('p.fiche-note', h('strong', REGLE_CARTES_DEUX_ETATS)),
     tableau('table.tbl.fiche-tbl',
       h('thead', h('tr',
@@ -453,7 +459,10 @@ function lesCartes(cfg, mode) {
           h('td.fiche-combo-nom', c.court || c.nom),
           estCompromis(cfg) ? h('td.num', String(refugePour(cfg, c))) : null,
           h('td.fiche-col-des', requis ? desRequis(requis, 19) : h('span.mini.muted', '—')),
-          h('td.petit', c.texte));
+          h('td.petit', c.texte,
+            // Une carte d'animal ne sort qu'à certaines tables : la fiche vaut
+            // pour toutes, elle le dit.
+            c.animal ? h('div.mini.muted', TABLES_ANIMAL[c.animal]) : null));
       }))),
   );
 }
@@ -466,8 +475,8 @@ function leJoueurVert(cfg, parEffectif) {
   const vert = COULEURS_EQUIPE.vert;
   const impairs = NOMBRES_JOUEURS.filter(avecVert);
   const combosPropres = cfg.combos.filter((c) => cfg.combosAsymetriques && difference(cfg, c));
-  const cowboy = cartesDuMode(cfg)
-    .find((c) => c.equipeRequise === 'vert' && cartesEnJeu(cfg).includes(c.id));
+  const cowboy = cartesDuJeu()
+    .find((c) => c.animal === 'cowboy' && cartesEnJeu(cfg).includes(c.id));
   // « Un autre nombre » ne se dit que s'il est vraiment autre : régler l'objectif
   // du Vert à la même valeur que les équipes ne change rien.
   const cartesVert = impairs.filter((n) => parEffectif[n].cartesVert

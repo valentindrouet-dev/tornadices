@@ -7,7 +7,8 @@ import {
   assainirFaces, assainirRequis, assainirConfig, FACES_ECLAIR, SYMBOLES_RETIRES,
   NB_FACES_DE, OPTIONS_ATTRAPE, comboDeclencheur, OPTIONS_MANCHE, infosMiseEnPlace,
   attrapeEmporteManche, requisPourEquipe, comboPossible, cartesEnJeu, requisCarte,
-  clePaquet, cleCombosCartes, CARTES_TORNADE, CARTES_SANS_POINTS, cartesDuMode, CARTES_PAR_ID,
+  clePaquet, cleCombosCartes, CARTES_TORNADE, cartesDuJeu, CARTES_PAR_ID,
+  migrerPaquet, carteALaTable, noteCarte,
   COULEURS_EQUIPE, COMBOS_TORNADE, faceSansReveil, NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
   JOUEURS_MIN, JOUEURS_MAX, bornerJoueurs, MISE_EN_PLACE,
   MODES_MANCHE, modeManche, estCompromis, estImmediat, estJeton, refugePour,
@@ -193,18 +194,19 @@ console.log('\nPlusieurs combinaisons au même jet');
   {
     const humains = spec.map((s, i) => (i === 0 ? { ...s, type: 'humain' } : s));
     const cfg = configParDefaut(6);
-    // « Journée intensive » : 2 tornades + 2 abris. Avec trois tornades sur un
-    // lot de cinq dés, le réveil est servi au même jet.
+    // La Tornade du Sommeil, réglée à deux ZzZ. Avec trois tornades sur un lot
+    // de cinq dés, le réveil est servi au même jet.
     cfg.desParLot = 5;
-    cfg.cartes = ['intensive'];
+    cfg.cartesTornade = ['spSommeil'];
     // Un paquet voulu exactement tel quel : on dit ce qu'il avait sous les yeux,
     // sinon les cartes arrivées depuis le rejoindraient.
-    cfg.cartesVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.combosCartesTornade = { spSommeil: { zzz: 2 } };
     cfg.melangerCartes = false;
     const m = new Moteur(cfg, humains, 'carte-office');
     const j = m.joueurs[0];
     if (!j.lots.length) j.lots.push(m._nouveauLot());
-    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'vache', 'vache']);
+    poser(j.lots[0], ['tornade', 'tornade', 'tornade', 'zzz', 'zzz']);
     const dispo = m.combosDisponibles(j);
     verifier(`la carte et le réveil sont servis au même jet (${dispo.map((d) => d.id).join(', ')})`,
       dispo.length > 1 && dispo.some((d) => d.source === 'journee'));
@@ -272,8 +274,10 @@ console.log('\nPlusieurs combinaisons au même jet');
   // Et quand la carte du jour sort au même jet, on la joue — et l'on se réveille.
   {
     const cfg = configParDefaut(6);
-    cfg.cartes = ['vaillants'];
-    cfg.cartesVues = CARTES_TORNADE.map((c) => c.id);
+    // La Tornade du Sommeil réglée à quatre tornades : le réveil est dedans.
+    cfg.cartesTornade = ['spSommeil'];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.combosCartesTornade = { spSommeil: { tornade: 4 } };
     cfg.melangerCartes = false;
     const m = new Moteur(cfg, spec, 'reveil-carte');
     const j = m.joueurs.find((x) => x.lots.length) || m.joueurs[0];
@@ -644,7 +648,7 @@ console.log('\nRéglages enregistrés d’une ancienne version');
       { id: 'endormir', nom: 'Endormi', requis: { zzz: 3 }, face: 'active' },
       { id: 'collision', nom: 'Attrape', requis: { etoile: 2 }, face: 'toutes' },
     ],
-    combosCartes: { fatigue: { cloche: 4 } },
+    combosCartesSansPoints: { spSommeil: { cloche: 4 } },
   };
 
   verifier('cloche redevient tornade, étoile redevient X',
@@ -668,8 +672,8 @@ console.log('\nRéglages enregistrés d’une ancienne version');
     cfg.faces.every((f) => SYMBOLES[f]), cfg.faces.join(','));
   verifier('les exigences de combinaison non plus',
     cfg.combos.every((c) => Object.keys(c.requis).every((s) => SYMBOLES[s])));
-  verifier('celles des cartes Journée non plus',
-    JSON.stringify(cfg.combosCartes.fatigue) === JSON.stringify({ tornade: 4 }));
+  verifier('celles des cartes Tornade non plus, reprises dans le paquet unique',
+    JSON.stringify(cfg.combosCartesTornade.spSommeil) === JSON.stringify({ tornade: 4 }));
   verifier('les réglages apparus depuis reprennent leur valeur par défaut',
     cfg.attrapeSur === 'echec' && cfg.lotsCumules === false
     && cfg.dureeLancer > 0 && cfg.dureeChoix > 0,
@@ -1021,74 +1025,142 @@ console.log('\nCombinaisons possibles sur le dé');
   verifier('une exigence vide n’est jamais « possible »', !comboPossible(officiel, {}));
 }
 
-// ── 3 septies bis quater. Un paquet de cartes par mode de jeu ────────────────
-console.log('\nCartes Tornade — un paquet par mode');
+// ── 3 septies bis quater. Un seul paquet pour toutes les façons de jouer ─────
+console.log('\nCartes Tornade — un seul paquet');
 {
   const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
-  const avec = configParDefaut(6);
-  const sans = configParDefaut(6, { sansPoints: true });
+  const jeton = configParDefaut(6);
+  const immediat = configParDefaut(6, { modeManche: 'immediat' });
+  const compromis = configParDefaut(6, { modeManche: 'compromis' });
 
-  verifier('le mode « jetons » garde ses douze cartes Journée',
-    cartesEnJeu(avec).length === CARTES_TORNADE.length
-    && cartesDuMode(avec) === CARTES_TORNADE);
-  verifier(`« sans les points » a son propre paquet (${CARTES_SANS_POINTS.length} Tornades)`,
-    cartesDuMode(sans) === CARTES_SANS_POINTS
-    && cartesEnJeu(sans).length === CARTES_SANS_POINTS.length);
-  // Deux paquets sans le moindre identifiant en commun : aucune carte de l'un
-  // ne peut se glisser dans l'autre.
-  {
-    const a = new Set(CARTES_TORNADE.map((c) => c.id));
-    verifier('les deux paquets n’ont aucune carte en commun',
-      CARTES_SANS_POINTS.every((c) => !a.has(c.id)));
-  }
-  verifier('les deux paquets se règlent par des clés distinctes',
-    clePaquet(avec) === 'cartes' && clePaquet(sans) === 'cartesSansPoints'
-    && cleCombosCartes(avec) === 'combosCartes'
-    && cleCombosCartes(sans) === 'combosCartesSansPoints');
-  verifier('un paquet enregistré pour l’autre mode est ignoré',
-    cartesEnJeu({ ...sans, cartesSansPoints: ['fatigue', 'troupeau'] }).length
-      === CARTES_SANS_POINTS.length);
+  verifier(`un seul paquet de ${CARTES_TORNADE.length} Tornades, le même dans les trois modes`,
+    [jeton, immediat, compromis].every((c) => cartesEnJeu(c).length === CARTES_TORNADE.length)
+    && cartesDuJeu() === CARTES_TORNADE);
+  verifier('les cartes « Journée » ont quitté le jeu',
+    !CARTES_PAR_ID.intensive && !CARTES_PAR_ID.chauffe && !CARTES_PAR_ID.vaillants);
+  verifier('une seule clé de paquet et une seule table de combinaisons',
+    [jeton, immediat, compromis].every((c) => clePaquet(c) === 'cartesTornade'
+      && cleCombosCartes(c) === 'combosCartesTornade'));
+  verifier('un paquet de cartes « Journée » enregistré ne retient rien : le paquet est complet',
+    cartesEnJeu({ ...jeton, cartesTornade: ['fatigue', 'troupeau'] }).length
+      === CARTES_TORNADE.length);
 
-  // Chaque mode a aussi ses exigences : régler l'une ne touche pas l'autre.
+  // Une combinaison réglée vaut pour les trois modes.
   {
-    const cfg = configParDefaut(6, { sansPoints: true });
-    cfg.combosCartes = { spMega: { vache: 2 } };
-    cfg.combosCartesSansPoints = { spMega: { vache: 5 } };
-    const combo = { id: 'spMega', requis: { tornade: 4 } };
-    verifier('sans les points, c’est la table du mode qui décide',
-      requisCarte(cfg, combo).vache === 5);
-    verifier('et le mode jetons garde la sienne',
-      requisCarte({ ...cfg, modeManche: 'jeton', sansPoints: false }, combo).vache === 2);
+    const combo = CARTES_PAR_ID.spFurieuse.combo;
+    const regle = { spFurieuse: { x: 4 } };
+    verifier('une combinaison de carte réglée vaut dans les trois modes',
+      [jeton, immediat, compromis].every((c) => requisCarte({ ...c, combosCartesTornade: regle }, combo).x === 4));
   }
 
-  // Le paquet du mode arrive bien jusqu'à la pioche du moteur.
+  // Les réglages d'avant la v1.73, rangés par mode, sont repris.
   {
-    const m = new Moteur(sans, spec(6), 'paquet-sp');
+    const ancien = {
+      nbJoueurs: 6, modeManche: 'jeton',
+      cartes: ['fatigue'],
+      cartesSansPoints: ['spMega', 'spSommeil'],
+      cartesSansPointsVues: CARTES_TORNADE.filter((c) => c.id !== 'spCochons').map((c) => c.id),
+      combosCartesSansPoints: { spMega: { vache: 4 } },
+    };
+    const repris = assainirConfig(ancien);
+    verifier('le paquet d’Immédiat devient le paquet unique, avec ce qu’il avait sous les yeux',
+      JSON.stringify(repris.cartesTornade) === '["spMega","spSommeil"]'
+      && Array.isArray(repris.cartesTornadeVues));
+    verifier('et ses combinaisons réglées aussi',
+      JSON.stringify(repris.combosCartesTornade.spMega) === '{"vache":4}');
+    verifier('à défaut, c’est celui du Compromis',
+      JSON.stringify(migrerPaquet({ cartesCompromis: ['spFurieuse'] }).cartesTornade) === '["spFurieuse"]');
+    verifier('un réglage déjà au paquet unique n’est pas touché',
+      JSON.stringify(migrerPaquet({ cartesTornade: ['spPaisible'], cartesSansPoints: ['spMega'] })
+        .cartesTornade) === '["spPaisible"]');
+  }
+
+  // Le même paquet arrive jusqu'à la pioche, quel que soit le mode.
+  for (const [nom, cfg] of [['jetons', jeton], ['Immédiat', immediat], ['Compromis', compromis]]) {
+    const m = new Moteur(cfg, spec(6), `paquet-${nom}`);
     m.jouerJusquAuBout();
-    const sorties = new Set(m.statsManches.map((s) => s.carte));
-    verifier('une partie sans les points ne tire que des Tornades',
-      [...sorties].every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)));
-    // La Tornade de Chauffe ouvre le paquet, et ne rapporte rien : c'est un
-    // tour d'essai, la carte est défaussée à la fin de la manche.
-    verifier('elle ouvre sur la Tornade de Chauffe, qui ne rapporte rien',
-      m.statsManches[0].carte === 'spChauffe' && m.statsManches[0].compte === false);
-
-    const avecJetons = new Moteur(avec, spec(6), 'paquet-sp');
-    avecJetons.jouerJusquAuBout();
-    verifier('et une partie avec les jetons ne tire que des cartes Journée',
-      avecJetons.statsManches.every((s) => CARTES_TORNADE.some((c) => c.id === s.carte)));
+    verifier(`${nom} : la partie ne tire que des Tornades, et ouvre sur la Tornade de Chauffe`,
+      m.statsManches.every((x) => CARTES_PAR_ID[x.carte])
+      && m.statsManches[0].carte === 'spChauffe' && m.statsManches[0].compte === false);
   }
 
+  // Méga Tornade : cinq symboles. Sur des lots de quatre dés, elle ne peut pas
+  // sortir, et la carte le dit.
+  verifier('la Méga Tornade demande cinq symboles',
+    Object.values(CARTES_PAR_ID.spMega.combo.requis).reduce((t, n) => t + n, 0) === 5);
+  verifier('sur des lots de quatre, la carte prévient qu’elle ne peut pas sortir',
+    /5 dés/.test(noteCarte(CARTES_PAR_ID.spMega, configParDefaut(6)))
+    && noteCarte(CARTES_PAR_ID.spMega, { ...configParDefaut(6), desParLot: 5 }) === '');
+
+  // Les cartes d'animal : à la table où l'animal joue, et nulle part ailleurs.
+  {
+    const a = (id, cfg) => carteALaTable(CARTES_PAR_ID[id], cfg);
+    const c3 = configParDefaut(3);
+    const c5 = configParDefaut(5);
+    const c6 = configParDefaut(6);
+    verifier('Vaches et Poules à quatre, cinq, six joueurs — pas à la table des Cochons',
+      a('spVaches', c6) && a('spPoules', c5) && !a('spVaches', c3) && !a('spPoules', c3));
+    verifier('le Cow-Boy avec le joueur Vert seulement',
+      a('spCowboy', c5) && !a('spCowboy', c6) && !a('spCowboy', c3));
+    verifier('les Cochons à la table à trois, et nulle part ailleurs',
+      a('spCochons', c3) && !a('spCochons', c5) && !a('spCochons', c6));
+    verifier('à trois sans la carte Cochon, les équipes reprennent leurs cartes',
+      a('spVaches', { ...c3, cochons: false }) && a('spCowboy', { ...c3, cochons: false })
+      && !a('spCochons', { ...c3, cochons: false }));
+    verifier('à trois, la note du Cow-Boy parle des Cochons, pas du joueur Vert',
+      /Cochon/.test(noteCarte(CARTES_PAR_ID.spCowboy, c3))
+      && /joueur Vert/.test(noteCarte(CARTES_PAR_ID.spCowboy, c6)));
+    verifier('la Tornade de Cochons vaut double pour qui prend la manche',
+      CARTES_PAR_ID.spCochons.effetPassif.doubleTous === true
+      && CARTES_PAR_ID.spCochons.texte === 'Les Cochons gagnent 2 Cartes Tornade à cette manche');
+    // Et la pioche du moteur les trie bien.
+    const pioche = (cfg, graine) => new Set(new Moteur({ ...cfg, melangerCartes: false }, spec(cfg.nbJoueurs), graine)
+      .pioche.map((c) => c.id));
+    const p3 = pioche(c3, 'pioche-3');
+    const p6 = pioche(c6, 'pioche-6');
+    verifier('la pioche à trois : les Cochons, sans Vaches, Poules ni Cow-Boy',
+      p3.has('spCochons') && !p3.has('spVaches') && !p3.has('spPoules') && !p3.has('spCowboy'));
+    verifier('la pioche à six : Vaches et Poules, sans Cochons ni Cow-Boy',
+      p6.has('spVaches') && p6.has('spPoules') && !p6.has('spCochons') && !p6.has('spCowboy'));
+  }
+
+  // Avec les jetons, la manche prise au dernier jeton d'une attrape est une
+  // manche gagnée en rattrapant : la Tornade Électrique paie double.
+  {
+    const cfg = configParDefaut(6);
+    // L'Électrique d'abord, et une carte derrière pour la seconde.
+    cfg.cartesTornade = ['spElectrique', 'spVaches'];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.melangerCartes = false;
+    const cartesApres = (source) => {
+      const m = new Moteur(cfg, spec(6), 'electrique-jetons');
+      const j = m.joueurs.find((x) => x.lots.length) || m.joueurs[0];
+      const eq = m.equipes[j.equipe];
+      eq.retournes = eq.jetons - 1;
+      m._retournerJeton(j, 1, source);
+      return m.carte.id === 'spElectrique' || eq.cartes[0] === 'spElectrique' ? eq.cartes.length : -1;
+    };
+    const parAttrape = cartesApres('collision');
+    const parAbri = cartesApres('vache');
+    verifier(`Tornade Électrique : 2 cartes pour la manche prise en rattrapant, 1 à l’Abri (${parAttrape}, ${parAbri})`,
+      parAttrape === 2 && parAbri === 1);
+  }
+}
+
+// ── 3 septies bis quater bis. Ce qu'une combinaison réglée devient ───────────
+console.log('\nCartes Tornade — combinaisons réglées');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
   // Une exigence réglée doit arriver jusqu'au moteur — et jusqu'à l'écran. La
   // table lisait `carte.combo.requis`, la référence, et montrait donc la
   // combinaison d'origine quoi qu'on ait réglé dans les menus.
   {
     const cfg = configParDefaut(6, { sansPoints: true });
     cfg.melangerCartes = false;
-    cfg.cartesSansPoints = ['spFurieuse'];
-    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+    cfg.cartesTornade = ['spFurieuse'];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
     // Une exigence d'un seul ZzZ : impossible à confondre avec la référence.
-    cfg.combosCartesSansPoints = { spFurieuse: { zzz: 1 } };
+    cfg.combosCartesTornade = { spFurieuse: { zzz: 1 } };
     const combo = CARTES_PAR_ID.spFurieuse.combo;
     verifier('l’exigence réglée l’emporte sur celle de la carte',
       JSON.stringify(requisCarte(cfg, combo)) === '{"zzz":1}'
@@ -1161,7 +1233,7 @@ console.log('\nTornades du mode sans les points');
       const enMain = Object.values(m.equipes).reduce((a, e) => a + e.cartes.length, 0);
       // Le paquet de départ moins la pioche restante doit couvrir ce qui est en
       // main : rien ne s'invente, une carte volée vient d'une autre pile.
-      if (enMain > CARTES_SANS_POINTS.length) fautes++;
+      if (enMain > CARTES_TORNADE.length) fautes++;
     }
     verifier('aucune partie ne distribue plus de cartes que le paquet n’en contient',
       fautes === 0);
@@ -1183,7 +1255,7 @@ console.log('\nManche « Compromis »');
     cfg.cartesPourGagner === 5 && cfg.jetonsRefuge === 3);
   verifier('la collision emporte la manche par défaut', cfg.attrapeGagneManche === 'touche');
   verifier('chaque Tornade demande de un à trois jetons',
-    CARTES_SANS_POINTS.every((c) => refugePour(cfg, c) >= 1 && refugePour(cfg, c) <= 3));
+    CARTES_TORNADE.every((c) => refugePour(cfg, c) >= 1 && refugePour(cfg, c) <= 3));
   verifier('le réglage d’une carte l’emporte sur son défaut',
     refugePour({ ...cfg, refugeCartes: { spSiecle: 1 } }, CARTES_PAR_ID.spSiecle) === 1);
   verifier('et reste borné par les jetons de l’équipe',
@@ -1235,11 +1307,11 @@ console.log('\nManche « Compromis »');
     verifier('le Refuge se vide au début de chaque manche', toujoursVide);
   }
 
-  // Et les trois modes restent bien trois jeux distincts.
+  // Les trois modes se jouent avec le même paquet de Tornades.
   const paquets = MODES_MANCHE.map((mode) => clePaquet({ modeManche: mode }));
-  verifier(`trois paquets distincts (${paquets.join(', ')})`, new Set(paquets).size === 3);
+  verifier(`un seul paquet pour les trois modes (${paquets[0]})`, new Set(paquets).size === 1);
   const tables = MODES_MANCHE.map((mode) => cleCombosCartes({ modeManche: mode }));
-  verifier(`trois tables d’exigences distinctes (${tables.join(', ')})`, new Set(tables).size === 3);
+  verifier(`une seule table d’exigences (${tables[0]})`, new Set(tables).size === 1);
 }
 
 // ── 3 septies. De trois à huit joueurs, jamais plus ─────────────────────────
@@ -1374,15 +1446,19 @@ console.log('\n« Réveillé seulement » — la case se décoche');
   const cfg = configParDefaut(6);
   cfg.combos = cfg.combos.map((c) => (c.id === 'vache' ? { ...c, face: faceSansReveil(c.id) } : c));
   const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
-  const m = new Moteur(cfg, spec, 'abri-endormi');
+  // Un dormeur court après ses tornades : trois granges au même jet sont rares,
+  // on joue donc quelques parties.
   let vueEnDormant = false;
-  const original = m.combosDisponibles.bind(m);
-  m.combosDisponibles = (j) => {
-    const dispo = original(j);
-    if (!j.eveille && dispo.some((c) => c.id === 'vache')) vueEnDormant = true;
-    return dispo;
-  };
-  m.jouerJusquAuBout();
+  for (let g = 0; g < 20 && !vueEnDormant; g++) {
+    const m = new Moteur(cfg, spec, `abri-endormi-${g}`);
+    const original = m.combosDisponibles.bind(m);
+    m.combosDisponibles = (j) => {
+      const dispo = original(j);
+      if (!j.eveille && dispo.some((c) => c.id === 'vache')) vueEnDormant = true;
+      return dispo;
+    };
+    m.jouerJusquAuBout();
+  }
   verifier('décochée, l’Abri est proposé à un joueur endormi', vueEnDormant);
 }
 
@@ -1436,14 +1512,14 @@ console.log('\nStatistiques décorrélées');
   verifier(`${avecCombo.length} cartes à combinaison suivies, taux entre 0 et 100 %`,
     avecCombo.length > 0
     && avecCombo.every((c) => c.manchesRealisee <= c.jouee && c.realisations >= c.manchesRealisee));
-  // Sur le dé officiel, « Journée de la chance » demande quatre éclairs : elle ne
+  // Sur des lots de quatre dés, la Méga Tornade demande cinq granges : elle ne
   // peut pas sortir, et le tableau doit le montrer plutôt que de rester muet.
-  const chance = r.parCarte.find((c) => c.id === 'chance');
-  verifier('une carte que le dé ne peut pas produire affiche un taux nul',
-    chance && chance.jouee > 0 && chance.manchesRealisee === 0);
-  const troupeau = r.parCarte.find((c) => c.id === 'troupeau');
-  verifier(`« Troupeau » sort dans ${troupeau.manchesRealisee}/${troupeau.jouee} de ses manches`,
-    troupeau && troupeau.manchesRealisee > 0);
+  const mega = r.parCarte.find((c) => c.id === 'spMega');
+  verifier('une carte que le lot ne peut pas produire affiche un taux nul',
+    mega && mega.jouee > 0 && mega.manchesRealisee === 0);
+  const sommeil = r.parCarte.find((c) => c.id === 'spSommeil');
+  verifier(`« Tornade du Sommeil » sort dans ${sommeil && sommeil.manchesRealisee}/${sommeil && sommeil.jouee} de ses manches`,
+    sommeil && sommeil.manchesRealisee > 0);
 }
 
 // ── 3 septies bis septies. Un résultat enregistré porte son format ───────────
@@ -1529,8 +1605,8 @@ console.log('\nRéglage livré « Vichy »');
   const vichy = PROFILS_INTEGRES.find((p) => p.id === 'vichy');
   verifier('le réglage est écrit dans le code, pas dans le navigateur', !!vichy && vichy.integre);
 
-  const paquet = vichy.variables.cartesSansPoints;
-  verifier(`son paquet compte 14 Tornades (${paquet.length})`, paquet.length === 14);
+  const paquet = vichy.variables.cartesTornade;
+  verifier(`son paquet compte les 15 Tornades (${paquet.length})`, paquet.length === 15);
 
   // Les cartes à réunir, effectif par effectif : l'objectif monte avec la table,
   // et le Vert — seul contre deux équipes — en a bien moins à réunir.
@@ -1585,8 +1661,8 @@ console.log('\nRéglage livré « Vichy »');
   {
     const cfg = configParDefaut(6, { modeManche: 'immediat' });
     cfg.melangerCartes = false;
-    cfg.cartesSansPoints = ['spSommeil'];
-    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+    cfg.cartesTornade = ['spSommeil'];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
     const m = new Moteur(cfg, spec(6), 'deux-etats');
     const j = m.joueurs.find((x) => x.lots.length);
     // Un lot qui sert la combinaison de la carte, et rien d'autre.
@@ -1610,13 +1686,13 @@ console.log('\nRéglage livré « Vichy »');
     /deux états/i.test(REGLE_CARTES_DEUX_ETATS));
 
   verifier('les combinaisons imprimées arrivent au moteur',
-    JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spMega.combo)) === '{"vache":4}'
+    JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spMega.combo)) === '{"vache":5}'
     && JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spSommeil.combo)) === '{"zzz":4}'
     && JSON.stringify(requisCarte(cfg, CARTES_PAR_ID.spFurieuse.combo)) === '{"x":3}');
 
   const enJeu = cartesEnJeu(cfg);
   verifier(`le paquet en jeu est bien celui de Vichy (${enJeu.length} cartes)`,
-    enJeu.length === 14 && paquet.every((id) => enJeu.includes(id)));
+    enJeu.length === 15 && paquet.every((id) => enJeu.includes(id)));
 
   // La Tornade chargée doit vraiment poser un lot de plus, la chauffe ne rien
   // rapporter, et une campagne entière aller au bout.
@@ -1635,10 +1711,10 @@ console.log('\nRéglage livré « Vichy »');
     const c = configParDefaut(6, { modeManche: 'immediat' });
     Object.assign(c, vichy.variables);
     c.melangerCartes = false;
-    c.cartesSansPoints = ['spChargee'];
-    c.cartesSansPointsVues = CARTES_SANS_POINTS.map((x) => x.id);
+    c.cartesTornade = ['spChargee'];
+    c.cartesTornadeVues = CARTES_TORNADE.map((x) => x.id);
     const avec = new Moteur(c, spec(6), 'vichy-lots');
-    const temoin = new Moteur({ ...c, cartesSansPoints: ['spSommeil'] }, spec(6), 'vichy-lots');
+    const temoin = new Moteur({ ...c, cartesTornade: ['spSommeil'] }, spec(6), 'vichy-lots');
     const lots = (m) => m.joueurs.reduce((a, j) => a + j.lots.length, 0);
     verifier(`la Tornade chargée pose ${lots(avec)} lots au lieu de ${lots(temoin)}`,
       lots(avec) === lots(temoin) + 1);
@@ -1662,7 +1738,7 @@ console.log('\nTornades Paisible, Maladroite et Chargée');
 
   verifier('les trois sont au paquet des modes Immédiat et Compromis',
     ['spPaisible', 'spMaladroite', 'spChargee']
-      .every((id) => CARTES_SANS_POINTS.some((c) => c.id === id)
+      .every((id) => CARTES_TORNADE.some((c) => c.id === id)
         && cartesEnJeu(configParDefaut(6, { modeManche: 'immediat' })).includes(id)
         && cartesEnJeu(configParDefaut(6, { modeManche: 'compromis' })).includes(id)));
   verifier('les Tornades hors du paquet imprimé ont quitté le jeu',
@@ -1676,8 +1752,8 @@ console.log('\nTornades Paisible, Maladroite et Chargée');
   const surUneCarte = (id, opts = {}) => {
     const cfg = configParDefaut(6, { modeManche: 'immediat', ...opts });
     cfg.melangerCartes = false;
-    cfg.cartesSansPoints = [id];
-    cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+    cfg.cartesTornade = [id];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
     const m = new Moteur(cfg, spec(6), `carte-${id}`);
     return m;
   };
@@ -1693,8 +1769,8 @@ console.log('\nTornades Paisible, Maladroite et Chargée');
     // À trois joueurs avec trois lots, elle n'en ajoute pas un quatrième.
     const cfg3 = configParDefaut(3, { modeManche: 'immediat' });
     cfg3.melangerCartes = false;
-    cfg3.cartesSansPoints = ['spChargee'];
-    cfg3.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+    cfg3.cartesTornade = ['spChargee'];
+    cfg3.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
     cfg3.lots = 3;
     const m3 = new Moteur(cfg3, spec(3), 'chargee-3');
     verifier('elle ne pose jamais plus de lots qu’il n’y a de joueurs',
@@ -1737,8 +1813,8 @@ console.log('\nTornades Paisible, Maladroite et Chargée');
       for (let g = 0; g < 40; g++) {
         const cfg = configParDefaut(6, { modeManche: 'immediat' });
         cfg.melangerCartes = false;
-        cfg.cartesSansPoints = [id];
-        cfg.cartesSansPointsVues = CARTES_SANS_POINTS.map((c) => c.id);
+        cfg.cartesTornade = [id];
+        cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
         const m = new Moteur(cfg, spec(6), `duree-${id}-${g}`);
         m.jouerJusquAuBout();
         for (const s of m.statsManches) { total += s.duree; manches++; }
@@ -1764,20 +1840,20 @@ console.log('\nTornades Paisible, Maladroite et Chargée');
 // ── 3 septies quater ter. Un paquet enregistré et les cartes arrivées depuis ─
 console.log('\nPaquet enregistré et cartes nouvelles');
 {
-  const tousSp = CARTES_SANS_POINTS.map((c) => c.id);
+  const tousSp = CARTES_TORNADE.map((c) => c.id);
   // Une carte ajoutée au jeu après coup porte sa date d'arrivée : c'est ce qui
   // permet à un paquet composé avant elle de la récupérer. Le paquet imprimé
   // est arrivé d'un bloc — aucune carte n'est donc datée pour l'instant, et
   // c'est bien ce que l'on vérifie ici : les paquets d'avant gardent alors leur
   // choix exact, sans rien récupérer.
-  const datees = CARTES_SANS_POINTS.filter((c) => c.depuis);
+  const datees = CARTES_TORNADE.filter((c) => c.depuis);
   verifier(`les dates d’arrivée sont bien formées (${datees.length} carte(s) datée(s))`,
     datees.every((c) => /^\d+\.\d+$/.test(c.depuis)));
 
   const enJeu = (paquet, vues) => cartesEnJeu({
     modeManche: 'compromis',
-    cartesCompromis: paquet,
-    ...(vues ? { cartesCompromisVues: vues } : {}),
+    cartesTornade: paquet,
+    ...(vues ? { cartesTornadeVues: vues } : {}),
   });
 
   // Sans trace de ce qui était proposé, on date le paquet par la plus récente
@@ -1919,7 +1995,7 @@ console.log('\nLe sens de rotation');
     sensRotation({ sensRotation: 'carte' }) === 'perdants'
     && assainirConfig({ nbJoueurs: 6, sensRotation: 'carte' }).sensRotation === 'perdants');
   verifier('aucune carte ne porte plus de sens',
-    [...CARTES_TORNADE, ...CARTES_SANS_POINTS].every((c) => c.sens === undefined));
+    CARTES_TORNADE.every((c) => c.sens === undefined));
 
   // Le sens observé au début de chaque manche, partie menée jusqu'au bout.
   const sensDesManches = (opts, graine) => {
@@ -2143,31 +2219,19 @@ console.log('\nLes jetons sur la carte Tornade');
 
   // La manche se prend en vidant sa rangée, et jamais avant.
   {
-    let fautes = 0, prises = 0, tropSortis = 0, sorties = 0, renvoyes = 0;
+    let fautes = 0, prises = 0, tropSortis = 0, sorties = 0;
     for (let g = 0; g < 40; g++) {
       const m = new Moteur(cfg, spec6, `tornade-vide-${g}`);
       // Combien de jetons chaque équipe a vu sortir dans la manche en cours : le
       // moteur ne doit jamais en annoncer plus que la carte n'en retenait.
       let sortis = new Map();
-      // La « Journée sans vent » renvoie un jeton adverse dans la Tornade : une
-      // manche peut donc en voir sortir plus que la carte n'en retenait, mais
-      // jamais plus que ce qui y est entré.
-      let renvois = new Map();
-      const idParNom = Object.fromEntries(
-        Object.keys(m.equipes).map((id) => [m._nomEquipe(id), id]),
-      );
       const demarrer = m._demarrerManche.bind(m);
-      m._demarrerManche = (premiere) => { sortis = new Map(); renvois = new Map(); demarrer(premiere); };
-      m.onJournal = (e) => {
-        const r = /renvoie un jeton (?:des|du) (.+) dans la Tornade/.exec(e.texte || '');
-        const id = r && idParNom[r[1]];
-        if (id) { renvois.set(id, (renvois.get(id) || 0) + 1); renvoyes++; }
-      };
+      m._demarrerManche = (premiere) => { sortis = new Map(); demarrer(premiere); };
       m.onJeton = (pid, equipe, n) => {
         sorties += n;
         const cumul = (sortis.get(equipe) || 0) + n;
         sortis.set(equipe, cumul);
-        if (cumul > m.suiviJetons(equipe).total + (renvois.get(equipe) || 0)) tropSortis++;
+        if (cumul > m.suiviJetons(equipe).total) tropSortis++;
       };
       const finir = m._finManche.bind(m);
       m._finManche = (equipeId, cause = {}) => {
@@ -2184,8 +2248,6 @@ console.log('\nLes jetons sur la carte Tornade');
       prises > 0 && fautes === 0);
     verifier(`${sorties} jetons sortis, jamais plus que la Tornade n’en avait`,
       sorties > 0 && tropSortis === 0);
-    verifier(`et ${renvoyes} jetons renvoyés dans la Tornade par la « Journée sans vent »`,
-      renvoyes > 0);
   }
 
   // Immédiat ne compte aucun jeton : le réglage n'y change rien.
@@ -2340,7 +2402,7 @@ console.log('\nLes cartes imprimées');
     illu && illu.largeur === 1432 && illu.hauteur === 1948);
   verifier('le texte de la carte est celui qu’elle imprime', sommeil.texte === 'Vous endormez vos 2 voisins');
   verifier('sa combinaison réglée autrement, on revient au dessin',
-    illustrationCarte({ ...cc, combosCartesCompromis: { spSommeil: { zzz: 3 } } }, sommeil) === null);
+    illustrationCarte({ ...cc, combosCartesTornade: { spSommeil: { zzz: 3 } } }, sommeil) === null);
   verifier('une carte sans image n’en a pas', illustrationCarte(cc, CARTES_PAR_ID.spFurieuse) === null);
   const chemins = [
     ...Object.values(ILLUSTRATIONS_CARTES).map((x) => x.src),

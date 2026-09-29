@@ -10,15 +10,15 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.72';
+import { makeRng } from './rng.js?v=1.73';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
   comboDeclencheur, attrapeEmporteManche,
-  requisPourEquipe, cartesEnJeu, requisCarte, cartesDuMode,
+  requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.72';
+} from './config.js?v=1.73';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -171,21 +171,21 @@ export class Moteur {
   }
 
   _initPioche() {
-    // Le paquet dépend du mode : chaque mode a le sien, réglé à part.
+    // Un seul paquet pour les trois façons de jouer : les cartes cochées.
     const ids = cartesEnJeu(this.cfg).slice();
-    const equipes = new Set(placement(this.cfg.nbJoueurs));
     const cartes = ids
       .map((id) => CARTES_PAR_ID[id])
       .filter(Boolean)
       .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs)
-      // Une carte qui désigne une équipe absente ne désignerait personne : la
-      // Tornade de Cow-boy sort du paquet quand il n'y a pas de Vert.
-      .filter((c) => !c.equipeRequise || equipes.has(c.equipeRequise));
+      // Une carte qui désigne un animal absent ne désignerait personne : pas de
+      // Cow-Boy sans joueur Vert, pas de Vaches ni de Poules à la table des
+      // Cochons, pas de Cochons ailleurs.
+      .filter((c) => carteALaTable(c, this.cfg));
     const chauffe = cartes.filter((c) => c.toujoursPremiere);
     let reste = cartes.filter((c) => !c.toujoursPremiere);
     if (this.cfg.melangerCartes !== false) reste = this.rng.shuffle(reste);
     this.pioche = [...chauffe, ...reste];
-    if (!this.pioche.length) this.pioche = [cartesDuMode(this.cfg)[0]];
+    if (!this.pioche.length) this.pioche = [cartesDuJeu()[0]];
   }
 
   // ── Manches ─────────────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ export class Moteur {
   // et le Vert avec elle. Le réglage « Qui commence » permet d'ouvrir sur les
   // Bleus, ou sur le Vert seul.
   // Manches suivantes : les perdants de la manche précédente — ou les gagnants
-  // si la « Journée de la triche » était en jeu.
+  // si la Tornade des Tricheurs était en jeu.
   _porteursDeDepart() {
     // Deux Tornades jouent sur le nombre de lots : la Mini en retire un, la
     // Chargée en ajoute un. Jamais moins d'un lot — sans quoi il ne se passerait
@@ -838,7 +838,7 @@ export class Moteur {
       return false;
     }
 
-    // « Journée de la tranquillité » : un seul dé à la fois.
+    // Tornade Paisible : un seul dé à la fois.
     const lances = (this.passif.unParUn && !premier && cible.length > 1) ? [cible[0]] : cible;
     const duree = this._dureeLancer();
     for (const i of lances) {
@@ -1199,12 +1199,6 @@ export class Moteur {
       case 'vache':
         this._retournerJeton(j, 1, 'vache');
         break;
-      case 'jeton1':
-        this._retournerJeton(j, 1, dispo.id === 'difference' ? 'difference' : 'intensive');
-        break;
-      case 'jeton2':
-        this._retournerJeton(j, 2, 'troupeau');
-        break;
       case 'endormir': {
         const cible = choix.cibleId != null
           ? this.joueurs[choix.cibleId]
@@ -1230,40 +1224,10 @@ export class Moteur {
         );
         break;
       }
-      case 'cacherJetonAdverse': {
-        const cible = this._meilleureCible(j);
-        if (cible) {
-          cible.retournes = Math.max(0, cible.retournes - 1);
-          // Un jeton sauvé retourne dans la tornade — ou repart face cachée
-          // devant son équipe, selon l'endroit où se jouent les jetons.
-          this._log(jetonsSurTornade(this.cfg)
-            ? `${j.nom} renvoie un jeton ${this._eq(cible.id).de} dans la Tornade.`
-            : `${j.nom} recache un jeton ${this._eq(cible.id).de}.`, 'combo', j.id);
-        }
-        break;
-      }
-      // La Tornade du Siècle : la manche est prise, et elle vaut double.
-      case 'gagnerManche2':
-        this._bonusCartes = Math.max(this._bonusCartes, 1);
-        this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée, et elle vaut deux cartes !`, 'combo', j.id);
-        this._finManche(j.equipe, { joueur: j, raison: 'carte' });
-        return;
       case 'gagnerManche':
         this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée sur-le-champ !`, 'combo', j.id);
         this._finManche(j.equipe, { joueur: j, raison: 'carte' });
         return;
-      case 'reveilEquipe': {
-        let n = 0;
-        for (const c of this.joueurs) if (c.equipe === j.equipe && !c.eveille) { c.eveille = true; n++; }
-        this._log(`${j.nom} réveille toute son équipe (${n} Tornade${n > 1 ? 's' : ''}).`, 'combo', j.id);
-        break;
-      }
-      case 'auChoix': {
-        // « Journée de la différence » : on rejoue l'effet le plus utile du moment.
-        const pref = choix.effetChoisi || (j.eveille ? 'vache' : 'reveil');
-        this._effetCombo(j, { id: pref, source: 'tornade', combo: { id: pref } }, choix);
-        break;
-      }
       default:
         break;
     }
@@ -1279,15 +1243,6 @@ export class Moteur {
   }
 
   _coequipiers(j) { return this.joueurs.filter((x) => x.equipe === j.equipe && x.id !== j.id); }
-
-  _meilleureCible(j) {
-    let best = null;
-    for (const e of Object.values(this.equipes)) {
-      if (e.id === j.equipe) continue;
-      if (e.retournes > 0 && (!best || e.retournes > best.retournes)) best = e;
-    }
-    return best;
-  }
 
   /**
    * Le nom d'une équipe, et son accord : « les Bleus remportent », « le Vert
@@ -1386,7 +1341,12 @@ export class Moteur {
       this._log(dit.journal, 'jeton', j.id);
       this._annoncer(dit.annonce, 'vert', j.id);
     }
-    if (eq.retournes >= eq.jetons) this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
+    if (eq.retournes >= eq.jetons) {
+      // Le dernier jeton pris d'un contact réussi : la manche est gagnée en
+      // rattrapant, et la Tornade Électrique paie double.
+      if (source === 'collision') this._mancheParAttrape = true;
+      this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
+    }
   }
 
   /**

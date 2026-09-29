@@ -12,8 +12,8 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.72';
-import { store } from './store.js?v=1.72';
+import { h } from './dom.js?v=1.73';
+import { store } from './store.js?v=1.73';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -38,18 +38,17 @@ export const PROFILS_INTEGRES = [
     integre: true,
     variables: {
       modeManche: 'immediat',
-      // Le paquet imprimé au complet — les quatorze. Le nommer plutôt que de le
-      // laisser vide fige ce que Vichy joue : une carte ajoutée au jeu plus tard
-      // n'entrera pas dans ce réglage sans qu'on le décide.
-      cartesSansPoints: [
+      // Le paquet imprimé au complet — les quinze, Tornade de Cochons comprise :
+      // elle ne sort qu'à la table à trois, les autres cartes d'animal ailleurs.
+      cartesTornade: [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
-        'spElectrique', 'spVaches', 'spPoules',
+        'spElectrique', 'spVaches', 'spPoules', 'spCochons',
       ],
-      cartesSansPointsVues: [
+      cartesTornadeVues: [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
-        'spElectrique', 'spVaches', 'spPoules',
+        'spElectrique', 'spVaches', 'spPoules', 'spCochons',
       ],
       // Les cartes à réunir pour gagner, effectif par effectif. Plus il y a de
       // monde, plus les manches sont disputées : l'objectif monte avec la table.

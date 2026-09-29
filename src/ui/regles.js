@@ -1,15 +1,23 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.72';
+import { h } from './dom.js?v=1.73';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_EMBLEME,
-} from './icons.js?v=1.72';
+} from './icons.js?v=1.73';
 import {
-  COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
+  COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS, COCHONS,
-} from '../core/config.js?v=1.72';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.72';
+} from '../core/config.js?v=1.73';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.73';
+
+/** Où sort une carte d'animal. */
+const TABLES_ANIMAL = {
+  vache: 'Pas à trois joueurs, où chacun est un Cochon.',
+  poule: 'Pas à trois joueurs, où chacun est un Cochon.',
+  cowboy: 'À cinq et à sept joueurs, avec le joueur Vert.',
+  cochon: 'À trois joueurs seulement.',
+};
 
 export function vueRegles() {
   return h('div.page',
@@ -236,8 +244,14 @@ export function vueRegles() {
         + 'combinaisons, où elle remplace celle des équipes à cet effectif.'),
     ),
 
+    // Un seul paquet pour les trois façons de jouer : une carte n'a pas de
+    // variante d'un mode à l'autre.
     h('div.carte',
-      h('div.titre-section', 'Les cartes Tornade — avec les jetons'),
+      h('div.titre-section', 'Les cartes Tornade'),
+      h('p.petit', 'Un seul paquet, pour les trois façons de jouer une manche : une carte a le même '
+        + 'titre, le même texte et le même pouvoir avec les jetons, en Immédiat ou en Compromis. '
+        + 'Certaines ouvrent une combinaison pour la manche, d’autres changent la façon de jouer, '
+        + 'd’autres encore doublent la mise ou volent son point à un adversaire.'),
       h('div.tbl-defile', h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
         h('tbody', ...CARTES_TORNADE.map((c) => h('tr',
@@ -245,35 +259,23 @@ export function vueRegles() {
           h('td', c.combo
             ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
             : h('span.mini.muted', '—')),
-          h('td.petit', c.texte),
-        ))),
-      )),
-    ),
-
-    // Le mode « sans les points » a son propre paquet, de bout en bout : sans
-    // jeton à retourner, une carte ne joue plus que sur les cartes elles-mêmes.
-    h('div.carte',
-      h('div.titre-section', 'Les cartes Tornade — sans les points'),
-      h('p.petit', 'Un paquet entièrement différent : plus de jeton à manipuler, les cartes '
-        + 'jouent sur les cartes. Certaines doublent la mise pour une équipe, d’autres emportent '
-        + 'la manche à la combinaison, une dernière vole son point à un adversaire.'),
-      h('div.tbl-defile', h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...CARTES_SANS_POINTS.map((c) => h('tr',
-          h('td', { style: { fontWeight: '700' } }, c.nom),
-          h('td', c.combo
-            ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
-            : h('span.mini.muted', '—')),
-          h('td.petit', c.texte),
+          h('td.petit', c.texte,
+            c.animal ? h('div.mini.muted', TABLES_ANIMAL[c.animal]) : null),
         ))),
       )),
       h('div.encart', { style: { marginTop: '12px' } },
         'On révèle une Tornade et on la joue. Une équipe qui doit gagner deux cartes prend celle '
         + 'en cours et la première du dessus de la pioche, qu’elle garde face cachée dans sa '
         + 'pile : deux points d’un coup.'),
+      h('div.encart', { style: { marginTop: '10px' } },
+        'Les cartes d’animal ne sortent que si l’animal est à la table : la Tornade de Cow-Boy '
+        + 'avec le joueur Vert, celles des Vaches et des Poules partout sauf à trois joueurs, et '
+        + 'celle des Cochons à trois seulement — là où chacun est un Cochon, elle vaut double '
+        + 'pour qui prend la manche.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
-        'La Tornade de feuille ouvre la partie sans pouvoir particulier, mais elle se gagne '
-        + 'comme les autres : l’équipe qui prend la manche de chauffe la met dans sa pile.'),
+        'La Tornade de Chauffe ouvre la partie : la manche se joue comme les autres, mais la '
+        + 'carte ne rapporte rien — elle est défaussée. La Méga Tornade demande cinq symboles : '
+        + 'il faut des lots d’au moins cinq dés pour la réaliser.'),
 
       h('div.encart', { style: { marginTop: '10px' } }, REGLE_CARTES_DEUX_ETATS),
       h('p.mini.muted', { style: { marginTop: '10px' } },
@@ -299,7 +301,7 @@ export function vueRegles() {
       h('p.petit', { style: { marginTop: '12px' } },
         'À la première manche, ce sont les Jaunes qui prennent les lots, et le Vert avec eux. '
         + 'Ensuite, les dés reviennent toujours aux perdants de la manche précédente — sauf sous '
-        + '« Journée de la triche », où ce sont les gagnants qui repartent avec.'),
+        + 'la Tornade des Tricheurs, où ce sont les gagnants qui repartent avec.'),
       h('p.mini.muted', 'Les Réglages permettent d’ouvrir sur les Bleus, ou sur le Vert seul : '
         + 'utile pour voir ce que change le premier tour de table. Sur 300 parties simulées, '
         + 'aucun écart mesurable sur les victoires — c’est un réglage de confort, pas '
@@ -390,9 +392,8 @@ export function vueRegles() {
         + 'deux mains, sortir l’Abri ou attraper celui qui allait le sortir. Le réglage « Ce '
         + 'que rapporte l’attrape » démarre donc sur « Manche gagnée », et reste modifiable.'),
       h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Certaines cartes Tornade manipulent les jetons : dans ce mode, elles ne font rien de '
-        + 'plus qu’une carte ordinaire. Et à nombre impair, la manche devient une course où le '
-        + 'Vert est seul contre tous — « Cartes du Vert » est là pour le remettre à niveau.'),
+        'À nombre impair, la manche devient une course où le Vert est seul contre tous — '
+        + '« Cartes du Vert » est là pour le remettre à niveau.'),
     ),
 
     // Le troisième mode : entre les jetons de la règle de base et l'Immédiat.

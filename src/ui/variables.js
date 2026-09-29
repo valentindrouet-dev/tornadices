@@ -3,18 +3,18 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.72';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.72';
-import { store } from './store.js?v=1.72';
-import { aller } from './app.js?v=1.72';
-import { lancerPartie } from './table.js?v=1.72';
+import { h, remplacer } from './dom.js?v=1.73';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.73';
+import { store } from './store.js?v=1.73';
+import { aller } from './app.js?v=1.73';
+import { lancerPartie } from './table.js?v=1.73';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
   OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
+  OPTIONS_MANCHE, AIDE_MANCHE, noteCarte, migrerPaquet,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuMode, requisCarte, comboPossible,
+  cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible,
   COULEURS_EQUIPE,
   assainirFaces, assainirRequis, aideVariance,
   NOMBRES_JOUEURS, lotsPour, lotsOfficiels,
@@ -24,20 +24,20 @@ import {
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.72';
-import { tableauCombos, editeurCases } from './combos.js?v=1.72';
-import { illustrationCarte } from './illustrations.js?v=1.72';
+} from '../core/config.js?v=1.73';
+import { tableauCombos, editeurCases } from './combos.js?v=1.73';
+import { illustrationCarte } from './illustrations.js?v=1.73';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.72';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.72';
-import { randomSeed } from '../core/rng.js?v=1.72';
-import { reglagesJoueurs } from './accueil.js?v=1.72';
+} from './apparence.js?v=1.73';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.73';
+import { randomSeed } from '../core/rng.js?v=1.73';
+import { reglagesJoueurs } from './accueil.js?v=1.73';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.72';
+} from './profils.js?v=1.73';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -143,7 +143,9 @@ export function variables() {
 
 /** Configuration complète d'une partie : défauts du nombre de joueurs + réglages. */
 export function construireConfig(nbJoueurs) {
-  const v = variables();
+  // Un paquet réglé avant la v1.73 était rangé sous la clé de son mode : on le
+  // reprend sous la clé du paquet unique.
+  const v = migrerPaquet(variables());
   const cfg = configParDefaut(nbJoueurs, {
     attrapeSur: v.attrapeSur,
     lotsCumules: v.lotsCumules,
@@ -188,7 +190,7 @@ export function construireConfig(nbJoueurs) {
     }));
   }
   // Les trois tables d'exigences enregistrées passent par la même retraduction.
-  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosVert']) {
+  for (const cle of ['combosCartesTornade', 'combosVert', 'combosCochon']) {
     if (cfg[cle]) {
       cfg[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -573,7 +575,7 @@ export function vueVariables() {
               estImmediat(cfg)
                 ? 'Deux façons de prendre la manche, donc : sortir l’Abri, ou attraper son '
                   + 'voisin. Le reste des réglages tient — les dés, les combinaisons, le rythme. '
-                  + 'Seuls les jetons sortent du jeu, avec les cartes Tornade qui les manipulent.'
+                  + 'Seuls les jetons sortent du jeu.'
                 : '',
               estCompromis(cfg)
                 ? 'Deux façons de prendre la manche, là aussi : mettre à l’Abri tous les jetons '
@@ -1001,27 +1003,23 @@ export function vueVariables() {
       ),
 
       // ── Cartes Tornade ────────────────────────────────────────────────────
-      // Un paquet par mode de jeu : ce qu'on coche ici ne vaut que pour le mode
-      // en cours, et l'autre garde le sien intact.
+      // Un seul paquet pour les trois façons de jouer : ce qu'on coche ici vaut
+      // avec les jetons, en Immédiat comme en Compromis.
       h('div.carte',
         titreAide(
-          `Cartes Tornade en jeu — ${NOM_MODE[modeManche(cfg)]} · `
-          + `${cartesEnJeu(cfg).length}/${cartesDuMode(cfg).length}`, [
+          `Cartes Tornade en jeu · ${cartesEnJeu(cfg).length}/${cartesDuJeu().length}`, [
           'Une carte par manche, dans l’ordre de la pile. Décochez celles que vous ne voulez pas '
-          + 'voir sortir — le compte du titre dit combien sont en jeu sur le total du mode.',
+          + 'voir sortir — le compte du titre dit combien sont en jeu sur le paquet complet.',
           REGLE_CARTES_DEUX_ETATS,
-          'Chaque mode de jeu a son propre paquet : ce que vous cochez ici ne vaut que pour '
-          + `« ${NOM_MODE[modeManche(cfg)]} ». Changez de `
-          + 'mode en haut de la page et vous retrouverez l’autre paquet, intact.',
-          estJeton(cfg)
-            ? 'La pile démarre par « Jour de chauffe » s’il est coché ; le reste suit, mélangé ou non.'
-            : 'La pile démarre par « Tornade de feuille » — la manche de chauffe — puis le reste '
-              + 'suit. On révèle une Tornade, on la joue ; le dos de la suivante, encore face '
-              + 'cachée, donne le sens de rotation de la manche en cours.',
-          estJeton(cfg)
-            ? ''
-            : 'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
-              + 'cours et celle du dessus, gardée face cachée dans sa pile.',
+          'Un seul paquet pour les trois façons de jouer une manche : une carte a le même titre, '
+          + 'le même texte et le même pouvoir avec les jetons, en Immédiat ou en Compromis.',
+          'Les cartes d’animal ne sortent que si l’animal est à la table : pas de Cow-Boy sans '
+          + 'joueur Vert, pas de Vaches ni de Poules à la table à trois — où chacun est un '
+          + 'Cochon —, pas de Cochons ailleurs.',
+          'La pile démarre par la Tornade de Chauffe si elle est cochée ; le reste suit, '
+          + 'mélangé ou non.',
+          'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
+          + 'cours et celle du dessus, gardée face cachée dans sa pile.',
           estCompromis(cfg)
             ? 'Chaque carte porte en plus le nombre de jetons à mettre à l’Abri pour prendre la '
               + 'manche sous elle — de un à trois. C’est le levier d’équilibrage propre à ce '
@@ -1038,11 +1036,11 @@ export function vueVariables() {
         // rotation, et sa combinaison — qui se règle ici plutôt que dans le
         // tableau des combinaisons, où on la cherchait loin de son texte.
         h('div.grille.grille--3.grille--cartes',
-          ...cartesDuMode(cfg).map((c) => {
+          ...cartesDuJeu().map((c) => {
             const paquet = cartesEnJeu(cfg);
             const dedans = paquet.includes(c.id);
             const requis = c.combo ? requisCarte(cfg, c.combo) : null;
-            const note = noteCarteMode(c, cfg);
+            const note = noteCarte(c, cfg);
             return h('div.carte-journee', { class: dedans ? '' : 'hors-jeu' },
               h('div.rangee.rangee--serree',
                 h('button', {
@@ -1053,7 +1051,7 @@ export function vueVariables() {
                     // Et ce qui était proposé au moment du choix : une carte
                     // ajoutée au jeu plus tard n'aura pas été décochée, elle
                     // n'existait pas. Sans cette trace, elle manquerait.
-                    ecrire(cleVues(cfg), cartesDuMode(cfg).map((x) => x.id));
+                    ecrire(cleVues(cfg), cartesDuJeu().map((x) => x.id));
                     dessiner();
                   },
                 }, h('span.case', '✓'), c.court),

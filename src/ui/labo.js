@@ -1,17 +1,17 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.72';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.72';
-import { nomSymbole } from './apparence.js?v=1.72';
-import { store } from './store.js?v=1.72';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.72';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.73';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.73';
+import { nomSymbole } from './apparence.js?v=1.73';
+import { store } from './store.js?v=1.73';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.73';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_DECLENCHEUR, AIDE_DECLENCHEUR,
-  OPTIONS_MANCHE, AIDE_MANCHE, noteCarteMode,
+  OPTIONS_MANCHE, AIDE_MANCHE, noteCarte,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuMode, requisCarte, comboPossible, lotsPour,
+  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, lotsPour,
   NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
   NOM_MODE, modeManche, estJeton, estImmediat, estCompromis, refugePour,
   cartesPour, cartesVertPour,
@@ -19,15 +19,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   TABLE_COCHONS, ECHEC_COCHON, auxCochons, equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.72';
-import { tableauCombos } from './combos.js?v=1.72';
-import { barreProfils, idActif } from './profils.js?v=1.72';
+} from '../core/config.js?v=1.73';
+import { tableauCombos } from './combos.js?v=1.73';
+import { barreProfils, idActif } from './profils.js?v=1.73';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.72';
+} from './variables.js?v=1.73';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.72';
+} from '../core/proba.js?v=1.73';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -57,7 +57,7 @@ function cfgLabo() {
   // Ouvrir le Laboratoire sur un autre mode de jeu que celui qu'on vient de
   // choisir n'a aucun sens — c'est le réglage le plus structurant de tous.
   const c = construireConfig(bornerJoueurs(store.get('nbJoueurs', 6)));
-  c.combosCartes = c.combosCartes || {};
+  c.combosCartesTornade = c.combosCartesTornade || {};
   return c;
 }
 
@@ -191,7 +191,7 @@ function panneauConfig(rafraichir) {
       h('button.btn.btn--petit', {
         onclick: () => {
           const base = configParDefaut(cfg.nbJoueurs);
-          base.combosCartes = {};
+          base.combosCartesTornade = {};
           etat.cfg = base;
           store.set('cfgLabo', base);
           rafraichir();
@@ -649,9 +649,8 @@ function tableauFrequences(objet, total, unite) {
 const LIBELLES = {
   reveil: 'Réveil (3 tornades)', vache: 'Abri', endormir: 'Endormir un voisin',
   collision: 'Attrape (3 éclairs)', blocage: 'Échec (2 X)',
-  fatigue: 'Fatigue', intensive: 'Intensive',
-  sansVent: 'Sans vent', chance: 'Chance', troupeau: 'Troupeau',
-  difference: 'Différence', vaillants: 'Vaillants',
+  // Les combinaisons des cartes Tornade, sous le nom de leur carte.
+  spMega: 'Méga Tornade', spSommeil: 'Tornade du Sommeil', spFurieuse: 'Tornade Furieuse',
 };
 function libelleEffet(id) { return LIBELLES[id] || id; }
 
@@ -741,7 +740,7 @@ function ongletProbas(rafraichir) {
       nom: c.nom, requis: c.requis, source: 'tornade', estArretForce: !!c.obligatoire,
     })),
     // Les cartes du mode en cours : chaque mode a son paquet et ses exigences.
-    ...cartesDuMode(cfg).filter((c) => c.combo).map((c) => ({
+    ...cartesDuJeu().filter((c) => c.combo).map((c) => ({
       nom: c.court,
       requis: requisCarte(cfg, c.combo),
       source: 'journee',
@@ -831,7 +830,8 @@ function ongletProbas(rafraichir) {
         + 'utiles d’un jet à l’autre. L’écart entre les deux mesure ce que rapporte la relance choisie.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'Les combinaisons de cartes Tornade l’emportent sur les combinaisons obligatoires au même '
-        + 'lancer : c’est ce qui rend « Journée de la chance » (quatre éclairs) atteignable.'),
+        + 'lancer : c’est ce qui rend la Tornade Furieuse — trois « X » — atteignable avant '
+        + 'l’Échec.'),
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },
@@ -877,22 +877,21 @@ function ongletRegles() {
     ),
 
     h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section',
-        `Cartes Tornade — ${NOM_MODE[modeManche(cfg)]}`),
+      h('div.titre-section', 'Cartes Tornade'),
       h('table.tbl',
         h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...cartesDuMode(cfg).map((c) => h('tr',
+        h('tbody', ...cartesDuJeu().map((c) => h('tr',
           h('td', { style: { fontWeight: '700' } }, c.nom),
           h('td', c.combo
             ? h('div.rangee.rangee--serree', suiteSymboles(requisCarte(cfg, c.combo), 18))
             : h('span.mini.muted', 'effet permanent')),
           h('td.petit', c.texte,
-            noteCarteMode(c, cfg) ? h('div.mini.muted', noteCarteMode(c, cfg)) : null),
+            noteCarte(c, cfg) ? h('div.mini.muted', noteCarte(c, cfg)) : null),
         ))),
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
-        'Le paquet dépend du mode de jeu, et les exigences se règlent carte par carte dans les '
-        + 'Réglages. Sans les points, le sens de chaque manche se lit au dos de la carte suivante.'),
+        'Un seul paquet pour les trois façons de jouer, et les exigences se règlent carte par '
+        + 'carte dans les Réglages.'),
     ),
   );
 }

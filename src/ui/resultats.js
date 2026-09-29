@@ -12,14 +12,14 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.72';
-import { store } from './store.js?v=1.72';
-import { aller } from './app.js?v=1.72';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.72';
+} from './dom.js?v=1.73';
+import { store } from './store.js?v=1.73';
+import { aller } from './app.js?v=1.73';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.73';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
   equipeVue, auxCochons,
-} from '../core/config.js?v=1.72';
+} from '../core/config.js?v=1.73';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
@@ -387,13 +387,10 @@ function suite(requis) {
   return el;
 }
 
-/** Les cinq façons de mettre un jeton à couvert, telles que le moteur les nomme. */
+/** Les façons de mettre un jeton à couvert, telles que le moteur les nomme. */
 const NOM_SOURCE = {
   vache: 'L’Abri',
   collision: 'Une attrape réussie',
-  intensive: 'La carte « Élevage intensif »',
-  troupeau: 'La carte « Troupeau »',
-  difference: 'La carte « Faire la différence »',
 };
 
 function origineJetons(joueurs, ctx) {

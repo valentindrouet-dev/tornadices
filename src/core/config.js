@@ -399,22 +399,53 @@ export function comboPossible(faces, requis) {
   return Object.keys(requis).every((sym) => dispo.has(sym));
 }
 
-// ── Cartes Tornade : une version par mode de jeu ─────────────────────────────
-// Le paquet et les exigences se règlent séparément pour « Retourner tous les
-// jetons » et pour « Sans les points » : une carte qui manipule les jetons n'a
-// pas le même sens dans les deux, et certaines n'y ont plus leur place.
+// ── Le paquet de cartes Tornade, et ce qu'on en règle ────────────────────────
+// Un seul paquet pour les trois façons de jouer, et une seule table des
+// combinaisons de cartes : une carte n'a pas de variante d'un mode à l'autre.
+// Seul le nombre de jetons qu'elle retient en Compromis — `refugeCartes` — ne
+// vaut que dans ce mode-là.
 
-/** La clé de réglage du paquet, selon le mode en cours. */
-export function clePaquet(cfg) {
-  const m = modeManche(cfg);
-  return m === 'immediat' ? 'cartesSansPoints' : m === 'compromis' ? 'cartesCompromis' : 'cartes';
+/** La clé de réglage du paquet. */
+export function clePaquet() {
+  return 'cartesTornade';
 }
 
-/** La clé de réglage des exigences de cartes, selon le mode en cours. */
-export function cleCombosCartes(cfg) {
-  const m = modeManche(cfg);
-  return m === 'immediat' ? 'combosCartesSansPoints'
-    : m === 'compromis' ? 'combosCartesCompromis' : 'combosCartes';
+/** La clé de réglage des combinaisons de cartes. */
+export function cleCombosCartes() {
+  return 'combosCartesTornade';
+}
+
+// Jusqu'à la v1.72, chaque mode avait son paquet, sous sa clé. Un réglage
+// enregistré d'alors garde ses choix : celui d'Immédiat d'abord — le paquet des
+// cartons imprimés — puis celui de Compromis. Celui du mode Jeton, fait de
+// cartes « Journée » qui n'existent plus, ne dit rien du paquet d'aujourd'hui.
+const PAQUETS_ANCIENS = [
+  ['cartesSansPoints', 'combosCartesSansPoints'],
+  ['cartesCompromis', 'combosCartesCompromis'],
+];
+
+/**
+ * Un réglage enregistré, avec son paquet sous la clé d'aujourd'hui. Rend une
+ * copie ; un réglage qui l'a déjà — ou qui n'a jamais touché au paquet — revient
+ * tel quel.
+ */
+export function migrerPaquet(reglages) {
+  if (!reglages || typeof reglages !== 'object') return reglages;
+  const sortie = { ...reglages };
+  if (!Array.isArray(sortie.cartesTornade)) {
+    const source = PAQUETS_ANCIENS.find(([cle]) => Array.isArray(reglages[cle]));
+    if (source) {
+      sortie.cartesTornade = reglages[source[0]].slice();
+      if (Array.isArray(reglages[`${source[0]}Vues`])) {
+        sortie.cartesTornadeVues = reglages[`${source[0]}Vues`].slice();
+      }
+    }
+  }
+  if (!sortie.combosCartesTornade || typeof sortie.combosCartesTornade !== 'object') {
+    const source = PAQUETS_ANCIENS.find(([, cle]) => reglages[cle] && typeof reglages[cle] === 'object');
+    if (source) sortie.combosCartesTornade = { ...reglages[source[1]] };
+  }
+  return sortie;
 }
 
 /**
@@ -427,13 +458,13 @@ export function cleCombosCartes(cfg) {
  */
 export const cleVues = (cfg) => `${clePaquet(cfg)}Vues`;
 
-/** Les cartes en jeu dans le mode en cours. */
+/** Les cartes cochées dans le paquet. */
 export function cartesEnJeu(cfg) {
-  const paquet = cartesDuMode(cfg).map((c) => c.id);
+  const paquet = cartesDuJeu().map((c) => c.id);
   const connues = new Set(paquet);
   const liste = cfg[clePaquet(cfg)];
-  // Un paquet enregistré peut porter des cartes de l'autre mode — un réglage
-  // d'avant la séparation des paquets : elles ne comptent pas ici.
+  // Un paquet enregistré peut porter des cartes qui n'existent plus — les
+  // « Journée » du mode Jeton, retirées en v1.73 : elles ne comptent pas.
   const retenues = Array.isArray(liste) ? liste.filter((id) => connues.has(id)) : [];
   // Un paquet vide n'existe pas : sans choix enregistré, le jeu est complet.
   if (!retenues.length) return paquet;
@@ -471,7 +502,7 @@ function apresVersion(a, b) {
   return false;
 }
 
-/** L'exigence d'une combinaison de carte dans le mode en cours. */
+/** L'exigence d'une combinaison de carte, telle que réglée. */
 export function requisCarte(cfg, combo) {
   const table = cfg[cleCombosCartes(cfg)];
   return (table && table[combo.id]) || combo.requis;
@@ -497,30 +528,31 @@ export const AIDE_EQUIPE_DEPART = {
 };
 
 /**
- * Ce que le mode de jeu fait — ou défait — à une carte Tornade. Sans les points,
- * celles qui manipulent les jetons n'ont plus le même sens : autant le dire sur
- * la carte, dans les Réglages comme au Laboratoire, plutôt que de laisser
- * découvrir en partie qu'elle ne sert à rien.
+ * Ce qu'il faut savoir d'une carte à cette table, s'il y a quelque chose à en
+ * dire : qu'elle ne va pas dans la pioche faute de l'animal qu'elle désigne, ou
+ * que sa combinaison demande plus de dés qu'un lot n'en compte — la Méga
+ * Tornade et ses cinq symboles, sur des lots de quatre.
  */
-export function noteCarteMode(carte, cfg) {
-  // Une carte qui désigne une équipe absente ne rejoint pas la pioche : autant
-  // le dire ici, sans quoi on la croirait en jeu parce qu'elle est cochée.
-  if (carte.equipeRequise && cfg.nbJoueurs % 2 === 0 && carte.equipeRequise === 'vert') {
-    return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pile.';
+export function noteCarte(carte, cfg) {
+  if (!carteALaTable(carte, cfg)) {
+    if (auxCochons(cfg) && carte.animal !== 'cochon') {
+      return 'À trois joueurs, tout le monde est un Cochon : cette carte n’est pas mise dans la pioche.';
+    }
+    if (carte.animal === 'cowboy') {
+      return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pioche.';
+    }
+    if (carte.animal === 'cochon') {
+      return 'Les Cochons ne jouent qu’à trois : ailleurs, cette carte n’est pas mise dans la pioche.';
+    }
+    return 'Cette carte n’est pas mise dans la pioche à ce nombre de joueurs.';
   }
-  if (estJeton(cfg) || !carte.combo) return '';
-  const mode = estCompromis(cfg) ? 'Compromis' : 'Immédiat';
-  switch (carte.combo.effet) {
-    case 'jeton1':
-    case 'jeton2':
-      return `${mode} : cette combinaison emporte la manche, comme l’Abri.`;
-    case 'cacherJetonAdverse':
-      return `${mode} : sans effet, il n’y a plus de jeton à recacher.`;
-    case 'auChoix':
-      return `${mode} : le choix se réduit au réveil ou à l’Abri.`;
-    default:
-      return '';
+  const requis = carte.combo ? requisCarte(cfg, carte.combo) : null;
+  const des = requis ? Object.values(requis).reduce((t, n) => t + (n > 0 ? n : 0), 0) : 0;
+  const lot = (cfg && cfg.desParLot) || 4;
+  if (des > lot) {
+    return `Sa combinaison demande ${des} dés : avec des lots de ${lot}, elle ne peut pas sortir.`;
   }
+  return '';
 }
 
 // ── Dés ───────────────────────────────────────────────────────────────────────
@@ -587,9 +619,12 @@ export function assainirRequis(requis) {
  * sont retraduites. Sans quoi un Laboratoire ouvert de longue date simule des
  * règles que le moteur ne comprend plus.
  */
-export function assainirConfig(cfg) {
-  const base = configParDefaut(cfg && cfg.nbJoueurs ? cfg.nbJoueurs : 6, cfg || {});
-  if (!cfg || typeof cfg !== 'object') return base;
+export function assainirConfig(brut) {
+  const base = configParDefaut(brut && brut.nbJoueurs ? brut.nbJoueurs : 6, brut || {});
+  if (!brut || typeof brut !== 'object') return base;
+  // Le paquet d'avant la v1.73, rangé sous la clé d'un mode, passe sous la clé
+  // d'aujourd'hui avant tout le reste.
+  const cfg = migrerPaquet(brut);
 
   const sortie = { ...base, ...cfg };
   // Le jeu se joue de trois à huit : une configuration enregistrée à neuf
@@ -636,10 +671,9 @@ export function assainirConfig(cfg) {
       face: garde && garde.face ? garde.face : c.face,
     };
   });
-  // Les trois tables d'exigences enregistrées — cartes par mode, et le Vert —
-  // passent par la même retraduction que les combinaisons de la Tornade.
-  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosCartesCompromis',
-    'combosVert', 'combosCochon']) {
+  // Les tables d'exigences enregistrées — cartes, Vert, Cochon — passent par la
+  // même retraduction que les combinaisons de la Tornade.
+  for (const cle of ['combosCartesTornade', 'combosVert', 'combosCochon']) {
     if (cfg[cle] && typeof cfg[cle] === 'object') {
       sortie[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -720,136 +754,24 @@ export function faceSansReveil(comboId) {
 }
 
 // ── Cartes Tornade ────────────────────────────────────────────────────────────
+// Un seul paquet, pour les trois façons de jouer une manche. Il n'y a pas de
+// variantes : une carte a un titre, un texte et un pouvoir, les mêmes avec les
+// jetons, en Immédiat ou en Compromis. Titres et textes sont ceux des cartons
+// imprimés — ce que la table affiche doit se lire à l'identique de ce qu'on a
+// dans la main.
+//
 // `combo` : combinaison supplémentaire ouverte pour la manche.
 // `effetPassif` : modificateur appliqué à tous les joueurs pendant la manche.
-export const CARTES_TORNADE = [
-  {
-    id: 'chauffe',
-    court: 'Jour de chauffe',
-    nom: '1ère Journée — Jour de chauffe',
-    texte: 'Défaussez cette carte à la fin de la manche. Elle ne compte pas pour la victoire !',
-    combo: null,
-    effetPassif: null,
-    neCompted: true,
-    toujoursPremiere: true,
-  },
-  {
-    id: 'fatigue',
-    court: 'Fatigue',
-    nom: 'Journée de la fatigue',
-    texte: 'Vos voisins s’endorment',
-    combo: { id: 'fatigue', requis: { zzz: 4 }, effet: 'endormirVoisins' },
-    effetPassif: null,
-  },
-  {
-    id: 'intensive',
-    court: 'Intensive',
-    nom: 'Journée intensive',
-    texte: 'Retournez un de vos jetons',
-    combo: { id: 'intensive', requis: { vache: 2, tornade: 2 }, effet: 'jeton1' },
-    effetPassif: null,
-  },
-  {
-    id: 'sansVent',
-    court: 'Sans vent',
-    nom: 'Journée sans vent',
-    texte: 'Replacez un jeton adverse face cachée',
-    combo: { id: 'sansVent', requis: { vache: 2, zzz: 2 }, effet: 'cacherJetonAdverse' },
-    effetPassif: null,
-    // Sans les points il n'y a plus de jeton à recacher : la carte ne ferait
-    // rien du tout. Elle sort du paquet de ce mode, réactivable à la main.
-    inerteSansPoints: true,
-  },
-  {
-    id: 'maladresse',
-    court: 'Maladresse',
-    nom: 'Journée de la maladresse',
-    texte: 'Lancez vos dés de votre autre main pour cette manche',
-    combo: null,
-    effetPassif: { lenteur: 1.35, erreur: 0.06 },
-  },
-  {
-    id: 'chance',
-    court: 'Chance',
-    nom: 'Journée de la chance',
-    texte: 'Remportez la manche immédiatement',
-    combo: { id: 'chance', requis: { eclair: 4 }, effet: 'gagnerManche' },
-    effetPassif: null,
-  },
-  {
-    id: 'troupeau',
-    court: 'Troupeau',
-    nom: 'Journée du troupeau',
-    texte: 'Retournez deux de vos jetons',
-    combo: { id: 'troupeau', requis: { vache: 4 }, effet: 'jeton2' },
-    effetPassif: null,
-  },
-  {
-    id: 'difference',
-    court: 'Différence',
-    nom: 'Journée de la différence',
-    texte: 'Jouez l’effet d’une des combinaisons visibles de votre carte',
-    combo: {
-      id: 'difference',
-      requis: { tornade: 1, vache: 1, zzz: 1, eclair: 1 },
-      effet: 'auChoix',
-    },
-    effetPassif: null,
-  },
-  {
-    id: 'vaillants',
-    court: 'Vaillants',
-    nom: 'Journée des vaillants',
-    texte: 'Toute votre équipe se réveille (à 3 joueurs, passez cette carte)',
-    combo: { id: 'vaillants', requis: { tornade: 4 }, effet: 'reveilEquipe' },
-    effetPassif: null,
-    minJoueurs: 4,
-  },
-  {
-    id: 'triche',
-    court: 'Triche',
-    nom: 'Journée de la triche',
-    texte: 'À la manche suivante, l’équipe gagnante commence avec les lots de dés',
-    combo: null,
-    effetPassif: { gagnantPrendLesDes: true },
-  },
-  {
-    id: 'tranquillite',
-    court: 'Tranquillité',
-    nom: 'Journée de la tranquillité',
-    texte: 'Relancez les dés un par un',
-    combo: null,
-    effetPassif: { unParUn: true },
-  },
-  {
-    id: 'silence',
-    court: 'Silence',
-    nom: 'Journée du silence',
-    texte: 'Seuls les mots « touché » et « endormi » sont autorisés durant cette journée',
-    combo: null,
-    effetPassif: { erreur: 0.03 },
-  },
-];
-
-// ── Cartes Tornade du mode « sans les points » ────────────────────────────────
-//
-// Le paquet imprimé, quatorze cartes, dans l'ordre du carton. Titres et textes
-// sont ceux des cartes : ce que la table affiche doit se lire à l'identique de
-// ce qu'on a dans la main.
-//
-// Un paquet entièrement à part : sans jeton à retourner, une carte ne peut plus
-// jouer sur les jetons, elle joue sur les cartes elles-mêmes. Trois façons :
 //   · `doubleSi` — l'équipe désignée gagne deux cartes si elle prend la manche ;
-//   · `gagnerManche2` — la combinaison emporte la manche et vaut deux cartes ;
+//   · `doubleTous` — la manche vaut deux cartes, pour qui la prend ;
 //   · `volerCarte` — le vainqueur prend une carte à une autre équipe.
-//
-// `sens` est la flèche imprimée au dos : +1 horaire, -1 antihoraire. C'est le
-// dos de la PROCHAINE carte, encore face cachée sur la pioche, qui donne le sens
-// de la manche en cours — ce n'est donc pas un sens puis l'autre.
-// `refuge` : en Compromis, combien de jetons de sa couleur il faut mettre à
-// l'Abri pour prendre la manche sous cette Tornade. De un à trois, réglable
-// carte par carte dans les Réglages. Sans effet dans les deux autres modes.
-export const CARTES_SANS_POINTS = [
+// `animal` : la carte désigne un animal — vaches, poules, cow-boy, cochons — et
+// ne va dans la pioche que s'il est à la table. Les Cochons n'existent qu'à
+// trois joueurs, où ils remplacent tous les autres.
+// `refuge` : en Compromis, combien de jetons de sa couleur la Tornade retient.
+// De un à trois, réglable carte par carte dans les Réglages. Sans effet dans les
+// deux autres modes.
+export const CARTES_TORNADE = [
   {
     id: 'spChauffe',
     refuge: 1,
@@ -916,7 +838,7 @@ export const CARTES_SANS_POINTS = [
     combo: null,
     effetPassif: { doubleSi: 'vert' },
     // Sans joueur Vert, la carte ne désignerait personne : elle sort du paquet.
-    equipeRequise: 'vert',
+    animal: 'cowboy',
   },
   {
     id: 'spSiecle',
@@ -934,7 +856,8 @@ export const CARTES_SANS_POINTS = [
     court: 'Méga Tornade',
     nom: 'Méga Tornade',
     texte: 'Vous gagnez immédiatement la Manche',
-    combo: { id: 'spMega', requis: { vache: 4 }, effet: 'gagnerManche' },
+    // Cinq symboles : il faut un lot d'au moins cinq dés pour la réaliser.
+    combo: { id: 'spMega', requis: { vache: 5 }, effet: 'gagnerManche' },
     effetPassif: null,
   },
   {
@@ -972,6 +895,7 @@ export const CARTES_SANS_POINTS = [
     texte: 'Les Vaches gagnent 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'bleu' },
+    animal: 'vache',
   },
   {
     id: 'spPoules',
@@ -981,6 +905,21 @@ export const CARTES_SANS_POINTS = [
     texte: 'Les Poules gagnent 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'jaune' },
+    animal: 'poule',
+  },
+  {
+    // À trois joueurs, tout le monde est un Cochon : la carte vaut double pour
+    // qui prend la manche, quel qu'il soit. Ailleurs, pas de Cochon à désigner.
+    id: 'spCochons',
+    refuge: 2,
+    court: 'Tornade de Cochons',
+    nom: 'Tornade de Cochons',
+    texte: 'Les Cochons gagnent 2 Cartes Tornade à cette manche',
+    combo: null,
+    effetPassif: { doubleTous: true },
+    animal: 'cochon',
+    // Arrivée en v1.73 : un paquet composé avant la reçoit d'office.
+    depuis: '1.73',
   },
 ];
 
@@ -995,18 +934,27 @@ export const REGLE_CARTES_DEUX_ETATS = 'La combinaison d’une carte Tornade, et
   + 'donne, valent dans les deux états : on n’a pas besoin d’être réveillé pour la réaliser, ni '
   + 'pour en profiter.';
 
-/** Le paquet du mode en cours : chaque mode a le sien, de bout en bout. */
-export function cartesDuMode(cfg) {
-  // « Compromis » joue les mêmes Tornades qu'« Immédiat » — ce sont les cartes
-  // qui portent le nombre de jetons à mettre à l'Abri — mais son paquet et ses
-  // exigences se règlent à part.
-  return cfg && modeManche(cfg) !== 'jeton' ? CARTES_SANS_POINTS : CARTES_TORNADE;
+/** Le paquet du jeu : le même pour les trois façons de jouer une manche. */
+export function cartesDuJeu() {
+  return CARTES_TORNADE;
 }
 
-/** Toutes les cartes des deux modes, par identifiant. */
-export const CARTES_PAR_ID = Object.fromEntries(
-  [...CARTES_TORNADE, ...CARTES_SANS_POINTS].map((c) => [c.id, c]),
-);
+/** Les cartes Tornade, par identifiant. */
+export const CARTES_PAR_ID = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c]));
+
+/**
+ * La carte va-t-elle dans la pioche, à cette table ? Une carte qui désigne un
+ * animal absent ne désignerait personne : la Tornade de Cow-Boy sans joueur
+ * Vert, celle des Vaches ou des Poules à la table à trois — où tout le monde est
+ * un Cochon — et celle des Cochons partout ailleurs.
+ */
+export function carteALaTable(carte, cfg) {
+  if (!carte || !carte.animal) return true;
+  if (auxCochons(cfg)) return carte.animal === 'cochon';
+  if (carte.animal === 'cochon') return false;
+  if (carte.animal === 'cowboy') return Number(cfg && cfg.nbJoueurs) % 2 === 1;
+  return true;
+}
 
 // ── Tableau de mise en place (règles V4.5) ────────────────────────────────────
 // Le tableau officiel V4.5, de trois à huit joueurs — huit est le maximum du jeu.
@@ -1243,15 +1191,11 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // premiers cas, comme au jeu.
     equipeDepart: EQUIPES_DEPART.includes(opts.equipeDepart) ? opts.equipeDepart : 'jaune',
     combos: COMBOS_TORNADE.map((c) => ({ ...c, requis: { ...c.requis } })),
-    // Chaque mode a son paquet, et ce sont deux paquets différents : les cartes
-    // Journée d'un côté, les Tornades de l'autre. Rien de commun entre les deux.
-    cartes: CARTES_TORNADE.map((c) => c.id),
-    cartesSansPoints: CARTES_SANS_POINTS.map((c) => c.id),
-    combosCartesSansPoints: {},
-    // Compromis joue les mêmes Tornades qu'Immédiat, mais son paquet, ses
-    // exigences et le nombre de jetons demandés par carte se règlent à part.
-    cartesCompromis: CARTES_SANS_POINTS.map((c) => c.id),
-    combosCartesCompromis: {},
+    // Un seul paquet pour les trois façons de jouer, et une seule table des
+    // combinaisons de cartes. En Compromis, chaque carte dit en plus combien de
+    // jetons elle retient.
+    cartesTornade: CARTES_TORNADE.map((c) => c.id),
+    combosCartesTornade: {},
     refugeCartes: {},
     // Le Vert joue seul contre deux équipes : on peut lui demander autre chose.
     // Décochée, la table est strictement symétrique — c'est la référence.
@@ -1327,8 +1271,7 @@ export function symbolesPertinents(cfg) {
   };
   for (const c of cfg.combos || []) ajouter(c.requis);
   for (const carte of CARTES_TORNADE) {
-    if (!carte.combo) continue;
-    ajouter((cfg.combosCartes && cfg.combosCartes[carte.combo.id]) || carte.combo.requis);
+    if (carte.combo) ajouter(requisCarte(cfg, carte.combo));
   }
   return ORDRE_SYMBOLES.filter((s) => vus.has(s));
 }

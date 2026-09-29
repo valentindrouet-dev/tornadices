@@ -1,9 +1,20 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.72';
+export const VERSION = '1.73';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.73',
+    date: '29/09/2026',
+    notes: [
+      'Un seul paquet de cartes Tornade pour toutes les façons de jouer. Le mode avec les jetons avait ses propres cartes « Journée » : elles quittent le jeu, et les trois modes piochent désormais dans les mêmes quinze Tornades. Les Réglages, le Laboratoire, la Fiche et les Règles ne montrent plus qu’un paquet.',
+      'La Méga Tornade demande cinq symboles — cinq granges — et fait toujours gagner la manche sur-le-champ. Sur des lots de quatre dés, elle ne peut pas sortir : sa case le dit dans les Réglages et le Laboratoire.',
+      'Nouvelle carte : la Tornade de Cochons, « Les Cochons gagnent 2 Cartes Tornade à cette manche ». Les Tornades de Vaches, de Poules et de Cochons sont trois cartes distinctes, chacune à la table où joue son animal : celle des Cochons à trois joueurs, celles des Vaches et des Poules ailleurs. Comme le Cow-Boy, une carte dont l’animal n’est pas à la table n’entre pas dans la pioche.',
+      'La Tornade Électrique paie aussi avec les jetons : une manche prise en retournant son dernier jeton sur une attrape est une manche gagnée en rattrapant, et rapporte deux cartes.',
+      'Un paquet composé avant cette version est repris tel quel : celui du mode Immédiat devient le paquet unique — à défaut, celui du Compromis —, avec les combinaisons qu’on y avait réglées.',
+    ],
+  },
   {
     version: '1.72',
     date: '29/09/2026',

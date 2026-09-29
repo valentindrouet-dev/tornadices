@@ -4,24 +4,24 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.72';
+import { h, remplacer, duree, vider } from './dom.js?v=1.73';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.72';
-import { Moteur } from '../core/engine.js?v=1.72';
+} from './icons.js?v=1.73';
+import { Moteur } from '../core/engine.js?v=1.73';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.72';
-import { ajouterHistorique } from './store.js?v=1.72';
-import { enregistrerPartie } from './resultats.js?v=1.72';
-import { aller } from './app.js?v=1.72';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.72';
-import { nomSymbole } from './apparence.js?v=1.72';
-import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.72';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.72';
+} from '../core/config.js?v=1.73';
+import { ajouterHistorique } from './store.js?v=1.73';
+import { enregistrerPartie } from './resultats.js?v=1.73';
+import { aller } from './app.js?v=1.73';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.73';
+import { nomSymbole } from './apparence.js?v=1.73';
+import { illustrationCarte, illustrationEquipe } from './illustrations.js?v=1.73';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.73';
 
 let moteur = null;
 let vitesse = 1;
@@ -419,8 +419,8 @@ export function vueTable() {
   /**
    * Garde les piles des sièges d'accord avec la carte : une équipe ne peut pas
    * avoir plus de jetons au-dessus de ses sièges qu'elle n'en a sortis de la
-   * tornade. Quand la « Journée sans vent » en renvoie un dedans, c'est la plus
-   * grosse pile de l'équipe qui le rend.
+   * tornade. Si l'une en retournait dedans, c'est la plus grosse pile de
+   * l'équipe qui le rendrait.
    */
   function accorderPiles() {
     for (const e of Object.values(moteur.equipes)) {
@@ -778,7 +778,7 @@ export function vueTable() {
         eq ? ` ${nom.v('remporte', 'remportent')} la manche ${info.manche}` : `Manche ${info.manche} terminée`),
       h('div.transition-suite', 'Manche suivante !'),
       info.carteSuivante
-        ? h('div.transition-carte', `Journée à venir : ${info.carteSuivante.nom}`)
+        ? h('div.transition-carte', `Tornade à venir : ${info.carteSuivante.nom}`)
         : h('div.transition-carte', 'Dernière carte jouée'),
       blocChoixSens(info.choixSens),
     );
