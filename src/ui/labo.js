@@ -1,10 +1,10 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.68';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.68';
-import { nomSymbole } from './apparence.js?v=1.68';
-import { store } from './store.js?v=1.68';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.68';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.69';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.69';
+import { nomSymbole } from './apparence.js?v=1.69';
+import { store } from './store.js?v=1.69';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.69';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -17,16 +17,17 @@ import {
   cartesPour, cartesVertPour,
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
+  TABLE_COCHONS, ECHEC_COCHON, auxCochons,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.68';
-import { tableauCombos } from './combos.js?v=1.68';
-import { barreProfils, idActif } from './profils.js?v=1.68';
+} from '../core/config.js?v=1.69';
+import { tableauCombos } from './combos.js?v=1.69';
+import { barreProfils, idActif } from './profils.js?v=1.69';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert,
-} from './variables.js?v=1.68';
+} from './variables.js?v=1.69';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.68';
+} from '../core/proba.js?v=1.69';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -286,6 +287,10 @@ function panneauConfig(rafraichir) {
         if (!cfg.combosVert) cfg.combosVert = {};
         cfg.combosVert[id] = requis;
       },
+      ecrireCochon: (id, requis) => {
+        if (!cfg.combosCochon) cfg.combosCochon = {};
+        cfg.combosCochon[id] = requis;
+      },
       ecrireFace: (id, face) => {
         const c = cfg.combos.find((x) => x.id === id);
         if (c) c.face = face;
@@ -341,6 +346,26 @@ function panneauConfig(rafraichir) {
       estImmediat(cfg)
         ? 'Immédiat ne compte aucun jeton : ce réglage n’y change rien.'
         : AIDE_PLACE_JETONS[jetonsSurTornade(cfg) ? 'tornade' : 'equipe']),
+
+    // La table à trois se joue aux Cochons : c'est le levier qui décide de la
+    // fréquence des attrapes à cet effectif, et il se compare comme le reste.
+    cfg.nbJoueurs === TABLE_COCHONS
+      ? [
+        h('div.titre-section', { style: { marginTop: '18px' } }, 'La table à trois'),
+        h('div.rangee.rangee--serree',
+          h('button', {
+            class: `chip${auxCochons(cfg) ? ' on' : ''}`,
+            onclick: () => { cfg.cochons = cfg.cochons === false; rafraichir(); },
+          }, h('span.case', '✓'), 'Chacun joue un Cochon'),
+        ),
+        h('div.mini.muted', { style: { marginTop: '6px' } },
+          auxCochons(cfg)
+            ? `Carte Cochon en jeu : l’Échec demande ${ECHEC_COCHON} dés rouges au lieu de 2, et `
+              + 'l’attrape s’en trouve retardée. Sa ligne se règle dans le tableau ci-dessus.'
+            : 'Sans la carte Cochon : les trois joueurs reprennent leurs équipes, et l’Échec ses '
+              + 'deux dés rouges.'),
+      ]
+      : null,
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce qui déclenche l’attrape'),
     h('div.segment',

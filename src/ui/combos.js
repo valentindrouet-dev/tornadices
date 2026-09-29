@@ -8,16 +8,18 @@
 // Trois réglages passent par ce tableau :
 //   · l'exigence de chaque combinaison, dé par dé ;
 //   · « Réveillé » — la combinaison ne sort que Tornade éveillée ;
-//   · l'asymétrie du Vert, qui lui donne ses propres exigences.
+//   · l'asymétrie du Vert, qui lui donne ses propres exigences ;
+//   · la carte Cochon, à trois joueurs, qui vaut pour les trois.
 // Les combinaisons des cartes Tornade, elles, se règlent sur chaque carte : une
 // carte porte son dessin, son texte et son exigence au même endroit.
 
-import { h } from './dom.js?v=1.68';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.68';
-import { nomSymbole } from './apparence.js?v=1.68';
+import { h } from './dom.js?v=1.69';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.69';
+import { nomSymbole } from './apparence.js?v=1.69';
 import {
   ORDRE_SYMBOLES, COULEURS_EQUIPE, requisPourEquipe, faceSansReveil,
-} from '../core/config.js?v=1.68';
+  auxCochons, EMBLEME_COCHON, CARTE_COCHON,
+} from '../core/config.js?v=1.69';
 
 /** { vache: 3 } → ['vache', 'vache', 'vache', ''] sur un lot de quatre dés. */
 export function requisEnCases(requis, nbDes) {
@@ -76,13 +78,18 @@ function caseDe(sym, onchange) {
  * @param {object} api  les écritures et le rafraîchissement :
  *   ecrireCombo(id, requis)  une combinaison de la Tornade
  *   ecrireVert(id, requis)   l'exigence propre au Vert
+ *   ecrireCochon(id, requis) l'exigence de la carte Cochon, à trois joueurs
  *   ecrireFace(id, face)     « active » (réveillé seulement) ou la face d'origine
  *   rafraichir()             après chaque changement
  */
 export function tableauCombos(cfg, api) {
-  const { ecrireCombo, ecrireVert, ecrireFace, rafraichir } = api;
+  const { ecrireCombo, ecrireVert, ecrireCochon, ecrireFace, rafraichir } = api;
   const nbDes = Math.max(1, Math.min(12, cfg.desParLot || 4));
   const asym = !!cfg.combosAsymetriques;
+  // À trois joueurs, chacun joue un Cochon : les lignes que sa carte porte se
+  // lisent sous la combinaison d'origine, comme celles du Vert. Sans elle, le
+  // tableau annoncerait deux dés rouges là où la table en demande trois.
+  const cochons = auxCochons(cfg) && !!ecrireCochon;
 
   // Une rangée de cases, quelle que soit la combinaison qu'elle sert.
   const cases = (requis, ecrire) => {
@@ -117,13 +124,29 @@ export function tableauCombos(cfg, api) {
   };
 
   const ligneCombo = (combo) => {
-    const lignes = [h('tr',
+    const surCarteCochon = cochons && !!CARTE_COCHON[combo.id];
+    const lignes = [h('tr', { class: surCarteCochon ? 'ligne-remplacee' : '' },
       h('td.cellule-nom', h('div.nom-combo', combo.nom),
-        asym ? h('span.mini.muted', 'Bleus · Jaunes') : null),
+        asym && !surCarteCochon ? h('span.mini.muted', 'Bleus · Jaunes') : null,
+        surCarteCochon ? h('span.mini.muted', 'hors table à trois') : null),
       caseReveille(combo),
       ...cases(combo.requis, (requis) => ecrireCombo(combo.id, requis)),
     )];
-    if (asym) {
+    if (surCarteCochon) {
+      // La carte Cochon vaut pour les trois joueurs : une seule ligne, sans
+      // couleur d'équipe, qui remplace celle du dessus le temps de la table.
+      lignes.push(h('tr.ligne-cochon',
+        h('td.cellule-nom',
+          h('div.rangee.rangee--serree',
+            emblemeEquipe(EMBLEME_COCHON.embleme, 18),
+            h('span.mini', 'Cochon — les trois joueurs')),
+        ),
+        h('td.cellule-reveil', h('span.mini.muted', '·')),
+        ...cases(cfg.combosCochon?.[combo.id] || CARTE_COCHON[combo.id],
+          (requis) => ecrireCochon(combo.id, requis)),
+      ));
+    }
+    if (asym && !surCarteCochon) {
       const propre = requisPourEquipe(cfg, combo.id, combo.requis, 'vert');
       lignes.push(h('tr.ligne-vert',
         h('td.cellule-nom',

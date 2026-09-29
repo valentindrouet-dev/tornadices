@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer } from './dom.js?v=1.68';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.68';
-import { store } from './store.js?v=1.68';
-import { aller } from './app.js?v=1.68';
-import { lancerPartie } from './table.js?v=1.68';
+import { h, remplacer } from './dom.js?v=1.69';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.69';
+import { store } from './store.js?v=1.69';
+import { aller } from './app.js?v=1.69';
+import { lancerPartie } from './table.js?v=1.69';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -23,19 +23,20 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.68';
-import { tableauCombos, editeurCases } from './combos.js?v=1.68';
+  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
+} from '../core/config.js?v=1.69';
+import { tableauCombos, editeurCases } from './combos.js?v=1.69';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.68';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.68';
-import { randomSeed } from '../core/rng.js?v=1.68';
-import { reglagesJoueurs } from './accueil.js?v=1.68';
+} from './apparence.js?v=1.69';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.69';
+import { randomSeed } from '../core/rng.js?v=1.69';
+import { reglagesJoueurs } from './accueil.js?v=1.69';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
-} from './profils.js?v=1.68';
+} from './profils.js?v=1.69';
 
 // « lots » n'est plus de la partie : il a son propre tableau, une ligne par
 // nombre de joueurs, et ne suit donc plus la case « Suivre le tableau officiel ».
@@ -696,6 +697,7 @@ export function vueVariables() {
         tableauCombos(cfg, {
           ecrireCombo: (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
           ecrireVert: (id, requis) => ecrire('combosVert', { ...(v.combosVert || {}), [id]: requis }),
+          ecrireCochon: (id, requis) => ecrire('combosCochon', { ...(v.combosCochon || {}), [id]: requis }),
           ecrireFace: (id, face) => ecrire('combosFaces', { ...(v.combosFaces || {}), [id]: face }),
           rafraichir: dessiner,
         }),
@@ -853,6 +855,11 @@ export function vueVariables() {
         titreAide('Mise en place', [
           `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
+          nb === TABLE_COCHONS
+            ? 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi, et chacun reçoit '
+              + 'une carte Cochon. Les couleurs restent — c’est ce qui dit qui est qui — mais '
+              + 'l’animal est le même pour les trois.'
+            : '',
           estImmediat(cfg)
             ? 'Immédiat : les jetons ne servent plus, leurs champs restent grisés. Une manche '
               + 'vaut une carte, et l’on joue en quatre par défaut.'
@@ -925,6 +932,46 @@ export function vueVariables() {
             }, lib)),
           ),
         ),
+
+        // À trois, la table est une ronde si serrée que chacun est le voisin de
+        // tout le monde : la carte Cochon retarde l'attrape en demandant un dé
+        // rouge de plus à l'Échec. Le réglage n'apparaît qu'à cet effectif —
+        // ailleurs, la carte n'existe pas.
+        nb === TABLE_COCHONS
+          ? [
+            titreAide('La table à trois — les Cochons', [
+              'À trois joueurs, personne n’a d’équipier. Chacun reçoit une carte Cochon, et les '
+              + `trois portent la même règle : l’Échec y demande ${ECHEC_COCHON} dés rouges au `
+              + 'lieu de 2, ce qui retarde d’autant la première attrape.',
+              'À trois, chacun est le voisin de tout le monde : à deux dés rouges, le lot change '
+              + 'de main sans arrêt et l’attrape tombe trop souvent. Sur 300 parties d’IA '
+              + 'équilibrées, la manche passe de 1,86 à 0,71 attrape tentée et de 0,79 à 0,28 '
+              + 'réussie — moins qu’à quatre joueurs à deux rouges, qui en réussit 0,70.',
+              auxCochons(cfg)
+                ? 'La ligne du Cochon se règle dans le tableau des combinaisons, plus haut : elle '
+                  + 'y remplace celle des équipes, puisqu’elle vaut pour les trois joueurs.'
+                : 'Décoché, les trois joueurs reprennent leurs équipes habituelles — les Bleus, '
+                  + 'les Jaunes et le Vert — et l’Échec ses deux dés rouges.',
+            ],
+              h('button', {
+                class: `chip${auxCochons(cfg) ? ' on' : ''}`,
+                title: 'À trois joueurs, chacun joue un Cochon',
+                onclick: () => { ecrire('cochons', cfg.cochons === false); dessiner(); },
+              }, h('span.case', '✓'), 'Chacun joue un Cochon'),
+            ),
+            h('div.rangee.rangee--serree',
+              ...Object.keys(CARTE_COCHON).map((id) => {
+                const combo = cfg.combos.find((c) => c.id === id);
+                if (!combo) return null;
+                const requis = (cfg.combosCochon && cfg.combosCochon[id]) || CARTE_COCHON[id];
+                return h('span.badge', { class: auxCochons(cfg) ? '' : 'badge--eteint' },
+                  `${combo.nom} — `,
+                  h('span.rangee.rangee--serree', { style: { display: 'inline-flex' } },
+                    suiteSymboles(requis, 18)));
+              }),
+            ),
+          ]
+          : null,
 
         // Les cartes pour gagner ne sont pas un nombre : elles dépendent du
         // nombre de joueurs, et le Vert — seul contre deux équipes — a le sien.

@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole, nomSymbole } from './apparence.js?v=1.68';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.69';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -141,10 +141,26 @@ const GLYPHE_COWBOY = `<g fill="${NOIR}">
     <path d="M50 66c-11 0-20 6.4-22 15.6-.5 2.4 1.4 4.4 3.9 4.4h36.2c2.5 0 4.4-2 3.9-4.4C70 72.4 61 66 50 66z"/>
   </g>`;
 
+// À trois joueurs, chacun joue un Cochon : oreilles pointues et groin rond, pour
+// qu'on ne le prenne pas pour la vache à la taille où il se lit — 15 px au bout
+// d'une rangée de jetons.
+const GLYPHE_COCHON = `<g fill="${NOIR}">
+    <path d="M24 20.5 35.5 33 23.5 38.5zM76 20.5 64.5 33l12 5.5z"/>
+    <path d="M50 26.5c-17.9 0-31 11.4-31 26.5S32.1 79.5 50 79.5 81 68.1 81 53 67.9 26.5 50 26.5z"/>
+    <ellipse cx="35.5" cy="44.5" rx="4.4" ry="5.2" fill="#fff"/>
+    <ellipse cx="64.5" cy="44.5" rx="4.4" ry="5.2" fill="#fff"/>
+    <circle cx="35.5" cy="45.5" r="2.4"/>
+    <circle cx="64.5" cy="45.5" r="2.4"/>
+    <circle cx="50" cy="62" r="13" fill="#fff"/>
+    <ellipse cx="44.6" cy="62" rx="2.6" ry="4.2"/>
+    <ellipse cx="55.4" cy="62" rx="2.6" ry="4.2"/>
+  </g>`;
+
 export const SVG_EMBLEME = {
   vache: svg(GLYPHES.vache),
   poule: svg(GLYPHE_POULE),
   cowboy: svg(GLYPHE_COWBOY),
+  cochon: svg(GLYPHE_COCHON),
 };
 
 /** Emblème d'équipe, à poser à côté d'un nom. */

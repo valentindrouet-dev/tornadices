@@ -12,20 +12,21 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.68';
-import { store } from './store.js?v=1.68';
-import { aller } from './app.js?v=1.68';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.68';
+} from './dom.js?v=1.69';
+import { store } from './store.js?v=1.69';
+import { aller } from './app.js?v=1.69';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.69';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
-} from '../core/config.js?v=1.68';
+  equipeVue, auxCochons,
+} from '../core/config.js?v=1.69';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
  * produit par une version antérieure est écarté plutôt que lu de travers — la
  * leçon de la v1.36, où un champ absent emportait une page entière.
  */
-export const SCHEMA_PARTIE = 3;
+export const SCHEMA_PARTIE = 4;
 
 const CLE = 'dernierePartie';
 
@@ -46,6 +47,9 @@ export function enregistrerPartie(moteur) {
       mode: modeManche(cfg),
       // Où étaient les jetons : la manche ne s'est pas gagnée du même geste.
       placeJetons: jetonsSurTornade(cfg) ? 'tornade' : 'equipe',
+      // À trois joueurs, chacun jouait un Cochon : l'emblème du compte rendu
+      // doit rester celui de la partie, pas celui d'un réglage changé depuis.
+      cochons: auxCochons(cfg),
       nbJoueurs: moteur.joueurs.length,
       cartesPourGagner: cfg.cartesPourGagner,
       jetons: cfg.jetons,
@@ -160,7 +164,7 @@ export function vueResultats() {
   const joueurs = r.joueurs;
   const manches = Array.isArray(r.statsManches) ? r.statsManches : [];
   const parJoueur = manchesParJoueur(manches);
-  const eqGagnante = r.vainqueur ? COULEURS_EQUIPE[r.vainqueur] : null;
+  const eqGagnante = r.vainqueur ? equipeVue(r.vainqueur, ctxEquipes(ctx)) : null;
 
   remplacer(racine,
     enteteVictoire(r, ctx, eqGagnante, p.quand),
@@ -180,6 +184,9 @@ export function vueResultats() {
   );
   return racine;
 }
+
+/** Ce que l'instantané dit de la table, pour retrouver l'emblème de chacun. */
+const ctxEquipes = (ctx) => ({ nbJoueurs: ctx.nbJoueurs, cochons: ctx.cochons !== false });
 
 function enteteVictoire(r, ctx, eq, quand) {
   return h('div.carte.carte--victoire', {
@@ -223,7 +230,7 @@ function equipes(r, ctx) {
   return h('div.carte',
     h('div.titre-section', ctx.mode === 'jeton' ? 'Score des équipes' : 'Cartes Tornade remportées'),
     ...entrees.map(([id, e]) => {
-      const c = COULEURS_EQUIPE[id] || { nom: id, hex: '#b8b0a5', embleme: null };
+      const c = equipeVue(id, ctxEquipes(ctx)) || { nom: id, hex: '#b8b0a5', embleme: null };
       return h('div', { style: { marginBottom: '10px' } },
         h('div.rangee', { style: { justifyContent: 'space-between', marginBottom: '4px' } },
           h('span.rangee.rangee--serree',

@@ -1,7 +1,7 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.68';
-import { CARTES_PAR_ID } from './config.js?v=1.68';
+import { Moteur } from './engine.js?v=1.69';
+import { CARTES_PAR_ID } from './config.js?v=1.69';
 
 // Les deux paquets réunis : une campagne peut porter sur l'un ou sur l'autre.
 const NOM_CARTE = Object.fromEntries(

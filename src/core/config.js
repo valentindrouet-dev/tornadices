@@ -341,13 +341,60 @@ export function attrapeEmporteManche(cfg) {
   return cfg.attrapeGagneManche === 'touche';
 }
 
+// ── La table à trois : les Cochons ───────────────────────────────────────────
+//
+// À trois joueurs, personne n'a d'équipier : chacun joue pour soi. Chacun reçoit
+// donc une carte Cochon, et les trois portent la même règle — l'Échec y demande
+// trois dés rouges au lieu de deux.
+//
+// C'est la ronde qui l'exige. À trois, chacun est le voisin de tout le monde :
+// à deux rouges le lot change de main sans arrêt, et l'attrape tombe bien trop
+// souvent. Mesuré sur 300 parties d'IA équilibrées, la manche passe de 1,86 à
+// 0,71 attrape tentée, et de 0,79 à 0,28 réussie — moins qu'à quatre joueurs à
+// deux rouges, qui en réussit 0,70.
+export const TABLE_COCHONS = 3;
+
+/** Les dés rouges que la carte Cochon demande à l'Échec. */
+export const ECHEC_COCHON = 3;
+
+/** Ce que la carte Cochon change aux combinaisons — une ligne, pour l'instant. */
+export const CARTE_COCHON = { blocage: { [SYMBOLE_BLOQUANT]: ECHEC_COCHON } };
+
+export const EMBLEME_COCHON = { embleme: 'cochon', emblemeNom: 'Cochons', emblemeUn: 'Cochon' };
+
+/** Vrai si la table se joue aux Cochons : trois joueurs, et la variante en jeu. */
+export function auxCochons(cfg) {
+  return !!cfg && Number(cfg.nbJoueurs) === TABLE_COCHONS && cfg.cochons !== false;
+}
+
 /**
- * L'exigence d'une combinaison pour une équipe donnée. Le Vert joue seul contre
- * deux équipes : l'asymétrie permet de lui demander autre chose — plus, moins,
- * ou d'autres faces — sans toucher aux Bleus ni aux Jaunes. Décochée, la table
- * redevient strictement symétrique, ce qui reste la référence.
+ * L'équipe telle qu'elle se présente à cette table.
+ *
+ * Les couleurs ne bougent jamais — c'est ce qui dit qui est qui. Aux Cochons,
+ * c'est l'animal qui change : les trois joueurs jouent le même, puisqu'aucun
+ * n'a d'équipier.
+ */
+export function equipeVue(equipeId, cfg) {
+  const base = COULEURS_EQUIPE[equipeId];
+  if (!base) return null;
+  return auxCochons(cfg) ? { ...base, ...EMBLEME_COCHON } : base;
+}
+
+/**
+ * L'exigence d'une combinaison pour une équipe donnée.
+ *
+ * Deux choses peuvent l'écarter de la table. La carte Cochon d'abord, à trois
+ * joueurs : elle vaut pour les trois, ce n'est pas une asymétrie mais la table
+ * elle-même. L'asymétrie du Vert ensuite : il joue seul contre deux équipes, et
+ * l'on peut lui demander autre chose — plus, moins, ou d'autres faces — sans
+ * toucher aux Bleus ni aux Jaunes. Sans l'une ni l'autre, la table est
+ * strictement symétrique, ce qui reste la référence.
  */
 export function requisPourEquipe(cfg, comboId, requisBase, equipe) {
+  if (auxCochons(cfg)) {
+    const carte = cfg.combosCochon && cfg.combosCochon[comboId];
+    if (carte && Object.keys(carte).length) return carte;
+  }
   if (equipe !== 'vert' || !cfg.combosAsymetriques) return requisBase;
   const propre = cfg.combosVert && cfg.combosVert[comboId];
   return propre && Object.keys(propre).length ? propre : requisBase;
@@ -600,7 +647,8 @@ export function assainirConfig(cfg) {
   });
   // Les trois tables d'exigences enregistrées — cartes par mode, et le Vert —
   // passent par la même retraduction que les combinaisons de la Tornade.
-  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosCartesCompromis', 'combosVert']) {
+  for (const cle of ['combosCartes', 'combosCartesSansPoints', 'combosCartesCompromis',
+    'combosVert', 'combosCochon']) {
     if (cfg[cle] && typeof cfg[cle] === 'object') {
       sortie[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -1236,6 +1284,13 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // Décochée, la table est strictement symétrique — c'est la référence.
     combosAsymetriques: false,
     combosVert: {},
+    // À trois joueurs, chacun joue un Cochon : la carte demande un dé rouge de
+    // plus à l'Échec, ce qui retarde d'autant la première attrape. Ailleurs,
+    // elle n'existe pas — et elle se décoche.
+    cochons: opts.cochons !== false,
+    combosCochon: Object.fromEntries(
+      Object.entries(CARTE_COCHON).map(([id, requis]) => [id, { ...requis }]),
+    ),
     lots: mep.lots,
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,

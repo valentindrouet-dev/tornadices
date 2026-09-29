@@ -21,6 +21,9 @@
   --vert: #46b25e;
   --rouge: #d4453f;
   --violet: #6b5bc4;
+  /* Le Cochon de la table à trois : il n'a pas d'équipe, donc pas de couleur
+     d'équipe — juste la sienne, pour signaler ce que sa carte change. */
+  --rose-cochon: #e87fa0;
   --r: 18px;
   --r-s: 12px;
   --ombre: 0 1px 2px rgba(20, 55, 95, .06), 0 10px 28px rgba(30, 90, 150, .07);
@@ -1126,6 +1129,8 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
   border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 800;
   background: var(--fond-doux); border: 1px solid var(--bord); color: var(--encre-doux);
 }
+/* Un badge qui dit ce qui ne se joue pas : la carte Cochon, réglage décoché. */
+.badge--eteint { opacity: .45; }
 .badge--bleu { background: #e3f1fc; color: #1d6ea8; border-color: #bfdff5; }
 .badge--jaune { background: #fdf3d8; color: #8f6c05; border-color: #f3e0a6; }
 .badge--vert { background: #e4f5e9; color: #2b7141; border-color: #bfe6cc; }
@@ -1348,6 +1353,11 @@ table.tbl--compacte th, table.tbl--compacte td { padding: 5px 4px; }
 .chip--case { padding: 4px 6px; gap: 0; }
 /* La ligne du Vert, sous celle des deux équipes, quand l'asymétrie est en jeu. */
 .ligne-vert > td { background: color-mix(in srgb, var(--vert, #46b25e) 8%, transparent); }
+/* La ligne de la carte Cochon, à trois joueurs : elle vaut pour les trois, et
+   c'est elle qu'on joue — celle du dessus s'efface le temps de cette table. */
+.ligne-cochon > td { background: color-mix(in srgb, var(--rose-cochon) 14%, transparent); }
+.ligne-remplacee > td { opacity: .5; }
+.ligne-remplacee .nom-combo { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 /* Un champ chiffré posé dans un tableau d'aperçu : discret, mais éditable. */
 .champ-mini {
   width: 68px; text-align: right; padding: 4px 8px;

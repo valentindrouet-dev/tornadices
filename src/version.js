@@ -1,9 +1,19 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.68';
+export const VERSION = '1.69';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.69',
+    date: '29/09/2026',
+    notes: [
+      'La table à trois a sa variante : personne n’a d’équipier, alors chacun joue un Cochon. Les trois cartes portent la même règle — l’Échec y demande trois dés rouges au lieu de deux. À trois, chacun est le voisin de tout le monde : à deux rouges, le lot change de main sans arrêt et l’attrape tombe bien trop souvent.',
+      'Mesuré sur 300 parties d’IA équilibrées : la manche passe de 1,86 à 0,71 attrape tentée et de 0,79 à 0,28 réussie. C’est moins qu’à quatre joueurs à deux dés rouges, qui en réussit 0,70 — la table à trois devient la plus calme au lieu d’être la plus agitée. La manche s’allonge à peine, de 67 à 73 secondes.',
+      'La mise en place le dit partout : « 3 Cochons, chacun pour soi » dans le tableau des effectifs, et l’animal change sur les sièges, sur la carte Tornade, à l’Abri et dans le compte rendu de fin de partie. La couleur, elle, ne bouge jamais — c’est elle qui dit qui est qui.',
+      'La ligne du Cochon se règle comme le reste : dans le tableau des combinaisons, elle remplace celle des équipes à cet effectif, et la carte se décoche d’un bouton dans la mise en place des Réglages comme au Laboratoire. La fiche imprimée marque les lignes qui viennent de la carte.',
+    ],
+  },
   {
     version: '1.68',
     date: '24/08/2026',

@@ -12,21 +12,22 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.68';
-import { store } from './store.js?v=1.68';
-import { aller } from './app.js?v=1.68';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.68';
-import { nomSymbole } from './apparence.js?v=1.68';
-import { construireConfig } from './variables.js?v=1.68';
-import { nomActif } from './profils.js?v=1.68';
-import { VERSION } from '../version.js?v=1.68';
+import { h, remplacer } from './dom.js?v=1.69';
+import { store } from './store.js?v=1.69';
+import { aller } from './app.js?v=1.69';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.69';
+import { nomSymbole } from './apparence.js?v=1.69';
+import { construireConfig } from './variables.js?v=1.69';
+import { nomActif } from './profils.js?v=1.69';
+import { VERSION } from '../version.js?v=1.69';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuMode, requisCarte, comboPossible, refugePour,
   comboDeclencheur, attrapeEmporteManche, bornerJoueurs, placement,
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
-} from '../core/config.js?v=1.68';
+  TABLE_COCHONS, CARTE_COCHON, auxCochons, equipeVue,
+} from '../core/config.js?v=1.69';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -142,9 +143,12 @@ function miseEnPlace(cfg, nb, parEffectif) {
         const parEquipe = Math.floor((n - (vert ? 1 : 0)) / 2);
         return h('tr', { class: n === nb ? 'fiche-ligne-courante' : '' },
           h('td.num', h('strong', String(n))),
-          h('td.petit', vert
-            ? `${parEquipe} + ${parEquipe} + le Vert`
-            : `${parEquipe} + ${parEquipe}`),
+          // À trois, il n'y a pas d'équipe à former : trois joueurs, trois Cochons.
+          h('td.petit', auxCochons(c)
+            ? `${n} Cochons, chacun pour soi`
+            : vert
+              ? `${parEquipe} + ${parEquipe} + le Vert`
+              : `${parEquipe} + ${parEquipe}`),
           h('td.num', c.lots),
           h('td.num', c.desParLot),
           estJeton(cfg) ? h('td.num', c.jetons) : null,
@@ -158,6 +162,11 @@ function miseEnPlace(cfg, nb, parEffectif) {
       `Les Bleus sont les ${COULEURS_EQUIPE.bleu.emblemeNom}, les Jaunes les `
       + `${COULEURS_EQUIPE.jaune.emblemeNom}. À nombre impair, un joueur reste seul : `
       + `le ${COULEURS_EQUIPE.vert.emblemeUn}, en vert, qui forme une équipe à lui tout seul.`),
+    auxCochons(parEffectif[TABLE_COCHONS])
+      ? h('p.fiche-note', reglage(`À ${TABLE_COCHONS} joueurs, chacun joue un Cochon`),
+        ' : personne n’a d’équipier, les couleurs disent seulement qui est qui, et les trois '
+        + 'cartes Cochon demandent un dé rouge de plus à l’Échec — voir les combinaisons.')
+      : null,
     h('p.fiche-note',
       reglage(`${depart.nom} prennent les lots à la première manche`),
       cfg.equipeDepart === 'vert' ? '.' : ', et le Vert avec eux.',
@@ -192,12 +201,19 @@ function lesCombinaisons(cfg) {
     active: 'Tornade éveillée',
     toutes: 'les deux états',
   };
-  const asym = !!cfg.combosAsymetriques && cfg.combos.some((c) => difference(cfg, c));
+  const cochons = auxCochons(cfg);
+  // La fiche décrit la partie réglée : à trois joueurs, ce sont les dés de la
+  // carte Cochon qu'on lit, pas ceux de la ligne d'origine.
+  const desDe = (c) => (cochons && CARTE_COCHON[c.id]
+    ? requisPourEquipe(cfg, c.id, c.requis, 'bleu')
+    : c.requis);
+  const asym = !cochons && !!cfg.combosAsymetriques && cfg.combos.some((c) => difference(cfg, c));
   const lignes = cfg.combos
     .filter((c) => comboPossible(cfg.faces, c.requis))
     .map((c) => h('tr',
-      h('td.fiche-combo-nom', c.nom),
-      h('td.fiche-col-des', desRequis(c.requis)),
+      h('td.fiche-combo-nom', c.nom,
+        cochons && CARTE_COCHON[c.id] ? h('div.mini.muted', 'carte Cochon') : null),
+      h('td.fiche-col-des', desRequis(desDe(c))),
       asym
         ? h('td.fiche-col-des', difference(cfg, c)
             ? desRequis(requisPourEquipe(cfg, c.id, c.requis, 'vert'))
@@ -216,6 +232,11 @@ function lesCombinaisons(cfg) {
     h('p.fiche-note',
       'La colonne « Possible quand » ne vaut que pour ces combinaisons-là. ',
       REGLE_CARTES_DEUX_ETATS),
+    cochons
+      ? h('p.fiche-note', reglage('À trois joueurs, chacun joue un Cochon'),
+        ' : les lignes marquées « carte Cochon » sont celles de sa carte, et elles valent pour '
+        + 'les trois joueurs.')
+      : null,
     asym
       ? h('p.fiche-note',
           `Le joueur Vert joue seul contre deux équipes : certaines combinaisons lui demandent `
@@ -450,10 +471,18 @@ function leJoueurVert(cfg, parEffectif) {
   // du Vert à la même valeur que les équipes ne change rien.
   const cartesVert = impairs.filter((n) => parEffectif[n].cartesVert
     && parEffectif[n].cartesVert !== parEffectif[n].cartesPourGagner);
+  // À trois joueurs il n'est plus le seul à être seul : tout le monde l'est, et
+  // tout le monde joue un Cochon. Le Vert n'a d'existence à part qu'à cinq et au-delà.
+  const troisAuxCochons = auxCochons(parEffectif[TABLE_COCHONS]);
+  const avecEquipes = impairs.filter((n) => !(troisAuxCochons && n === TABLE_COCHONS));
   return section(`Le joueur Vert — le ${vert.emblemeUn}`,
-    h('p', `À ${impairs.join(', ')} joueurs, la table ne se partage pas en deux : un joueur `
+    h('p', `À ${avecEquipes.join(', ')} joueurs, la table ne se partage pas en deux : un joueur `
       + 'reste seul et forme une équipe à lui tout seul, en vert. Il ferme la ronde, entre un '
       + 'Jaune et un Bleu.'),
+    troisAuxCochons
+      ? h('p.fiche-note', `À ${TABLE_COCHONS} joueurs, il n’a plus rien de particulier : `
+        + 'personne n’a d’équipier, et les trois joueurs jouent un Cochon.')
+      : null,
     h('p', 'Il joue exactement comme les autres — mêmes dés, mêmes combinaisons, même façon de '
       + 'prendre une manche — mais il les joue seul contre deux équipes. C’est l’asymétrie la '
       + 'plus sensible du jeu, et les réglages ci-dessous sont là pour la corriger.'),

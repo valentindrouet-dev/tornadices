@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.68';
+import { h } from './dom.js?v=1.69';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
-  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.68';
+  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_EMBLEME,
+} from './icons.js?v=1.69';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, CARTES_SANS_POINTS, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.68';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.68';
+} from '../core/config.js?v=1.69';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.69';
 
 export function vueRegles() {
   return h('div.page',
@@ -234,6 +234,30 @@ export function vueRegles() {
         + 'qui vaut dans les deux états.'),
     ),
 
+    // La table à trois : trois joueurs seuls, trois Cochons, et un Échec plus
+    // difficile pour que l'attrape ne tombe pas à tout bout de champ.
+    h('div.carte',
+      h('div.titre-section', 'La table à trois — les Cochons'),
+      h('p.petit', 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi. Les couleurs '
+        + 'restent — c’est ce qui dit qui est qui — mais l’animal est le même pour les trois : '
+        + 'chacun reçoit une carte Cochon.'),
+      h('div.rangee', { style: { margin: '12px 0' } },
+        ...[0, 1, 2].map(() => h('span', { style: { width: '30px' }, html: SVG_EMBLEME.cochon })),
+        h('span.petit', 'Trois joueurs, trois Cochons — aucune équipe.'),
+      ),
+      h('p.petit', `Les trois cartes portent la même règle : l’Échec y demande trois « ${nomSymbole('x')} » `
+        + 'au lieu de deux. C’est ce qui retarde l’attrape — à trois, chacun est le voisin de tout '
+        + 'le monde, et à deux dés rouges le lot changerait de main sans arrêt.'),
+      h('div.encart.encart--info', { style: { marginTop: '10px' } },
+        'Mesuré sur 300 parties d’IA équilibrées : la manche passe de 1,86 à 0,71 attrape tentée, '
+        + 'et de 0,79 à 0,28 réussie. C’est moins qu’à quatre joueurs à deux dés rouges, qui en '
+        + 'réussit 0,70 — la table à trois devient la plus calme des trois, au lieu d’être la plus '
+        + 'agitée.'),
+      h('p.mini.muted', { style: { marginTop: '10px' } },
+        'La carte Cochon se décoche dans les Réglages, et sa ligne se règle dans le tableau des '
+        + 'combinaisons, où elle remplace celle des équipes à cet effectif.'),
+    ),
+
     h('div.carte',
       h('div.titre-section', 'Les cartes Tornade — avec les jetons'),
       h('div.tbl-defile', h('table.tbl',
@@ -292,7 +316,8 @@ export function vueRegles() {
         ))),
       )),
       h('p.mini.muted', { style: { marginTop: '8px' } },
-        'TornaDice se joue de trois à huit joueurs.'),
+        'TornaDice se joue de trois à huit joueurs. À trois, il n’y a pas d’équipe : chacun joue '
+        + 'un Cochon, et les trois cartes demandent un dé rouge de plus à l’Échec.'),
       h('p.petit', { style: { marginTop: '12px' } },
         'À la première manche, ce sont les Jaunes qui prennent les lots, et le Vert avec eux. '
         + 'Ensuite, les dés reviennent toujours aux perdants de la manche précédente — sauf sous '

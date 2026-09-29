@@ -4,21 +4,21 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.68';
+import { h, remplacer, duree, vider } from './dom.js?v=1.69';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.68';
-import { Moteur } from '../core/engine.js?v=1.68';
+} from './icons.js?v=1.69';
+import { Moteur } from '../core/engine.js?v=1.69';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
-  estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade,
-} from '../core/config.js?v=1.68';
-import { ajouterHistorique } from './store.js?v=1.68';
-import { enregistrerPartie } from './resultats.js?v=1.68';
-import { aller } from './app.js?v=1.68';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.68';
-import { nomSymbole } from './apparence.js?v=1.68';
+  estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
+} from '../core/config.js?v=1.69';
+import { ajouterHistorique } from './store.js?v=1.69';
+import { enregistrerPartie } from './resultats.js?v=1.69';
+import { aller } from './app.js?v=1.69';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.69';
+import { nomSymbole } from './apparence.js?v=1.69';
 
 let moteur = null;
 let vitesse = 1;
@@ -979,7 +979,7 @@ export function vueTable() {
     const jetons = Object.values(moteur.equipes)
       .map((e) => `${e.id}:${jetonsAffiches(e)}/${e.jetons}:${e.cartes.length}`).join('|');
     if (siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
-      const c = COULEURS_EQUIPE[e.id];
+      const c = equipeVue(e.id, moteur.cfg);
       const acquis = jetonsAffiches(e);
       return h('div.score-equipe', { class: `equipe-${e.id}` },
         // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes
@@ -1012,7 +1012,7 @@ export function vueTable() {
       h('div.tornade-jetons-titre', 'Pris dans la tornade'),
       ...Object.values(moteur.equipes).map((e) => {
         const s = moteur.suiviJetons(e.id);
-        const c = COULEURS_EQUIPE[e.id];
+        const c = equipeVue(e.id, moteur.cfg);
         return h('div.tornade-jetons-eq', { style: { '--couleur-eq': c.hex } },
           // Les jetons sortent par la fin : ceux qui restent sont les premiers
           // de la rangée, et la case vidée se voit à sa place.
@@ -1044,7 +1044,7 @@ export function vueTable() {
     siChange(elRefuge, sig, () => [
       h('div.refuge-titre', 'Refuge'),
       h('div.refuge-equipes', ...equipes.map((e) => {
-        const c = COULEURS_EQUIPE[e.id];
+        const c = equipeVue(e.id, moteur.cfg);
         return h('div.refuge-equipe', { style: { '--couleur-eq': c.hex } },
           h('div.refuge-jetons',
             ...Array.from({ length: requis }, (_, k) => h('div', {

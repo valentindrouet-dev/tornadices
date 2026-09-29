@@ -15,6 +15,7 @@ import {
   OPTIONS_SENS, sensRotation,
   comboAutomatique, comboIneluctable, comboRefusable, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, jetonsSurTornade,
+  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons, equipeVue,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -2268,6 +2269,107 @@ console.log('\nLes jetons sur la carte Tornade');
     ).jouerJusquAuBout();
     verifier('Immédiat : la même partie aux deux places',
       surCarte.vainqueur === devant.vainqueur && surCarte.manches === devant.manches);
+  }
+}
+
+// ── 3 septies septies. La table à trois : les Cochons ───────────────────────
+// À trois joueurs, personne n'a d'équipier : chacun joue un Cochon, et les trois
+// cartes demandent trois dés rouges à l'Échec au lieu de deux. C'est ce qui
+// retarde l'attrape sur une ronde où chacun est le voisin de tout le monde.
+console.log('\nLa table à trois — les Cochons');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const c3 = configParDefaut(3);
+  const c4 = configParDefaut(4);
+
+  verifier('à trois joueurs, la table se joue aux Cochons',
+    auxCochons(c3) && c3.cochons === true);
+  verifier('ailleurs, la carte Cochon n’existe pas', !auxCochons(c4) && !auxCochons(configParDefaut(6)));
+  verifier('et elle se décoche', !auxCochons({ ...c3, cochons: false }));
+  verifier(`la carte demande ${ECHEC_COCHON} dés rouges à l’Échec`,
+    JSON.stringify(c3.combosCochon.blocage) === JSON.stringify({ x: ECHEC_COCHON })
+    && JSON.stringify(CARTE_COCHON.blocage) === JSON.stringify({ x: ECHEC_COCHON }));
+
+  // Elle vaut pour les trois joueurs : ce n'est pas une asymétrie.
+  const echecDe = (cfg, equipe) => JSON.stringify(requisPourEquipe(cfg, 'blocage', { x: 2 }, equipe));
+  verifier('les trois joueurs jouent le même Échec',
+    ['bleu', 'jaune', 'vert'].every((e) => echecDe(c3, e) === JSON.stringify({ x: ECHEC_COCHON })));
+  verifier('à quatre joueurs, l’Échec reste à deux dés rouges',
+    echecDe(c4, 'bleu') === JSON.stringify({ x: 2 }));
+  verifier('décochée, la table à trois reprend l’Échec de tout le monde',
+    echecDe({ ...c3, cochons: false }, 'bleu') === JSON.stringify({ x: 2 }));
+  verifier('la carte Cochon l’emporte sur l’asymétrie du Vert',
+    echecDe({ ...c3, combosAsymetriques: true, combosVert: { blocage: { x: 4 } } }, 'vert')
+    === JSON.stringify({ x: ECHEC_COCHON }));
+  verifier('mais ne touche pas les lignes qu’elle ne porte pas',
+    echecDe(c3, 'bleu') !== JSON.stringify(requisPourEquipe(c3, 'reveil', { tornade: 3 }, 'bleu')));
+  verifier('un réglage enregistré garde sa propre ligne de Cochon',
+    JSON.stringify(assainirConfig({ nbJoueurs: 3, combosCochon: { blocage: { x: 4 } } })
+      .combosCochon.blocage) === JSON.stringify({ x: 4 }));
+
+  // L'animal : trois Cochons à trois joueurs, les équipes partout ailleurs.
+  verifier('à trois joueurs, les trois jouent un Cochon',
+    ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).embleme === 'cochon'));
+  verifier('et la couleur ne bouge pas — c’est elle qui dit qui est qui',
+    ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).hex === COULEURS_EQUIPE[e].hex));
+  verifier('à six joueurs, chacun garde le sien',
+    equipeVue('bleu', configParDefaut(6)).embleme === 'vache'
+    && equipeVue('vert', configParDefaut(6)).embleme === 'cowboy');
+
+  // Ce que la carte fait vraiment, au moteur : l'attrape retardée.
+  const campagne = (cfg, n, graine, parties = 200) => {
+    let tentees = 0, reussies = 0, manches = 0, finies = 0;
+    for (let g = 0; g < parties; g++) {
+      const r = new Moteur(cfg, spec(n), `${graine}-${g}`).jouerJusquAuBout();
+      for (const j of r.joueurs) {
+        tentees += j.stats.collisionsTentees;
+        reussies += j.stats.collisionsReussies;
+      }
+      manches += r.manches;
+      if (r.vainqueur) finies++;
+    }
+    return { tentees: tentees / manches, reussies: reussies / manches, manches, finies, parties };
+  };
+  const cochons = campagne(c3, 3, 'cochon-oui');
+  const sans = campagne({ ...c3, cochons: false }, 3, 'cochon-non');
+  const quatre = campagne(c4, 4, 'cochon-quatre');
+  verifier(`3 joueurs aux Cochons : ${cochons.tentees.toFixed(2)} attrape tentée par manche, `
+    + `contre ${sans.tentees.toFixed(2)} sans la carte`,
+    cochons.tentees < sans.tentees * 0.6);
+  verifier(`et ${cochons.reussies.toFixed(2)} réussie par manche, contre `
+    + `${quatre.reussies.toFixed(2)} à quatre joueurs sans carte`,
+    cochons.reussies < quatre.reussies);
+  verifier(`${cochons.parties} parties menées à terme aux Cochons`,
+    cochons.finies === cochons.parties);
+
+  // Et l'Échec ne se voit servir qu'à trois dés rouges, jamais à deux. On le
+  // lit au moment où le moteur repère la combinaison : une fois jouée, le lot a
+  // déjà quitté la main du joueur.
+  {
+    let fautes = 0, echecs = 0, aDeuxRouges = 0;
+    for (const [nom, cfg] of [['aux Cochons', c3], ['sans la carte', { ...c3, cochons: false }]]) {
+      fautes = 0; echecs = 0; aDeuxRouges = 0;
+      for (let g = 0; g < 40; g++) {
+        const m = new Moteur(cfg, spec(3), `cochon-des-${g}`);
+        const original = m.combosDisponibles.bind(m);
+        m.combosDisponibles = (j) => {
+          const out = original(j);
+          const lot = j.lots[0];
+          const rouges = lot ? lot.des.filter((d) => d.sym === 'x').length : 0;
+          if (out.some((d) => d.id === 'blocage')) {
+            echecs++;
+            if (rouges < (auxCochons(cfg) ? ECHEC_COCHON : 2)) fautes++;
+          } else if (rouges === 2) aDeuxRouges++;
+          return out;
+        };
+        m.jouerJusquAuBout();
+      }
+      verifier(`${nom} : ${echecs} Échecs servis, tous au bon nombre de dés rouges`,
+        echecs > 0 && fautes === 0);
+      if (auxCochons(cfg)) {
+        verifier(`et ${aDeuxRouges} lots à deux dés rouges laissés en main`, aDeuxRouges > 0);
+      }
+    }
   }
 }
 
