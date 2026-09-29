@@ -176,6 +176,9 @@ a { color: var(--accent-fonce); }
 }
 
 .grille { display: grid; gap: 16px; }
+/* Dans une grille, l'écart vient de `gap` : la marge qu'une carte prend sous la
+   précédente, en pile, décalerait la seconde colonne vers le bas. */
+.grille > .carte + .carte { margin-top: 0; }
 .grille--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grille--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grille--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }

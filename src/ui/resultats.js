@@ -12,14 +12,14 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.81';
-import { store } from './store.js?v=1.81';
-import { aller } from './app.js?v=1.81';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.81';
+} from './dom.js?v=1.82';
+import { store } from './store.js?v=1.82';
+import { aller } from './app.js?v=1.82';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.82';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
   equipeVue, auxCochons,
-} from '../core/config.js?v=1.81';
+} from '../core/config.js?v=1.82';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat

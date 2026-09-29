@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.81';
+export const VERSION = '1.82';
 export const BUILD_DATE = '2026-09-29';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.82',
+    date: '29/09/2026',
+    notes: [
+      'Changer le nombre de joueurs sur l’accueil ne défait plus les réglages de la partie. « Lots en jeu » et « Cartes pour gagner » s’écrivaient dans la seule ligne de l’effectif affiché : à un autre nombre de joueurs, on retrouvait l’ancienne valeur. Réglés depuis l’accueil, ils valent désormais pour tous les effectifs — le réglage ligne par ligne reste possible dans les Réglages. Les noms et rôles des joueurs déjà saisis sont gardés, eux aussi.',
+      'Les boîtes « Joueurs » et « Réglages de la partie » de l’accueil sont alignées : même haut, même hauteur. La seconde prenait la marge d’une carte posée sous une autre, qui n’a pas lieu d’être dans une grille.',
+    ],
+  },
   {
     version: '1.81',
     date: '29/09/2026',

@@ -1,23 +1,23 @@
 // Écran d'accueil : qui joue, et de quoi lancer une partie sans changer de page —
 // le mode de jeu, les lots, les cartes. Les réglages fins restent dans Réglages.
 
-import { h, remplacer } from './dom.js?v=1.81';
-import { store } from './store.js?v=1.81';
-import { aller } from './app.js?v=1.81';
-import { eveillerSons } from './sons.js?v=1.81';
-import { lancerPartie, partieEnCours } from './table.js?v=1.81';
+import { h, remplacer } from './dom.js?v=1.82';
+import { store } from './store.js?v=1.82';
+import { aller } from './app.js?v=1.82';
+import { eveillerSons } from './sons.js?v=1.82';
+import { lancerPartie, partieEnCours } from './table.js?v=1.82';
 import {
   construireConfig, variables, ecrireLots, ecrireCartes,
-} from './variables.js?v=1.81';
+} from './variables.js?v=1.82';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
   OPTIONS_MANCHE, cartesDuJeu, cartesEnJeu, NOMBRES_JOUEURS, bornerJoueurs,
   modeManche, estJeton, estCompromis,
-} from '../core/config.js?v=1.81';
-import { nomSymbole } from './apparence.js?v=1.81';
-import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.81';
-import { randomSeed } from '../core/rng.js?v=1.81';
-import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.81';
+} from '../core/config.js?v=1.82';
+import { nomSymbole } from './apparence.js?v=1.82';
+import { pastilleSymbole, emblemeEquipe } from './icons.js?v=1.82';
+import { randomSeed } from '../core/rng.js?v=1.82';
+import { reglagesCourants, enregistrerReglages } from './profils.js?v=1.82';
 
 const NOMS = [
   'Alex', 'Camille', 'Sacha', 'Louise', 'Noé', 'Jade', 'Tom', 'Anna', 'Milo',
@@ -122,7 +122,9 @@ export function vueAccueil() {
       h('div.rangee', { style: { marginBottom: '16px' } },
         h('div.segment', ...NOMBRES_JOUEURS.map((n) => h('button', {
           class: n === nb ? 'on' : '',
-          onclick: () => { nb = n; joueurs = reglagesJoueurs(n); dessiner(); },
+          // Les noms et les rôles déjà saisis sont gardés : on les enregistre
+          // avant de recomposer la table à son nouvel effectif.
+          onclick: () => { sauver(); nb = n; joueurs = reglagesJoueurs(n); dessiner(); },
         }, String(n)))),
         h('span.petit.muted', `${nb} joueurs`),
       ),
@@ -195,10 +197,13 @@ export function vueAccueil() {
           let x = Number(e.target.value);
           if (!isFinite(x)) return;
           x = Math.min(opts.max ?? 99, Math.max(opts.min ?? 1, x));
+          // Depuis l'accueil, une valeur réglée vaut quel que soit le nombre de
+          // joueurs : changer d'effectif ne doit pas la faire sauter. Le réglage
+          // ligne par ligne reste possible dans les Réglages.
           if (cle === 'lots') {
-            ecrireLots(nb, x);
+            for (const n of NOMBRES_JOUEURS) ecrireLots(n, x);
           } else if (cle === 'cartesPourGagner' || cle === 'cartesVert') {
-            ecrireCartes(modeManche(cfg), nb, x, cle === 'cartesVert');
+            for (const n of NOMBRES_JOUEURS) ecrireCartes(modeManche(cfg), n, x, cle === 'cartesVert');
           } else {
             ecrireReglage(cle, x);
             // Toucher une valeur de mise en place, c'est quitter le tableau
@@ -238,8 +243,6 @@ export function vueAccueil() {
       h('table.tbl',
         h('tbody',
           champ('Dés par lot', cfg.desParLot, 'desParLot', { min: 1, max: 12 }),
-          // Les lots ont un tableau par effectif : depuis l'accueil, on écrit
-          // dans la ligne de la table qu'on est en train de composer.
           champ('Lots en jeu', cfg.lots, 'lots', { min: 1, max: 12 }),
           estJeton(cfg)
             ? champ('Jetons par équipe', cfg.jetons, 'jetons', { min: 1, max: 12 })
@@ -251,8 +254,6 @@ export function vueAccueil() {
           nb % 2 && estJeton(cfg)
             ? champ('Jetons du Vert', cfg.jetonsVert, 'jetonsVert', { min: 1, max: 12 })
             : null,
-          // Les cartes ont un tableau par effectif et par mode : depuis
-          // l'accueil, on écrit dans la ligne de la table qu'on compose.
           champ('Cartes pour gagner', cfg.cartesPourGagner, 'cartesPourGagner', { min: 1, max: 12 }),
           nb % 2
             ? champ('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner, 'cartesVert',
