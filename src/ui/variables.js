@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.87';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.87';
-import { store } from './store.js?v=1.87';
-import { aller } from './app.js?v=1.87';
-import { lancerPartie } from './table.js?v=1.87';
+import { h, remplacer, telecharger } from './dom.js?v=1.88';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.88';
+import { store } from './store.js?v=1.88';
+import { aller } from './app.js?v=1.88';
+import { lancerPartie } from './table.js?v=1.88';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -22,22 +22,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.87';
-import { tableauCombos, editeurCases } from './combos.js?v=1.87';
-import { illustrationCarte } from './illustrations.js?v=1.87';
+} from '../core/config.js?v=1.88';
+import { tableauCombos, editeurCases } from './combos.js?v=1.88';
+import { illustrationCarte } from './illustrations.js?v=1.88';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.87';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.87';
-import { randomSeed } from '../core/rng.js?v=1.87';
-import { reglagesJoueurs } from './accueil.js?v=1.87';
+} from './apparence.js?v=1.88';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.88';
+import { randomSeed } from '../core/rng.js?v=1.88';
+import { reglagesJoueurs } from './accueil.js?v=1.88';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.87';
+} from './profils.js?v=1.88';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,

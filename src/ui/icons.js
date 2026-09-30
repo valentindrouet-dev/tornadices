@@ -3,7 +3,7 @@
 // Chaque face reprend le dessin des dés physiques : une pastille de couleur et
 // un pictogramme noir par-dessus.
 
-import { imageSymbole, nomSymbole } from './apparence.js?v=1.87';
+import { imageSymbole, nomSymbole } from './apparence.js?v=1.88';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;
@@ -84,37 +84,26 @@ export const SVG_GLYPHE = Object.fromEntries(
 );
 
 // ── Emblèmes d'équipe ────────────────────────────────────────────────────────
-// Les Bleus sont les vaches, les Jaunes les poules, le Vert est le cowboy.
-// Dessinés dans le même trait que les faces de dés, sans pastille : ils se
-// posent à côté d'un nom d'équipe, à la taille du texte.
-const GLYPHE_POULE = `<g fill="${NOIR}">
-    <path d="M50 20c-6 0-10.6 3.6-12.4 8.6-9.6 3.2-16.6 12-16.6 22.4 0 6.4 2.6 12.2 6.8 16.4L23 82h11l3.4-9.6c3.8 1.8 8 2.8 12.6 2.8 4.6 0 8.8-1 12.6-2.8L66 82h11l-4.8-14.6c4.2-4.2 6.8-10 6.8-16.4 0-10.4-7-19.2-16.6-22.4C60.6 23.6 56 20 50 20z"/>
-    <path d="M50 8c3 0 5 2.4 5 5.4 0 2-1 3.6-2.6 4.6 2.6.6 4.6 2 5.8 4-2.6-1-5.6-1.6-8.2-1.6s-5.6.6-8.2 1.6c1.2-2 3.2-3.4 5.8-4-1.6-1-2.6-2.6-2.6-4.6C45 10.4 47 8 50 8z" fill="#e2000f"/>
-    <circle cx="42" cy="42" r="3.6" fill="#fff"/>
-    <circle cx="58" cy="42" r="3.6" fill="#fff"/>
-    <circle cx="42" cy="42.6" r="2" />
-    <circle cx="58" cy="42.6" r="2" />
-    <path d="M44 52h12l-6 8z" fill="#f9b115"/>
-  </g>`;
-
-const GLYPHE_COWBOY = `<g fill="${NOIR}">
-    <path d="M50 16c-7.6 0-13.6 4.4-16 11-6.4 1-11 3.4-11 6.4 0 4.4 12.2 8 27 8s27-3.6 27-8c0-3-4.6-5.4-11-6.4-2.4-6.6-8.4-11-16-11z"/>
-    <path d="M34 44.5c1 10.4 7.6 18 16 18s15-7.6 16-18c-4.6 1.2-10.2 1.9-16 1.9s-11.4-.7-16-1.9z"/>
-    <path d="M50 66c-11 0-20 6.4-22 15.6-.5 2.4 1.4 4.4 3.9 4.4h36.2c2.5 0 4.4-2 3.9-4.4C70 72.4 61 66 50 66z"/>
-  </g>`;
-
-export const SVG_EMBLEME = {
-  vache: svg(GLYPHES.vache),
-  poule: svg(GLYPHE_POULE),
-  cowboy: svg(GLYPHE_COWBOY),
+// Les Bleus sont les vaches, les Jaunes les poules, le Vert est le cow-boy : leur
+// emblème, partout sur le site, est le jeton imprimé de l'animal.
+export const JETONS_EMBLEME = {
+  vache: 'assets/jetons/vache.png',
+  poule: 'assets/jetons/poule.png',
+  cowboy: 'assets/jetons/cowboy.png',
 };
 
-/** Emblème d'équipe, à poser à côté d'un nom. */
+/** Emblème d'équipe, à poser à côté d'un nom : le jeton de l'animal. */
 export function emblemeEquipe(nom, taille = 20) {
   const s = document.createElement('span');
   s.className = 'embleme';
   s.style.width = s.style.height = `${taille}px`;
-  s.innerHTML = SVG_EMBLEME[nom] || '';
+  const src = JETONS_EMBLEME[nom];
+  if (src) {
+    const img = document.createElement('img');
+    img.src = src; img.alt = ''; img.draggable = false;
+    img.width = img.height = 74;
+    s.appendChild(img);
+  }
   return s;
 }
 

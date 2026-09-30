@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.87';
+import { h, remplacer, duree, vider } from './dom.js?v=1.88';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.87';
-import { Moteur } from '../core/engine.js?v=1.87';
+} from './icons.js?v=1.88';
+import { Moteur } from '../core/engine.js?v=1.88';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, requisPourEquipe,
-} from '../core/config.js?v=1.87';
-import { ajouterHistorique } from './store.js?v=1.87';
-import { enregistrerPartie } from './resultats.js?v=1.87';
-import { aller } from './app.js?v=1.87';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.87';
-import { nomSymbole } from './apparence.js?v=1.87';
+} from '../core/config.js?v=1.88';
+import { ajouterHistorique } from './store.js?v=1.88';
+import { enregistrerPartie } from './resultats.js?v=1.88';
+import { aller } from './app.js?v=1.88';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.88';
+import { nomSymbole } from './apparence.js?v=1.88';
 import {
-  illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.87';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.87';
+  illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens, facesEquipe, ecartsCarteEquipe,
+} from './illustrations.js?v=1.88';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.88';
 
 let moteur = null;
 let vitesse = 1;
@@ -581,11 +581,23 @@ export function vueTable() {
   // quand on se réveille ou qu'on s'endort. Il faut les deux faces imprimées,
   // et qu'elles disent exactement ce que la table joue ; sinon, les deux listes.
   const joueurLu = moteur.joueurs.find((j) => j.type === 'humain') || moteur.joueurs[0];
-  const faceImprimee = (etat) => illustrationEquipe(moteur.cfg, equipeLue, etat,
-    jouables.filter((c) => c.face === 'toutes' || c.face === etat));
-  const faces = { endormie: faceImprimee('endormie'), active: faceImprimee('active') };
+  const faces = facesEquipe(equipeLue);
   let carteEquipe = null;
-  if (faces.endormie && faces.active) {
+  let ecartsCarte = null;
+  if (faces) {
+    // La carte se montre telle qu'imprimée ; ce que la table règle autrement se
+    // lit dessous, pour que la carte ne dise jamais faux.
+    const ecarts = ecartsCarteEquipe(moteur.cfg, equipeLue,
+      (etat) => jouables.filter((c) => c.face === 'toutes' || c.face === etat));
+    if (ecarts.length) {
+      ecartsCarte = h('div.carte-equipe-ecarts',
+        h('div.mini', { style: { fontWeight: '700', marginBottom: '4px' } }, 'Réglé autrement à cette table :'),
+        ...ecarts.map((e) => h('div.rangee.rangee--serree.mini',
+          h('strong', e.nom), ' ',
+          e.table ? suiteSymboles(e.table, 16) : h('span.muted', 'ne se joue pas'),
+          e.carte ? h('span.muted', ' au lieu de ') : h('span.muted', ' — pas sur la carte'),
+          e.carte ? suiteSymboles(e.carte, 16) : null)));
+    }
     const face = (illu, cote) => h(`div.carte-equipe-face.carte-equipe-face--${cote}`,
       h('img', { src: illu.src, alt: illu.nom, width: illu.largeur, height: illu.hauteur }));
     carteEquipe = h('div.carte-equipe-retournable', {
@@ -606,7 +618,7 @@ export function vueTable() {
 
   const zoneCote = h('div.colonne-cote',
     ...(carteEquipe
-      ? [h('div.carte.carte--equipe', carteEquipe)]
+      ? [h('div.carte.carte--equipe', carteEquipe, ecartsCarte)]
       // Deux listes plutôt qu'une : ce qu'on peut faire en dormant, et ce qu'on
       // peut faire réveillé. À la table, c'est la question qu'on se pose.
       : [listeCombos('Combinaisons (Endormi)', 'endormie'),
@@ -1258,7 +1270,7 @@ export function vueTable() {
         // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes
         // les poules, le Vert est le cowboy.
         h('span.score-nom', { style: { color: c.hex } },
-          emblemeEquipe(c.embleme, 18), ' ', c.nom),
+          emblemeEquipe(c.embleme, 26), ' ', c.nom),
         h('span.score-cartes', { title: 'cartes Tornade gagnées' },
           `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
         // Hors de la règle de base, il n'y a plus de jetons à retourner : la

@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.87';
+export const VERSION = '1.88';
 export const BUILD_DATE = '2026-09-30';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.88',
+    date: '30/09/2026',
+    notes: [
+      'La carte de votre équipe s’affiche toujours à droite de la table, même quand vos réglages diffèrent de ce qu’elle imprime. Elle ne se montrait que si elle disait exactement les règles en cours : un Échec réglé à trois X suffisait à la remplacer par les listes. Désormais, ce que votre table joue autrement se lit sous la carte — « Échec : trois X au lieu de deux ».',
+      'Les emblèmes d’équipe — la vache, la poule, le cow-boy — sont les jetons imprimés partout sur le site : l’accueil, les scores de la table, le tableau des combinaisons, les Règles et le compte rendu des parties.',
+    ],
+  },
   {
     version: '1.87',
     date: '30/09/2026',

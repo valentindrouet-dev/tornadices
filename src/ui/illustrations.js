@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.87';
-import { requisCarte, requisPourEquipe } from '../core/config.js?v=1.87';
+import { VERSION } from '../version.js?v=1.88';
+import { requisCarte, requisPourEquipe } from '../core/config.js?v=1.88';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle
@@ -111,4 +111,47 @@ export const CARTES_SENS = {
 /** La face de la carte de sens qui dit ce sens-là (1 : horaire, -1 : antihoraire). */
 export function faceCarteSens(sens) {
   return sens > 0 ? CARTES_SENS.horaire : CARTES_SENS.antihoraire;
+}
+
+/**
+ * Les deux faces imprimées de la carte d'une équipe — endormie, éveillée — si
+ * on les a toutes les deux. La carte se montre telle qu'elle est imprimée, même
+ * quand la table se joue autrement : `ecartsCarteEquipe` dit alors en quoi.
+ */
+export function facesEquipe(equipe) {
+  const f = ILLUSTRATIONS_EQUIPES[equipe];
+  if (!f || !f.endormie || !f.active) return null;
+  const vue = (illu) => ({
+    src: adresse(illu.src), nom: illu.nom, largeur: illu.taille[0], hauteur: illu.taille[1],
+  });
+  return { endormie: vue(f.endormie), active: vue(f.active) };
+}
+
+/**
+ * Ce que la table joue autrement que la carte ne l'imprime : une combinaison
+ * aux dés réglés autrement, une en plus, une en moins. `jouables(etat)` rend
+ * les combinaisons que la table affiche pour cet état.
+ */
+export function ecartsCarteEquipe(cfg, equipe, jouables) {
+  const f = ILLUSTRATIONS_EQUIPES[equipe];
+  if (!f) return [];
+  const ecarts = new Map();
+  for (const etat of ['endormie', 'active']) {
+    const illu = f[etat];
+    if (!illu) continue;
+    const enJeu = jouables(etat);
+    for (const c of enJeu) {
+      const table = requisPourEquipe(cfg, c.id, c.requis, equipe);
+      const carte = illu.combos[c.id];
+      if (carte && memeRequis(table, carte)) continue;
+      ecarts.set(c.id, { id: c.id, nom: c.nom, table, carte: carte || null });
+    }
+    for (const id of Object.keys(illu.combos)) {
+      if (!enJeu.some((c) => c.id === id) && !ecarts.has(id)) {
+        const c = (cfg.combos || []).find((x) => x.id === id);
+        ecarts.set(id, { id, nom: c ? c.nom : id, table: null, carte: illu.combos[id] });
+      }
+    }
+  }
+  return [...ecarts.values()];
 }
