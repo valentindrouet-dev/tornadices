@@ -55,6 +55,28 @@ export function comboDeclencheur() {
   return COMBO_ATTRAPE;
 }
 
+// La variante sans attrape : l'Échec ne tente plus rien. Le lot part chez le
+// voisin comme n'importe quel lot, et si celui-ci en tient déjà un, il doit
+// s'arrêter et le passer à son tour — c'est la poussée, qui existe déjà quand
+// deux lots se rencontrent.
+export const OPTIONS_ECHEC = [
+  ['attrape', 'Tente l’attrape'],
+  ['pousse', 'Sans attrape : pousse le lot'],
+];
+
+export const AIDE_ECHEC = {
+  attrape: 'Règle de base : l’Échec fait partir le lot, et si le joueur suivant tient un lot, '
+    + 'on tente de l’attraper au passage.',
+  pousse: 'Variante sans attrape : l’Échec fait partir le lot vers le voisin, sans rien tenter. '
+    + 'S’il tient déjà un lot, il doit s’arrêter et le passer au joueur suivant — la poussée '
+    + 'peut se propager autour de la table.',
+};
+
+/** Vrai quand la table se joue sans attrape : l'Échec ne fait que pousser. */
+export function sansAttrape(cfg) {
+  return !!cfg && cfg.sansAttrape === true;
+}
+
 // Trois façons de jouer une manche.
 //
 // « jeton » — la règle de base : chaque équipe met ses jetons Abri à couvert un
@@ -1074,6 +1096,8 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // Un dormeur ne tend pas la main : l'attrape sur échec demande d'être
     // réveillé. Décochable dans les Réglages.
     attrapeEveille: opts.attrapeEveille !== false,
+    // Variante sans attrape : l'Échec pousse le lot, sans tenter le contact.
+    sansAttrape: opts.sansAttrape === true,
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.
     lotsCumules: !!opts.lotsCumules,

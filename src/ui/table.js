@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.88';
+import { h, remplacer, duree, vider } from './dom.js?v=1.89';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.88';
-import { Moteur } from '../core/engine.js?v=1.88';
+} from './icons.js?v=1.89';
+import { Moteur } from '../core/engine.js?v=1.89';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, requisPourEquipe,
-} from '../core/config.js?v=1.88';
-import { ajouterHistorique } from './store.js?v=1.88';
-import { enregistrerPartie } from './resultats.js?v=1.88';
-import { aller } from './app.js?v=1.88';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.88';
-import { nomSymbole } from './apparence.js?v=1.88';
+} from '../core/config.js?v=1.89';
+import { ajouterHistorique } from './store.js?v=1.89';
+import { enregistrerPartie } from './resultats.js?v=1.89';
+import { aller } from './app.js?v=1.89';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.89';
+import { nomSymbole } from './apparence.js?v=1.89';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens, facesEquipe, ecartsCarteEquipe,
-} from './illustrations.js?v=1.88';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.88';
+} from './illustrations.js?v=1.89';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.89';
 
 let moteur = null;
 let vitesse = 1;
@@ -549,8 +549,10 @@ export function vueTable() {
     h('div', { style: { display: 'flex', gap: '2px', width: '84px', flex: 'none' } },
       suiteSymboles(requisPourEquipe(moteur.cfg, c.id, c.requis, equipeLue), 20)),
     h('div.mini', { style: { flex: '1' } }, c.nom,
-      // Le rappel dit quelle combinaison porte le contact : l'Échec.
-      c.id === 'blocage' ? h('span.muted', ' · tente l’attrape') : null),
+      // Le rappel dit ce que fait l'Échec : tenter l'attrape, ou pousser le lot.
+      c.id === 'blocage'
+        ? h('span.muted', moteur.cfg.sansAttrape ? ' · pousse le lot, sans attrape' : ' · tente l’attrape')
+        : null),
   );
 
   // Une combinaison que le dé ne peut pas produire n'est pas une règle, c'est
@@ -589,9 +591,14 @@ export function vueTable() {
     // lit dessous, pour que la carte ne dise jamais faux.
     const ecarts = ecartsCarteEquipe(moteur.cfg, equipeLue,
       (etat) => jouables.filter((c) => c.face === 'toutes' || c.face === etat));
-    if (ecarts.length) {
+    if (ecarts.length || moteur.cfg.sansAttrape) {
       ecartsCarte = h('div.carte-equipe-ecarts',
         h('div.mini', { style: { fontWeight: '700', marginBottom: '4px' } }, 'Réglé autrement à cette table :'),
+        // « Passe ou Rattrape » : sans attrape, il ne reste que « Passe ».
+        moteur.cfg.sansAttrape
+          ? h('div.mini', h('strong', 'Pas d’attrape'), ' : l’Échec pousse le lot au voisin, qui doit '
+            + 's’arrêter et passer le sien.')
+          : null,
         ...ecarts.map((e) => h('div.rangee.rangee--serree.mini',
           h('strong', e.nom), ' ',
           e.table ? suiteSymboles(e.table, 16) : h('span.muted', 'ne se joue pas'),

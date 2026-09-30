@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.88';
+import { makeRng } from './rng.js?v=1.89';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.88';
+} from './config.js?v=1.89';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -308,6 +308,7 @@ export class Moteur {
    * Un humain ne se laisse pas prévoir : on le suppose à mi-chemin.
    */
   _appetitAttaque(x) {
+    if (this.cfg.sansAttrape) return 0;
     if (x.type === 'humain') return 0.5;
     const p = x.profil;
     const styles = p.styles && p.styles.length
@@ -335,6 +336,8 @@ export class Moteur {
    * par qui ne la visait pas.
    */
   _scoreSens(joueurs, s) {
+    // Sans attrape, le sens ne donne ni proie ni chasseur : aucun ne vaut mieux.
+    if (this.cfg.sansAttrape) return 0;
     const n = this.joueurs.length;
     let score = 0;
     for (const j of joueurs) {
@@ -619,7 +622,8 @@ export class Moteur {
     // dé réglé sans X, un Agressif chercherait le X jusqu'à épuisement — et
     // l'attrape quand le voisin a les mains vides. Reste le coup utile du moment
     // pour qui ne visait plus rien.
-    const attrape = cible ? null : this._symboleAttrape();
+    // Sans attrape à la table, chercher l'Échec ne sert à rien.
+    const attrape = cible && !this.cfg.sansAttrape ? null : this._symboleAttrape();
     const brut = Object.entries((source.vise && source.vise[etat]) || {});
     const retenu = brut.filter(([sym]) => sym !== attrape && this._deProduit(sym));
     const poids = retenu.length
@@ -916,6 +920,9 @@ export class Moteur {
    * l'on est réveillé.
    */
   _attrapeAuDepart(j, choisi) {
+    // Sans attrape, l'Échec pousse le lot comme n'importe quel départ : le
+    // voisin qui en tient un doit s'arrêter et le passer à son tour.
+    if (this.cfg.sansAttrape) return false;
     if (choisi.id !== comboDeclencheur(this.cfg)) return false;
     if (this.cfg.attrapeEveille !== false && !j.eveille) return false;
     return this._suivant(j).lots.length > 0;

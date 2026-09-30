@@ -3,14 +3,14 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.88';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.88';
-import { store } from './store.js?v=1.88';
-import { aller } from './app.js?v=1.88';
-import { lancerPartie } from './table.js?v=1.88';
+import { h, remplacer, telecharger } from './dom.js?v=1.89';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.89';
+import { store } from './store.js?v=1.89';
+import { aller } from './app.js?v=1.89';
+import { lancerPartie } from './table.js?v=1.89';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
-  OPTIONS_ATTRAPE, AIDE_ATTRAPE,
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, sansAttrape,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarte, migrerPaquet,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible,
@@ -22,22 +22,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.88';
-import { tableauCombos, editeurCases } from './combos.js?v=1.88';
-import { illustrationCarte } from './illustrations.js?v=1.88';
+} from '../core/config.js?v=1.89';
+import { tableauCombos, editeurCases } from './combos.js?v=1.89';
+import { illustrationCarte } from './illustrations.js?v=1.89';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.88';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.88';
-import { randomSeed } from '../core/rng.js?v=1.88';
-import { reglagesJoueurs } from './accueil.js?v=1.88';
+} from './apparence.js?v=1.89';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.89';
+import { randomSeed } from '../core/rng.js?v=1.89';
+import { reglagesJoueurs } from './accueil.js?v=1.89';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.88';
+} from './profils.js?v=1.89';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -345,7 +345,8 @@ const REGLES_DU_JEU = [
   ['cartesVert', 'Cartes du Vert', (c) => (c.nbJoueurs % 2 ? c.cartesVert : null)],
   ['placeJetons', 'Où sont les jetons'],
   ['attrapeEveille', 'Il faut être réveillé pour attraper'],
-  ['attrapeGagneManche', 'Ce que rapporte l’attrape'],
+  ['sansAttrape', 'Ce que fait l’Échec', (c) => (sansAttrape(c) ? 'Pousse le lot, sans attrape' : 'Tente l’attrape')],
+  ['attrapeGagneManche', 'Ce que rapporte l’attrape', (c) => (sansAttrape(c) ? null : c.attrapeGagneManche)],
   ['lotsCumules', 'Deux lots qui se rencontrent', (c) => (c.lotsCumules ? 'Ils s’empilent' : 'Le lot en cours est poussé')],
   ['comboServie', 'Quand une combinaison sort'],
   ['sensRotation', 'Sens de rotation'],
@@ -1026,32 +1027,45 @@ export function vueVariables() {
         // toujours l'Échec qui la déclenche.
         h('div.grille.grille--4', { style: { gap: '18px', marginTop: '18px' } },
           h('div',
-            titreAide('L’attrape, sur l’Échec', [
-              'C’est la combinaison « Échec » qui tente le contact : elle fait partir le lot, et si '
-              + 'le joueur suivant tient un lot, on l’attrape au passage. Deux X au départ, ou ce '
-              + 'que vous réglez dans le tableau des combinaisons.',
-              cfg.attrapeEveille !== false
-                ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter le '
-                  + 'contact. Il faut s’être réveillé pour attraper au passage.'
-                : 'L’attrape vaut même endormi : chaque Échec tente le contact, dès que le voisin '
-                  + 'a un lot.',
-              'On n’attrape que ce qui existe : si le joueur suivant a les mains vides, il ne se '
-              + 'passe rien.',
+            titreAide('Ce que fait l’Échec', [
+              AIDE_ECHEC[sansAttrape(cfg) ? 'pousse' : 'attrape'],
+              sansAttrape(cfg)
+                ? 'Sans attrape, la poussée suppose que le lot en cours soit poussé quand deux lots '
+                  + 'se rencontrent — c’est la règle de base, à droite. Empilés, les lots '
+                  + 'attendraient leur tour et personne ne serait forcé de s’arrêter.'
+                : 'C’est la combinaison « Échec » qui tente le contact. Deux X au départ, ou ce que '
+                  + 'vous réglez dans le tableau des combinaisons.',
+              sansAttrape(cfg) ? ''
+                : cfg.attrapeEveille !== false
+                  ? 'Tornade endormie, l’Échec reste un échec sec : on passe le lot sans tenter le '
+                    + 'contact. Il faut s’être réveillé pour attraper au passage.'
+                  : 'L’attrape vaut même endormi : chaque Échec tente le contact, dès que le voisin '
+                    + 'a un lot.',
             ]),
-            h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
+            h('div.segment.segment--plein',
+              ...OPTIONS_ECHEC.map(([id, lib]) => h('button', {
+                class: (sansAttrape(cfg) ? 'pousse' : 'attrape') === id ? 'on' : '',
+                onclick: () => { ecrire('sansAttrape', id === 'pousse'); dessiner(); },
+              }, lib)),
+            ),
+            h('div.rangee.rangee--serree', { style: { marginTop: '8px', opacity: sansAttrape(cfg) ? '.45' : '1' } },
               h('button', {
                 class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
-                title: 'Un dormeur ne tend pas la main pour attraper son voisin',
+                title: sansAttrape(cfg)
+                  ? 'Sans effet : la table se joue sans attrape'
+                  : 'Un dormeur ne tend pas la main pour attraper son voisin',
+                disabled: sansAttrape(cfg),
                 onclick: () => { ecrire('attrapeEveille', cfg.attrapeEveille === false); dessiner(); },
-              }, h('span.case', '✓'), 'Il faut être réveillé'),
+              }, h('span.case', '✓'), 'Il faut être réveillé pour attraper'),
             ),
           ),
 
           // Réglable dans les trois modes. Sans les points, « touche » est la
           // valeur de départ : c'est la base du mode, l'attrape y étant le
           // second moyen de prendre une manche.
-          h('div',
+          h('div', { style: { opacity: sansAttrape(cfg) ? '.45' : '1' } },
             titreAide('Ce que rapporte l’attrape', [
+              sansAttrape(cfg) ? 'Sans effet : la table se joue sans attrape.' : '',
               AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non'],
               !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
                 ? 'Attention : sans les points, « Un jeton » ne rapporte rien — il n’y a plus de '

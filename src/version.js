@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.88';
+export const VERSION = '1.89';
 export const BUILD_DATE = '2026-09-30';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.89',
+    date: '30/09/2026',
+    notes: [
+      'Nouvelle variante : la table sans attrape. Dans les Réglages, « Ce que fait l’Échec » passe de « Tente l’attrape » à « Sans attrape : pousse le lot ». L’Échec fait alors partir le lot vers le voisin sans tenter de contact ; s’il tient déjà un lot, il doit s’arrêter et le passer au joueur suivant — la poussée peut faire le tour de la table.',
+      'Sans attrape, les réglages qui la concernent (« Il faut être réveillé », « Ce que rapporte l’attrape ») s’estompent, les IA agressives cessent de chercher l’Échec, la carte de sens ne se retourne plus pour chasser un voisin, et la table rappelle « pousse le lot » à côté de l’Échec. La variante se règle aussi au Laboratoire, et s’écrit dans la Fiche et les Règles.',
+    ],
+  },
   {
     version: '1.88',
     date: '30/09/2026',

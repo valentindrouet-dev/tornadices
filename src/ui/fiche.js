@@ -12,14 +12,14 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.88';
-import { store } from './store.js?v=1.88';
-import { aller } from './app.js?v=1.88';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.88';
-import { nomSymbole } from './apparence.js?v=1.88';
-import { construireConfig } from './variables.js?v=1.88';
-import { nomActif } from './profils.js?v=1.88';
-import { VERSION } from '../version.js?v=1.88';
+import { h, remplacer } from './dom.js?v=1.89';
+import { store } from './store.js?v=1.89';
+import { aller } from './app.js?v=1.89';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.89';
+import { nomSymbole } from './apparence.js?v=1.89';
+import { construireConfig } from './variables.js?v=1.89';
+import { nomActif } from './profils.js?v=1.89';
+import { VERSION } from '../version.js?v=1.89';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, refugePour, carteALaTable,
@@ -27,7 +27,7 @@ import {
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   equipeVue,
-} from '../core/config.js?v=1.88';
+} from '../core/config.js?v=1.89';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -259,6 +259,10 @@ function effetCombo(cfg, c) {
     return 'Retournez un jeton de votre équipe';
   }
   const declencheur = comboDeclencheur(cfg);
+  if (c.id === declencheur && cfg.sansAttrape) {
+    return 'Le lot part vers le joueur suivant, sans attrape — s’il tient déjà un lot, il doit '
+      + 's’arrêter et le passer à son tour';
+  }
   if (c.id === declencheur) {
     const gain = attrapeEmporteManche(cfg)
       ? (estCompromis(cfg)
@@ -388,6 +392,14 @@ function gagnerLaManche(cfg, mode) {
 
 function lAttrape(cfg, mode) {
   const decl = cfg.combos.find((c) => c.id === comboDeclencheur(cfg));
+  if (cfg.sansAttrape) {
+    return section('Pas d’attrape',
+      h('p', reglage('Cette table se joue sans attrape'), ' : la combinaison ',
+        reglage(`« ${decl ? decl.nom : 'Échec'} »`),
+        ' fait partir le lot vers le joueur suivant, sans tenter de le toucher.'),
+      h('p', 'S’il tient déjà un lot, il doit s’arrêter et le passer à son tour : c’est la '
+        + 'poussée, qui peut faire le tour de la table.'));
+  }
   const emporte = attrapeEmporteManche(cfg);
   return section(estCompromis(cfg) ? 'La collision' : 'L’attrape',
     h('p', 'C’est la combinaison ',

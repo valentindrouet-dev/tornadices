@@ -2372,6 +2372,54 @@ console.log('\nCampagne du Laboratoire');
     `${(r.duree.medianeMs / 60000).toFixed(1)} min`);
 }
 
+// ── Variante sans attrape : l'Échec ne fait que pousser le lot ──────────────
+console.log('\nVariante sans attrape');
+{
+  const spec = (n, p = 'equilibre') => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: p }));
+  const poser = (lot, syms) => {
+    lot.des.forEach((d, i) => { d.sym = syms[i]; d.roule = false; d.finRoule = 0; d.verrou = syms[i] === 'x'; });
+    lot.lance = true;
+  };
+  verifier('par défaut, l’Échec tente l’attrape',
+    configParDefaut(6).sansAttrape === false && configParDefaut(6, { sansAttrape: true }).sansAttrape === true);
+
+  // Un Échec, réveillé, voisin chargé : le lot part sans tenter le contact, et
+  // le voisin doit passer le sien au joueur suivant.
+  const cfg = configParDefaut(6, { sansAttrape: true });
+  const m = new Moteur(cfg, spec(6), 'sans-attrape');
+  const j = m.joueurs.find((x) => x.lots.length);
+  j.eveille = true;
+  const voisin = m._suivant(j);
+  const suivant = m._suivant(voisin);
+  const lotDuVoisin = m._nouveauLot();
+  voisin.lots = [lotDuVoisin];
+  suivant.lots = [];
+  const lotParti = j.lots[0];
+  poser(lotParti, ['x', 'x', 'tornade', 'vache']);
+  m._finLancer(j, []);
+  verifier('l’Échec part sans tenter l’attrape',
+    !!j.departEnAttente && j.departEnAttente.motif === 'combo' && j.departEnAttente.dispo.id === 'blocage');
+  m.avancerJusqua(m.now + 4000);
+  verifier('aucun contact n’est tenté', j.stats.collisionsTentees === 0 && !m.duel);
+  const ouEst = (lot) => m.joueurs.find((x) => x.lots.includes(lot))
+    || (m.transits.some((t) => t.lot === lot) ? 'en route' : null);
+  verifier('le voisin a reçu le lot, et le sien est poussé plus loin',
+    ouEst(lotParti) === voisin && ouEst(lotDuVoisin) !== voisin && ouEst(lotDuVoisin) !== null);
+
+  // L'IA agressive ne cherche plus l'Échec : il n'y a rien à attraper.
+  const ma = new Moteur(cfg, spec(6, 'tresAgressif'), 'sans-attrape-ia');
+  const ja = ma.joueurs.find((x) => x.lots.length);
+  ja.eveille = true;
+  ma._suivant(ja).lots = [ma._nouveauLot()];
+  verifier('sans attrape, le Très agressif ne vise pas le X',
+    ma._objectifIA(ja, ja.lots[0]) !== 'x');
+
+  // Et des parties entières, sans un seul contact.
+  const r = lancerCampagne(cfg, spec(6), 'sans-attrape-campagne', 30);
+  verifier(`30 parties sans attrape menées à terme, ${r.collisions.tentees} contact tenté`,
+    r.collisions.tentees === 0 && r.raisons.manchesMax === undefined && !r.raisons.limite);
+}
+
 // ── Le journal montre d'abord les dés de la combinaison ─────────────────────
 console.log('\nJournal : les dés de la combinaison d’abord');
 {

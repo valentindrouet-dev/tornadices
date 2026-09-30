@@ -12,9 +12,9 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.88';
-import { store } from './store.js?v=1.88';
-import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.88';
+import { h } from './dom.js?v=1.89';
+import { store } from './store.js?v=1.89';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.89';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
