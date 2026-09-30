@@ -1,9 +1,18 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.86';
-export const BUILD_DATE = '2026-09-29';
+export const VERSION = '1.87';
+export const BUILD_DATE = '2026-09-30';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.87',
+    date: '30/09/2026',
+    notes: [
+      'La variante des Cochons à trois joueurs est annulée : à trois, on joue une Vache, une Poule et le Cow-Boy, avec les combinaisons de tout le monde — l’Échec à deux dés rouges. La carte Cochon, ses couleurs, ses réglages et la Tornade de Cochons quittent le jeu ; les Tornades de Vaches, de Poules et de Cow-Boy sortent aussi à trois joueurs.',
+      'À droite de la table, la carte de votre équipe remplace les deux listes de combinaisons : pour l’instant les Poules, dont on a les deux faces imprimées. Quand votre Tornade se réveille ou s’endort, la carte se retourne. Les Vaches et le Cow-Boy gardent les listes en attendant leurs cartes.',
+      'Le journal n’affiche plus le minutage.',
+    ],
+  },
   {
     version: '1.86',
     date: '29/09/2026',

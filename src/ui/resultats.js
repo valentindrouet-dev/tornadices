@@ -12,14 +12,14 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.86';
-import { store } from './store.js?v=1.86';
-import { aller } from './app.js?v=1.86';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.86';
+} from './dom.js?v=1.87';
+import { store } from './store.js?v=1.87';
+import { aller } from './app.js?v=1.87';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.87';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
-  equipeVue, auxCochons,
-} from '../core/config.js?v=1.86';
+  equipeVue,
+} from '../core/config.js?v=1.87';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
@@ -47,9 +47,6 @@ export function enregistrerPartie(moteur) {
       mode: modeManche(cfg),
       // Où étaient les jetons : la manche ne s'est pas gagnée du même geste.
       placeJetons: jetonsSurTornade(cfg) ? 'tornade' : 'equipe',
-      // À trois joueurs, chacun jouait un Cochon : l'emblème du compte rendu
-      // doit rester celui de la partie, pas celui d'un réglage changé depuis.
-      cochons: auxCochons(cfg),
       nbJoueurs: moteur.joueurs.length,
       cartesPourGagner: cfg.cartesPourGagner,
       jetons: cfg.jetons,
@@ -186,14 +183,11 @@ export function vueResultats() {
 }
 
 /** Ce que l'instantané dit de la table, pour retrouver l'emblème de chacun. */
-const ctxEquipes = (ctx) => ({ nbJoueurs: ctx.nbJoueurs, cochons: ctx.cochons !== false });
+const ctxEquipes = (ctx) => ({ nbJoueurs: ctx.nbJoueurs });
 
-/** Le badge d'une équipe : sa classe, ou la couleur de son Cochon à trois. */
-function attributsBadge(id, ctx) {
-  const eq = equipeVue(id, ctxEquipes(ctx));
-  return auxCochons(ctxEquipes(ctx)) && eq
-    ? { class: 'badge--cochon', style: { '--couleur-eq': eq.hex } }
-    : { class: `badge--${id}` };
+/** Le badge d'une équipe : sa classe. */
+function attributsBadge(id) {
+  return { class: `badge--${id}` };
 }
 
 function enteteVictoire(r, ctx, eq, quand) {

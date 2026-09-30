@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.86';
+import { h, remplacer, duree, vider } from './dom.js?v=1.87';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.86';
-import { Moteur } from '../core/engine.js?v=1.86';
+} from './icons.js?v=1.87';
+import { Moteur } from '../core/engine.js?v=1.87';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
-  nomDansPhrase, auxCochons, requisPourEquipe,
-} from '../core/config.js?v=1.86';
-import { ajouterHistorique } from './store.js?v=1.86';
-import { enregistrerPartie } from './resultats.js?v=1.86';
-import { aller } from './app.js?v=1.86';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.86';
-import { nomSymbole } from './apparence.js?v=1.86';
+  nomDansPhrase, requisPourEquipe,
+} from '../core/config.js?v=1.87';
+import { ajouterHistorique } from './store.js?v=1.87';
+import { enregistrerPartie } from './resultats.js?v=1.87';
+import { aller } from './app.js?v=1.87';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.87';
+import { nomSymbole } from './apparence.js?v=1.87';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens,
-} from './illustrations.js?v=1.86';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.86';
+} from './illustrations.js?v=1.87';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.87';
 
 let moteur = null;
 let vitesse = 1;
@@ -219,8 +219,7 @@ export function vueTable() {
   const elCentre = h('div.centre-table', h('div.centre-carte', elCarte, elRefuge), elPioche);
   const zoneTable = h('div.table-zone', h('div.tapis'), elCentre);
   const elSieges = moteur.joueurs.map((j) => {
-    // La couleur vient de l'équipe telle qu'elle se présente à cette table : à
-    // trois, un Cochon rouge, orange ou rose, et non plus les Bleus ou les Jaunes.
+    // La couleur vient de l'équipe du joueur.
     const el = h('div.siege', {
       class: `equipe-${j.equipe}${j.type === 'humain' ? ' siege--humain' : ''}`,
       style: { '--couleur-eq': equipeVue(j.equipe, moteur.cfg).hex },
@@ -542,8 +541,8 @@ export function vueTable() {
   const zoneJournal = h('div.journal');
 
   // Une ligne de la liste : les dés demandés, le nom, et ce qu'il faut savoir.
-  // Les dés se lisent tels que la table les demande à qui regarde : la carte
-  // Cochon à trois joueurs, la ligne du Vert s'il joue à part. C'est l'équipe du
+  // Les dés se lisent tels que la table les demande à qui regarde : la ligne du
+  // Vert s'il joue à part. C'est l'équipe du
   // joueur humain qui compte — la première assise, s'il n'y en a pas.
   const equipeLue = (moteur.joueurs.find((j) => j.type === 'humain') || moteur.joueurs[0]).equipe;
   const ligneCombo = (c) => h('div.rangee.rangee--serree',
@@ -577,11 +576,41 @@ export function vueTable() {
     );
   };
 
+  // La carte de l'équipe du joueur, comme sur une vraie table : une face pour
+  // la Tornade endormie, une pour la Tornade éveillée, et la carte se retourne
+  // quand on se réveille ou qu'on s'endort. Il faut les deux faces imprimées,
+  // et qu'elles disent exactement ce que la table joue ; sinon, les deux listes.
+  const joueurLu = moteur.joueurs.find((j) => j.type === 'humain') || moteur.joueurs[0];
+  const faceImprimee = (etat) => illustrationEquipe(moteur.cfg, equipeLue, etat,
+    jouables.filter((c) => c.face === 'toutes' || c.face === etat));
+  const faces = { endormie: faceImprimee('endormie'), active: faceImprimee('active') };
+  let carteEquipe = null;
+  if (faces.endormie && faces.active) {
+    const face = (illu, cote) => h(`div.carte-equipe-face.carte-equipe-face--${cote}`,
+      h('img', { src: illu.src, alt: illu.nom, width: illu.largeur, height: illu.hauteur }));
+    carteEquipe = h('div.carte-equipe-retournable', {
+      class: joueurLu.eveille ? 'carte-equipe--eveillee' : '',
+      title: `Votre carte d’équipe — Tornade ${joueurLu.eveille ? 'éveillée' : 'endormie'}`,
+    },
+      h('div.carte-equipe-interieur',
+        face(faces.endormie, 'endormie'),
+        face(faces.active, 'eveillee')));
+  }
+  let carteRetournee = joueurLu.eveille;
+  function peindreCarteEquipe() {
+    if (!carteEquipe || carteRetournee === joueurLu.eveille) return;
+    carteRetournee = joueurLu.eveille;
+    carteEquipe.classList.toggle('carte-equipe--eveillee', carteRetournee);
+    carteEquipe.title = `Votre carte d’équipe — Tornade ${carteRetournee ? 'éveillée' : 'endormie'}`;
+  }
+
   const zoneCote = h('div.colonne-cote',
-    // Deux listes plutôt qu'une : ce qu'on peut faire en dormant, et ce qu'on
-    // peut faire réveillé. À la table, c'est la question qu'on se pose.
-    listeCombos('Combinaisons (Endormi)', 'endormie'),
-    listeCombos('Combinaisons (Réveillé)', 'active'),
+    ...(carteEquipe
+      ? [h('div.carte.carte--equipe', carteEquipe)]
+      // Deux listes plutôt qu'une : ce qu'on peut faire en dormant, et ce qu'on
+      // peut faire réveillé. À la table, c'est la question qu'on se pose.
+      : [listeCombos('Combinaisons (Endormi)', 'endormie'),
+        listeCombos('Combinaisons (Réveillé)', 'active')]),
     // La carte du jour se lit au centre de la table : le journal prend sa place.
     h('div.carte', h('div.titre-section', 'Journal'), zoneJournal),
   );
@@ -767,7 +796,7 @@ export function vueTable() {
   function montrerChoixSens(choix) {
     if (!choix || choix.decide || !choix.humain) return;
     attenteSens = true;
-    // « Les Bleus », « le Vert », « le Cochon rouge » : un nom d'équipe a besoin
+    // « Les Bleus », « le Vert » : un nom d'équipe a besoin
     // de son article dans une phrase, et le verbe suit — un joueur seul reçoit,
     // une équipe reçoivent.
     const noms = choix.equipes.map((e) => nomDansPhrase(e, moteur.cfg));
@@ -1082,6 +1111,7 @@ export function vueTable() {
     peindreSieges();
     peindreCentre();
     peindreJournal();
+    peindreCarteEquipe();
     peindrePanneaux();
     peindreCouche();
   }
@@ -1308,14 +1338,12 @@ export function vueTable() {
         zoneJournal.appendChild(h('div.ligne.ligne--tour', {
           data: { couleur: e.couleur || 'gris' },
         },
-          h('span.t', duree(e.t)),
           h('span.nom-joueur', e.texte),
           h('span.des-tour', ...(e.des || []).map((sym) => faceDe(sym, { taille: 'mini' }))),
           h('span.issue', e.issue),
         ));
       } else {
-        zoneJournal.appendChild(h('div', { class: `ligne ligne--${e.type}` },
-          h('span.t', duree(e.t)), e.texte));
+        zoneJournal.appendChild(h('div', { class: `ligne ligne--${e.type}` }, e.texte));
       }
     }
     zoneJournal.scrollTop = zoneJournal.scrollHeight;
@@ -1483,8 +1511,6 @@ export function vueTable() {
       ajouterHistorique({
         date: new Date().toISOString().slice(0, 16).replace('T', ' '),
         joueurs: moteur.joueurs.length,
-        // À trois, le vainqueur est un Cochon : l'historique doit pouvoir le dire.
-        cochons: auxCochons(moteur.cfg),
         vainqueur: r.vainqueur,
         manches: r.manches,
         duree: r.duree,

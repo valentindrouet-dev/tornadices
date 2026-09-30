@@ -1,22 +1,19 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.86';
+import { h } from './dom.js?v=1.87';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
-  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_EMBLEME,
-} from './icons.js?v=1.86';
+  SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
+} from './icons.js?v=1.87';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
-  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS, COCHONS,
-} from '../core/config.js?v=1.86';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.86';
+  PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
+} from '../core/config.js?v=1.87';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.87';
 
 /** Où sort une carte d'animal. */
 const TABLES_ANIMAL = {
-  vache: 'Pas à trois joueurs, où chacun est un Cochon.',
-  poule: 'Pas à trois joueurs, où chacun est un Cochon.',
-  cowboy: 'À cinq et à sept joueurs, avec le joueur Vert.',
-  cochon: 'À trois joueurs seulement.',
+  cowboy: 'À trois, cinq et sept joueurs, avec le joueur Vert.',
 };
 
 export function vueRegles() {
@@ -207,31 +204,6 @@ export function vueRegles() {
         + 'passage — règle décochable dans les Réglages.'),
     ),
 
-    // La table à trois : trois joueurs seuls, trois Cochons, et un Échec plus
-    // difficile pour que l'attrape ne tombe pas à tout bout de champ.
-    h('div.carte',
-      h('div.titre-section', 'La table à trois — les Cochons'),
-      h('p.petit', 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi, et chacun '
-        + 'reçoit une carte Cochon. Les équipes disparaissent avec leurs couleurs : il y a un '
-        + 'Cochon rouge, un Cochon orange et un Cochon rose.'),
-      h('div.rangee', { style: { margin: '12px 0', gap: '16px' } },
-        ...Object.values(COCHONS).map((c) => h('span.rangee.rangee--serree',
-          h('span', { style: { width: '30px', color: c.hex }, html: SVG_EMBLEME.cochon }),
-          h('strong.petit', { style: { color: c.hex } }, c.nom))),
-      ),
-      h('p.petit', `Les trois cartes portent la même règle : l’Échec y demande trois « ${nomSymbole('x')} » `
-        + 'au lieu de deux. C’est ce qui retarde l’attrape — à trois, chacun est le voisin de tout '
-        + 'le monde, et à deux dés rouges le lot changerait de main sans arrêt.'),
-      h('div.encart.encart--info', { style: { marginTop: '10px' } },
-        'Mesuré sur 300 parties d’IA équilibrées : la manche passe de 1,86 à 0,71 attrape tentée, '
-        + 'et de 0,79 à 0,28 réussie. C’est moins qu’à quatre joueurs à deux dés rouges, qui en '
-        + 'réussit 0,70 — la table à trois devient la plus calme des trois, au lieu d’être la plus '
-        + 'agitée.'),
-      h('p.mini.muted', { style: { marginTop: '10px' } },
-        'La carte Cochon se décoche dans les Réglages, et sa ligne se règle dans le tableau des '
-        + 'combinaisons, où elle remplace celle des équipes à cet effectif.'),
-    ),
-
     // Un seul paquet pour les trois façons de jouer : une carte n'a pas de
     // variante d'un mode à l'autre.
     h('div.carte',
@@ -248,7 +220,7 @@ export function vueRegles() {
             ? h('div.rangee.rangee--serree', suiteSymboles(c.combo.requis, 18))
             : h('span.mini.muted', '—')),
           h('td.petit', c.texte,
-            c.animal ? h('div.mini.muted', TABLES_ANIMAL[c.animal]) : null),
+            TABLES_ANIMAL[c.animal] ? h('div.mini.muted', TABLES_ANIMAL[c.animal]) : null),
         ))),
       )),
       h('div.encart', { style: { marginTop: '12px' } },
@@ -257,9 +229,7 @@ export function vueRegles() {
         + 'pile : deux points d’un coup.'),
       h('div.encart', { style: { marginTop: '10px' } },
         'Les cartes d’animal ne sortent que si l’animal est à la table : la Tornade de Cow-Boy '
-        + 'avec le joueur Vert, celles des Vaches et des Poules partout sauf à trois joueurs, et '
-        + 'celle des Cochons à trois seulement — là où chacun est un Cochon, elle vaut double '
-        + 'pour qui prend la manche.'),
+        + 'avec le joueur Vert, celles des Vaches et des Poules à toutes les tables.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'La Tornade de Chauffe ouvre la partie : la manche se joue comme les autres, mais la '
         + 'carte ne rapporte rien — elle est défaussée. La Méga Tornade demande cinq symboles : '
@@ -284,8 +254,8 @@ export function vueRegles() {
         ))),
       )),
       h('p.mini.muted', { style: { marginTop: '8px' } },
-        'TornaDice se joue de trois à huit joueurs. À trois, il n’y a pas d’équipe : chacun joue '
-        + 'un Cochon, et les trois cartes demandent un dé rouge de plus à l’Échec.'),
+        'TornaDice se joue de trois à huit joueurs. À trois, une Vache, une Poule et le Cow-Boy '
+        + 'jouent chacun pour son camp.'),
       h('p.petit', { style: { marginTop: '12px' } },
         'À la première manche, ce sont les Jaunes qui prennent les lots, et le Vert avec eux. '
         + 'Ensuite, les dés reviennent toujours aux perdants de la manche précédente — sauf sous '

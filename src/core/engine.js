@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.86';
+import { makeRng } from './rng.js?v=1.87';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.86';
+} from './config.js?v=1.87';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -178,8 +178,7 @@ export class Moteur {
       .filter(Boolean)
       .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs)
       // Une carte qui désigne un animal absent ne désignerait personne : pas de
-      // Cow-Boy sans joueur Vert, pas de Vaches ni de Poules à la table des
-      // Cochons, pas de Cochons ailleurs.
+      // Cow-Boy sans joueur Vert.
       .filter((c) => carteALaTable(c, this.cfg));
     const chauffe = cartes.filter((c) => c.toujoursPremiere);
     let reste = cartes.filter((c) => !c.toujoursPremiere);
@@ -1257,8 +1256,7 @@ export class Moteur {
 
   /**
    * Le nom d'une équipe, et son accord : « les Bleus remportent », « le Vert
-   * remporte », « le Cochon rouge remporte ». Le journal et les annonces en ont
-   * besoin à chaque phrase.
+   * remporte ». Le journal et les annonces en ont besoin à chaque phrase.
    */
   _eq(id) { return nomDansPhrase(id, this.cfg); }
 

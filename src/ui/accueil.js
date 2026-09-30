@@ -1,22 +1,22 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=1.86';
-import { store } from './store.js?v=1.86';
-import { aller } from './app.js?v=1.86';
-import { eveillerSons } from './sons.js?v=1.86';
-import { lancerPartie, partieEnCours } from './table.js?v=1.86';
+import { h, remplacer } from './dom.js?v=1.87';
+import { store } from './store.js?v=1.87';
+import { aller } from './app.js?v=1.87';
+import { eveillerSons } from './sons.js?v=1.87';
+import { lancerPartie, partieEnCours } from './table.js?v=1.87';
 import {
   construireConfig, variables, nombresJoueursPermis, joueursDansBornes,
   ecartsAuxOfficielles, nomParDefaut, NOMS_ORIGINE,
-} from './variables.js?v=1.86';
+} from './variables.js?v=1.87';
 import {
-  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE, equipeVue, auxCochons,
+  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   bornerJoueurs,
-} from '../core/config.js?v=1.86';
-import { emblemeEquipe } from './icons.js?v=1.86';
-import { randomSeed } from '../core/rng.js?v=1.86';
-import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.86';
+} from '../core/config.js?v=1.87';
+import { emblemeEquipe } from './icons.js?v=1.87';
+import { randomSeed } from '../core/rng.js?v=1.87';
+import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.87';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
@@ -160,10 +160,7 @@ export function vueAccueil() {
   }
 
   function ligneJoueur(j) {
-    // À trois joueurs, chacun joue un Cochon : la couleur dit qui est qui,
-    // l'animal est le même pour les trois.
-    const eq = equipeVue(j.equipe, { nbJoueurs: nb, cochons: variables().cochons })
-      || COULEURS_EQUIPE[j.equipe];
+    const eq = COULEURS_EQUIPE[j.equipe];
     return h('div.rangee.rangee--serree.ligne-joueur',
       h('span', {
         title: eq.nom,
@@ -195,12 +192,9 @@ export function vueAccueil() {
           value: p.id, selected: j.type === 'ia' && j.profil === p.id,
         }, `IA ${p.nom}`)),
       ),
-      // L'emblème de l'équipe : les vaches, les poules, le cowboy — ou, à trois, le cochon.
-      auxCochons({ nbJoueurs: nb, cochons: variables().cochons })
-        ? h('span.badge.badge--joueur.badge--cochon', { style: { '--couleur-eq': eq.hex } },
-          emblemeEquipe(eq.embleme, 14), eq.emblemeNom)
-        : h('span.badge.badge--joueur', { class: `badge--${j.equipe}` },
-          emblemeEquipe(eq.embleme, 14), eq.emblemeNom),
+      // L'emblème de l'équipe : les vaches, les poules, le cowboy.
+      h('span.badge.badge--joueur', { class: `badge--${j.equipe}` },
+        emblemeEquipe(eq.embleme, 14), eq.emblemeNom),
     );
   }
 

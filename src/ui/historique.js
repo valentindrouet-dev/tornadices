@@ -1,22 +1,15 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.86';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.86';
-import { COULEURS_EQUIPE, equipeVue, auxCochons } from '../core/config.js?v=1.86';
-import { aller } from './app.js?v=1.86';
-import { dernierePartie } from './resultats.js?v=1.86';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.87';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.87';
+import { COULEURS_EQUIPE } from '../core/config.js?v=1.87';
+import { aller } from './app.js?v=1.87';
+import { dernierePartie } from './resultats.js?v=1.87';
 
-/**
- * Le vainqueur d'une partie de l'historique. À trois joueurs il s'agit d'un
- * Cochon — rouge, orange ou rose — et non des Bleus ou des Jaunes ; une partie
- * enregistrée avant la v1.70 ne dit pas si la carte était en jeu, on la croit.
- */
+/** Le vainqueur d'une partie de l'historique. */
 function badgeVainqueur(p) {
-  const table = { nbJoueurs: p.joueurs, cochons: p.cochons !== false };
-  const eq = equipeVue(p.vainqueur, table) || COULEURS_EQUIPE[p.vainqueur] || {};
-  return auxCochons(table)
-    ? h('span.badge.badge--cochon', { style: { '--couleur-eq': eq.hex } }, eq.nom || p.vainqueur)
-    : h('span.badge', { class: `badge--${p.vainqueur}` }, eq.nom || p.vainqueur);
+  const eq = COULEURS_EQUIPE[p.vainqueur] || {};
+  return h('span.badge', { class: `badge--${p.vainqueur}` }, eq.nom || p.vainqueur);
 }
 
 export function vueHistorique() {

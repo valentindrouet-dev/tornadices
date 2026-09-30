@@ -15,7 +15,7 @@ import {
   OPTIONS_SENS, sensRotation,
   comboAutomatique, comboIneluctable, comboRefusable, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, jetonsSurTornade,
-  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons, equipeVue, COCHONS, nomDansPhrase,
+  equipeVue, nomDansPhrase,
 } from '../src/core/config.js';
 import { lancerCampagne, SCHEMA_RESULTAT } from '../src/core/sim.js';
 // Les réglages livrés avec le jeu vivent dans l'interface, mais ce qu'ils
@@ -1040,7 +1040,7 @@ console.log('\nCartes Tornade — un seul paquet');
       nbJoueurs: 6, modeManche: 'jeton',
       cartes: ['fatigue'],
       cartesSansPoints: ['spMega', 'spSommeil'],
-      cartesSansPointsVues: CARTES_TORNADE.filter((c) => c.id !== 'spCochons').map((c) => c.id),
+      cartesSansPointsVues: CARTES_TORNADE.filter((c) => c.id !== 'spPoules').map((c) => c.id),
       combosCartesSansPoints: { spMega: { vache: 4 } },
     };
     const repris = assainirConfig(ancien);
@@ -1079,30 +1079,23 @@ console.log('\nCartes Tornade — un seul paquet');
     const c3 = configParDefaut(3);
     const c5 = configParDefaut(5);
     const c6 = configParDefaut(6);
-    verifier('Vaches et Poules à quatre, cinq, six joueurs — pas à la table des Cochons',
-      a('spVaches', c6) && a('spPoules', c5) && !a('spVaches', c3) && !a('spPoules', c3));
-    verifier('le Cow-Boy avec le joueur Vert seulement',
-      a('spCowboy', c5) && !a('spCowboy', c6) && !a('spCowboy', c3));
-    verifier('les Cochons à la table à trois, et nulle part ailleurs',
-      a('spCochons', c3) && !a('spCochons', c5) && !a('spCochons', c6));
-    verifier('à trois sans la carte Cochon, les équipes reprennent leurs cartes',
-      a('spVaches', { ...c3, cochons: false }) && a('spCowboy', { ...c3, cochons: false })
-      && !a('spCochons', { ...c3, cochons: false }));
-    verifier('à trois, la note du Cow-Boy parle des Cochons, pas du joueur Vert',
-      /Cochon/.test(noteCarte(CARTES_PAR_ID.spCowboy, c3))
-      && /joueur Vert/.test(noteCarte(CARTES_PAR_ID.spCowboy, c6)));
-    verifier('la Tornade de Cochons vaut double pour qui prend la manche',
-      CARTES_PAR_ID.spCochons.effetPassif.doubleTous === true
-      && CARTES_PAR_ID.spCochons.texte === 'Les Cochons gagnent 2 Cartes Tornade à cette manche');
+    verifier('Vaches et Poules à toutes les tables, trois joueurs compris',
+      a('spVaches', c6) && a('spPoules', c5) && a('spVaches', c3) && a('spPoules', c3));
+    verifier('le Cow-Boy avec le joueur Vert — à trois, cinq et sept',
+      a('spCowboy', c5) && a('spCowboy', c3) && !a('spCowboy', c6));
+    verifier('la Tornade de Cochons a quitté le paquet', !CARTES_PAR_ID.spCochons);
+    verifier('la note du Cow-Boy parle du joueur Vert',
+      /joueur Vert/.test(noteCarte(CARTES_PAR_ID.spCowboy, c6))
+      && noteCarte(CARTES_PAR_ID.spCowboy, c3) === '');
     // Et la pioche du moteur les trie bien.
     const pioche = (cfg, graine) => new Set(new Moteur({ ...cfg, melangerCartes: false }, spec(cfg.nbJoueurs), graine)
       .pioche.map((c) => c.id));
     const p3 = pioche(c3, 'pioche-3');
     const p6 = pioche(c6, 'pioche-6');
-    verifier('la pioche à trois : les Cochons, sans Vaches, Poules ni Cow-Boy',
-      p3.has('spCochons') && !p3.has('spVaches') && !p3.has('spPoules') && !p3.has('spCowboy'));
-    verifier('la pioche à six : Vaches et Poules, sans Cochons ni Cow-Boy',
-      p6.has('spVaches') && p6.has('spPoules') && !p6.has('spCochons') && !p6.has('spCowboy'));
+    verifier('la pioche à trois : Vaches, Poules et Cow-Boy',
+      p3.has('spVaches') && p3.has('spPoules') && p3.has('spCowboy'));
+    verifier('la pioche à six : Vaches et Poules, sans Cow-Boy',
+      p6.has('spVaches') && p6.has('spPoules') && !p6.has('spCowboy'));
   }
 
   // Avec les jetons, la manche prise au dernier jeton d'une attrape est une
@@ -1587,7 +1580,7 @@ console.log('\nRéglage livré « Vichy »');
   verifier('le réglage est écrit dans le code, pas dans le navigateur', !!vichy && vichy.integre);
 
   const paquet = vichy.variables.cartesTornade;
-  verifier(`son paquet compte les 15 Tornades (${paquet.length})`, paquet.length === 15);
+  verifier(`son paquet compte les 14 Tornades (${paquet.length})`, paquet.length === 14);
 
   // Les cartes à réunir, effectif par effectif : l'objectif monte avec la table,
   // et le Vert — seul contre deux équipes — en a bien moins à réunir.
@@ -1673,7 +1666,7 @@ console.log('\nRéglage livré « Vichy »');
 
   const enJeu = cartesEnJeu(cfg);
   verifier(`le paquet en jeu est bien celui de Vichy (${enJeu.length} cartes)`,
-    enJeu.length === 15 && paquet.every((id) => enJeu.includes(id)));
+    enJeu.length === 14 && paquet.every((id) => enJeu.includes(id)));
 
   // La Tornade chargée doit vraiment poser un lot de plus, la chauffe ne rien
   // rapporter, et une campagne entière aller au bout.
@@ -2243,130 +2236,28 @@ console.log('\nLes jetons sur la carte Tornade');
   }
 }
 
-// ── 3 septies septies. La table à trois : les Cochons ───────────────────────
-// À trois joueurs, personne n'a d'équipier : chacun joue un Cochon, et les trois
-// cartes demandent trois dés rouges à l'Échec au lieu de deux. C'est ce qui
-// retarde l'attrape sur une ronde où chacun est le voisin de tout le monde.
-console.log('\nLa table à trois — les Cochons');
+// ── 3 septies septies. La table à trois : une Vache, une Poule, le Cow-Boy ──
+// La variante des Cochons a quitté le jeu en v1.87 : à trois, chacun garde son
+// équipe et ses combinaisons.
+console.log('\nLa table à trois');
 {
   const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
   const c3 = configParDefaut(3);
-  const c4 = configParDefaut(4);
-
-  verifier('à trois joueurs, la table se joue aux Cochons',
-    auxCochons(c3) && c3.cochons === true);
-  verifier('ailleurs, la carte Cochon n’existe pas', !auxCochons(c4) && !auxCochons(configParDefaut(6)));
-  verifier('et elle se décoche', !auxCochons({ ...c3, cochons: false }));
-  verifier(`la carte demande ${ECHEC_COCHON} dés rouges à l’Échec`,
-    JSON.stringify(c3.combosCochon.blocage) === JSON.stringify({ x: ECHEC_COCHON })
-    && JSON.stringify(CARTE_COCHON.blocage) === JSON.stringify({ x: ECHEC_COCHON }));
-
-  // Elle vaut pour les trois joueurs : ce n'est pas une asymétrie.
-  const echecDe = (cfg, equipe) => JSON.stringify(requisPourEquipe(cfg, 'blocage', { x: 2 }, equipe));
-  verifier('les trois joueurs jouent le même Échec',
-    ['bleu', 'jaune', 'vert'].every((e) => echecDe(c3, e) === JSON.stringify({ x: ECHEC_COCHON })));
-  verifier('à quatre joueurs, l’Échec reste à deux dés rouges',
-    echecDe(c4, 'bleu') === JSON.stringify({ x: 2 }));
-  verifier('décochée, la table à trois reprend l’Échec de tout le monde',
-    echecDe({ ...c3, cochons: false }, 'bleu') === JSON.stringify({ x: 2 }));
-  verifier('la carte Cochon l’emporte sur l’asymétrie du Vert',
-    echecDe({ ...c3, combosAsymetriques: true, combosVert: { blocage: { x: 4 } } }, 'vert')
-    === JSON.stringify({ x: ECHEC_COCHON }));
-  verifier('mais ne touche pas les lignes qu’elle ne porte pas',
-    echecDe(c3, 'bleu') !== JSON.stringify(requisPourEquipe(c3, 'reveil', { tornade: 3 }, 'bleu')));
-  verifier('un réglage enregistré garde sa propre ligne de Cochon',
-    JSON.stringify(assainirConfig({ nbJoueurs: 3, combosCochon: { blocage: { x: 4 } } })
-      .combosCochon.blocage) === JSON.stringify({ x: 4 }));
-
-  // L'animal : trois Cochons à trois joueurs, les équipes partout ailleurs.
-  verifier('à trois joueurs, les trois jouent un Cochon',
-    ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).embleme === 'cochon'));
-  verifier('un Cochon rouge, un orange, un rose — les couleurs d’équipe s’en vont',
-    ['bleu', 'jaune', 'vert'].map((e) => equipeVue(e, c3).nom).join(',')
-      === 'Cochon rouge,Cochon orange,Cochon rose'
-    && ['bleu', 'jaune', 'vert'].every((e) => equipeVue(e, c3).hex === COCHONS[e].hex
-      && equipeVue(e, c3).hex !== COULEURS_EQUIPE[e].hex)
-    && new Set(Object.values(COCHONS).map((c) => c.hex)).size === 3);
-  verifier('carte décochée, les trois joueurs retrouvent leurs équipes',
-    equipeVue('bleu', { ...c3, cochons: false }).hex === COULEURS_EQUIPE.bleu.hex);
-
-  // Le journal accorde le verbe : un Cochon joue seul, le Vert aussi.
-  verifier('« le Cochon rouge remporte », « les Bleus remportent », « le Vert remporte »',
-    `${nomDansPhrase('bleu', c3).Le} ${nomDansPhrase('bleu', c3).v('remporte', 'remportent')}`
-      === 'Le Cochon rouge remporte'
-    && `${nomDansPhrase('bleu', c4).Le} ${nomDansPhrase('bleu', c4).v('remporte', 'remportent')}`
-      === 'Les Bleus remportent'
-    && `${nomDansPhrase('vert', configParDefaut(5)).le} ${nomDansPhrase('vert', configParDefaut(5)).v('remporte', 'remportent')}`
-      === 'le Vert remporte');
-  {
-    const m = new Moteur(c3, spec(3), 'cochon-journal');
-    m.jouerJusquAuBout();
-    const lignes = m.journal.map((e) => e.texte || '');
-    verifier('à trois, le journal parle des Cochons, jamais des Bleus ni des Jaunes',
-      lignes.some((t) => /Cochon (rouge|orange|rose)/.test(t))
-      && !lignes.some((t) => /\b(Bleus|Jaunes)\b/.test(t)));
-    verifier('et ne met jamais un Cochon au pluriel',
-      !lignes.some((t) => /Cochon (rouge|orange|rose) (remportent|gagnent|prennent|volent)/.test(t)));
-  }
-  verifier('à six joueurs, chacun garde le sien',
-    equipeVue('bleu', configParDefaut(6)).embleme === 'vache'
-    && equipeVue('vert', configParDefaut(6)).embleme === 'cowboy');
-
-  // Ce que la carte fait vraiment, au moteur : l'attrape retardée.
-  const campagne = (cfg, n, graine, parties = 200) => {
-    let tentees = 0, reussies = 0, manches = 0, finies = 0;
-    for (let g = 0; g < parties; g++) {
-      const r = new Moteur(cfg, spec(n), `${graine}-${g}`).jouerJusquAuBout();
-      for (const j of r.joueurs) {
-        tentees += j.stats.collisionsTentees;
-        reussies += j.stats.collisionsReussies;
-      }
-      manches += r.manches;
-      if (r.vainqueur) finies++;
-    }
-    return { tentees: tentees / manches, reussies: reussies / manches, manches, finies, parties };
-  };
-  const cochons = campagne(c3, 3, 'cochon-oui');
-  const sans = campagne({ ...c3, cochons: false }, 3, 'cochon-non');
-  const quatre = campagne(c4, 4, 'cochon-quatre');
-  verifier(`3 joueurs aux Cochons : ${cochons.tentees.toFixed(2)} attrape tentée par manche, `
-    + `contre ${sans.tentees.toFixed(2)} sans la carte`,
-    cochons.tentees < sans.tentees * 0.6);
-  verifier(`et ${cochons.reussies.toFixed(2)} réussie par manche, contre `
-    + `${quatre.reussies.toFixed(2)} à quatre joueurs sans carte`,
-    cochons.reussies < quatre.reussies);
-  verifier(`${cochons.parties} parties menées à terme aux Cochons`,
-    cochons.finies === cochons.parties);
-
-  // Et l'Échec ne se voit servir qu'à trois dés rouges, jamais à deux. On le
-  // lit au moment où le moteur repère la combinaison : une fois jouée, le lot a
-  // déjà quitté la main du joueur.
-  {
-    let fautes = 0, echecs = 0, aDeuxRouges = 0;
-    for (const [nom, cfg] of [['aux Cochons', c3], ['sans la carte', { ...c3, cochons: false }]]) {
-      fautes = 0; echecs = 0; aDeuxRouges = 0;
-      for (let g = 0; g < 40; g++) {
-        const m = new Moteur(cfg, spec(3), `cochon-des-${g}`);
-        const original = m.combosDisponibles.bind(m);
-        m.combosDisponibles = (j) => {
-          const out = original(j);
-          const lot = j.lots[0];
-          const rouges = lot ? lot.des.filter((d) => d.sym === 'x').length : 0;
-          if (out.some((d) => d.id === 'blocage')) {
-            echecs++;
-            if (rouges < (auxCochons(cfg) ? ECHEC_COCHON : 2)) fautes++;
-          } else if (rouges === 2) aDeuxRouges++;
-          return out;
-        };
-        m.jouerJusquAuBout();
-      }
-      verifier(`${nom} : ${echecs} Échecs servis, tous au bon nombre de dés rouges`,
-        echecs > 0 && fautes === 0);
-      if (auxCochons(cfg)) {
-        verifier(`et ${aDeuxRouges} lots à deux dés rouges laissés en main`, aDeuxRouges > 0);
-      }
-    }
-  }
+  verifier('à trois joueurs : une Vache, une Poule et le Cow-Boy',
+    placement(3).slice().sort().join(',') === 'bleu,jaune,vert'
+    && ['bleu', 'jaune', 'vert'].map((e) => equipeVue(e).embleme).join(',') === 'vache,poule,cowboy');
+  verifier('l’Échec demande ses deux dés rouges, comme ailleurs',
+    ['bleu', 'jaune', 'vert'].every((e) => JSON.stringify(requisPourEquipe(c3,
+      'blocage', c3.combos.find((c) => c.id === 'blocage').requis, e)) === JSON.stringify({ x: 2 })));
+  verifier('un ancien réglage perd la carte Cochon',
+    !('cochons' in assainirConfig({ nbJoueurs: 3, cochons: true, combosCochon: { blocage: { x: 3 } } }))
+    && !('combosCochon' in assainirConfig({ nbJoueurs: 3, combosCochon: { blocage: { x: 3 } } })));
+  verifier('« les Bleus remportent », « le Vert remporte »',
+    `${nomDansPhrase('bleu').Le} ${nomDansPhrase('bleu').v('remporte', 'remportent')}` === 'Les Bleus remportent'
+    && `${nomDansPhrase('vert').Le} ${nomDansPhrase('vert').v('remporte', 'remportent')}` === 'Le Vert remporte');
+  const r = lancerCampagne(c3, spec(3), 'table-trois', 40);
+  verifier(`40 parties à trois menées à terme (${JSON.stringify(r.raisons)})`,
+    r.raisons.manchesMax === undefined && !r.raisons.limite);
 }
 
 // ── 3 septies octies. Les cartes imprimées ──────────────────────────────────
@@ -2406,8 +2297,15 @@ console.log('\nLes cartes imprimées');
   verifier('si l’Échec demande d’autres dés, la carte ne dit plus vrai',
     !illustrationEquipe(echec3, 'jaune', 'endormie', endormie(echec3)));
   const c3 = configParDefaut(3);
-  verifier('à trois joueurs, personne n’est une Poule',
-    !illustrationEquipe(c3, 'jaune', 'endormie', endormie(c3)));
+  verifier('à trois joueurs aussi, la Poule a sa carte',
+    !!illustrationEquipe(c3, 'jaune', 'endormie', endormie(c3)));
+  // Et sa face éveillée : l'Échec, l'Abri et l'Endormi.
+  const eveillee = (cfg) => cfg.combos.filter((c) => (c.face === 'toutes' || c.face === 'active')
+    && comboPossible(cfg.faces, c.requis));
+  verifier('les Poules éveillées ont leur carte',
+    !!illustrationEquipe(c6, 'jaune', 'active', eveillee(c6)));
+  verifier('les Vaches éveillées pas encore',
+    !illustrationEquipe(c6, 'bleu', 'active', eveillee(c6)));
   const abriEndormi = configParDefaut(6);
   abriEndormi.combos = abriEndormi.combos.map((c) => (c.id === 'vache' ? { ...c, face: 'toutes' } : c));
   verifier('un Abri jouable en dormant n’est pas sur la carte : on revient à la liste',

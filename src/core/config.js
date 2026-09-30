@@ -275,71 +275,24 @@ export function attrapeEmporteManche(cfg) {
   return cfg.attrapeGagneManche === 'touche';
 }
 
-// ── La table à trois : les Cochons ───────────────────────────────────────────
-//
-// À trois joueurs, personne n'a d'équipier : chacun joue pour soi. Chacun reçoit
-// donc une carte Cochon, et les trois portent la même règle — l'Échec y demande
-// trois dés rouges au lieu de deux.
-//
-// C'est la ronde qui l'exige. À trois, chacun est le voisin de tout le monde :
-// à deux rouges le lot change de main sans arrêt, et l'attrape tombe bien trop
-// souvent. Mesuré sur 300 parties d'IA équilibrées, la manche passe de 1,86 à
-// 0,71 attrape tentée, et de 0,79 à 0,28 réussie — moins qu'à quatre joueurs à
-// deux rouges, qui en réussit 0,70.
-export const TABLE_COCHONS = 3;
-
-/** Les dés rouges que la carte Cochon demande à l'Échec. */
-export const ECHEC_COCHON = 3;
-
-/** Ce que la carte Cochon change aux combinaisons — une ligne, pour l'instant. */
-export const CARTE_COCHON = { blocage: { [SYMBOLE_BLOQUANT]: ECHEC_COCHON } };
-
-export const EMBLEME_COCHON = { embleme: 'cochon', emblemeNom: 'Cochons', emblemeUn: 'Cochon' };
-
-// Chaque Cochon a sa couleur : un rouge, un orange, un rose. Ils prennent les
-// trois sièges du jeu dans leur ordre — ceux des Bleus, des Jaunes et du Vert —
-// mais ne gardent rien de ces équipes : ni couleur, ni nom, ni animal. Les
-// règles propres au Vert, elles, restent attachées à son siège.
-export const COCHONS = {
-  bleu: { nom: 'Cochon rouge', hex: '#dc3a37', clair: '#fce4e3' },
-  jaune: { nom: 'Cochon orange', hex: '#f08519', clair: '#fdeedd' },
-  vert: { nom: 'Cochon rose', hex: '#ec6aa2', clair: '#fde7f1' },
-};
-
-/** Vrai si la table se joue aux Cochons : trois joueurs, et la variante en jeu. */
-export function auxCochons(cfg) {
-  return !!cfg && Number(cfg.nbJoueurs) === TABLE_COCHONS && cfg.cochons !== false;
-}
-
 /**
- * L'équipe telle qu'elle se présente à cette table.
- *
- * Aux Cochons, tout change à l'œil : l'animal, qui est le même pour les trois
- * puisqu'aucun n'a d'équipier, et la couleur — rouge, orange ou rose — qui dit
- * qui est qui. Ailleurs, les Bleus, les Jaunes et le Vert.
+ * L'équipe telle qu'elle se présente à la table : les Bleus et leurs Vaches, les
+ * Jaunes et leurs Poules, le Vert et son Cow-Boy — à trois joueurs comme à huit.
  */
-export function equipeVue(equipeId, cfg) {
-  const base = COULEURS_EQUIPE[equipeId];
-  if (!base) return null;
-  if (!auxCochons(cfg)) return base;
-  const cochon = COCHONS[equipeId] || {};
-  return {
-    ...base, ...EMBLEME_COCHON, ...cochon,
-    emblemeNom: cochon.nom || EMBLEME_COCHON.emblemeNom,
-    emblemeUn: cochon.nom || EMBLEME_COCHON.emblemeUn,
-  };
+export function equipeVue(equipeId) {
+  return COULEURS_EQUIPE[equipeId] || null;
 }
 
 /**
  * Le nom d'une équipe dans une phrase, et l'accord qui va avec.
  *
  * Les Bleus et les Jaunes sont plusieurs : « les Bleus remportent ». Le Vert
- * joue seul, et chaque Cochon aussi : « le Vert remporte », « le Cochon rouge
- * remporte ». `v('remporte', 'remportent')` choisit la bonne forme.
+ * joue seul : « le Vert remporte ». `v('remporte', 'remportent')` choisit la
+ * bonne forme.
  */
-export function nomDansPhrase(equipeId, cfg) {
-  const e = equipeVue(equipeId, cfg) || { nom: String(equipeId) };
-  const seul = equipeId === 'vert' || auxCochons(cfg);
+export function nomDansPhrase(equipeId) {
+  const e = equipeVue(equipeId) || { nom: String(equipeId) };
+  const seul = equipeId === 'vert';
   const nom = e.nom;
   return {
     nom,
@@ -355,18 +308,12 @@ export function nomDansPhrase(equipeId, cfg) {
 /**
  * L'exigence d'une combinaison pour une équipe donnée.
  *
- * Deux choses peuvent l'écarter de la table. La carte Cochon d'abord, à trois
- * joueurs : elle vaut pour les trois, ce n'est pas une asymétrie mais la table
- * elle-même. L'asymétrie du Vert ensuite : il joue seul contre deux équipes, et
- * l'on peut lui demander autre chose — plus, moins, ou d'autres faces — sans
- * toucher aux Bleus ni aux Jaunes. Sans l'une ni l'autre, la table est
- * strictement symétrique, ce qui reste la référence.
+ * Le Vert joue seul contre deux équipes : on peut lui demander autre chose —
+ * plus, moins, ou d'autres faces — sans toucher aux Bleus ni aux Jaunes. Sans
+ * cette asymétrie, la table est strictement symétrique, ce qui reste la
+ * référence.
  */
 export function requisPourEquipe(cfg, comboId, requisBase, equipe) {
-  if (auxCochons(cfg)) {
-    const carte = cfg.combosCochon && cfg.combosCochon[comboId];
-    if (carte && Object.keys(carte).length) return carte;
-  }
   if (equipe !== 'vert' || !cfg.combosAsymetriques) return requisBase;
   const propre = cfg.combosVert && cfg.combosVert[comboId];
   return propre && Object.keys(propre).length ? propre : requisBase;
@@ -519,14 +466,8 @@ export const AIDE_EQUIPE_DEPART = {
  */
 export function noteCarte(carte, cfg) {
   if (!carteALaTable(carte, cfg)) {
-    if (auxCochons(cfg) && carte.animal !== 'cochon') {
-      return 'À trois joueurs, tout le monde est un Cochon : cette carte n’est pas mise dans la pioche.';
-    }
     if (carte.animal === 'cowboy') {
       return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pioche.';
-    }
-    if (carte.animal === 'cochon') {
-      return 'Les Cochons ne jouent qu’à trois : ailleurs, cette carte n’est pas mise dans la pioche.';
     }
     return 'Cette carte n’est pas mise dans la pioche à ce nombre de joueurs.';
   }
@@ -616,8 +557,11 @@ export function assainirConfig(brut) {
   // toucher pour emporter la manche.
   if (cfg.attrapeGagneManche === 'combo') sortie.attrapeGagneManche = 'touche';
   // Le déclencheur de l'attrape n'est plus un réglage depuis la v1.84 : c'est
-  // toujours l'Échec.
+  // toujours l'Échec. Et la variante des Cochons à trois joueurs a quitté le jeu
+  // en v1.87 : à trois, on joue une Vache, une Poule et le Cow-Boy.
   delete sortie.attrapeSur;
+  delete sortie.cochons;
+  delete sortie.combosCochon;
   // Une équipe de départ inconnue — ou aucune, avant la v1.34 — retombe sur la
   // règle du jeu plutôt que de laisser la manche sans porteur.
   if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
@@ -655,9 +599,9 @@ export function assainirConfig(brut) {
       face: garde && garde.face ? garde.face : c.face,
     };
   });
-  // Les tables d'exigences enregistrées — cartes, Vert, Cochon — passent par la
-  // même retraduction que les combinaisons de la Tornade.
-  for (const cle of ['combosCartesTornade', 'combosVert', 'combosCochon']) {
+  // Les tables d'exigences enregistrées — cartes, Vert — passent par la même
+  // retraduction que les combinaisons de la Tornade.
+  for (const cle of ['combosCartesTornade', 'combosVert']) {
     if (cfg[cle] && typeof cfg[cle] === 'object') {
       sortie[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -741,9 +685,8 @@ export function faceSansReveil(comboId) {
 //   · `doubleSi` — l'équipe désignée gagne deux cartes si elle prend la manche ;
 //   · `doubleTous` — la manche vaut deux cartes, pour qui la prend ;
 //   · `volerCarte` — le vainqueur prend une carte à une autre équipe.
-// `animal` : la carte désigne un animal — vaches, poules, cow-boy, cochons — et
-// ne va dans la pioche que s'il est à la table. Les Cochons n'existent qu'à
-// trois joueurs, où ils remplacent tous les autres.
+// `animal` : la carte désigne un animal — vaches, poules, cow-boy — et ne va
+// dans la pioche que s'il est à la table : le Cow-Boy, avec le joueur Vert.
 // `refuge` : en Compromis, combien de jetons de sa couleur la Tornade retient.
 // De un à trois, réglable carte par carte dans les Réglages. Sans effet dans les
 // deux autres modes.
@@ -883,20 +826,7 @@ export const CARTES_TORNADE = [
     effetPassif: { doubleSi: 'jaune' },
     animal: 'poule',
   },
-  {
-    // À trois joueurs, tout le monde est un Cochon : la carte vaut double pour
-    // qui prend la manche, quel qu'il soit. Ailleurs, pas de Cochon à désigner.
-    id: 'spCochons',
-    refuge: 2,
-    court: 'Tornade de Cochons',
-    nom: 'Tornade de Cochons',
-    texte: 'Les Cochons gagnent 2 Cartes Tornade à cette manche',
-    combo: null,
-    effetPassif: { doubleTous: true },
-    animal: 'cochon',
-    // Arrivée en v1.73 : un paquet composé avant la reçoit d'office.
-    depuis: '1.73',
-  },
+
 ];
 
 /**
@@ -921,13 +851,10 @@ export const CARTES_PAR_ID = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id,
 /**
  * La carte va-t-elle dans la pioche, à cette table ? Une carte qui désigne un
  * animal absent ne désignerait personne : la Tornade de Cow-Boy sans joueur
- * Vert, celle des Vaches ou des Poules à la table à trois — où tout le monde est
- * un Cochon — et celle des Cochons partout ailleurs.
+ * Vert. Les Vaches et les Poules sont à toutes les tables.
  */
 export function carteALaTable(carte, cfg) {
   if (!carte || !carte.animal) return true;
-  if (auxCochons(cfg)) return carte.animal === 'cochon';
-  if (carte.animal === 'cochon') return false;
   if (carte.animal === 'cowboy') return Number(cfg && cfg.nbJoueurs) % 2 === 1;
   return true;
 }
@@ -1173,13 +1100,6 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     // Décochée, la table est strictement symétrique — c'est la référence.
     combosAsymetriques: false,
     combosVert: {},
-    // À trois joueurs, chacun joue un Cochon : la carte demande un dé rouge de
-    // plus à l'Échec, ce qui retarde d'autant la première attrape. Ailleurs,
-    // elle n'existe pas — et elle se décoche.
-    cochons: opts.cochons !== false,
-    combosCochon: Object.fromEntries(
-      Object.entries(CARTE_COCHON).map(([id, requis]) => [id, { ...requis }]),
-    ),
     lots: mep.lots,
     jetons: mep.jetons,
     jetonsVert: mep.jetonsVert,

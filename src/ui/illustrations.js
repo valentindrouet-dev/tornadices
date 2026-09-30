@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.86';
-import { requisCarte, requisPourEquipe, auxCochons } from '../core/config.js?v=1.86';
+import { VERSION } from '../version.js?v=1.87';
+import { requisCarte, requisPourEquipe } from '../core/config.js?v=1.87';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle
@@ -32,9 +32,15 @@ export const ILLUSTRATIONS_EQUIPES = {
   jaune: {
     endormie: {
       src: 'assets/equipes/poules-endormie.webp',
-      taille: [1434, 1948],
+      taille: [1270, 1814],
       nom: 'Poules — Tornade endormie',
       combos: { reveil: { tornade: 3 }, blocage: { x: 2 } },
+    },
+    active: {
+      src: 'assets/equipes/poules-eveillee.webp',
+      taille: [1320, 1834],
+      nom: 'Poules — Tornade éveillée',
+      combos: { blocage: { x: 2 }, vache: { vache: 3 }, endormir: { zzz: 3 } },
     },
   },
 };
@@ -68,9 +74,6 @@ export function illustrationCarte(cfg, carte) {
  * table affiche pour cet état.
  */
 export function illustrationEquipe(cfg, equipe, etat, jouables) {
-  // À trois joueurs, personne n'est plus une Poule ni une Vache : chacun est un
-  // Cochon, et sa carte n'est pas celle de l'équipe.
-  if (auxCochons(cfg)) return null;
   const illu = ILLUSTRATIONS_EQUIPES[equipe] && ILLUSTRATIONS_EQUIPES[equipe][etat];
   if (!illu) return null;
   const enJeu = jouables;
@@ -85,17 +88,15 @@ export function illustrationEquipe(cfg, equipe, etat, jouables) {
 
 // ── Les jetons imprimés ──────────────────────────────────────────────────────
 // Un jeton par animal : la vache des Bleus, la poule des Jaunes, le cow-boy du
-// Vert. À la table à trois, chacun joue un Cochon : ces jetons-là n'y sont pas,
-// et l'on garde le jeton dessiné, aux couleurs des Cochons.
+// Vert.
 export const JETONS_IMPRIMES = {
   bleu: 'assets/jetons/vache.png',
   jaune: 'assets/jetons/poule.png',
   vert: 'assets/jetons/cowboy.png',
 };
 
-/** L'image du jeton d'une équipe, ou null quand il n'y en a pas à cette table. */
+/** L'image du jeton d'une équipe, ou null quand elle n'en a pas. */
 export function jetonImprime(cfg, equipe) {
-  if (auxCochons(cfg)) return null;
   return JETONS_IMPRIMES[equipe] || null;
 }
 

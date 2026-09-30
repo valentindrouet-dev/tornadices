@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.86';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.86';
-import { store } from './store.js?v=1.86';
-import { aller } from './app.js?v=1.86';
-import { lancerPartie } from './table.js?v=1.86';
+import { h, remplacer, telecharger } from './dom.js?v=1.87';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.87';
+import { store } from './store.js?v=1.87';
+import { aller } from './app.js?v=1.87';
+import { lancerPartie } from './table.js?v=1.87';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE,
@@ -22,23 +22,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-  TABLE_COCHONS, ECHEC_COCHON, CARTE_COCHON, auxCochons,
-} from '../core/config.js?v=1.86';
-import { tableauCombos, editeurCases } from './combos.js?v=1.86';
-import { illustrationCarte } from './illustrations.js?v=1.86';
+} from '../core/config.js?v=1.87';
+import { tableauCombos, editeurCases } from './combos.js?v=1.87';
+import { illustrationCarte } from './illustrations.js?v=1.87';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.86';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.86';
-import { randomSeed } from '../core/rng.js?v=1.86';
-import { reglagesJoueurs } from './accueil.js?v=1.86';
+} from './apparence.js?v=1.87';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.87';
+import { randomSeed } from '../core/rng.js?v=1.87';
+import { reglagesJoueurs } from './accueil.js?v=1.87';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.86';
+} from './profils.js?v=1.87';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -313,7 +312,7 @@ export function construireConfig(nbJoueurs, reglages = variables()) {
     }));
   }
   // Les trois tables d'exigences enregistrées passent par la même retraduction.
-  for (const cle of ['combosCartesTornade', 'combosVert', 'combosCochon']) {
+  for (const cle of ['combosCartesTornade', 'combosVert']) {
     if (cfg[cle]) {
       cfg[cle] = Object.fromEntries(Object.entries(cfg[cle])
         .map(([id, requis]) => [id, assainirRequis(requis)]));
@@ -351,14 +350,12 @@ const REGLES_DU_JEU = [
   ['comboServie', 'Quand une combinaison sort'],
   ['sensRotation', 'Sens de rotation'],
   ['equipeDepart', 'Qui commence'],
-  ['cochons', 'Carte Cochon à trois joueurs', (c) => (c.nbJoueurs === 3 ? c.cochons : null)],
   ['combosAsymetriques', 'Combinaisons du Vert à part', (c) => (c.nbJoueurs % 2 ? c.combosAsymetriques : null)],
   ['melangerCartes', 'Pile de Tornades mélangée'],
   ['cartes', 'Cartes Tornade en jeu', (c) => `${cartesEnJeu(c).length} cartes`, (c) => cartesEnJeu(c).join(',')],
   ['combosCartesTornade', 'Combinaisons des cartes Tornade', (c) => c.combosCartesTornade],
   ['refugeCartes', 'Jetons à l’Abri par carte', (c) => (estCompromis(c) ? c.refugeCartes : null)],
   ['combosVert', 'Combinaisons du Vert', (c) => (c.nbJoueurs % 2 && c.combosAsymetriques ? c.combosVert : null)],
-  ['combosCochon', 'Combinaisons du Cochon', (c) => (auxCochons(c) ? c.combosCochon : null)],
 ];
 
 // Une valeur écrite toujours de la même façon, clés triées : deux réglages
@@ -1020,7 +1017,6 @@ export function vueVariables() {
         tableauCombos(cfg, {
           ecrireCombo: (id, requis) => ecrire('combos', { ...(v.combos || {}), [id]: requis }),
           ecrireVert: (id, requis) => ecrire('combosVert', { ...(v.combosVert || {}), [id]: requis }),
-          ecrireCochon: (id, requis) => ecrire('combosCochon', { ...(v.combosCochon || {}), [id]: requis }),
           ecrireFace: (id, face) => ecrire('combosFaces', { ...(v.combosFaces || {}), [id]: face }),
           rafraichir: dessiner,
         }),
@@ -1169,11 +1165,6 @@ export function vueVariables() {
         titreAide('Mise en place', [
           `Tableau officiel à ${nb} joueurs : ${mep.lots} lots · ${mep.jetons} jetons par équipe`
           + `${nb % 2 ? ` · ${mep.jetonsVert} pour le Vert` : ''} · ${mep.cartes} cartes pour gagner.`,
-          nb === TABLE_COCHONS
-            ? 'À trois joueurs, personne n’a d’équipier : chacun joue pour soi, et chacun reçoit '
-              + 'une carte Cochon — un rouge, un orange, un rose. Les Bleus, les Jaunes et le '
-              + 'Vert disparaissent de la table, couleurs comprises.'
-            : '',
           estImmediat(cfg)
             ? 'Immédiat : les jetons ne servent plus, leurs champs restent grisés. Une manche '
               + 'vaut une carte, et l’on joue en quatre par défaut.'
@@ -1269,46 +1260,6 @@ export function vueVariables() {
           ),
         ),
 
-        // À trois, la table est une ronde si serrée que chacun est le voisin de
-        // tout le monde : la carte Cochon retarde l'attrape en demandant un dé
-        // rouge de plus à l'Échec. Le réglage n'apparaît qu'à cet effectif —
-        // ailleurs, la carte n'existe pas.
-        nb === TABLE_COCHONS
-          ? [
-            titreAide('La table à trois — les Cochons', [
-              'À trois joueurs, personne n’a d’équipier. Chacun reçoit une carte Cochon, et les '
-              + `trois portent la même règle : l’Échec y demande ${ECHEC_COCHON} dés rouges au `
-              + 'lieu de 2, ce qui retarde d’autant la première attrape.',
-              'À trois, chacun est le voisin de tout le monde : à deux dés rouges, le lot change '
-              + 'de main sans arrêt et l’attrape tombe trop souvent. Sur 300 parties d’IA '
-              + 'équilibrées, la manche passe de 1,86 à 0,71 attrape tentée et de 0,79 à 0,28 '
-              + 'réussie — moins qu’à quatre joueurs à deux rouges, qui en réussit 0,70.',
-              auxCochons(cfg)
-                ? 'La ligne du Cochon se règle dans le tableau des combinaisons, plus haut : elle '
-                  + 'y remplace celle des équipes, puisqu’elle vaut pour les trois joueurs.'
-                : 'Décoché, les trois joueurs reprennent leurs équipes habituelles — les Bleus, '
-                  + 'les Jaunes et le Vert — et l’Échec ses deux dés rouges.',
-            ],
-              h('button', {
-                class: `chip${auxCochons(cfg) ? ' on' : ''}`,
-                title: 'À trois joueurs, chacun joue un Cochon',
-                onclick: () => { ecrire('cochons', cfg.cochons === false); dessiner(); },
-              }, h('span.case', '✓'), 'Chacun joue un Cochon'),
-            ),
-            h('div.rangee.rangee--serree',
-              ...Object.keys(CARTE_COCHON).map((id) => {
-                const combo = cfg.combos.find((c) => c.id === id);
-                if (!combo) return null;
-                const requis = (cfg.combosCochon && cfg.combosCochon[id]) || CARTE_COCHON[id];
-                return h('span.badge', { class: auxCochons(cfg) ? '' : 'badge--eteint' },
-                  `${combo.nom} — `,
-                  h('span.rangee.rangee--serree', { style: { display: 'inline-flex' } },
-                    suiteSymboles(requis, 18)));
-              }),
-            ),
-          ]
-          : null,
-
         // Les cartes pour gagner ne sont pas un nombre : elles dépendent du
         // nombre de joueurs, et le Vert — seul contre deux équipes — a le sien.
         tableauCartes(nb, modeManche(cfg), dessiner),
@@ -1360,8 +1311,7 @@ export function vueVariables() {
           'Un seul paquet pour les trois façons de jouer une manche : une carte a le même titre, '
           + 'le même texte et le même pouvoir avec les jetons, en Immédiat ou en Compromis.',
           'Les cartes d’animal ne sortent que si l’animal est à la table : pas de Cow-Boy sans '
-          + 'joueur Vert, pas de Vaches ni de Poules à la table à trois — où chacun est un '
-          + 'Cochon —, pas de Cochons ailleurs.',
+          + 'joueur Vert.',
           'La pile démarre par la Tornade de Chauffe si elle est cochée ; le reste suit, '
           + 'mélangé ou non.',
           'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '

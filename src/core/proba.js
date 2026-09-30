@@ -6,7 +6,7 @@
 //     deux X — qui se figent et ne se relancent jamais — font l'Échec. Chaîne de
 //     Markov absorbante sur le nombre de X déjà figés.
 
-import { comboServie } from './config.js?v=1.86';
+import { comboServie } from './config.js?v=1.87';
 
 const facto = [1];
 function fact(n) {

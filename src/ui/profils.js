@@ -12,9 +12,9 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.86';
-import { store } from './store.js?v=1.86';
-import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.86';
+import { h } from './dom.js?v=1.87';
+import { store } from './store.js?v=1.87';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.87';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -39,17 +39,16 @@ export const PROFILS_INTEGRES = [
     integre: true,
     variables: {
       modeManche: 'immediat',
-      // Le paquet imprimé au complet — les quinze, Tornade de Cochons comprise :
-      // elle ne sort qu'à la table à trois, les autres cartes d'animal ailleurs.
+      // Le paquet imprimé au complet : les quatorze Tornades.
       cartesTornade: [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
-        'spElectrique', 'spVaches', 'spPoules', 'spCochons',
+        'spElectrique', 'spVaches', 'spPoules',
       ],
       cartesTornadeVues: [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
-        'spElectrique', 'spVaches', 'spPoules', 'spCochons',
+        'spElectrique', 'spVaches', 'spPoules',
       ],
       // Les cartes à réunir pour gagner, effectif par effectif. Plus il y a de
       // monde, plus les manches sont disputées : l'objectif monte avec la table.
