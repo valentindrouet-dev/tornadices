@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.89';
+export const VERSION = '1.90';
 export const BUILD_DATE = '2026-09-30';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.90',
+    date: '30/09/2026',
+    notes: [
+      'Laboratoire : chaque campagne tire une nouvelle graine, pour que relancer donne d’autres parties. La case « Nouvelle graine à chaque campagne », sous les paramètres de la campagne, se décoche pour garder la graine et rejouer exactement la même campagne — ce qu’il faut pour comparer deux réglages. Taper une graine à la main la garde, elle aussi.',
+    ],
+  },
   {
     version: '1.89',
     date: '30/09/2026',

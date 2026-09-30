@@ -1,22 +1,22 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=1.89';
-import { store } from './store.js?v=1.89';
-import { aller } from './app.js?v=1.89';
-import { eveillerSons } from './sons.js?v=1.89';
-import { lancerPartie, partieEnCours } from './table.js?v=1.89';
+import { h, remplacer } from './dom.js?v=1.90';
+import { store } from './store.js?v=1.90';
+import { aller } from './app.js?v=1.90';
+import { eveillerSons } from './sons.js?v=1.90';
+import { lancerPartie, partieEnCours } from './table.js?v=1.90';
 import {
   construireConfig, variables, nombresJoueursPermis, joueursDansBornes,
   ecartsAuxOfficielles, nomParDefaut, NOMS_ORIGINE,
-} from './variables.js?v=1.89';
+} from './variables.js?v=1.90';
 import {
   infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
   bornerJoueurs,
-} from '../core/config.js?v=1.89';
-import { emblemeEquipe } from './icons.js?v=1.89';
-import { randomSeed } from '../core/rng.js?v=1.89';
-import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.89';
+} from '../core/config.js?v=1.90';
+import { emblemeEquipe } from './icons.js?v=1.90';
+import { randomSeed } from '../core/rng.js?v=1.90';
+import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.90';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);

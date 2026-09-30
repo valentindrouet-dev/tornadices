@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.89';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.89';
-import { store } from './store.js?v=1.89';
-import { aller } from './app.js?v=1.89';
-import { lancerPartie } from './table.js?v=1.89';
+import { h, remplacer, telecharger } from './dom.js?v=1.90';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.90';
+import { store } from './store.js?v=1.90';
+import { aller } from './app.js?v=1.90';
+import { lancerPartie } from './table.js?v=1.90';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, sansAttrape,
@@ -22,22 +22,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.89';
-import { tableauCombos, editeurCases } from './combos.js?v=1.89';
-import { illustrationCarte } from './illustrations.js?v=1.89';
+} from '../core/config.js?v=1.90';
+import { tableauCombos, editeurCases } from './combos.js?v=1.90';
+import { illustrationCarte } from './illustrations.js?v=1.90';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.89';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.89';
-import { randomSeed } from '../core/rng.js?v=1.89';
-import { reglagesJoueurs } from './accueil.js?v=1.89';
+} from './apparence.js?v=1.90';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.90';
+import { randomSeed } from '../core/rng.js?v=1.90';
+import { reglagesJoueurs } from './accueil.js?v=1.90';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.89';
+} from './profils.js?v=1.90';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,

@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.89';
+import { h } from './dom.js?v=1.90';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.89';
+} from './icons.js?v=1.90';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.89';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.89';
+} from '../core/config.js?v=1.90';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.90';
 
 /** Où sort une carte d'animal. */
 const TABLES_ANIMAL = {

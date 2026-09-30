@@ -1,10 +1,11 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.89';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.89';
-import { nomSymbole } from './apparence.js?v=1.89';
-import { store } from './store.js?v=1.89';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.89';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.90';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.90';
+import { nomSymbole } from './apparence.js?v=1.90';
+import { store } from './store.js?v=1.90';
+import { randomSeed } from '../core/rng.js?v=1.90';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.90';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -19,15 +20,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.89';
-import { tableauCombos } from './combos.js?v=1.89';
-import { barreProfils, idActif } from './profils.js?v=1.89';
+} from '../core/config.js?v=1.90';
+import { tableauCombos } from './combos.js?v=1.90';
+import { barreProfils, idActif } from './profils.js?v=1.90';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
-} from './variables.js?v=1.89';
+} from './variables.js?v=1.90';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.89';
+} from '../core/proba.js?v=1.90';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -72,6 +73,10 @@ let etat = {
   profils: store.get('profilsLabo', null) || Array.from({ length: JOUEURS_MAX }, () => 'equilibre'),
   nbParties: store.get('nbPartiesLabo', 200),
   graine: store.get('graineLabo', 'tornade-1000'),
+  // Une nouvelle graine à chaque campagne, par défaut : relancer donne d'autres
+  // parties. Décochée, la graine reste en place et la campagne se rejoue à
+  // l'identique — c'est ce qu'il faut pour comparer deux réglages.
+  nouvelleGraine: store.get('nouvelleGraineLabo', true) !== false,
   resultat: resultatEnregistre(),
   calcul: false,
 };
@@ -81,6 +86,7 @@ function sauver() {
   store.set('profilsLabo', etat.profils);
   store.set('nbPartiesLabo', etat.nbParties);
   store.set('graineLabo', etat.graine);
+  store.set('nouvelleGraineLabo', etat.nouvelleGraine);
 }
 
 export function vueLabo() {
@@ -162,6 +168,7 @@ function panneauConfig(rafraichir) {
     }));
 
   function lancer() {
+    if (etat.nouvelleGraine) etat.graine = randomSeed();
     sauver();
     etat.calcul = true;
     rafraichir();
@@ -228,8 +235,22 @@ function panneauConfig(rafraichir) {
       }, ...[25, 50, 100, 200, 500, 1000, 2000].map((n) =>
         h('option', { value: n, selected: n === etat.nbParties }, n)))),
       h('label.champ', 'Graine', h('input', {
-        type: 'text', value: etat.graine, onchange: (e) => { etat.graine = e.target.value; },
+        type: 'text', value: etat.graine,
+        // Taper une graine, c'est vouloir la rejouer : elle ne change plus d'elle-même.
+        onchange: (e) => { etat.graine = e.target.value; etat.nouvelleGraine = false; rafraichir(); },
       })),
+    ),
+    h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
+      h('button', {
+        class: `chip${etat.nouvelleGraine ? ' on' : ''}`,
+        title: etat.nouvelleGraine
+          ? 'Chaque campagne tire une nouvelle graine : d’autres parties à chaque fois'
+          : 'La graine reste en place : relancer rejoue exactement la même campagne',
+        onclick: () => { etat.nouvelleGraine = !etat.nouvelleGraine; sauver(); rafraichir(); },
+      }, h('span.case', '✓'), 'Nouvelle graine à chaque campagne'),
+      h('span.mini.muted', etat.nouvelleGraine
+        ? 'Décochez pour rejouer la même campagne à l’identique.'
+        : 'La même graine redonne exactement les mêmes chiffres.'),
     ),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Profils des joueurs'),
