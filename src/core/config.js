@@ -603,6 +603,9 @@ export function assainirConfig(brut) {
   delete sortie.attrapeSur;
   delete sortie.cochons;
   delete sortie.combosCochon;
+  // Plus de relance d'un X par mégarde depuis la v1.92.
+  delete sortie.tauxErreur;
+  delete sortie.penaliteErreurAdverse;
   // Une équipe de départ inconnue — ou aucune, avant la v1.34 — retombe sur la
   // règle du jeu plutôt que de laisser la manche sans porteur.
   if (!EQUIPES_DEPART.includes(cfg.equipeDepart)) sortie.equipeDepart = 'jaune';
@@ -760,7 +763,7 @@ export const CARTES_TORNADE = [
     nom: 'Tornade Maladroite',
     texte: 'Vous lancez les dés de votre autre main',
     combo: null,
-    effetPassif: { lenteur: 1.35, erreur: 0.06 },
+    effetPassif: { lenteur: 1.35 },
   },
   {
     id: 'spChargee',
@@ -1009,7 +1012,7 @@ export const PROFILS_IA = {
     id: 'logique', nom: 'Logique',
     vise: { endormi: { tornade: 1 }, eveille: { vache: 1 } },
     lancersAvantPasse: 7, ecartLancers: 2, peur: 0.55,
-    reflexe: 780, ecartReflexe: 200, adresse: 0.52, esquive: 0.58, erreur: 0.02,
+    reflexe: 780, ecartReflexe: 200, adresse: 0.52, esquive: 0.58,
     desc: 'Joue pour gagner : d’abord les tornades pour se réveiller, ensuite les abris.',
   },
   agressif: {
@@ -1018,14 +1021,14 @@ export const PROFILS_IA = {
     // se réveille ; réveillé, il cherche les X trois lots sur quatre.
     vise: { endormi: { tornade: 1 }, eveille: { x: 3, vache: 1 } },
     lancersAvantPasse: 9, ecartLancers: 3, peur: 0.3,
-    reflexe: 690, ecartReflexe: 180, adresse: 0.68, esquive: 0.55, erreur: 0.04,
+    reflexe: 690, ecartReflexe: 180, adresse: 0.68, esquive: 0.55,
     desc: 'Cherche l’attrape trois lots sur quatre ; se réveille et court à l’abri le reste du temps.',
   },
   tresAgressif: {
     id: 'tresAgressif', nom: 'Très agressif', court: 'T. agressif',
     vise: { endormi: { tornade: 1 }, eveille: { x: 1 } },
     lancersAvantPasse: 14, ecartLancers: 4, peur: 0.12,
-    reflexe: 620, ecartReflexe: 160, adresse: 0.74, esquive: 0.5, erreur: 0.06,
+    reflexe: 620, ecartReflexe: 160, adresse: 0.74, esquive: 0.5,
     desc: 'Se réveille, puis ne cherche plus que les X de l’Échec pour attraper.',
   },
   penible: {
@@ -1033,7 +1036,7 @@ export const PROFILS_IA = {
     // Endormir demande d'être réveillé : tant qu'il dort, il vise la tornade.
     vise: { endormi: { tornade: 1 }, eveille: { zzz: 3, vache: 1 } },
     lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.45,
-    reflexe: 760, ecartReflexe: 200, adresse: 0.5, esquive: 0.6, erreur: 0.03,
+    reflexe: 760, ecartReflexe: 200, adresse: 0.5, esquive: 0.6,
     desc: 'Endort ses voisins trois lots sur quatre ; se réveille et court à l’abri le reste du temps.',
   },
   tresPenible: {
@@ -1041,7 +1044,7 @@ export const PROFILS_IA = {
     // Il se réveille parce qu'il le faut, puis ne joue plus que le ZzZ.
     vise: { endormi: { tornade: 1 }, eveille: { zzz: 1 } },
     lancersAvantPasse: 13, ecartLancers: 4, peur: 0.2,
-    reflexe: 700, ecartReflexe: 180, adresse: 0.48, esquive: 0.6, erreur: 0.05,
+    reflexe: 700, ecartReflexe: 180, adresse: 0.48, esquive: 0.6,
     desc: 'Ne cherche que les ZzZ : il ne joue pas pour gagner, il joue pour gêner.',
   },
   equilibre: {
@@ -1049,7 +1052,7 @@ export const PROFILS_IA = {
     // Emprunte le style d'un autre profil, et en change à chaque lot.
     styles: ['logique', 'agressif', 'penible'],
     lancersAvantPasse: 8, ecartLancers: 2.5, peur: 0.5,
-    reflexe: 760, ecartReflexe: 220, adresse: 0.57, esquive: 0.57, erreur: 0.03,
+    reflexe: 760, ecartReflexe: 220, adresse: 0.57, esquive: 0.57,
     desc: 'Varie : d’un lot à l’autre il se fait logique, agressif ou pénible.',
   },
   idiot: {
@@ -1062,7 +1065,7 @@ export const PROFILS_IA = {
     },
     bevue: 0.35,   // et une fois sur trois, il garde le mauvais dé
     lancersAvantPasse: 6, ecartLancers: 5, peur: 0.5,
-    reflexe: 900, ecartReflexe: 420, adresse: 0.42, esquive: 0.42, erreur: 0.08,
+    reflexe: 900, ecartReflexe: 420, adresse: 0.42, esquive: 0.42,
     desc: 'Pas de stratégie : vise au hasard, même l’inutile, et se trompe souvent de dés.',
   },
 };
@@ -1080,7 +1083,7 @@ export function profilIA(id) {
 export const PROFIL_HUMAIN = {
   id: 'humain', nom: 'Humain',
   lancersAvantPasse: 7, ecartLancers: 2.5, peur: 0.5,
-  reflexe: 800, ecartReflexe: 250, adresse: 0.55, esquive: 0.55, erreur: 0.04,
+  reflexe: 800, ecartReflexe: 250, adresse: 0.55, esquive: 0.55,
 };
 
 // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes les
@@ -1189,8 +1192,6 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     variance: 0,               // 0 à 0,5 : irrégularité du rythme, coup par coup
 
     adresseBase: 0.55,         // chance de toucher, avant écart d'adresse
-    tauxErreur: 0.03,          // chance de relancer un X par mégarde
-    penaliteErreurAdverse: 0.35, // part des erreurs assez graves pour offrir un jeton aux adverses
     dureeMaxManche: 1_800_000, // garde-fou : 30 min de temps de jeu simulé
     manchesMax: 40,
   };

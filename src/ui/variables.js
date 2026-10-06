@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.91';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.91';
-import { store } from './store.js?v=1.91';
-import { aller } from './app.js?v=1.91';
-import { lancerPartie } from './table.js?v=1.91';
+import { h, remplacer, telecharger } from './dom.js?v=1.92';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.92';
+import { store } from './store.js?v=1.92';
+import { aller } from './app.js?v=1.92';
+import { lancerPartie } from './table.js?v=1.92';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, sansAttrape,
@@ -23,22 +23,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.91';
-import { tableauCombos, editeurCases } from './combos.js?v=1.91';
-import { illustrationCarte } from './illustrations.js?v=1.91';
+} from '../core/config.js?v=1.92';
+import { tableauCombos, editeurCases } from './combos.js?v=1.92';
+import { illustrationCarte } from './illustrations.js?v=1.92';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.91';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.91';
-import { randomSeed } from '../core/rng.js?v=1.91';
-import { reglagesJoueurs } from './accueil.js?v=1.91';
+} from './apparence.js?v=1.92';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.92';
+import { randomSeed } from '../core/rng.js?v=1.92';
+import { reglagesJoueurs } from './accueil.js?v=1.92';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.91';
+} from './profils.js?v=1.92';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -1307,20 +1307,13 @@ export function vueVariables() {
         ),
       ),
 
-      // ── Adresse et incidents ──────────────────────────────────────────────
+      // ── Adresse ───────────────────────────────────────────────────────────
       h('div.carte',
-        titreAide('Adresse et incidents', [
+        titreAide('Adresse', [
           'Adresse de base : la chance de toucher, de 0 à 1, avant l’écart propre à chaque joueur.',
-          `Taux d’erreur : la part des gestes où l’on relance par mégarde un « ${nomSymbole('x')} » — ce qui fait `
-          + 'partir le lot. Erreur punie : la part de ces bourdes assez graves pour offrir un '
-          + 'jeton aux équipes adverses.',
         ]),
         h('div.grille.grille--3', { style: { gap: '12px' } },
           num('Adresse de base', cfg.adresseBase, 'adresseBase',
-            { min: 0, max: 1, step: 0.05 }),
-          num('Taux d’erreur', cfg.tauxErreur, 'tauxErreur',
-            { min: 0, max: 1, step: 0.01 }),
-          num('Erreur punie', cfg.penaliteErreurAdverse, 'penaliteErreurAdverse',
             { min: 0, max: 1, step: 0.05 }),
         ),
       ),

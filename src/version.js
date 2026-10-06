@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.91';
+export const VERSION = '1.92';
 export const BUILD_DATE = '2026-10-06';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.92',
+    date: '06/10/2026',
+    notes: [
+      'Plus de relance d’un X par mégarde : cet incident tiré au hasard, qui faisait passer son lot à une IA — et offrait parfois un jeton aux adversaires —, disparaît du jeu. Avec lui partent les réglages « Taux d’erreur » et « Erreur punie » (Réglages et Laboratoire), la colonne « Erreurs » et la distinction « Le plus maladroit » du compte rendu, et la ligne des Règles qui en parlait. La Tornade Maladroite garde sa seule lenteur.',
+    ],
+  },
   {
     version: '1.91',
     date: '06/10/2026',

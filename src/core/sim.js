@@ -1,7 +1,7 @@
 // Campagnes de parties simulées et agrégation des résultats.
 
-import { Moteur } from './engine.js?v=1.91';
-import { CARTES_PAR_ID } from './config.js?v=1.91';
+import { Moteur } from './engine.js?v=1.92';
+import { CARTES_PAR_ID } from './config.js?v=1.92';
 
 // Les deux paquets réunis : une campagne peut porter sur l'un ou sur l'autre.
 const NOM_CARTE = Object.fromEntries(
@@ -49,7 +49,7 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
   const jetonsParSource = {};
   const parCarte = {};
   let collisionsTentees = 0, collisionsReussies = 0, lancersTotal = 0;
-  let passesTotal = 0, erreursTotal = 0, endormisTotal = 0;
+  let passesTotal = 0, endormisTotal = 0;
   const raisons = {};
 
   for (let i = 0; i < cfg.nbJoueurs; i++) {
@@ -116,7 +116,6 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
       collisionsReussies += j.stats.collisionsReussies;
       lancersTotal += j.stats.lancers;
       passesTotal += j.stats.passes;
-      erreursTotal += j.stats.erreurs;
       endormisTotal += j.stats.foisEndormi;
     }
 
@@ -179,7 +178,6 @@ export function lancerCampagne(cfg, specJoueurs, graine, nbParties, onProgres) {
       lancers: lancersTotal,
       lancersParPartie: lancersTotal / nbParties,
       passes: passesTotal,
-      erreurs: erreursTotal,
       endormis: endormisTotal,
     },
   };

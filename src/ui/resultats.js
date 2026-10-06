@@ -12,14 +12,14 @@
 
 import {
   h, remplacer, duree, dureeLongue, nombre, pourcent, telecharger,
-} from './dom.js?v=1.91';
-import { store } from './store.js?v=1.91';
-import { aller } from './app.js?v=1.91';
-import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.91';
+} from './dom.js?v=1.92';
+import { store } from './store.js?v=1.92';
+import { aller } from './app.js?v=1.92';
+import { emblemeEquipe, pastilleSymbole } from './icons.js?v=1.92';
 import {
   COULEURS_EQUIPE, CARTES_PAR_ID, ORDRE_SYMBOLES, NOM_MODE, modeManche, jetonsSurTornade,
   equipeVue,
-} from '../core/config.js?v=1.91';
+} from '../core/config.js?v=1.92';
 
 /**
  * Le format de l'instantané. Il monte dès qu'une colonne apparaît : un résultat
@@ -277,7 +277,7 @@ function tableauJoueurs(joueurs, ctx, parJoueur, dureePartie) {
         h('th.num', 'Lancers'),
         h('th.num', { title: 'Combinaisons réalisées' }, 'Combis'),
         h('th.num', 'Attrapes'), h('th.num', 'Subies'),
-        h('th.num', 'Réveils'), h('th.num', 'Endormi'), h('th.num', 'Erreurs'),
+        h('th.num', 'Réveils'), h('th.num', 'Endormi'),
         h('th.num', { title: 'Part de la partie passée dés en main' }, 'Lot'))),
       h('tbody', ...tri.map((j) => h('tr',
         h('td', h('span.rangee.rangee--serree',
@@ -291,7 +291,6 @@ function tableauJoueurs(joueurs, ctx, parJoueur, dureePartie) {
         h('td.num', String(j.stats.foisTouche)),
         h('td.num', String(j.stats.reveils)),
         h('td.num', String(j.stats.foisEndormi)),
-        h('td.num', String(j.stats.erreurs)),
         h('td.num', dureePartie ? pourcent(j.stats.tempsAvecLot / dureePartie, 0) : '—'),
       ))))),
     h('p.mini.muted', { style: { marginTop: '10px' } },
@@ -330,8 +329,6 @@ function faitsMarquants(joueurs, manches, ctx) {
     ajouter('Le plus de jetons', meilleur(joueurs, (j) => j.stats.jetonsRetournes),
       (v) => `${v} jeton${v > 1 ? 's' : ''}`);
   }
-  ajouter('Le plus maladroit', meilleur(joueurs, (j) => j.stats.erreurs),
-    (v) => `${v} bourde${v > 1 ? 's' : ''}`);
 
   if (!lignes.length) return null;
   return h('div.carte',
@@ -468,13 +465,13 @@ function csv(r, ctx) {
   l.push(`place_jetons;${ctx.placeJetons || 'tornade'}`);
   l.push('');
   l.push('joueur;equipe;siege;type;profil;jetons;lancers;combinaisons;attrapes_tentees;'
-    + 'attrapes_reussies;subies;reveils;endormi;erreurs;temps_avec_lot_s');
+    + 'attrapes_reussies;subies;reveils;endormi;temps_avec_lot_s');
   for (const j of r.joueurs) {
     const combos = Object.values(j.stats.combos || {}).reduce((s, n) => s + n, 0);
     l.push([
       j.nom, j.equipe, j.siege, j.type, j.profil, j.stats.jetonsRetournes, j.stats.lancers,
       combos, j.stats.collisionsTentees, j.stats.collisionsReussies, j.stats.foisTouche,
-      j.stats.reveils, j.stats.foisEndormi, j.stats.erreurs,
+      j.stats.reveils, j.stats.foisEndormi,
       Math.round((j.stats.tempsAvecLot || 0) / 1000),
     ].join(';'));
   }

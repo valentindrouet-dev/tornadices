@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.91';
+import { makeRng } from './rng.js?v=1.92';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.91';
+} from './config.js?v=1.92';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -70,7 +70,7 @@ function statsVides() {
     // fréquences des combinaisons de base.
     lancers: 0, passes: 0, combos: {}, combosCartes: {},
     collisionsTentees: 0, collisionsReussies: 0,
-    foisTouche: 0, foisEndormi: 0, jetonsRetournes: 0, erreurs: 0,
+    foisTouche: 0, foisEndormi: 0, jetonsRetournes: 0,
     tempsAvecLot: 0, reveils: 0, jetonsParSource: {},
   };
 }
@@ -822,18 +822,6 @@ export class Moteur {
       });
     if (!cible.length) return false;
 
-    // Incident fâcheux : à une vraie table on relance parfois un X sans le vouloir.
-    // Impossible à l'écran — l'interface ne laisse pas cliquer un dé figé — donc
-    // la mégarde ne concerne que les IA.
-    const tauxErreur = (this.passif.erreur ?? 0) + (this.cfg.tauxErreur ?? 0) + (j.profil.erreur ?? 0) * 0.5;
-    if (j.type !== 'humain' && !premier && lot.des.some((d) => d.verrou) && this.rng() < tauxErreur) {
-      j.stats.erreurs++;
-      this._log(`${j.nom} relance un X par mégarde — il passe son lot.`, 'incident', j.id);
-      if (this.rng() < (this.cfg.penaliteErreurAdverse ?? 0)) this._jetonAuxAdverses(j);
-      this._demanderDepart(j, 'megarde');
-      return false;
-    }
-
     // Tornade Paisible : un seul dé à la fois.
     const lances = (this.passif.unParUn && !premier && cible.length > 1) ? [cible[0]] : cible;
     const duree = this._dureeLancer();
@@ -1031,7 +1019,6 @@ export class Moteur {
     if (motif === 'attrape' && dispo && dispo.id === 'blocage') return 'Échec — attrape !';
     if (motif === 'passe') return 'Passé';
     if (motif === 'pousse') return 'Poussé';
-    if (motif === 'megarde') return 'Mégarde';
     if (motif === 'attrape') return 'Attrape !';
     if (motif === 'combo' && dispo) {
       if (dispo.id === 'blocage') return 'Échec';
@@ -1050,7 +1037,7 @@ export class Moteur {
       if (dispo.source === 'journee') return 'carte';
       return ALERTES[dispo.id] || 'gris';
     }
-    return 'gris';                                   // passé, poussé, mégarde
+    return 'gris';                                   // passé, poussé
   }
 
   /** Le lot atteint son destinataire. */
@@ -1397,24 +1384,6 @@ export class Moteur {
     this._log(dit.journal, 'jeton', j.id);
     this._annoncer(dit.annonce, 'vert', j.id);
     if (eq.refuge >= plafond) this._finManche(j.equipe, { joueur: j, raison: 'refuge' });
-  }
-
-  _jetonAuxAdverses(j) {
-    // Hors de la règle de base, il n'y a pas de jeton à offrir : la bourde reste
-    // une bourde — le lot est parti — mais elle ne donne rien aux adversaires.
-    // En Compromis on n'y touche pas non plus : la manche se gagne de deux
-    // façons, l'Abri et la collision, et la bourde d'en face n'en est pas une.
-    if (!estJeton(this.cfg)) return;
-    for (const e of Object.values(this.equipes)) {
-      if (e.id === j.equipe) continue;
-      e.retournes = Math.min(e.jetons, e.retournes + 1);
-      // Personne n'a rien réussi : c'est la bourde d'en face qui a fini la
-      // manche. On garde le nom du fautif, la page de résultats le dit.
-      if (e.retournes >= e.jetons) { this._finManche(e.id, { raison: 'incident', cible: j }); return; }
-    }
-    this._log(jetonsSurTornade(this.cfg)
-      ? `Incident : les équipes adverses de ${j.nom} sortent un jeton de la Tornade.`
-      : `Incident : les équipes adverses de ${j.nom} retournent un jeton.`, 'incident', j.id);
   }
 
   /**

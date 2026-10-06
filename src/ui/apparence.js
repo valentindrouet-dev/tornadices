@@ -14,8 +14,8 @@
 // Ce module ne dessine rien : il ne fait que retenir le choix. `icons.js`
 // résout l'identifiant en image — un modèle fourni, ou le fichier importé.
 
-import { store } from './store.js?v=1.91';
-import { SYMBOLES } from '../core/config.js?v=1.91';
+import { store } from './store.js?v=1.92';
+import { SYMBOLES } from '../core/config.js?v=1.92';
 
 /** Les faces personnalisables : les quatre que le jeu met en avant. */
 export const FACES_PERSONNALISABLES = ['tornade', 'vache', 'zzz', 'x'];

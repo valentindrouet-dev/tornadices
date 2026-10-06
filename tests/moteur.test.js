@@ -2474,6 +2474,22 @@ console.log('\nTrois ZzZ, et passer son lot');
     passes === 0 && finies === 20);
 }
 
+// ── Plus de relance d'un X par mégarde ──────────────────────────────────────
+console.log('\nPas de mégarde');
+{
+  const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'idiot' }));
+  let megardes = 0;
+  for (let g = 0; g < 15; g++) {
+    const m = new Moteur(configParDefaut(6), spec, `megarde-${g}`);
+    m.jouerJusquAuBout();
+    megardes += m.journal.filter((e) => /mégarde|Incident/.test(e.texte || '') || e.issue === 'Mégarde').length;
+  }
+  verifier(`15 parties d’Idiots, ${megardes} X relancé par mégarde`, megardes === 0);
+  verifier('un ancien réglage perd le taux d’erreur',
+    !('tauxErreur' in assainirConfig({ nbJoueurs: 6, tauxErreur: 0.2, penaliteErreurAdverse: 0.5 }))
+    && !('tauxErreur' in configParDefaut(6)));
+}
+
 // ── Le journal montre d'abord les dés de la combinaison ─────────────────────
 console.log('\nJournal : les dés de la combinaison d’abord');
 {

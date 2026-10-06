@@ -1,11 +1,11 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.91';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.91';
-import { nomSymbole } from './apparence.js?v=1.91';
-import { store } from './store.js?v=1.91';
-import { randomSeed } from '../core/rng.js?v=1.91';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.91';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.92';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.92';
+import { nomSymbole } from './apparence.js?v=1.92';
+import { store } from './store.js?v=1.92';
+import { randomSeed } from '../core/rng.js?v=1.92';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.92';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -20,15 +20,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.91';
-import { tableauCombos } from './combos.js?v=1.91';
-import { barreProfils, idActif } from './profils.js?v=1.91';
+} from '../core/config.js?v=1.92';
+import { tableauCombos } from './combos.js?v=1.92';
+import { barreProfils, idActif } from './profils.js?v=1.92';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
-} from './variables.js?v=1.91';
+} from './variables.js?v=1.92';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.91';
+} from '../core/proba.js?v=1.92';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -459,10 +459,6 @@ function panneauConfig(rafraichir) {
         (v) => { cfg.variance = Math.min(0.5, Math.max(0, v / 100)); }, { min: 0, max: 50, step: 5 }),
       h('div.mini.muted', { style: { alignSelf: 'end', paddingBottom: '6px' } },
         aideVariance(cfg.variance || 0, cfg)),
-    ),
-    h('div.grille.grille--2', { style: { gap: '10px', marginTop: '10px' } },
-      num('Taux d’erreur', cfg.tauxErreur, (v) => { cfg.tauxErreur = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.01 }),
-      num('Erreur punie par l’adversaire', cfg.penaliteErreurAdverse, (v) => { cfg.penaliteErreurAdverse = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.05 }),
     ),
 
   );

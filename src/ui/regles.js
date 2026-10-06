@@ -1,15 +1,15 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.91';
+import { h } from './dom.js?v=1.92';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.91';
+} from './icons.js?v=1.92';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.91';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.91';
+} from '../core/config.js?v=1.92';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.92';
 
 /** Où sort une carte d'animal. */
 const TABLES_ANIMAL = {
@@ -421,7 +421,6 @@ export function vueRegles() {
     h('div.carte',
       h('div.titre-section', 'Incidents fâcheux'),
       h('ul.petit',
-        h('li', `Relancer un « ${nomSymbole('x')} » par mégarde : le joueur passe son lot.`),
         h('li', 'Lancer les dés au lieu de les passer, ou ne pas passer après une attrape : '
           + 'les équipes adverses sortent un jeton de la tornade.'),
         h('li', 'Un dé tombe, un imprévu survient : mettez le jeu en pause.'),
