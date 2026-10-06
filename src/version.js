@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.92';
+export const VERSION = '1.93';
 export const BUILD_DATE = '2026-10-06';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.93',
+    date: '06/10/2026',
+    notes: [
+      'Le score des équipes se lit en cartes : au lieu de « 0/4 », une rangée de petites cases au format d’une carte Tornade, vides au départ. Chaque carte gagnée y tombe à son tour, dos rouge comme la pioche, jusqu’à remplir la rangée et gagner la partie. Le joueur Vert a autant de cases que son propre objectif.',
+    ],
+  },
   {
     version: '1.92',
     date: '06/10/2026',

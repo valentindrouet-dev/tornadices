@@ -897,11 +897,28 @@ label.champ {
   box-shadow: var(--ombre);
 }
 .score-nom { font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; font-size: 19px; letter-spacing: .02em; }
-.score-cartes {
-  font-weight: 850; font-size: 14px;
-  background: var(--fond-doux); border: 1px solid var(--bord);
-  border-radius: 999px; padding: 1px 9px;
+/* Le compteur de cartes : des cases au format d'une carte Tornade, vides tant
+   qu'on ne l'a pas gagnée, puis le dos rouge de la pioche. */
+.score-cartes { display: inline-flex; align-items: center; gap: 4px; }
+.carte-score {
+  display: block; width: 20px; aspect-ratio: 1432 / 1948; border-radius: 3px;
+  border: 1.5px dashed var(--bord-fort); background: rgba(255, 255, 255, .6);
 }
+.carte-score--pleine {
+  border: 2px solid #fff3e4;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 220, 190, .3) 0 18%, transparent 19%),
+    repeating-linear-gradient(135deg, #d8332c, #d8332c 3px, #c02721 3px, #c02721 6px);
+  box-shadow: 0 0 0 1px #b3241f, 0 1px 3px rgba(90, 20, 10, .3);
+}
+/* La carte gagnée tombe dans sa case, comme posée sur la pile. */
+.carte-score--arrive { animation: carteScoreArrive .6s cubic-bezier(.2, .8, .3, 1.2) both; }
+@keyframes carteScoreArrive {
+  from { transform: translateY(-34px) rotate(-28deg) scale(1.8); opacity: 0; }
+  60% { opacity: 1; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .carte-score--arrive { animation: none; } }
 .suivi-jetons { display: flex; gap: 5px; align-items: center; margin-left: auto; }
 .jeton { width: 26px; height: 26px; border-width: 2.5px; }
 .jeton.on svg { width: 16px; height: 16px; }

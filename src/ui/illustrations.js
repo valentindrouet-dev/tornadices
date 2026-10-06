@@ -10,8 +10,8 @@
 // ici. Rien d'autre à toucher : la table, les Réglages et la révélation de la
 // carte la trouvent d'eux-mêmes.
 
-import { VERSION } from '../version.js?v=1.92';
-import { requisCarte, requisPourEquipe } from '../core/config.js?v=1.92';
+import { VERSION } from '../version.js?v=1.93';
+import { requisCarte, requisPourEquipe } from '../core/config.js?v=1.93';
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
 // Par identifiant de carte : l'image, ses dimensions, et la combinaison qu'elle

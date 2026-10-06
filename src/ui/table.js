@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.92';
+import { h, remplacer, duree, vider } from './dom.js?v=1.93';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.92';
-import { Moteur } from '../core/engine.js?v=1.92';
+} from './icons.js?v=1.93';
+import { Moteur } from '../core/engine.js?v=1.93';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, requisPourEquipe,
-} from '../core/config.js?v=1.92';
-import { ajouterHistorique } from './store.js?v=1.92';
-import { enregistrerPartie } from './resultats.js?v=1.92';
-import { aller } from './app.js?v=1.92';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.92';
-import { nomSymbole } from './apparence.js?v=1.92';
+} from '../core/config.js?v=1.93';
+import { ajouterHistorique } from './store.js?v=1.93';
+import { enregistrerPartie } from './resultats.js?v=1.93';
+import { aller } from './app.js?v=1.93';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.93';
+import { nomSymbole } from './apparence.js?v=1.93';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens, facesEquipe, ecartsCarteEquipe,
-} from './illustrations.js?v=1.92';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.92';
+} from './illustrations.js?v=1.93';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.93';
 
 let moteur = null;
 let vitesse = 1;
@@ -453,6 +453,7 @@ export function vueTable() {
   // vol ne compte pas : il apparaît au-dessus du siège quand il s'y pose.
   const jetonsSauves = new Map();   // pid → jetons posés ou en route
   const volsVersSiege = new Map();  // pid → jetons encore en l'air
+  const cartesVues = new Map();     // équipe → cartes gagnées au dernier affichage
   const pilesVues = new Map();      // pid → ce que le siège montrait au dernier coup
   const jetonsAuSiege = (pid) => Math.max(0, (jetonsSauves.get(pid) || 0) - (volsVersSiege.get(pid) || 0));
 
@@ -1273,13 +1274,30 @@ export function vueTable() {
     siChange(elScores, jetons, () => Object.values(moteur.equipes).map((e) => {
       const c = equipeVue(e.id, moteur.cfg);
       const acquis = jetonsAffiches(e);
+      // Les cartes à réunir pour gagner, en petit : une case vide par carte
+      // qui manque, un dos rouge par carte gagnée. Celles qui viennent d'arriver
+      // se posent dans le compteur, l'une après l'autre.
+      const objectif = moteur._cartesPourGagner(e.id);
+      const gagnees = e.cartes.length;
+      const avant = cartesVues.get(e.id) ?? gagnees;
+      cartesVues.set(e.id, gagnees);
+      const cases = Array.from({ length: Math.max(objectif, gagnees) }, (_, k) => {
+        const pleine = k < gagnees;
+        const arrive = pleine && k >= avant;
+        return h('span.carte-score', {
+          class: `${pleine ? 'carte-score--pleine' : ''}${arrive ? ' carte-score--arrive' : ''}`,
+          style: arrive ? { animationDelay: `${(k - avant) * 220}ms` } : null,
+        });
+      });
       return h('div.score-equipe', { class: `equipe-${e.id}`, style: { '--couleur-eq': c.hex } },
         // Chaque équipe a son emblème : les Bleus sont les vaches, les Jaunes
         // les poules, le Vert est le cowboy.
         h('span.score-nom', { style: { color: c.hex } },
           emblemeEquipe(c.embleme, 26), ' ', c.nom),
-        h('span.score-cartes', { title: 'cartes Tornade gagnées' },
-          `${e.cartes.length}/${moteur.cfg.cartesPourGagner}`),
+        h('span.score-cartes', {
+          title: `${gagnees} carte${gagnees > 1 ? 's' : ''} Tornade sur ${objectif} pour gagner`,
+          'aria-label': `${gagnees} sur ${objectif}`,
+        }, ...cases),
         // Hors de la règle de base, il n'y a plus de jetons à retourner : la
         // ligne de pastilles disparaît, seules les cartes font le score. En
         // Compromis, c'est l'Abri qui la remplace, au centre de la table — et
