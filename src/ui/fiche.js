@@ -12,14 +12,14 @@
 // PDF » dans sa boîte d'impression. C'est le seul chemin sans dépendance, et
 // c'est aussi celui qui donne le meilleur résultat.
 
-import { h, remplacer } from './dom.js?v=1.90';
-import { store } from './store.js?v=1.90';
-import { aller } from './app.js?v=1.90';
-import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.90';
-import { nomSymbole } from './apparence.js?v=1.90';
-import { construireConfig } from './variables.js?v=1.90';
-import { nomActif } from './profils.js?v=1.90';
-import { VERSION } from '../version.js?v=1.90';
+import { h, remplacer } from './dom.js?v=1.91';
+import { store } from './store.js?v=1.91';
+import { aller } from './app.js?v=1.91';
+import { pastilleSymbole, suiteSymboles, emblemeEquipe } from './icons.js?v=1.91';
+import { nomSymbole } from './apparence.js?v=1.91';
+import { construireConfig } from './variables.js?v=1.91';
+import { nomActif } from './profils.js?v=1.91';
+import { VERSION } from '../version.js?v=1.91';
 import {
   COULEURS_EQUIPE, NOM_MODE, modeManche, estJeton, estCompromis, estImmediat,
   cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, refugePour, carteALaTable,
@@ -27,7 +27,7 @@ import {
   infosMiseEnPlace, NOMBRES_JOUEURS, requisPourEquipe, sensRotation, comboAutomatique,
   REGLE_CARTES_DEUX_ETATS, jetonsSurTornade,
   equipeVue,
-} from '../core/config.js?v=1.90';
+} from '../core/config.js?v=1.91';
 
 /** Les dés d'une exigence, en ligne et sans retour à la ligne possible. */
 const desRequis = (requis, taille = 21) =>
@@ -292,7 +292,11 @@ function leTour(cfg) {
     h('ol.fiche-liste',
       h('li', `Chacun joue en même temps : plusieurs lots de ${cfg.desParLot} dés circulent `
         + 'autour de la table — leur nombre dépend de l’effectif, voir la mise en place — et '
-        + 'celui qui tient un lot le relance aussi vite et aussi souvent qu’il veut.'),
+        + 'celui qui tient un lot le relance aussi vite et aussi souvent qu’il veut.',
+        cfg.peutPasser === false
+          ? [' ', reglage('On ne peut pas passer son lot'), ' : on le garde jusqu’à sortir une '
+            + 'combinaison, ou un Échec.']
+          : ' On peut aussi le passer au voisin sans combinaison.'),
       h('li', 'Dès qu’une combinaison sort, ',
         reglage(comboAutomatique(cfg)
           ? 'elle est jouée'

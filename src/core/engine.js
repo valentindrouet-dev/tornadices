@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.90';
+import { makeRng } from './rng.js?v=1.91';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.90';
+} from './config.js?v=1.91';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -679,7 +679,6 @@ export class Moteur {
       if (!servie(requis)) continue;
       if (combo.face === 'endormie' && j.eveille) continue;
       if (combo.face === 'active' && !j.eveille) continue;
-      if (combo.id === 'endormir' && !this._voisinsEveilles(j).length) continue;
       out.push({
         id: combo.id, source: 'tornade',
         combo: requis === combo.requis ? combo : { ...combo, requis },
@@ -798,7 +797,8 @@ export class Moteur {
       const menace = this._precedent(j).lots.length > 0 ? p.peur : 0;
       const seuil = Math.max(1, this.rng.normal(p.lancersAvantPasse, p.ecartLancers, 1));
       const tension = (j.lancersLot / seuil) * (1 + menace * 0.35);
-      if (tension >= 1) { this._demanderDepart(j, 'passe'); return; }
+      // Quand on ne peut pas passer, on garde le lot jusqu'à la combinaison.
+      if (tension >= 1 && this.cfg.peutPasser !== false) { this._demanderDepart(j, 'passe'); return; }
       if (lot.des.every((d) => d.verrou)) { this._demanderDepart(j, 'passe'); return; }
     }
     this._demarrerLancer(j, this._choixDesIA(j, lot));
@@ -1225,6 +1225,11 @@ export class Moteur {
           cible.stats.foisEndormi++;
           this._flash('endormi', cible.id);
           this._annoncer(`Endort ${cible.nom}`, 'nuit', j.id);
+        } else {
+          // Les trois ZzZ sont sortis : la combinaison est jouée et le lot part,
+          // même si les deux voisins dorment déjà.
+          this._log(`${j.nom} sort ses ZzZ, mais ses deux voisins dorment déjà.`, 'combo', j.id);
+          this._annoncer('Voisins déjà endormis', 'nuit', j.id);
         }
         break;
       }
@@ -1680,6 +1685,7 @@ export class Moteur {
   passerHumain(pid) {
     const j = this.joueurs[pid];
     if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
+    if (this.cfg.peutPasser === false) return false;
     const lot = j.lots[0];
     if (this._desEnLAir(lot) || !this._lotPose(lot)) return false;
     this._demanderDepart(j, 'passe');

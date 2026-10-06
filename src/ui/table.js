@@ -4,26 +4,26 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=1.90';
+import { h, remplacer, duree, vider } from './dom.js?v=1.91';
 import {
   faceDe, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE, SVG_SYMBOLE,
-} from './icons.js?v=1.90';
-import { Moteur } from '../core/engine.js?v=1.90';
+} from './icons.js?v=1.91';
+import { Moteur } from '../core/engine.js?v=1.91';
 import {
   COULEURS_EQUIPE, ALERTES, comboServie, exigenceVide, comboPossible, requisCarte,
   estJeton, estCompromis, sensRotation, comboAutomatique, jetonsSurTornade, equipeVue,
   nomDansPhrase, requisPourEquipe,
-} from '../core/config.js?v=1.90';
-import { ajouterHistorique } from './store.js?v=1.90';
-import { enregistrerPartie } from './resultats.js?v=1.90';
-import { aller } from './app.js?v=1.90';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.90';
-import { nomSymbole } from './apparence.js?v=1.90';
+} from '../core/config.js?v=1.91';
+import { ajouterHistorique } from './store.js?v=1.91';
+import { enregistrerPartie } from './resultats.js?v=1.91';
+import { aller } from './app.js?v=1.91';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=1.91';
+import { nomSymbole } from './apparence.js?v=1.91';
 import {
   illustrationCarte, illustrationEquipe, jetonImprime, faceCarteSens, facesEquipe, ecartsCarteEquipe,
-} from './illustrations.js?v=1.90';
-import { carteTornadeDessinee } from './carte-tornade.js?v=1.90';
+} from './illustrations.js?v=1.91';
+import { carteTornadeDessinee } from './carte-tornade.js?v=1.91';
 
 let moteur = null;
 let vitesse = 1;
@@ -1416,7 +1416,8 @@ export function vueTable() {
         j.lots.length > 1 ? h('span.badge', `${j.lots.length} lots en main`) : null,
         h('div.pousse'),
         h('span.mini.muted.aide-clavier',
-          `clic sur un dé : le relancer · ${t.libLancer} : tout relancer · ${t.libPasser} : passer`),
+          `clic sur un dé : le relancer · ${t.libLancer} : tout relancer`
+          + (moteur.cfg.peutPasser !== false ? ` · ${t.libPasser} : passer` : '')),
       ),
       h('div.rangee',
         zoneDesPanneau(j, lot, peutAgir),
@@ -1429,10 +1430,13 @@ export function vueTable() {
         }, surMobile()
           ? (lot.lance ? 'Tout relancer' : 'Lancer')
           : (lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`)),
-        h('button.btn', {
-          disabled: !peutAgir || !pose,
-          onclick: () => moteur.passerHumain(j.id),
-        }, surMobile() ? 'Passer' : `Passer (${t.libPasser})`),
+        // Variante « on ne peut pas passer » : le bouton n'a plus lieu d'être.
+        moteur.cfg.peutPasser !== false
+          ? h('button.btn', {
+              disabled: !peutAgir || !pose,
+              onclick: () => moteur.passerHumain(j.id),
+            }, surMobile() ? 'Passer' : `Passer (${t.libPasser})`)
+          : null,
       ),
       options
         ? h('div.choix-combo',

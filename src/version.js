@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.90';
-export const BUILD_DATE = '2026-09-30';
+export const VERSION = '1.91';
+export const BUILD_DATE = '2026-10-06';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.91',
+    date: '06/10/2026',
+    notes: [
+      'Les trois ZzZ marchent à tous les coups. La combinaison n’était servie que si l’un des deux voisins était éveillé : sinon, rien ne se passait et le lot restait en main — ce qui arrivait souvent, puisque chaque manche commence Tornade endormie. Désormais, trois ZzZ Tornade éveillée sont toujours joués : le lot part, et un voisin éveillé s’endort s’il y en a un. Sinon, la table l’annonce : « Voisins déjà endormis ».',
+      'Nouvelle option dans les Réglages : « Passer son lot » — « On peut passer » (la règle de base) ou « On ne peut pas passer ». Interdit, on garde son lot et l’on relance jusqu’à sortir une combinaison ou un Échec : le bouton « Passer » et la touche P disparaissent de la table, et les IA ne rendent plus leur lot d’elles-mêmes. L’option se règle aussi au Laboratoire, s’écrit dans la Fiche et les Règles, et compte dans les Règles officielles.',
+    ],
+  },
   {
     version: '1.90',
     date: '30/09/2026',

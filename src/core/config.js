@@ -72,6 +72,25 @@ export const AIDE_ECHEC = {
     + 'peut se propager autour de la table.',
 };
 
+// Passer son lot sans combinaison : permis par défaut. Interdit, on garde le lot
+// jusqu'à sortir une combinaison — ou un Échec.
+export const OPTIONS_PASSER = [
+  ['oui', 'On peut passer'],
+  ['non', 'On ne peut pas passer'],
+];
+
+export const AIDE_PASSER = {
+  oui: 'Règle de base : on peut rendre son lot à tout moment, sans combinaison — un lot trop '
+    + 'menacé ou trop mal parti se passe au voisin.',
+  non: 'Variante : on ne passe plus son lot de son plein gré. On le garde et on relance jusqu’à '
+    + 'sortir une combinaison, ou un Échec. Le bouton « Passer » disparaît de la table.',
+};
+
+/** Vrai si l'on peut rendre son lot sans combinaison. */
+export function peutPasser(cfg) {
+  return !cfg || cfg.peutPasser !== false;
+}
+
 /** Vrai quand la table se joue sans attrape : l'Échec ne fait que pousser. */
 export function sansAttrape(cfg) {
   return !!cfg && cfg.sansAttrape === true;
@@ -1098,6 +1117,8 @@ export function configParDefaut(nbJoueurs = 6, opts = {}) {
     attrapeEveille: opts.attrapeEveille !== false,
     // Variante sans attrape : l'Échec pousse le lot, sans tenter le contact.
     sansAttrape: opts.sansAttrape === true,
+    // Passer son lot sans combinaison : permis, sauf variante.
+    peutPasser: opts.peutPasser !== false,
     // Deux lots qui se rencontrent : le premier est poussé plus loin, ou bien ils
     // s'empilent dans la même main.
     lotsCumules: !!opts.lotsCumules,

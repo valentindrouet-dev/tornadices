@@ -1,15 +1,15 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.90';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.90';
-import { nomSymbole } from './apparence.js?v=1.90';
-import { store } from './store.js?v=1.90';
-import { randomSeed } from '../core/rng.js?v=1.90';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.90';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.91';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.91';
+import { nomSymbole } from './apparence.js?v=1.91';
+import { store } from './store.js?v=1.91';
+import { randomSeed } from '../core/rng.js?v=1.91';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.91';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
-  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC,
+  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, OPTIONS_PASSER, AIDE_PASSER,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarte,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, lotsPour,
@@ -20,15 +20,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.90';
-import { tableauCombos } from './combos.js?v=1.90';
-import { barreProfils, idActif } from './profils.js?v=1.90';
+} from '../core/config.js?v=1.91';
+import { tableauCombos } from './combos.js?v=1.91';
+import { barreProfils, idActif } from './profils.js?v=1.91';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
-} from './variables.js?v=1.90';
+} from './variables.js?v=1.91';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.90';
+} from '../core/proba.js?v=1.91';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -384,6 +384,16 @@ function panneauConfig(rafraichir) {
         ? 'Sans les points, « Un jeton » ne rapporte rien : le contact interrompt le voisin, sans '
           + 'plus. C’est « Manche gagnée » qui fait de l’attrape le second moyen de prendre une manche.'
         : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
+
+    h('div.titre-section', { style: { marginTop: '18px' } }, 'Passer son lot'),
+    h('div.segment',
+      ...OPTIONS_PASSER.map(([id, lib]) => h('button', {
+        class: (cfg.peutPasser === false ? 'non' : 'oui') === id ? 'on' : '',
+        style: { fontSize: '12.5px' },
+        onclick: () => { cfg.peutPasser = id === 'oui'; rafraichir(); },
+      }, lib)),
+    ),
+    h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_PASSER[cfg.peutPasser === false ? 'non' : 'oui']),
 
     h('div.titre-section', { style: { marginTop: '18px' } }, 'Quand deux lots se rencontrent'),
     h('div.segment',

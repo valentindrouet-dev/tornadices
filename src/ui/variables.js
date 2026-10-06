@@ -3,14 +3,15 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.90';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.90';
-import { store } from './store.js?v=1.90';
-import { aller } from './app.js?v=1.90';
-import { lancerPartie } from './table.js?v=1.90';
+import { h, remplacer, telecharger } from './dom.js?v=1.91';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.91';
+import { store } from './store.js?v=1.91';
+import { aller } from './app.js?v=1.91';
+import { lancerPartie } from './table.js?v=1.91';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, sansAttrape,
+  OPTIONS_PASSER, AIDE_PASSER, peutPasser,
   OPTIONS_MANCHE, AIDE_MANCHE, noteCarte, migrerPaquet,
   OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
   cleCombosCartes, clePaquet, cleVues, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible,
@@ -22,22 +23,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.90';
-import { tableauCombos, editeurCases } from './combos.js?v=1.90';
-import { illustrationCarte } from './illustrations.js?v=1.90';
+} from '../core/config.js?v=1.91';
+import { tableauCombos, editeurCases } from './combos.js?v=1.91';
+import { illustrationCarte } from './illustrations.js?v=1.91';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.90';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.90';
-import { randomSeed } from '../core/rng.js?v=1.90';
-import { reglagesJoueurs } from './accueil.js?v=1.90';
+} from './apparence.js?v=1.91';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.91';
+import { randomSeed } from '../core/rng.js?v=1.91';
+import { reglagesJoueurs } from './accueil.js?v=1.91';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.90';
+} from './profils.js?v=1.91';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -345,6 +346,7 @@ const REGLES_DU_JEU = [
   ['cartesVert', 'Cartes du Vert', (c) => (c.nbJoueurs % 2 ? c.cartesVert : null)],
   ['placeJetons', 'Où sont les jetons'],
   ['attrapeEveille', 'Il faut être réveillé pour attraper'],
+  ['peutPasser', 'Passer son lot', (c) => (peutPasser(c) ? 'On peut passer' : 'On ne peut pas passer')],
   ['sansAttrape', 'Ce que fait l’Échec', (c) => (sansAttrape(c) ? 'Pousse le lot, sans attrape' : 'Tente l’attrape')],
   ['attrapeGagneManche', 'Ce que rapporte l’attrape', (c) => (sansAttrape(c) ? null : c.attrapeGagneManche)],
   ['lotsCumules', 'Deux lots qui se rencontrent', (c) => (c.lotsCumules ? 'Ils s’empilent' : 'Le lot en cours est poussé')],
@@ -1095,6 +1097,16 @@ export function vueVariables() {
               ...OPTIONS_COMBO_SERVIE.map(([id, lib]) => h('button', {
                 class: (cfg.comboServie === 'choix' ? 'choix' : 'auto') === id ? 'on' : '',
                 onclick: () => { ecrire('comboServie', id); dessiner(); },
+              }, lib)),
+            ),
+          ),
+
+          h('div',
+            titreAide('Passer son lot', [AIDE_PASSER[peutPasser(cfg) ? 'oui' : 'non']]),
+            h('div.segment.segment--plein',
+              ...OPTIONS_PASSER.map(([id, lib]) => h('button', {
+                class: (peutPasser(cfg) ? 'oui' : 'non') === id ? 'on' : '',
+                onclick: () => { ecrire('peutPasser', id === 'oui'); dessiner(); },
               }, lib)),
             ),
           ),

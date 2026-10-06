@@ -2420,6 +2420,60 @@ console.log('\nVariante sans attrape');
     r.collisions.tentees === 0 && r.raisons.manchesMax === undefined && !r.raisons.limite);
 }
 
+// ── Les trois ZzZ, et le droit de passer ────────────────────────────────────
+console.log('\nTrois ZzZ, et passer son lot');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: i === 0 ? 'humain' : 'ia', profil: 'equilibre' }));
+  const poser = (lot, syms) => {
+    lot.des.forEach((d, i) => { d.sym = syms[i]; d.roule = false; d.finRoule = 0; d.verrou = syms[i] === 'x'; });
+    lot.lance = true;
+  };
+  const essai = (voisinsEveilles, graine) => {
+    const m = new Moteur(configParDefaut(6), spec(6), graine);
+    const j = m.joueurs[0];
+    j.eveille = true;
+    for (const v of m._voisinsDirects(j)) v.eveille = voisinsEveilles;
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    const lot = j.lots[0];
+    poser(lot, ['zzz', 'zzz', 'zzz', 'tornade']);
+    m._finLancer(j, []);
+    const depart = j.departEnAttente;
+    m.avancerJusqua(m.now + 4000);
+    return { m, j, lot, depart };
+  };
+  {
+    const { m, j, depart } = essai(true, 'zzz-voisins');
+    verifier('trois ZzZ, un voisin éveillé : il s’endort, et le lot part',
+      depart && depart.dispo.id === 'endormir' && m._voisinsDirects(j).some((v) => !v.eveille)
+      && j.stats.combos.endormir === 1);
+  }
+  {
+    const { j, lot, depart } = essai(false, 'zzz-personne');
+    verifier('trois ZzZ, voisins déjà endormis : la combinaison se joue quand même, le lot part',
+      depart && depart.dispo.id === 'endormir' && j.stats.combos.endormir === 1 && !j.lots.includes(lot));
+  }
+
+  // On peut passer, ou non.
+  verifier('par défaut, on peut passer', configParDefaut(6).peutPasser === true);
+  const interdit = configParDefaut(6, { peutPasser: false });
+  {
+    const m = new Moteur(interdit, spec(6), 'pas-de-passe');
+    const j = m.joueurs[0];
+    if (!j.lots.length) j.lots.push(m._nouveauLot());
+    poser(j.lots[0], ['tornade', 'vache', 'zzz', 'x']);
+    verifier('variante : le joueur humain ne peut pas passer', m.passerHumain(0) === false && !j.departEnAttente);
+  }
+  let passes = 0, finies = 0;
+  for (let g = 0; g < 20; g++) {
+    const m = new Moteur(interdit, spec(6).map((x) => ({ ...x, type: 'ia' })), `pas-de-passe-${g}`);
+    m.jouerJusquAuBout();
+    if (m.termine && m.raisonFin === 'cartes') finies++;
+    passes += m.journal.filter((e) => e.type === 'tour' && e.issue === 'Passé').length;
+  }
+  verifier(`variante : 20 parties sans un lot passé de son plein gré (${passes}), ${finies} menées à terme`,
+    passes === 0 && finies === 20);
+}
+
 // ── Le journal montre d'abord les dés de la combinaison ─────────────────────
 console.log('\nJournal : les dés de la combinaison d’abord');
 {
