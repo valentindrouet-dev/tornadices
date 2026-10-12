@@ -12,9 +12,9 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.93';
-import { store } from './store.js?v=1.93';
-import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.93';
+import { h } from './dom.js?v=1.94';
+import { store } from './store.js?v=1.94';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.94';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -174,6 +174,12 @@ export function nomActif() {
 export function reglagesCourants() {
   const id = idActif();
   if (!id) return store.get(CLE_LIBRE, {});
+  // Des modifications gardées à part sur les Règles officielles datent d'avant
+  // la v1.94, où il fallait encore les valider : c'est bien les Règles
+  // officielles qu'on voulait changer, elles le deviennent.
+  if (id === ID_OFFICIELLES && modificationsIntegrees()[ID_OFFICIELLES]) {
+    validerReglesOfficielles(modificationsIntegrees()[ID_OFFICIELLES]);
+  }
   // Un réglage livré avec le jeu se lit dans le code — sauf si on l'a modifié
   // ici, auquel cas c'est notre version qui vaut, jusqu'à ce qu'on la rende.
   if (estIntegre(id)) {
@@ -191,6 +197,9 @@ export function enregistrerReglages(v) {
   const valeur = v && typeof v === 'object' ? v : {};
   const id = idActif();
   if (!id) { store.set(CLE_LIBRE, valeur); return; }
+  // Modifier le réglage « Règles officielles », c'est changer les Règles
+  // officielles elles-mêmes — pas en garder une variante à part.
+  if (id === ID_OFFICIELLES) { validerReglesOfficielles(valeur); return; }
   // Le code ne se réécrit pas : ce qu'on modifie par-dessus un réglage livré
   // est gardé à part, et « Réglage d'origine » l'efface d'un coup.
   if (estIntegre(id)) {
@@ -372,7 +381,11 @@ export function barreProfils(apres) {
         )
       : null,
     h('p.mini.muted', { style: { marginTop: '10px' } },
-      livre
+      courant && courant.id === ID_OFFICIELLES
+        ? 'Vous modifiez les Règles officielles elles-mêmes : chaque changement ci-dessous les '
+          + 'redéfinit aussitôt, ici comme au Laboratoire. Pour qu’elles le soient aussi pour les '
+          + 'autres visiteurs du site, téléchargez leur fichier dans le bloc « Règles officielles ».'
+      : livre
         ? `« ${courant.nom} » est livré avec le jeu : il est le même pour tout le monde, `
           + 'sans rien à enregistrer ni à partager. Ce que vous modifiez ci-dessous ne vaut '
           + 'que pour ce navigateur, et « Réglage d’origine » le rend tel qu’il est écrit.'

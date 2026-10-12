@@ -1,11 +1,11 @@
 // Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.93';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.93';
-import { nomSymbole } from './apparence.js?v=1.93';
-import { store } from './store.js?v=1.93';
-import { randomSeed } from '../core/rng.js?v=1.93';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.93';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.94';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.94';
+import { nomSymbole } from './apparence.js?v=1.94';
+import { store } from './store.js?v=1.94';
+import { randomSeed } from '../core/rng.js?v=1.94';
+import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.94';
 import {
   configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
   ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
@@ -20,15 +20,15 @@ import {
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
   equipeVue,
   assainirConfig, aideVariance,
-} from '../core/config.js?v=1.93';
-import { tableauCombos } from './combos.js?v=1.93';
-import { barreProfils, idActif } from './profils.js?v=1.93';
+} from '../core/config.js?v=1.94';
+import { tableauCombos } from './combos.js?v=1.94';
+import { barreProfils, idActif, reglagesCourants } from './profils.js?v=1.94';
 import {
   construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
-} from './variables.js?v=1.93';
+} from './variables.js?v=1.94';
 import {
   loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.93';
+} from '../core/proba.js?v=1.94';
 
 // Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
 // « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
@@ -67,6 +67,9 @@ let etat = {
   // Le réglage enregistré dont vient `cfg`. La page garde son état d'une visite
   // à l'autre — il faut donc savoir quand la configuration n'est plus la bonne.
   profil: idActif(),
+  // Les Réglages d'où vient `cfg`, tels qu'ils étaient : s'ils ont changé depuis,
+  // la campagne les reprend.
+  empreinte: store.get('empreinteLabo', null),
   // Construite à la première ouverture, pas au chargement du module : elle
   // dépend des réglages, dont le module n'est pas encore forcément évalué.
   cfg: null,
@@ -94,10 +97,23 @@ export function vueLabo() {
   // était ailleurs : la configuration de campagne le suit, sinon les deux pages
   // parleraient de deux jeux de règles différents. Tant que le réglage ne change
   // pas, ce qu'on a modifié ici reste en place.
+  // Et les Réglages ont pu être modifiés depuis : la campagne reprend alors les
+  // règles en vigueur, en gardant son nombre de joueurs. Ce qu'on règle ici, au
+  // Laboratoire, tient tant que les Réglages ne bougent pas.
+  const empreinte = JSON.stringify(reglagesCourants());
   if (!etat.cfg || etat.profil !== idActif()) {
     etat.profil = idActif();
     etat.cfg = cfgLabo();
+    if (etat.empreinte && etat.empreinte !== empreinte) {
+      etat.cfg = construireConfig(etat.cfg.nbJoueurs);
+      store.set('cfgLabo', etat.cfg);
+    }
+  } else if (etat.empreinte !== empreinte) {
+    etat.cfg = construireConfig(etat.cfg.nbJoueurs);
+    store.set('cfgLabo', etat.cfg);
   }
+  etat.empreinte = empreinte;
+  store.set('empreinteLabo', empreinte);
   const racine = h('div.page.page--large');
 
   function dessiner() {
@@ -133,6 +149,7 @@ function ongletSimulation(rafraichir) {
         etat.profil = idActif();
         etat.cfg = construireConfig(etat.cfg.nbJoueurs);
         store.set('cfgLabo', etat.cfg);
+        etat.empreinte = JSON.stringify(reglagesCourants());
         rafraichir();
       }),
       panneauConfig(rafraichir),

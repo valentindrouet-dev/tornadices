@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.93';
-export const BUILD_DATE = '2026-10-06';
+export const VERSION = '1.94';
+export const BUILD_DATE = '2026-10-12';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.94',
+    date: '12/10/2026',
+    notes: [
+      'Modifier le réglage « Règles officielles » change désormais les Règles officielles elles-mêmes. Jusqu’ici, ce qu’on y touchait était gardé à part comme une variante locale, et les Règles officielles ne bougeaient qu’au bouton « Valider ». Les modifications déjà faites ainsi sont reprises comme Règles officielles. « Valider comme Règles officielles » sert toujours à faire d’un autre réglage les Règles officielles.',
+      'Le Laboratoire suit les Réglages : il gardait sa propre copie des règles et ne la reprenait qu’en changeant de réglage enregistré, si bien qu’une valeur modifiée dans les Réglages n’y arrivait jamais. Désormais, dès que les Réglages ont changé, la campagne repart des règles en vigueur — en gardant son nombre de joueurs. Ce qu’on règle au Laboratoire tient tant que les Réglages ne bougent pas.',
+    ],
+  },
   {
     version: '1.93',
     date: '06/10/2026',
