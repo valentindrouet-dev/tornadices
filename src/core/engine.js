@@ -10,7 +10,7 @@
 //   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
 // Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
 
-import { makeRng } from './rng.js?v=1.95';
+import { makeRng } from './rng.js?v=1.96';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
   placement, infosMiseEnPlace, comboServie, exigenceVide,
@@ -18,7 +18,7 @@ import {
   requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
   modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
   comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.95';
+} from './config.js?v=1.96';
 
 // Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
 // si une IA a obtenu ce qu'elle visait, ou tout autre chose.
@@ -220,6 +220,20 @@ export class Moteur {
     // sont en jeu reviennent sur la carte Tornade — ou face cachée devant leur
     // équipe, selon l'endroit réglé.
     for (const e of Object.values(this.equipes)) { e.retournes = 0; e.refuge = 0; e.emportes = 0; }
+    // La Tornade Jalouse : l'équipe seule en tête aux cartes pose un jeton de
+    // plus, le temps de la manche.
+    for (const e of Object.values(this.equipes)) {
+      if (e.jetonsBase === undefined) e.jetonsBase = e.jetons;
+      e.jetons = e.jetonsBase;
+    }
+    if (this.passif.jetonMeneur) {
+      const meneur = this._seulEnTete();
+      if (meneur) {
+        meneur.jetons = meneur.jetonsBase + this.passif.jetonMeneur;
+        this._log(`${this._eq(meneur.id).Le} ${this._eq(meneur.id).v('mène', 'mènent')} : `
+          + `${this._eq(meneur.id).v('il pose', 'ils posent')} un jeton de plus dans la Tornade.`, 'manche');
+      }
+    }
     // Ce que la Tornade du jour demande de mettre à l'Abri, une fois pour la
     // manche : la carte ne changera plus d'ici la fin.
     this.refugeRequis = estCompromis(this.cfg) ? refugePour(this.cfg, this.carte) : 0;
@@ -559,7 +573,8 @@ export class Moteur {
       d.sym = faces[this.rng.int(faces.length)];
       d.roule = false;
       d.finRoule = 0;
-      if (d.sym === bloquant) d.verrou = true;
+      // La Tornade du Chaos : les X ne se figent plus, on les relance aussi.
+      if (d.sym === bloquant && !this.passif.sansVerrou) d.verrou = true;
     }
     lot.lance = this._lotPose(lot);
   }
@@ -1249,6 +1264,14 @@ export class Moteur {
     if (!pool.length) return null;
     pool.sort((a, b) => (this.equipes[b.equipe]?.retournes || 0) - (this.equipes[a.equipe]?.retournes || 0));
     return pool[0];
+  }
+
+  /** L'équipe seule en tête aux cartes, ou rien en cas d'égalité. */
+  _seulEnTete() {
+    const equipes = Object.values(this.equipes);
+    const max = Math.max(...equipes.map((e) => e.cartes.length));
+    const tete = equipes.filter((e) => e.cartes.length === max);
+    return max > 0 && tete.length === 1 ? tete[0] : null;
   }
 
   _coequipiers(j) { return this.joueurs.filter((x) => x.equipe === j.equipe && x.id !== j.id); }

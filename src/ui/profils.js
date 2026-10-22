@@ -12,9 +12,9 @@
 // les réglages libres, ceux du site depuis toujours, sous leur clé historique.
 // Le sélectionner les retrouve tels qu'on les avait laissés — il n'efface rien.
 
-import { h } from './dom.js?v=1.95';
-import { store } from './store.js?v=1.95';
-import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.95';
+import { h } from './dom.js?v=1.96';
+import { store } from './store.js?v=1.96';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=1.96';
 
 const CLE_LISTE = 'profilsReglages';
 const CLE_ACTIF = 'profilActif';
@@ -49,6 +49,8 @@ export const PROFILS_INTEGRES = [
         'spChauffe', 'spPaisible', 'spMaladroite', 'spChargee', 'spTricheurs',
         'spF5', 'spCowboy', 'spSiecle', 'spMega', 'spSommeil', 'spFurieuse',
         'spElectrique', 'spVaches', 'spPoules',
+        // Les cartes à l'essai : connues, mais pas dans le paquet imprimé.
+        'spSilencieuse', 'spJalouse', 'spChaos',
       ],
       // Les cartes à réunir pour gagner, effectif par effectif. Plus il y a de
       // monde, plus les manches sont disputées : l'objectif monte avec la table.

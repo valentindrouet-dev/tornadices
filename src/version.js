@@ -1,9 +1,17 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.95';
+export const VERSION = '1.96';
 export const BUILD_DATE = '2026-10-22';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.96',
+    date: '22/10/2026',
+    notes: [
+      'Trois nouvelles cartes Tornade, à l’essai : la Tornade Silencieuse (« Interdit de parler : le premier qui parle remet un jeton de son équipe dans la Tornade » — une carte de table, que le site ne peut pas arbitrer : à l’écran, la manche se joue normalement), la Tornade Jalouse (l’équipe seule en tête aux cartes pose un jeton de plus dans la Tornade ; à égalité, personne) et la Tornade du Chaos (les X ne se figent plus : tous les dés se relancent, et deux X au même jet font toujours l’Échec).',
+      'Elles entrent dans le paquet des Réglages, du Laboratoire et des Règles ; le réglage Vichy, qui est le paquet imprimé, ne les reçoit pas.',
+    ],
+  },
   {
     version: '1.95',
     date: '22/10/2026',

@@ -506,6 +506,11 @@ export const AIDE_EQUIPE_DEPART = {
  * Tornade et ses cinq symboles, sur des lots de quatre.
  */
 export function noteCarte(carte, cfg) {
+  // Une carte de table que le site ne sait pas arbitrer : elle se joue autour
+  // de la vraie table, et passe à l'écran comme une manche ordinaire.
+  if (carte.physique) {
+    return 'Carte de table : à l’écran, la manche se joue normalement — c’est autour d’une vraie table qu’on l’arbitre.';
+  }
   if (!carteALaTable(carte, cfg)) {
     if (carte.animal === 'cowboy') {
       return 'La Tornade de Cow-Boy ne se joue qu’à trois joueurs : ailleurs, elle n’est pas mise dans la pioche.';
@@ -871,6 +876,43 @@ export const CARTES_TORNADE = [
     animal: 'poule',
   },
 
+  {
+    // Une carte de table : le site ne peut pas entendre qui parle. À l'écran,
+    // elle se joue comme une manche ordinaire.
+    id: 'spSilencieuse',
+    refuge: 2,
+    court: 'Tornade Silencieuse',
+    nom: 'Tornade Silencieuse',
+    texte: 'Interdit de parler : le premier qui parle remet un jeton de son équipe dans la Tornade',
+    combo: null,
+    effetPassif: null,
+    physique: true,
+    depuis: '1.96',
+  },
+  {
+    // L'équipe qui mène — le plus de cartes, seule en tête — pose un jeton de
+    // plus. Une égalité en tête ne désigne personne.
+    id: 'spJalouse',
+    refuge: 2,
+    court: 'Tornade Jalouse',
+    nom: 'Tornade Jalouse',
+    texte: 'L’équipe qui mène pose un jeton de plus dans la Tornade',
+    combo: null,
+    effetPassif: { jetonMeneur: 1 },
+    depuis: '1.96',
+  },
+  {
+    // Les X ne se figent plus : on les relance comme les autres dés. Deux X au
+    // même jet font toujours l'Échec.
+    id: 'spChaos',
+    refuge: 2,
+    court: 'Tornade du Chaos',
+    nom: 'Tornade du Chaos',
+    texte: 'Tous les dés peuvent être relancés, même les X',
+    combo: null,
+    effetPassif: { sansVerrou: true },
+    depuis: '1.96',
+  },
 ];
 
 /**

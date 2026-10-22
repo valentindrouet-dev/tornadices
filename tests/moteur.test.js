@@ -553,7 +553,12 @@ console.log('\nCaractères des IA');
   const par = {};
   for (const id of Object.keys(PROFILS_IA)) {
     const spec = Array.from({ length: 6 }, (_, i) => ({ nom: `J${i}`, type: 'ia', profil: id }));
-    const r = lancerCampagne(configParDefaut(6), spec, `car-${id}`, N);
+    // Sur le paquet imprimé : une carte ajoutée au jeu ne doit pas changer ce
+    // qu'on mesure du caractère des IA.
+    const cfgCar = configParDefaut(6);
+    cfgCar.cartesTornade = PROFILS_INTEGRES.find((x) => x.id === 'vichy').variables.cartesTornade.slice();
+    cfgCar.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
+    const r = lancerCampagne(cfgCar, spec, `car-${id}`, N);
     par[id] = {
       reveil: (r.combos.reveil || 0) / N,
       vache: (r.combos.vache || 0) / N,
@@ -2489,6 +2494,66 @@ console.log('\nPas de mégarde');
   verifier('un ancien réglage perd le taux d’erreur',
     !('tauxErreur' in assainirConfig({ nbJoueurs: 6, tauxErreur: 0.2, penaliteErreurAdverse: 0.5 }))
     && !('tauxErreur' in configParDefaut(6)));
+}
+
+// ── Les cartes à l'essai : Silencieuse, Jalouse, Chaos ──────────────────────
+console.log('\nTornades Silencieuse, Jalouse et du Chaos');
+{
+  const spec = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, type: 'ia', profil: 'equilibre' }));
+  const avec = (id, graine, prepa) => {
+    const cfg = configParDefaut(6);
+    cfg.cartesTornade = [id];
+    cfg.cartesTornadeVues = CARTES_TORNADE.map((c) => c.id);
+    cfg.melangerCartes = false;
+    const m = new Moteur(cfg, spec(6), graine, prepa);
+    return m;
+  };
+  verifier('les trois cartes sont au paquet',
+    ['spSilencieuse', 'spJalouse', 'spChaos'].every((id) => CARTES_PAR_ID[id]));
+  verifier('la Silencieuse se dit carte de table',
+    /Carte de table/.test(noteCarte(CARTES_PAR_ID.spSilencieuse, configParDefaut(6))));
+  verifier('Vichy, le paquet imprimé, ne les reçoit pas',
+    !cartesEnJeu({ ...configParDefaut(6), ...PROFILS_INTEGRES.find((x) => x.id === 'vichy').variables })
+      .some((id) => ['spSilencieuse', 'spJalouse', 'spChaos'].includes(id)));
+
+  // Jalouse : l'équipe seule en tête pose un jeton de plus, le temps de la manche.
+  {
+    const m = avec('spJalouse', 'jalouse');
+    m.equipes.bleu.cartes = ['spSiecle'];
+    m._demarrerManche(false);
+    const jeu = m.carte && m.carte.id === 'spJalouse';
+    verifier(`Jalouse : les Bleus mènent, ils posent un jeton de plus (${m.equipes.bleu.jetons} contre ${m.equipes.jaune.jetons})`,
+      !jeu || m.equipes.bleu.jetons === m.equipes.jaune.jetons + 1);
+    m.equipes.jaune.cartes = ['spPaisible'];
+    m.pioche.unshift(CARTES_PAR_ID.spJalouse);
+    m._demarrerManche(false);
+    verifier('Jalouse : à égalité en tête, personne n’en pose de plus',
+      m.equipes.bleu.jetons === m.equipes.jaune.jetons);
+  }
+
+  // Chaos : un X sorti ne se fige pas.
+  {
+    const m = avec('spChaos', 'chaos');
+    verifier('la Tornade du Chaos est bien la carte du jour', m.carte && m.carte.id === 'spChaos');
+    const j = m.joueurs.find((x) => x.lots.length);
+    const lot = j.lots[0];
+    lot.des.forEach((d) => { d.roule = true; });
+    let fige = 0, x = 0;
+    for (let k = 0; k < 200; k++) {
+      lot.des.forEach((d) => { d.roule = true; d.verrou = false; });
+      m._poserDes(lot, [0, 1, 2, 3]);
+      x += lot.des.filter((d) => d.sym === 'x').length;
+      fige += lot.des.filter((d) => d.verrou).length;
+    }
+    verifier(`Chaos : ${x} X sortis, aucun figé`, x > 0 && fige === 0);
+    let parties = 0;
+    for (let g = 0; g < 10; g++) {
+      const p = avec('spChaos', `chaos-partie-${g}`);
+      p.jouerJusquAuBout();
+      if (p.termine) parties++;
+    }
+    verifier('Chaos : les parties vont au bout', parties === 10);
+  }
 }
 
 // ── Le journal montre d'abord les dés de la combinaison ─────────────────────
