@@ -1,9 +1,16 @@
 // Compteur de version — incrémenté à chaque modification livrée.
-export const VERSION = '1.94';
-export const BUILD_DATE = '2026-10-12';
+export const VERSION = '1.95';
+export const BUILD_DATE = '2026-10-22';
 
 // Journal des versions : le plus récent en premier.
 export const CHANGELOG = [
+  {
+    version: '1.95',
+    date: '22/10/2026',
+    notes: [
+      'La Tornade de Cow-Boy ne se joue plus qu’à trois joueurs. Elle entrait dans la pioche dès qu’il y avait un joueur Vert — à trois, cinq et sept joueurs ; à cinq et sept, elle n’est plus mise dans la pioche, et les Réglages, la Fiche et les Règles le disent.',
+    ],
+  },
   {
     version: '1.94',
     date: '12/10/2026',

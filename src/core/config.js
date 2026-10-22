@@ -508,7 +508,7 @@ export const AIDE_EQUIPE_DEPART = {
 export function noteCarte(carte, cfg) {
   if (!carteALaTable(carte, cfg)) {
     if (carte.animal === 'cowboy') {
-      return 'Pas de joueur Vert à ce nombre de joueurs : cette carte n’est pas mise dans la pioche.';
+      return 'La Tornade de Cow-Boy ne se joue qu’à trois joueurs : ailleurs, elle n’est pas mise dans la pioche.';
     }
     return 'Cette carte n’est pas mise dans la pioche à ce nombre de joueurs.';
   }
@@ -800,7 +800,7 @@ export const CARTES_TORNADE = [
     texte: 'Le Cow-Boy gagne 2 Cartes Tornade à cette manche',
     combo: null,
     effetPassif: { doubleSi: 'vert' },
-    // Sans joueur Vert, la carte ne désignerait personne : elle sort du paquet.
+    // Elle ne se joue qu'à trois joueurs : ailleurs, elle sort du paquet.
     animal: 'cowboy',
   },
   {
@@ -893,13 +893,13 @@ export function cartesDuJeu() {
 export const CARTES_PAR_ID = Object.fromEntries(CARTES_TORNADE.map((c) => [c.id, c]));
 
 /**
- * La carte va-t-elle dans la pioche, à cette table ? Une carte qui désigne un
- * animal absent ne désignerait personne : la Tornade de Cow-Boy sans joueur
- * Vert. Les Vaches et les Poules sont à toutes les tables.
+ * La carte va-t-elle dans la pioche, à cette table ? La Tornade de Cow-Boy ne se
+ * joue qu'à trois joueurs. Les Vaches et les Poules sont à toutes les tables.
  */
+export const TABLE_COWBOY = 3;
 export function carteALaTable(carte, cfg) {
   if (!carte || !carte.animal) return true;
-  if (carte.animal === 'cowboy') return Number(cfg && cfg.nbJoueurs) % 2 === 1;
+  if (carte.animal === 'cowboy') return Number(cfg && cfg.nbJoueurs) === TABLE_COWBOY;
   return true;
 }
 

@@ -1081,11 +1081,12 @@ console.log('\nCartes Tornade — un seul paquet');
     const c6 = configParDefaut(6);
     verifier('Vaches et Poules à toutes les tables, trois joueurs compris',
       a('spVaches', c6) && a('spPoules', c5) && a('spVaches', c3) && a('spPoules', c3));
-    verifier('le Cow-Boy avec le joueur Vert — à trois, cinq et sept',
-      a('spCowboy', c5) && a('spCowboy', c3) && !a('spCowboy', c6));
+    verifier('la Tornade de Cow-Boy à trois joueurs seulement',
+      a('spCowboy', c3) && !a('spCowboy', c5) && !a('spCowboy', c6)
+      && !a('spCowboy', configParDefaut(7)));
     verifier('la Tornade de Cochons a quitté le paquet', !CARTES_PAR_ID.spCochons);
-    verifier('la note du Cow-Boy parle du joueur Vert',
-      /joueur Vert/.test(noteCarte(CARTES_PAR_ID.spCowboy, c6))
+    verifier('la note du Cow-Boy dit qu’elle ne se joue qu’à trois',
+      /qu’à trois joueurs/.test(noteCarte(CARTES_PAR_ID.spCowboy, c5))
       && noteCarte(CARTES_PAR_ID.spCowboy, c3) === '');
     // Et la pioche du moteur les trie bien.
     const pioche = (cfg, graine) => new Set(new Moteur({ ...cfg, melangerCartes: false }, spec(cfg.nbJoueurs), graine)
@@ -1152,15 +1153,15 @@ console.log('\nCartes Tornade — combinaisons réglées');
       realisations > 0);
   }
 
-  // Sans joueur Vert, la Tornade de Cow-boy ne désigne personne.
+  // La Tornade de Cow-Boy ne se joue qu'à trois joueurs.
   {
-    const m6 = new Moteur(configParDefaut(6, { sansPoints: true }), spec(6), 'cowboy-6');
-    m6.jouerJusquAuBout();
-    verifier('à nombre pair, la Tornade de Cow-boy reste hors du paquet',
-      !m6.statsManches.some((s) => s.carte === 'spCowboy'));
     const m5 = new Moteur(configParDefaut(5, { sansPoints: true }), spec(5), 'cowboy-5');
-    verifier('à nombre impair, elle est bien dans la pioche',
-      m5.pioche.some((c) => c.id === 'spCowboy'));
+    m5.jouerJusquAuBout();
+    verifier('à cinq joueurs, la Tornade de Cow-Boy reste hors du paquet',
+      !m5.statsManches.some((s) => s.carte === 'spCowboy'));
+    const m3 = new Moteur(configParDefaut(3, { sansPoints: true }), spec(3), 'cowboy-3');
+    verifier('à trois, elle est bien dans la pioche',
+      [m3.carte, ...m3.pioche].some((c) => c && c.id === 'spCowboy'));
   }
 }
 

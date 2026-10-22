@@ -1,19 +1,19 @@
 // Rappel des règles, tel qu'implémenté par le moteur.
 
-import { h } from './dom.js?v=1.94';
+import { h } from './dom.js?v=1.95';
 import {
   pastilleSymbole, suiteSymboles, emblemeEquipe,
   SVG_TORNADE_EVEILLEE, SVG_TORNADE_ENDORMIE,
-} from './icons.js?v=1.94';
+} from './icons.js?v=1.95';
 import {
   COMBOS_TORNADE, CARTES_TORNADE, SYMBOLES, MISE_EN_PLACE,
   PROFILS_IA, COULEURS_EQUIPE, OPTIONS_SENS, AIDE_SENS, REGLE_CARTES_DEUX_ETATS,
-} from '../core/config.js?v=1.94';
-import { nomSymbole, nomAncien } from './apparence.js?v=1.94';
+} from '../core/config.js?v=1.95';
+import { nomSymbole, nomAncien } from './apparence.js?v=1.95';
 
 /** Où sort une carte d'animal. */
 const TABLES_ANIMAL = {
-  cowboy: 'À trois, cinq et sept joueurs, avec le joueur Vert.',
+  cowboy: 'À trois joueurs seulement.',
 };
 
 export function vueRegles() {
@@ -234,8 +234,8 @@ export function vueRegles() {
         + 'en cours et la première du dessus de la pioche, qu’elle garde face cachée dans sa '
         + 'pile : deux points d’un coup.'),
       h('div.encart', { style: { marginTop: '10px' } },
-        'Les cartes d’animal ne sortent que si l’animal est à la table : la Tornade de Cow-Boy '
-        + 'avec le joueur Vert, celles des Vaches et des Poules à toutes les tables.'),
+        'La Tornade de Cow-Boy ne sort qu’à trois joueurs ; celles des Vaches et des Poules, '
+        + 'à toutes les tables.'),
       h('p.mini.muted', { style: { marginTop: '10px' } },
         'La Tornade de Chauffe ouvre la partie : la manche se joue comme les autres, mais la '
         + 'carte ne rapporte rien — elle est défaussée. La Méga Tornade demande cinq symboles : '

@@ -3,11 +3,11 @@
 // La page ne stocke qu'un jeu de réglages partiels ; `construireConfig` les pose
 // par-dessus la configuration par défaut du nombre de joueurs choisi.
 
-import { h, remplacer, telecharger } from './dom.js?v=1.94';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.94';
-import { store } from './store.js?v=1.94';
-import { aller } from './app.js?v=1.94';
-import { lancerPartie } from './table.js?v=1.94';
+import { h, remplacer, telecharger } from './dom.js?v=1.95';
+import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.95';
+import { store } from './store.js?v=1.95';
+import { aller } from './app.js?v=1.95';
+import { lancerPartie } from './table.js?v=1.95';
 import {
   configParDefaut, infosMiseEnPlace, ORDRE_SYMBOLES,
   OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, sansAttrape,
@@ -23,22 +23,22 @@ import {
   OPTIONS_SENS, AIDE_SENS, sensRotation,
   OPTIONS_COMBO_SERVIE, AIDE_COMBO_SERVIE, REGLE_CARTES_DEUX_ETATS,
   OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-} from '../core/config.js?v=1.94';
-import { tableauCombos, editeurCases } from './combos.js?v=1.94';
-import { illustrationCarte } from './illustrations.js?v=1.94';
+} from '../core/config.js?v=1.95';
+import { tableauCombos, editeurCases } from './combos.js?v=1.95';
+import { illustrationCarte } from './illustrations.js?v=1.95';
 import {
   FACES_PERSONNALISABLES, MODELES_FACE, NOM_MODELE, APPARENCE_OFFICIELLE,
   nomSymbole, nomAncien, imageSymbole, faceModifiee,
   reglerApparence, reinitialiserApparence, reinitialiserApparences,
-} from './apparence.js?v=1.94';
-import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.94';
-import { randomSeed } from '../core/rng.js?v=1.94';
-import { reglagesJoueurs } from './accueil.js?v=1.94';
+} from './apparence.js?v=1.95';
+import { eveillerSons, jouerSon, sonsActifs, reglerSons, volumeSons, reglerVolume, SONS, NOMS_SONS } from './sons.js?v=1.95';
+import { randomSeed } from '../core/rng.js?v=1.95';
+import { reglagesJoueurs } from './accueil.js?v=1.95';
 import {
   barreProfils, reglagesCourants, enregistrerReglages,
   reglesOfficielles, validerReglesOfficielles, fichierReglesOfficielles,
   ID_OFFICIELLES, selectionnerProfil, retablirIntegre,
-} from './profils.js?v=1.94';
+} from './profils.js?v=1.95';
 
 /**
  * Les jetons par manche, une colonne par nombre de joueurs : ceux d'une équipe,
@@ -1329,8 +1329,7 @@ export function vueVariables() {
           REGLE_CARTES_DEUX_ETATS,
           'Un seul paquet pour les trois façons de jouer une manche : une carte a le même titre, '
           + 'le même texte et le même pouvoir avec les jetons, en Immédiat ou en Compromis.',
-          'Les cartes d’animal ne sortent que si l’animal est à la table : pas de Cow-Boy sans '
-          + 'joueur Vert.',
+          'La Tornade de Cow-Boy ne sort qu’à trois joueurs.',
           'La pile démarre par la Tornade de Chauffe si elle est cochée ; le reste suit, '
           + 'mélangé ou non.',
           'Une carte qui vaut deux points se paie sur la pioche : l’équipe prend la carte en '
