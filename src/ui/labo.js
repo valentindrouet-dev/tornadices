@@ -1,136 +1,343 @@
-// Laboratoire d'équilibrage : campagnes simulées et probabilités exactes.
+// Laboratoire d'équilibrage : des milliers de parties jouées par le moteur de
+// la table, avec les règles du réglage actif, et ce qu'on peut en conclure.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=1.96';
-import { pastilleSymbole, suiteSymboles } from './icons.js?v=1.96';
-import { nomSymbole } from './apparence.js?v=1.96';
-import { store } from './store.js?v=1.96';
-import { randomSeed } from '../core/rng.js?v=1.96';
-import { lancerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=1.96';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.01';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.01';
+import { store } from './store.js?v=2.01';
+import { aller } from './app.js?v=2.01';
+import { randomSeed, makeRng } from '../core/rng.js?v=2.01';
+import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.01';
+import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.01';
 import {
-  configParDefaut, infosMiseEnPlace, placement, PROFILS_IA, COULEURS_EQUIPE,
-  ORDRE_SYMBOLES, SYMBOLES, CARTES_PAR_ID, profilIA,
-  OPTIONS_ATTRAPE, AIDE_ATTRAPE, OPTIONS_ECHEC, AIDE_ECHEC, OPTIONS_PASSER, AIDE_PASSER,
-  OPTIONS_MANCHE, AIDE_MANCHE, noteCarte,
-  OPTIONS_EQUIPE_DEPART, AIDE_EQUIPE_DEPART,
-  cleCombosCartes, clePaquet, cartesEnJeu, cartesDuJeu, requisCarte, comboPossible, lotsPour,
-  NOMBRES_JOUEURS, JOUEURS_MAX, bornerJoueurs,
-  NOM_MODE, modeManche, estJeton, estImmediat, estCompromis, refugePour,
-  cartesPour, cartesVertPour,
-  OPTIONS_SENS, AIDE_SENS, sensRotation,
-  OPTIONS_PLACE_JETONS, AIDE_PLACE_JETONS, jetonsSurTornade,
-  equipeVue,
-  assainirConfig, aideVariance,
-} from '../core/config.js?v=1.96';
-import { tableauCombos } from './combos.js?v=1.96';
-import { barreProfils, idActif, reglagesCourants } from './profils.js?v=1.96';
-import {
-  construireConfig, tableLots, tableCartes, tableCartesVert, nomParDefaut,
-} from './variables.js?v=1.96';
-import {
-  loiDuDe, loiBinomiale, courseCombinaison, courseAvecGarde, esperanceAvantPerte,
-} from '../core/proba.js?v=1.96';
+  EQUIPES, PROFILS_IA, CARTES_PAR_ID, SYMBOLES, ORDRE_SYMBOLES, configDepuis, placement, requisCarte,
+  carteALaTable, tailleRequis,
+} from '../core/config.js?v=2.01';
+import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.01';
+import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.01';
 
-// Le nom affiché d'une face suit l'habillage en cours : « Réveil » plutôt que
-// « Tornade » sur le dé officiel, ou celui que vous lui avez donné.
-const NOM_SYM = new Proxy({}, { get: (_, id) => nomSymbole(String(id)) });
+const PARTIES = [200, 1000, 5000, 20000];
+const etat = { onglet: 'simulation', enCours: null };
 
-/**
- * Le dernier résultat de campagne, s'il est encore lisible. Un résultat produit
- * par une version antérieure n'a pas les colonnes d'aujourd'hui : on l'écarte
- * plutôt que de laisser la page tomber sur un champ absent. Il suffit de
- * relancer la campagne — c'est l'affaire d'une seconde.
- */
-function resultatEnregistre() {
-  const r = store.get('dernierResultat', null);
-  if (!r || typeof r !== 'object') return null;
-  // Une erreur enregistrée n'a pas de format : elle reste affichable telle quelle.
-  if (r.erreur) return r;
-  return r.schema === SCHEMA_RESULTAT ? r : null;
+function params() {
+  const p = store.get('labo', {});
+  const nb = joueursDansBornes(p.nb ?? 6);
+  return {
+    nb,
+    parties: Math.min(100000, Math.max(10, Math.round(Number(p.parties)) || 1000)),
+    graine: p.graine || 'labo-1',
+    nouvelleGraine: p.nouvelleGraine !== false,
+    profils: Array.from({ length: nb }, (_, i) => (PROFILS_IA[(p.profils || [])[i]] ? p.profils[i] : 'equilibre')),
+  };
+}
+const ecrireParams = (modif) => store.set('labo', { ...params(), ...modif });
+
+function resultatGarde() {
+  const g = store.get('laboResultat', null);
+  return g && g.resultat && g.resultat.schema === SCHEMA_RESULTAT ? g : null;
 }
 
-function cfgLabo() {
-  const enregistre = store.get('cfgLabo', null);
-  // Un Laboratoire ouvert de longue date garde ses réglages tels quels : il faut
-  // les retraduire, sinon les faces d'avant le renommage de la v1.3 restent au
-  // dé sans que rien ne les reconnaisse.
-  if (enregistre) return assainirConfig(enregistre);
-  // Première visite : on part des réglages en cours, pas des valeurs d'usine.
-  // Ouvrir le Laboratoire sur un autre mode de jeu que celui qu'on vient de
-  // choisir n'a aucun sens — c'est le réglage le plus structurant de tous.
-  const c = construireConfig(bornerJoueurs(store.get('nbJoueurs', 6)));
-  c.combosCartesTornade = c.combosCartesTornade || {};
-  return c;
-}
-
-let etat = {
-  onglet: 'simulation',
-  // Le réglage enregistré dont vient `cfg`. La page garde son état d'une visite
-  // à l'autre — il faut donc savoir quand la configuration n'est plus la bonne.
-  profil: idActif(),
-  // Les Réglages d'où vient `cfg`, tels qu'ils étaient : s'ils ont changé depuis,
-  // la campagne les reprend.
-  empreinte: store.get('empreinteLabo', null),
-  // Construite à la première ouverture, pas au chargement du module : elle
-  // dépend des réglages, dont le module n'est pas encore forcément évalué.
-  cfg: null,
-  profils: store.get('profilsLabo', null) || Array.from({ length: JOUEURS_MAX }, () => 'equilibre'),
-  nbParties: store.get('nbPartiesLabo', 200),
-  graine: store.get('graineLabo', 'tornade-1000'),
-  // Une nouvelle graine à chaque campagne, par défaut : relancer donne d'autres
-  // parties. Décochée, la graine reste en place et la campagne se rejoue à
-  // l'identique — c'est ce qu'il faut pour comparer deux réglages.
-  nouvelleGraine: store.get('nouvelleGraineLabo', true) !== false,
-  resultat: resultatEnregistre(),
-  calcul: false,
-};
-
-function sauver() {
-  store.set('cfgLabo', etat.cfg);
-  store.set('profilsLabo', etat.profils);
-  store.set('nbPartiesLabo', etat.nbParties);
-  store.set('graineLabo', etat.graine);
-  store.set('nouvelleGraineLabo', etat.nouvelleGraine);
-}
+const stat = (valeur, libelle, sous) => h('div.stat', h('div.lib', libelle), h('div.val', valeur), sous ? h('div.sous', sous) : null);
+const pts = (x) => `${nombre(x * 100, 1).replace('.', ',')}`;
+const part = (w) => `${pts(w.part)} %`;
+const intervalle = (w) => `${pts(w.bas)} – ${pts(w.haut)} %`;
 
 export function vueLabo() {
-  // Un réglage enregistré a pu être choisi depuis les Réglages pendant qu'on
-  // était ailleurs : la configuration de campagne le suit, sinon les deux pages
-  // parleraient de deux jeux de règles différents. Tant que le réglage ne change
-  // pas, ce qu'on a modifié ici reste en place.
-  // Et les Réglages ont pu être modifiés depuis : la campagne reprend alors les
-  // règles en vigueur, en gardant son nombre de joueurs. Ce qu'on règle ici, au
-  // Laboratoire, tient tant que les Réglages ne bougent pas.
-  const empreinte = JSON.stringify(reglagesCourants());
-  if (!etat.cfg || etat.profil !== idActif()) {
-    etat.profil = idActif();
-    etat.cfg = cfgLabo();
-    if (etat.empreinte && etat.empreinte !== empreinte) {
-      etat.cfg = construireConfig(etat.cfg.nbJoueurs);
-      store.set('cfgLabo', etat.cfg);
-    }
-  } else if (etat.empreinte !== empreinte) {
-    etat.cfg = construireConfig(etat.cfg.nbJoueurs);
-    store.set('cfgLabo', etat.cfg);
-  }
-  etat.empreinte = empreinte;
-  store.set('empreinteLabo', empreinte);
   const racine = h('div.page.page--large');
 
   function dessiner() {
     remplacer(racine,
-      h('div.rangee', { style: { margin: '6px 0 18px' } },
+      h('div.rangee', { style: { margin: '6px 0 14px' } },
         h('h1', 'Laboratoire d’équilibrage'),
+        h('div.pousse'),
+        h('div.onglets', { style: { margin: 0 } },
+          ...[['simulation', 'Simulation'], ['probas', 'Probabilités']].map(([id, lib]) => h('button', {
+            class: etat.onglet === id ? 'on' : '', onclick: () => { etat.onglet = id; dessiner(); },
+          }, lib))),
       ),
-      h('div.onglets',
-        ...[['simulation', 'Simulation'], ['probas', 'Probabilités'], ['regles', 'Règles chiffrées']]
-          .map(([id, lib]) => h('button', {
-            class: etat.onglet === id ? 'on' : '',
-            onclick: () => { etat.onglet = id; dessiner(); },
-          }, lib)),
+      barreProfils(dessiner, noteRegles()),
+      etat.onglet === 'simulation' ? ongletSimulation() : ongletProbas(),
+    );
+  }
+
+  function noteRegles() {
+    const p = params();
+    const ecarts = ecartsAuxOfficielles(p.nb);
+    return h('div.mini.muted.note-profil',
+      `Les campagnes jouent « ${nomActif()} », le réglage de la page Réglages`,
+      ecarts.length ? ` — ${ecarts.length} écart${ecarts.length > 1 ? 's' : ''} aux Règles officielles à ${p.nb} joueurs. ` : '. ',
+      h('button.lien', { onclick: () => aller('/reglages') }, 'Modifier les règles'));
+  }
+
+  // ── Simulation ─────────────────────────────────────────────────────────────
+  function lancer() {
+    let p = params();
+    if (p.nouvelleGraine && resultatGarde()) { ecrireParams({ graine: randomSeed() }); p = params(); }
+    const cfg = configDepuis(reglagesCourants(), p.nb);
+    const spec = p.profils.map((profil, i) => ({ nom: nomParDefaut(i), type: 'ia', profil }));
+    const campagne = creerCampagne(cfg, spec, p.graine);
+    const course = { campagne, total: p.parties, arret: false };
+    etat.enCours = course;
+    dessiner();
+    // Par tranches de 40 ms : la page reste vivante et la barre avance. Le
+    // résultat ne dépend pas du découpage.
+    const tranche = () => {
+      if (etat.enCours !== course) return;
+      const t0 = performance.now();
+      while (!course.arret && campagne.fait < course.total && performance.now() - t0 < 40) {
+        campagne.jouer(Math.min(5, course.total - campagne.fait));
+      }
+      if (!course.arret && campagne.fait < course.total) {
+        const barre = racine.querySelector('.jauge-progres > div');
+        const texte = racine.querySelector('.progres-texte');
+        if (barre) barre.style.width = `${(campagne.fait / course.total) * 100}%`;
+        if (texte) texte.textContent = `${campagne.fait} / ${course.total} parties`;
+        setTimeout(tranche, 0);
+        return;
+      }
+      etat.enCours = null;
+      if (campagne.fait) {
+        store.set('laboResultat', {
+          resultat: campagne.resultat(), reglage: nomActif(), profils: p.profils, interrompue: course.arret,
+        });
+      }
+      if (document.body.contains(racine)) dessiner();
+    };
+    setTimeout(tranche, 0);
+  }
+
+  function panneauCampagne() {
+    const p = params();
+    const cfg = configDepuis(reglagesCourants(), p.nb);
+    const sieges = placement(p.nb);
+    const optionsProfil = (choisi) => Object.values(PROFILS_IA).map((x) => h('option', { value: x.id, selected: x.id === choisi }, x.nom));
+    const tous = p.profils.every((x) => x === p.profils[0]) ? p.profils[0] : '';
+    return h('div.carte',
+      h('div.titre-section', 'Campagne'),
+      h('div.rangee',
+        h('span.petit', 'Joueurs'),
+        h('div.segment', ...nombresJoueursPermis().map((n) => h('button', {
+          class: n === p.nb ? 'on' : '', onclick: () => { ecrireParams({ nb: n }); dessiner(); },
+        }, String(n)))),
       ),
-      etat.onglet === 'simulation' ? ongletSimulation(dessiner)
-        : etat.onglet === 'probas' ? ongletProbas(dessiner)
-          : ongletRegles(dessiner),
+      h('p.mini.muted', { style: { margin: '8px 0 12px' } },
+        `${cfg.lots} lots de ${cfg.desParLot} dés · ${cfg.abris} Abri${cfg.abris > 1 ? 's' : ''} par manche · `
+        + `${cfg.cartesPourGagner} cartes pour gagner`
+        + (p.nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert})` : '')
+        + ` · ${cfg.cartes.filter((id) => carteALaTable(CARTES_PAR_ID[id], p.nb)).length} cartes dans la pioche`),
+      h('div.rangee.rangee--serree', { style: { marginBottom: '6px' } },
+        h('span.petit', { style: { flex: '1' } }, 'Caractère des IA'),
+        h('select', {
+          title: 'Donner le même caractère à toutes les places',
+          onchange: (e) => { if (e.target.value) { ecrireParams({ profils: p.profils.map(() => e.target.value) }); dessiner(); } },
+        }, h('option', { value: '', selected: !tous }, 'Tous : …'), ...optionsProfil(tous))),
+      h('div.places-labo', ...p.profils.map((profil, i) => h('label.place-labo',
+        emblemeEquipe(EQUIPES[sieges[i]].embleme, 20),
+        h('span', nomParDefaut(i)),
+        h('select', {
+          title: PROFILS_IA[profil].desc,
+          onchange: (e) => { ecrireParams({ profils: p.profils.map((x, k) => (k === i ? e.target.value : x)) }); dessiner(); },
+        }, ...optionsProfil(profil))))),
+      h('div.rangee', { style: { marginTop: '14px' } },
+        h('span.petit', 'Parties'),
+        h('div.segment', ...PARTIES.map((n) => h('button', {
+          class: n === p.parties ? 'on' : '', onclick: () => { ecrireParams({ parties: n }); dessiner(); },
+        }, n >= 1000 ? `${n / 1000} k` : String(n)))),
+        h('input', {
+          type: 'number', min: 10, max: 100000, step: 10, value: p.parties, style: { width: '92px' },
+          onchange: (e) => { ecrireParams({ parties: Number(e.target.value) }); dessiner(); },
+        }),
+      ),
+      h('div.rangee', { style: { marginTop: '10px' } },
+        h('span.petit', 'Graine'),
+        h('input', {
+          type: 'text', value: p.graine, style: { flex: '1 1 120px' },
+          onchange: (e) => { ecrireParams({ graine: e.target.value.trim() || randomSeed() }); dessiner(); },
+        }),
+        h('label.champ-ligne', { title: 'Décoché, la même campagne se rejoue à l’identique : utile pour comparer deux réglages sur les mêmes tirages' },
+          h('input', {
+            type: 'checkbox', checked: p.nouvelleGraine,
+            onchange: (e) => { ecrireParams({ nouvelleGraine: e.target.checked }); dessiner(); },
+          }), 'nouvelle à chaque campagne'),
+      ),
+      etat.enCours
+        ? h('div', { style: { marginTop: '16px' } },
+            h('div.jauge-progres', h('div', { style: { width: '0%' } })),
+            h('div.rangee', { style: { marginTop: '8px' } },
+              h('span.mini.muted.progres-texte', `0 / ${etat.enCours.total} parties`),
+              h('div.pousse'),
+              h('button.btn.btn--petit', { onclick: () => { etat.enCours.arret = true; } }, 'Arrêter là')))
+        : h('button.btn.btn--primaire', { style: { marginTop: '16px', width: '100%' }, onclick: lancer }, 'Lancer la campagne'),
+    );
+  }
+
+  function ongletSimulation() {
+    const garde = resultatGarde();
+    return h('div.grille.grille--labo', { style: { marginTop: '16px' } },
+      panneauCampagne(),
+      garde ? resultats(garde) : h('div.carte', { style: { textAlign: 'center', padding: '48px 20px' } },
+        h('h3', 'Aucune campagne pour l’instant'),
+        h('p.muted', 'Chaque partie simulée est jouée par le même moteur que la table, dé par dé, avec les règles du réglage actif.')),
+    );
+  }
+
+  function resultats(garde) {
+    const r = garde.resultat;
+    const n = r.nbParties;
+    const autres = n - r.parts.reduce((s, x) => s + x.n, 0);
+    // Pour ± 1 point, il faut (marge / 1 pt)² fois plus de parties.
+    const pourUnPoint = Math.ceil((n * (r.marge / 0.01) ** 2) / 100) * 100;
+    const gardeFous = Object.entries(r.raisons).filter(([k]) => k !== 'cartes');
+    const nomRaison = { pioche: 'pioche épuisée', manchesMax: 'manches maximum', limite: 'limite du moteur' };
+    const deuxEquipes = r.parts.length === 2;
+    const ecartNet = deuxEquipes && (r.parts[0].bas > 0.5 || r.parts[0].haut < 0.5);
+    const profilsVus = r.parProfil.length > 1;
+
+    return h('div.pile',
+      h('div.grille.grille--stats.grille--stats-labo',
+        stat(String(n), 'parties', `« ${garde.reglage} » · graine ${r.graine} · ${nombre(r.calculMs / 1000, 1)} s`),
+        stat(`± ${pts(r.marge)} pt`, 'marge d’erreur à 95 %', r.marge > 0.0105 ? `± 1 pt vers ${pourUnPoint} parties` : 'résultat fin'),
+        stat(dureeLongue(r.duree.moyenneMs), 'durée d’une partie', `8 sur 10 entre ${dureeLongue(r.duree.p10Ms)} et ${dureeLongue(r.duree.p90Ms)}`),
+        stat(dureeLongue(r.dureeManche.moyenneMs), 'durée d’une manche', `médiane ${dureeLongue(r.dureeManche.medianeMs)}`),
+        stat(nombre(r.manches.moyenne, 1), 'manches par partie', `de ${r.manches.min} à ${r.manches.max}`),
+        stat(nombre(r.totaux.poussesParPartie, 1), 'tourbillons par partie', `${nombre(r.totaux.lancersParPartie, 0)} lancers`),
+      ),
+      garde.interrompue || gardeFous.length
+        ? h('div.encart.encart--info',
+            garde.interrompue ? `Campagne arrêtée en route : ${n} parties jouées. ` : '',
+            gardeFous.length
+              ? `${pourcent(1 - r.concluantes)} des parties ne vont pas jusqu’aux cartes demandées (`
+                + gardeFous.map(([k, v]) => `${nomRaison[k] || k} : ${v}`).join(', ')
+                + ') — l’équipe en tête est alors déclarée gagnante.'
+              : '')
+        : null,
+
+      h('div.carte',
+        h('div.titre-section', 'Victoires par équipe'),
+        ...r.parts.slice().sort((a, b) => b.part - a.part).map((w) => {
+          const c = EQUIPES[w.equipe];
+          return h('div', { style: { marginBottom: '10px' } },
+            h('div.rangee', { style: { justifyContent: 'space-between', marginBottom: '4px' } },
+              h('strong.rangee.rangee--serree', emblemeEquipe(c.embleme, 22), c.animal),
+              h('span.petit', h('strong', part(w)), h('span.muted', ` · entre ${intervalle(w)} · ${w.n} parties`))),
+            h('div.barre-fond.barre-ic',
+              h('div', { style: { width: `${w.part * 100}%`, background: c.hex } }),
+              // La bande : là où se trouve la vraie part, 95 fois sur 100.
+              h('span.ic', { style: { left: `${w.bas * 100}%`, width: `${(w.haut - w.bas) * 100}%` } })));
+        }),
+        autres ? h('p.mini.muted', `${autres} partie${autres > 1 ? 's' : ''} sans vainqueur (égalité à l’arrêt).`) : null,
+        h('p.mini', { style: { marginTop: '8px' } },
+          deuxEquipes
+            ? (ecartNet
+              ? h('strong', 'L’écart entre les deux équipes est réel : 50 % est hors de l’intervalle.')
+              : 'Aucun écart démontré entre les deux équipes : 50 % est dans l’intervalle.')
+            : 'Le Cow-boy joue seul contre deux équipes : sa part se règle avec ses cartes à gagner.'),
+      ),
+
+      h('div.grille.grille--2',
+        h('div.carte',
+          h('div.titre-section', 'Ce qui pèse sur l’équilibre'),
+          h('table.tbl', h('tbody',
+            h('tr', h('td', 'Manches gagnées par l’équipe qui reçoit les dés'),
+              h('td.num', h('strong', part(r.des)), h('div.mini.muted', intervalle(r.des)))),
+            h('tr', h('td', 'Parties gagnées par l’équipe qui prend la première carte'),
+              h('td.num', h('strong', part(r.premierGain)), h('div.mini.muted', intervalle(r.premierGain)))),
+            ...r.combos.map((c) => h('tr', h('td', `${c.nom} — par manche`), h('td.num', h('strong', nombre(c.parManche, 2))))),
+            h('tr', h('td', 'Joueurs endormis par manche'), h('td.num', h('strong', nombre(r.totaux.endormis / (r.totaux.manches || 1), 2)))),
+          )),
+        ),
+        h('div.carte',
+          h('div.titre-section', 'Durée des parties (minutes) · manches par partie'),
+          histogramme(r.duree.histogramme),
+          h('div', { style: { height: '14px' } }),
+          histogrammeEntier(r.manches.histogramme),
+        ),
+      ),
+
+      h('div.carte',
+        h('div.titre-section', 'Par place'),
+        h('div.tbl-defile', h('table.tbl',
+          h('thead', h('tr', h('th', 'Place'), h('th', 'IA'), h('th.num', 'Victoires'), h('th.num', 'Lancers'),
+            h('th.num', 'Réveils'), h('th.num', 'Abris'), h('th.num', 'Endormi'), h('th.num', 'Tourbillons'))),
+          h('tbody', ...r.parSiege.map((s) => h('tr',
+            h('td', h('span.rangee.rangee--serree', emblemeEquipe(EQUIPES[s.equipe].embleme, 18), nomParDefaut(s.siege))),
+            h('td.mini', (PROFILS_IA[s.profil] || {}).nom || s.profil),
+            h('td.num', part(s)),
+            ...['lancers', 'reveils', 'abris', 'endormi', 'pousses'].map((k) => h('td.num', nombre(s[k] / n, 1)))))))),
+        h('p.mini.muted', { style: { marginTop: '6px' } }, 'Moyennes par partie.'),
+        profilsVus ? h('div', { style: { marginTop: '12px' } },
+          h('div.titre-section', 'Par caractère d’IA'),
+          h('table.tbl', h('tbody', ...r.parProfil.map((x) => h('tr',
+            h('td', (PROFILS_IA[x.profil] || {}).nom || x.profil),
+            h('td.num', h('strong', part(x)), h('span.mini.muted', ` de victoires · ${intervalle(x)}`)),
+            h('td.num', `${nombre(x.abris / x.parties, 2)} Abris par partie`)))))) : null,
+      ),
+
+      h('div.carte',
+        h('div.titre-section', 'Par carte Tornade'),
+        h('div.tbl-defile', h('table.tbl',
+          h('thead', h('tr', h('th', 'Carte'), h('th.num', 'Manches'), h('th.num', 'Durée moyenne'),
+            ...r.parts.map((w) => h('th.num', EQUIPES[w.equipe].animal)), h('th.num', 'Sa combinaison'))),
+          h('tbody', ...r.parCarte.map((c) => h('tr',
+            h('td', c.nom),
+            h('td.num', c.jouee),
+            h('td.num', dureeLongue(c.dureeTotale / c.jouee)),
+            ...r.parts.map((w) => h('td.num', pourcent((c.vainqueurs[w.equipe] || 0) / c.jouee, 0))),
+            h('td.num', CARTES_PAR_ID[c.id] && CARTES_PAR_ID[c.id].combo
+              ? `${pourcent(c.manchesRealisee / c.jouee, 0)} des manches` : h('span.muted', '—'))))))),
+        h('p.mini.muted', { style: { marginTop: '6px' } },
+          'Part des manches gagnées par chaque équipe sous cette carte. Sous 300 manches, lisez ces parts à ± 6 points près.'),
+      ),
+      h('div.rangee', h('div.pousse'),
+        h('button.btn.btn--petit', { onclick: () => telecharger('tornadice-campagne.csv', campagneCSV(garde)) }, 'Exporter en CSV')),
+    );
+  }
+
+  // ── Probabilités ───────────────────────────────────────────────────────────
+  function ongletProbas() {
+    const p = params();
+    const cfg = configDepuis(reglagesCourants(), p.nb);
+    const loi = loiDuDe(cfg.faces);
+    const envol = cfg.combos.find((c) => c.id === 'envol');
+    const seuil = envol.requis.tornade || 99;
+    const lignes = [
+      ...cfg.combos.map((c) => ({ ...c, source: 'role' })),
+      ...cfg.cartes.map((id) => CARTES_PAR_ID[id]).filter((c) => c.combo && carteALaTable(c, p.nb))
+        .map((c) => ({ id: c.id, nom: c.nom, requis: requisCarte(cfg, c), etat: 'tous', source: 'carte' })),
+    ];
+    const rng = makeRng('probas');
+    return h('div.pile', { style: { marginTop: '16px' } },
+      h('div.carte',
+        h('div.titre-section', `Le dé — ${cfg.desParLot} dés par lot`),
+        h('div.rangee', ...ORDRE_SYMBOLES.filter((s) => loi[s]).map((s) => h('span.rangee.rangee--serree',
+          suiteSymboles({ [s]: 1 }, 26), h('strong', SYMBOLES[s].nom), h('span.muted', `${Math.round(loi[s] * cfg.faces.length)} face${loi[s] * cfg.faces.length > 1 ? 's' : ''} sur ${cfg.faces.length} · ${pourcent(loi[s])}`)))),
+      ),
+      h('div.carte',
+        h('div.titre-section', 'Combinaisons'),
+        h('div.tbl-defile', h('table.tbl',
+          h('thead', h('tr', h('th', 'Combinaison'), h('th', 'Dés'), h('th.num', 'Au premier lancer'),
+            h('th.num', 'Avant de perdre le lot'), h('th.num', 'Lancers pour y arriver'))),
+          h('tbody', ...lignes.map((l) => {
+            const possible = tailleRequis(l.requis) <= cfg.desParLot;
+            const premier = possible ? probaLancerUnique(cfg.faces, cfg.desParLot, l.requis) : 0;
+            // On garde les bons dés, comme à la table ; le lot se perd sur un
+            // Envol ou sur une autre combinaison du même état, jouée d'office.
+            const rivales = cfg.combos.filter((c) => c.id !== l.id && c.id !== 'envol'
+              && l.etat !== 'tous' && (c.etat === l.etat || c.etat === 'tous'));
+            const course = possible && l.id !== 'envol'
+              ? courseAvecGarde(cfg.faces, cfg.desParLot, l.requis,
+                  { seuilBloquant: seuil, arretsForces: rivales, prioritaire: l.source === 'carte' }, 20000, rng)
+              : null;
+            return h('tr',
+              h('td', h('strong', l.nom), l.source === 'carte' ? h('span.mini.muted', ' carte') : null),
+              h('td', h('span.rangee.rangee--serree', suiteSymboles(l.requis, 18))),
+              h('td.num', possible ? pourcent(premier) : 'impossible'),
+              h('td.num', course ? pourcent(course.reussite, 0) : h('span.muted', '—')),
+              h('td.num', course && course.reussite ? nombre(course.lancersSiReussite, 1) : h('span.muted', '—')));
+          })))),
+        h('p.mini.muted', { style: { marginTop: '8px' } },
+          '« Au premier lancer » est un calcul exact. « Avant de perdre le lot » suppose qu’on garde les dés utiles et qu’on relance '
+          + 'les autres, sans être poussé par un voisin : c’est une estimation sur 20 000 tirages, à ± 1 point.'),
+      ),
     );
   }
 
@@ -138,560 +345,15 @@ export function vueLabo() {
   return racine;
 }
 
-// ── Onglet Simulation ────────────────────────────────────────────────────────
-function ongletSimulation(rafraichir) {
-  return h('div.grille.grille--labo',
-    h('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' } },
-      // Le même bandeau qu'aux Réglages : changer de réglage enregistré remonte
-      // la configuration de la campagne, sans toucher au nombre de joueurs ni à
-      // la graine, qui appartiennent à la campagne et non au jeu.
-      barreProfils(() => {
-        etat.profil = idActif();
-        etat.cfg = construireConfig(etat.cfg.nbJoueurs);
-        store.set('cfgLabo', etat.cfg);
-        etat.empreinte = JSON.stringify(reglagesCourants());
-        rafraichir();
-      }),
-      panneauConfig(rafraichir),
-    ),
-    etat.calcul
-      ? h('div.carte', { style: { textAlign: 'center', padding: '60px 20px' } },
-          h('h3', 'Campagne en cours…'),
-          h('p.muted', `${etat.nbParties} parties simulées, un instant.`))
-      : (etat.resultat ? resultats(etat.resultat) : accueilLabo()),
-  );
-}
-
-function accueilLabo() {
-  return h('div.carte',
-    h('p', 'Lancez une campagne pour obtenir la distribution des durées, le taux de victoire '
-      + 'de chaque équipe, la fréquence de chaque combinaison, l’origine des jetons mis à couvert '
-      + 'et l’avantage éventuel de la place à table.'),
-    h('p.petit.muted', 'Les IA jouent exactement les règles réglées à gauche : modifiez une '
-      + 'valeur, relancez, comparez. La graine rend chaque campagne reproductible.'),
-  );
-}
-
-function panneauConfig(rafraichir) {
-  const cfg = etat.cfg;
-  const mep = infosMiseEnPlace(cfg.nbJoueurs);
-  const sieges = placement(cfg.nbJoueurs);
-
-  const num = (libelle, valeur, onchange, opts = {}) => h('label.champ', libelle,
-    h('input', {
-      type: 'number', value: valeur, min: opts.min ?? 0, max: opts.max ?? 9999,
-      step: opts.step ?? 1, disabled: opts.disabled,
-      onchange: (e) => { onchange(Number(e.target.value)); rafraichir(); },
-    }));
-
-  function lancer() {
-    if (etat.nouvelleGraine) etat.graine = randomSeed();
-    sauver();
-    etat.calcul = true;
-    rafraichir();
-    // On rend l'écran d'attente avant de bloquer le fil principal.
-    setTimeout(() => {
-      const spec = Array.from({ length: cfg.nbJoueurs }, (_, i) => ({
-        nom: nomParDefaut(i), type: 'ia', profil: etat.profils[i] || 'equilibre',
-      }));
-      try {
-        etat.resultat = lancerCampagne(cfg, spec, etat.graine, etat.nbParties);
-        store.set('dernierResultat', etat.resultat);
-      } catch (err) {
-        etat.resultat = { erreur: String(err && err.message ? err.message : err) };
-      }
-      etat.calcul = false;
-      rafraichir();
-    }, 40);
-  }
-
-  return h('div.carte',
-    h('div.rangee', { style: { marginBottom: '16px' } },
-      h('button.btn.btn--primaire.btn--grand', {
-        // Une base de 200 px : la rangée passe à la ligne avant que le libellé
-        // ne se coupe en deux.
-        style: { flex: '1 1 200px' }, onclick: lancer, disabled: etat.calcul,
-      }, 'Lancer la simulation'),
-      h('button.btn.btn--petit', {
-        onclick: () => {
-          const base = configParDefaut(cfg.nbJoueurs);
-          base.combosCartesTornade = {};
-          etat.cfg = base;
-          store.set('cfgLabo', base);
-          rafraichir();
-        },
-      }, 'Réglages d’origine'),
-    ),
-
-    h('div.titre-section', 'Configuration testée'),
-
-    h('div.grille.grille--3', { style: { gap: '10px' } },
-      h('label.champ', 'Joueurs', h('select', {
-        onchange: (e) => {
-          const n = Number(e.target.value);
-          // Le mode reste celui de la campagne en cours : sans les points, la
-          // référence est quatre cartes, pas celle du tableau officiel.
-          const mode = modeManche(cfg);
-          const base = configParDefaut(n, { modeManche: mode });
-          Object.assign(cfg, {
-            // Lots et cartes viennent des tableaux réglés, pas du tableau
-            // officiel : sans quoi le Laboratoire testerait autre chose que la
-            // table. Le Vert a le sien, il joue seul contre deux équipes.
-            nbJoueurs: n,
-            lots: lotsPour(tableLots(), n),
-            jetons: base.jetons,
-            jetonsVert: base.jetonsVert,
-            cartesPourGagner: cartesPour(tableCartes(mode), mode, n),
-            cartesVert: cartesVertPour(tableCartesVert(mode), mode, n),
-          });
-          rafraichir();
-        },
-      }, ...NOMBRES_JOUEURS.map((n) => h('option', { value: n, selected: n === cfg.nbJoueurs }, n)))),
-      h('label.champ', 'Parties', h('select', {
-        onchange: (e) => { etat.nbParties = Number(e.target.value); },
-      }, ...[25, 50, 100, 200, 500, 1000, 2000].map((n) =>
-        h('option', { value: n, selected: n === etat.nbParties }, n)))),
-      h('label.champ', 'Graine', h('input', {
-        type: 'text', value: etat.graine,
-        // Taper une graine, c'est vouloir la rejouer : elle ne change plus d'elle-même.
-        onchange: (e) => { etat.graine = e.target.value; etat.nouvelleGraine = false; rafraichir(); },
-      })),
-    ),
-    h('div.rangee.rangee--serree', { style: { marginTop: '8px' } },
-      h('button', {
-        class: `chip${etat.nouvelleGraine ? ' on' : ''}`,
-        title: etat.nouvelleGraine
-          ? 'Chaque campagne tire une nouvelle graine : d’autres parties à chaque fois'
-          : 'La graine reste en place : relancer rejoue exactement la même campagne',
-        onclick: () => { etat.nouvelleGraine = !etat.nouvelleGraine; sauver(); rafraichir(); },
-      }, h('span.case', '✓'), 'Nouvelle graine à chaque campagne'),
-      h('span.mini.muted', etat.nouvelleGraine
-        ? 'Décochez pour rejouer la même campagne à l’identique.'
-        : 'La même graine redonne exactement les mêmes chiffres.'),
-    ),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Profils des joueurs'),
-    h('div', { style: { display: 'grid', gap: '6px' } },
-      ...Array.from({ length: cfg.nbJoueurs }, (_, i) => h('div.rangee.rangee--serree',
-        h('span.badge', {
-          class: `badge--${sieges[i]}`,
-          style: { width: '96px', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-        }, nomParDefaut(i)),
-        h('select', {
-          style: { flex: '1' },
-          onchange: (e) => { etat.profils[i] = e.target.value; rafraichir(); },
-        }, ...Object.values(PROFILS_IA).map((p) => h('option', {
-          value: p.id, title: p.desc,
-          selected: profilIA(etat.profils[i]).id === p.id,
-        }, p.nom))),
-      )),
-    ),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Dés'),
-    h('div.grille.grille--2', { style: { gap: '10px' } },
-      num('Dés par lot', cfg.desParLot, (v) => { cfg.desParLot = Math.max(1, Math.min(12, v)); }, { min: 1, max: 12 }),
-      num('Lots en jeu', cfg.lots, (v) => { cfg.lots = Math.max(1, v); }, { min: 1, max: 9 }),
-    ),
-    h('div.faces-edit', { style: { marginTop: '10px' } },
-      ...cfg.faces.map((f, i) => h('div.face-case',
-        pastilleSymbole(f, 30),
-        h('select', {
-          onchange: (e) => { cfg.faces[i] = e.target.value; rafraichir(); },
-        }, ...ORDRE_SYMBOLES.map((s) => h('option', { value: s, selected: s === f }, NOM_SYM[s]))),
-      )),
-    ),
-    h('div.rangee', { style: { marginTop: '18px', marginBottom: '10px' } },
-      h('div.titre-section', { style: { margin: 0, flex: '1' } }, 'Combinaisons requises'),
-    ),
-    tableauCombos(cfg, {
-      ecrireCombo: (id, requis) => {
-        const c = cfg.combos.find((x) => x.id === id);
-        if (c) c.requis = requis;
-      },
-      ecrireVert: (id, requis) => {
-        if (!cfg.combosVert) cfg.combosVert = {};
-        cfg.combosVert[id] = requis;
-      },
-      ecrireFace: (id, face) => {
-        const c = cfg.combos.find((x) => x.id === id);
-        if (c) c.face = face;
-      },
-      rafraichir,
-    }),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Comment se joue une manche'),
-    h('div.segment',
-      ...OPTIONS_MANCHE.map(([id, lib]) => h('button', {
-        class: modeManche(cfg) === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => {
-          cfg.modeManche = id;
-          cfg.sansPoints = id === 'immediat';
-          // Les trois modes n'ont ni le même nombre de cartes ni la même valeur
-          // d'attrape : on repart de ce qui est réglé pour le mode choisi.
-          const base = configParDefaut(cfg.nbJoueurs, { modeManche: id });
-          cfg.cartesPourGagner = cartesPour(tableCartes(id), id, cfg.nbJoueurs);
-          cfg.cartesVert = cartesVertPour(tableCartesVert(id), id, cfg.nbJoueurs);
-          cfg.attrapeGagneManche = base.attrapeGagneManche;
-          rafraichir();
-        },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      AIDE_MANCHE[modeManche(cfg)]),
-
-    // Le sens de rotation se compare comme le reste : c'est un levier
-    // d'équilibrage à part entière, et il change qui peut attraper qui.
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Le sens de rotation'),
-    h('div.segment',
-      ...OPTIONS_SENS.map(([id, lib]) => h('button', {
-        class: sensRotation(cfg) === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.sensRotation = id; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      AIDE_SENS[sensRotation(cfg)]),
-
-    // Où sont les jetons ne change pas le compte des Abris : la campagne le
-    // vérifie plutôt que de le supposer.
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Où sont les jetons'),
-    h('div.segment',
-      ...OPTIONS_PLACE_JETONS.map(([id, lib]) => h('button', {
-        class: (jetonsSurTornade(cfg) ? 'tornade' : 'equipe') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.placeJetons = id; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      estImmediat(cfg)
-        ? 'Immédiat ne compte aucun jeton : ce réglage n’y change rien.'
-        : AIDE_PLACE_JETONS[jetonsSurTornade(cfg) ? 'tornade' : 'equipe']),
-
-
-    // Ce que fait l'Échec : tenter l'attrape, ou seulement pousser le lot. Et
-    // s'il tente l'attrape, faut-il être réveillé pour le faire ?
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que fait l’Échec'),
-    h('div.segment',
-      ...OPTIONS_ECHEC.map(([id, lib]) => h('button', {
-        class: (cfg.sansAttrape ? 'pousse' : 'attrape') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.sansAttrape = id === 'pousse'; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_ECHEC[cfg.sansAttrape ? 'pousse' : 'attrape']),
-    h('div.rangee.rangee--serree', { style: { marginTop: '8px', opacity: cfg.sansAttrape ? '.45' : '1' } },
-      h('button', {
-        class: `chip${cfg.attrapeEveille !== false ? ' on' : ''}`,
-        title: 'Un dormeur ne tend pas la main',
-        onclick: () => { cfg.attrapeEveille = cfg.attrapeEveille === false; rafraichir(); },
-      }, h('span.case', '✓'), 'Il faut être réveillé'),
-    ),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Ce que rapporte l’attrape'),
-    h('div.segment',
-      ...OPTIONS_ATTRAPE.map(([id, lib]) => h('button', {
-        class: (cfg.attrapeGagneManche || 'non') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.attrapeGagneManche = id; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      !estJeton(cfg) && cfg.attrapeGagneManche !== 'touche'
-        ? 'Sans les points, « Un jeton » ne rapporte rien : le contact interrompt le voisin, sans '
-          + 'plus. C’est « Manche gagnée » qui fait de l’attrape le second moyen de prendre une manche.'
-        : AIDE_ATTRAPE[cfg.attrapeGagneManche || 'non']),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Passer son lot'),
-    h('div.segment',
-      ...OPTIONS_PASSER.map(([id, lib]) => h('button', {
-        class: (cfg.peutPasser === false ? 'non' : 'oui') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.peutPasser = id === 'oui'; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } }, AIDE_PASSER[cfg.peutPasser === false ? 'non' : 'oui']),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Quand deux lots se rencontrent'),
-    h('div.segment',
-      ...[['pousse', 'Poussé'], ['cumul', 'Empilés']].map(([id, lib]) => h('button', {
-        class: (cfg.lotsCumules ? 'cumul' : 'pousse') === id ? 'on' : '',
-        style: { fontSize: '12.5px' },
-        onclick: () => { cfg.lotsCumules = id === 'cumul'; rafraichir(); },
-      }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      cfg.lotsCumules
-        ? 'Les lots s’empilent dans la même main et attendent leur tour.'
-        : 'Le lot en cours est poussé vers le voisin suivant, la poussée peut se propager.'),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Mise en place'),
-    h('div.grille.grille--4', { style: { gap: '10px' } },
-      num('Jetons Bleu/Jaune', cfg.jetons, (v) => { cfg.jetons = Math.max(1, v); },
-        { min: 1, max: 12, disabled: !estJeton(cfg) }),
-      num('Jetons Vert', cfg.jetonsVert, (v) => { cfg.jetonsVert = Math.max(1, v); },
-        { min: 1, max: 12, disabled: !estJeton(cfg) }),
-      // Compromis : les jetons de sa couleur qu'une équipe met à l'Abri.
-      estCompromis(cfg)
-        ? num('Jetons à l’Abri', cfg.jetonsRefuge, (v) => { cfg.jetonsRefuge = Math.max(1, v); },
-            { min: 1, max: 6 })
-        : null,
-      num('Cartes pour gagner', cfg.cartesPourGagner, (v) => { cfg.cartesPourGagner = Math.max(1, v); }, { min: 1, max: 12 }),
-      cfg.nbJoueurs % 2
-        ? num('Cartes du Vert', cfg.cartesVert ?? cfg.cartesPourGagner,
-            (v) => { cfg.cartesVert = Math.max(1, v); }, { min: 1, max: 12 })
-        : null,
-      num('Manches max.', cfg.manchesMax, (v) => { cfg.manchesMax = Math.max(1, v); }, { min: 1, max: 200 }),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      `Référence officielle à ${cfg.nbJoueurs} joueurs : ${mep.lots} lots · ${mep.jetons} jetons `
-      + `(Vert ${mep.jetonsVert}) · ${mep.cartes} cartes.`),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Qui commence'),
-    h('div.segment',
-      ...OPTIONS_EQUIPE_DEPART
-        .filter(([id]) => id !== 'vert' || cfg.nbJoueurs % 2)
-        .map(([id, lib]) => h('button', {
-          class: (cfg.equipeDepart || 'jaune') === id ? 'on' : '',
-          style: { fontSize: '12.5px' },
-          onclick: () => { cfg.equipeDepart = id; rafraichir(); },
-        }, lib)),
-    ),
-    h('div.mini.muted', { style: { marginTop: '6px' } },
-      AIDE_EQUIPE_DEPART[cfg.equipeDepart || 'jaune']),
-
-    h('div.titre-section', { style: { marginTop: '18px' } }, 'Rythme et adresse'),
-    h('div.grille.grille--3', { style: { gap: '10px' } },
-      num('Durée d’un lancer (ms)', cfg.dureeLancer, (v) => { cfg.dureeLancer = Math.max(0, v); }, { min: 0, max: 6000, step: 50 }),
-      num('Temps de constat (ms)', cfg.dureeConstat, (v) => { cfg.dureeConstat = Math.max(0, v); }, { min: 0, max: 6000, step: 50 }),
-      num('Durée du passage (ms)', cfg.dureePassage, (v) => { cfg.dureePassage = Math.max(0, v); }, { min: 0, max: 6000, step: 50 }),
-    ),
-    h('div.grille.grille--3', { style: { gap: '10px', marginTop: '10px' } },
-      num('Réflexion IA (ms)', cfg.tempsReflexion, (v) => { cfg.tempsReflexion = Math.max(0, v); }, { min: 0, max: 4000, step: 50 }),
-      num('Écart de réflexion (ms)', cfg.ecartReflexion, (v) => { cfg.ecartReflexion = Math.max(0, v); }, { min: 0, max: 2000, step: 10 }),
-      num('Adresse de base', cfg.adresseBase, (v) => { cfg.adresseBase = Math.min(1, Math.max(0, v)); }, { min: 0, max: 1, step: 0.05 }),
-    ),
-    h('div.grille.grille--2', { style: { gap: '10px', marginTop: '10px' } },
-      num('Irrégularité du rythme (%)', Math.round((cfg.variance || 0) * 100),
-        (v) => { cfg.variance = Math.min(0.5, Math.max(0, v / 100)); }, { min: 0, max: 50, step: 5 }),
-      h('div.mini.muted', { style: { alignSelf: 'end', paddingBottom: '6px' } },
-        aideVariance(cfg.variance || 0, cfg)),
-    ),
-
-  );
-}
-
-// ── Résultats ────────────────────────────────────────────────────────────────
-function resultats(r) {
-  if (r.erreur) {
-    return h('div.carte', h('h3', 'La campagne a échoué'), h('p.petit', r.erreur));
-  }
-  const vue = (id) => equipeVue(id) || COULEURS_EQUIPE[id];
-  const badge = (id, texte, style = {}) => h('span.badge', { class: `badge--${id}`, style }, texte);
-  const total = r.nbParties;
-  const equipes = Object.entries(r.victoires).sort((a, b) => b[1] - a[1]);
-  const dm = r.dureeManche || {};
-
-  return h('div', { style: { display: 'grid', gap: '16px' } },
-    h('div.grille.grille--stats',
-      stat(String(total), 'parties', `calculées en ${r.calculMs} ms`),
-      stat(dureeLongue(r.duree.moyenneMs), 'durée moyenne d’une partie',
-        `médiane ${dureeLongue(r.duree.medianeMs)}`),
-      // La manche est l'unité qu'on règle : c'est elle qu'on raccourcit ou
-      // qu'on allonge, la partie n'en est que la somme.
-      stat(dureeLongue(dm.moyenneMs), 'durée moyenne d’une manche',
-        `médiane ${dureeLongue(dm.medianeMs)}`),
-      stat(nombre(r.manches.moyenne, 1), 'manches par partie',
-        `de ${r.manches.min} à ${r.manches.max}`),
-      stat(nombre(r.collisions.parPartie, 1), 'contacts tentés par partie',
-        `${pourcent(r.collisions.taux, 0)} de touchés`),
-    ),
-
-    h('div.carte',
-      h('div.titre-section', 'Victoires par équipe'),
-      ...equipes.map(([id, n]) => {
-        const c = vue(id) || { nom: 'Aucune', hex: '#b8b0a5' };
-        return h('div', { style: { marginBottom: '10px' } },
-          h('div.rangee', { style: { justifyContent: 'space-between', marginBottom: '4px' } },
-            h('strong', c.nom),
-            h('span.petit.muted', `${n} · ${pourcent(n / total)}`)),
-          h('div.barre-fond', h('div', {
-            style: { width: `${(n / total) * 100}%`, background: c.hex },
-          })));
-      }),
-      h('p.mini.muted', { style: { marginTop: '10px' } },
-        'À nombre impair de joueurs, le Vert joue seul avec moins de jetons : '
-        + 'c’est l’asymétrie la plus sensible du jeu.'),
-    ),
-
-    h('div.grille.grille--2',
-      h('div.carte',
-        h('div.titre-section', 'Durée des parties (minutes)'),
-        histogramme(r.duree.histogramme.map((c) => ({ n: c.n, min: c.min, max: c.max })), 1),
-        h('p.mini.muted',
-          `10 % des parties sous ${dureeLongue(r.duree.p10Ms)}, 10 % au-delà de ${dureeLongue(r.duree.p90Ms)}. `
-          + `Une manche sur dix dépasse ${dureeLongue(dm.p90Ms)}.`),
-      ),
-      h('div.carte',
-        h('div.titre-section', 'Nombre de manches'),
-        histogrammeEntier(r.manches.histogramme),
-      ),
-    ),
-
-    h('div.grille.grille--2',
-      h('div.carte',
-        h('div.titre-section', 'Avantage de la place à table'),
-        h('table.tbl',
-          h('thead', h('tr', h('th', 'Siège'), h('th', 'Équipe'), h('th.num', 'Victoires'),
-            h('th.num', 'Jetons'), h('th.num', 'Touchés'), h('th.num', 'Subis'))),
-          h('tbody', ...r.parSiege.map((s) => h('tr',
-            h('td', `Siège ${s.siege + 1}`),
-            h('td', badge(s.equipe, (vue(s.equipe) || {}).nom || '—')),
-            h('td.num', pourcent(s.victoires / total, 0)),
-            h('td.num', nombre(s.jetons / total, 2)),
-            h('td.num', nombre(s.touches / total, 2)),
-            h('td.num', nombre(s.subis / total, 2)),
-          ))),
-        ),
-        h('p.mini.muted', 'Jetons, touchés et subis sont donnés par partie.'),
-      ),
-      h('div.carte',
-        h('div.titre-section', 'Profils d’IA'),
-        h('table.tbl',
-          h('thead', h('tr', h('th', 'Profil'), h('th.num', 'Sièges'), h('th.num', 'Victoires'),
-            h('th.num', 'Jetons/partie'), h('th.num', 'Lancers/partie'))),
-          h('tbody', ...r.parProfil.map((p) => h('tr',
-            h('td', profilIA(p.profil).nom),
-            h('td.num', p.parties),
-            h('td.num', pourcent(p.victoires / p.parties, 0)),
-            h('td.num', nombre(p.jetons / p.parties, 2)),
-            h('td.num', nombre(p.lancers / p.parties, 1)),
-          ))),
-        ),
-        h('p.mini.muted', 'Un profil présent sur plus de sièges gagne mécaniquement plus souvent : '
-          + 'comparez à effectifs égaux.'),
-      ),
-    ),
-
-    h('div.grille.grille--2',
-      h('div.carte',
-        h('div.titre-section', 'Combinaisons de base'),
-        tableauFrequences(r.combosBase, total, 'par partie'),
-        h('p.mini.muted', 'Les combinaisons de la Tornade, disponibles à chaque lancer. Celles '
-          + 'des cartes sont comptées à part : elles n’existent qu’une manche durant, et les '
-          + 'mélanger écraserait leur fréquence réelle.'),
-      ),
-      h('div.carte',
-        h('div.titre-section', 'Origine des jetons mis à couvert'),
-        tableauFrequences(r.jetonsParSource, total, 'par partie'),
-        h('p.mini.muted', 'Si les collisions dominent, la course aux abris perd son rôle moteur.'),
-      ),
-    ),
-
-    // Le taux de sortie d'une carte n'a de sens que rapporté aux manches où
-    // elle était en jeu : c'est une combinaison sur une manche, pas sur la
-    // partie. D'où une colonne « réalisée » à côté de « jouée ».
-    h('div.carte',
-      h('div.titre-section', 'Cartes Tornade — sortie de leur combinaison'),
-      h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'),
-          h('th.num', 'Manches jouées'), h('th.num', 'Manches où elle sort'),
-          h('th.num', 'Taux de sortie'), h('th.num', 'Réalisations'),
-          h('th.num', 'Durée moyenne'), h('th', 'Vainqueurs'))),
-        h('tbody', ...r.parCarte.map((c) => {
-          const carte = CARTES_PAR_ID[c.id];
-          const combo = carte && carte.combo;
-          return h('tr',
-            h('td', c.nom),
-            // L'exigence de la campagne, pas celle de la référence : c'est bien
-            // celle-là qui a produit le taux de sortie de la ligne.
-            h('td', combo
-              ? h('div.rangee.rangee--serree', suiteSymboles(requisCarte(etat.cfg, combo), 16))
-              : h('span.mini.muted', 'aucune')),
-            h('td.num', c.jouee),
-            h('td.num', combo ? (c.manchesRealisee ?? 0) : '—'),
-            h('td.num', combo ? pourcent((c.manchesRealisee ?? 0) / Math.max(1, c.jouee), 0) : '—'),
-            h('td.num', combo ? nombre((c.realisations ?? 0) / Math.max(1, c.jouee), 2) : '—'),
-            h('td.num', dureeLongue(c.dureeTotale / Math.max(1, c.jouee))),
-            h('td', Object.entries(c.vainqueurs)
-              .sort((a, b) => b[1] - a[1])
-              .map(([id, n]) => badge(id, `${(vue(id) || {}).nom || 'aucun'} ${n}`,
-                { marginRight: '4px' }))),
-          );
-        })),
-      ),
-      h('p.mini.muted', { style: { marginTop: '8px' } },
-        '« Taux de sortie » : la part des manches où la carte était en jeu et où sa combinaison '
-        + 'est effectivement tombée. « Réalisations » : combien de fois par manche jouée. Un taux '
-        + 'à 0 % signale une combinaison que le dé ne peut pas produire — vérifiez ses faces.'),
-    ),
-
-    h('div.carte',
-      h('div.rangee',
-        h('div.titre-section', { style: { margin: '0', flex: '1' } }, 'Export'),
-        h('button.btn.btn--petit', {
-          onclick: () => telecharger(`tornadice-campagne-${etat.graine}.csv`, campagneCSV(r)),
-        }, 'Exporter en CSV'),
-        h('button.btn.btn--petit', {
-          onclick: () => telecharger(`tornadice-campagne-${etat.graine}.json`,
-            JSON.stringify({ config: etat.cfg, profils: etat.profils, resultat: r }, null, 2),
-            'application/json'),
-        }, 'Exporter le réglage complet (JSON)'),
-      ),
-      h('p.mini.muted', { style: { marginTop: '8px' } },
-        `Graine « ${r.graine} » — relancer la même campagne avec la même graine redonne exactement ces chiffres.`),
-    ),
-  );
-}
-
-function tableauFrequences(objet, total, unite) {
-  // Un agrégat absent vaut « aucune occurrence » : une colonne qui manque ne
-  // doit jamais emporter la page entière.
-  const lignes = Object.entries(objet || {}).sort((a, b) => b[1] - a[1]);
-  if (!lignes.length) return h('p.petit.muted', 'Aucune occurrence.');
-  const max = lignes[0][1];
-  return h('table.tbl',
-    h('thead', h('tr', h('th', 'Effet'), h('th.num', 'Total'), h('th.num', unite), h('th', ''))),
-    h('tbody', ...lignes.map(([id, n]) => h('tr',
-      h('td', libelleEffet(id)),
-      h('td.num', n),
-      h('td.num', nombre(n / total, 2)),
-      h('td', { style: { width: '35%' } },
-        h('div.barre-fond', h('div', {
-          style: { width: `${(n / max) * 100}%`, background: 'var(--accent)' },
-        }))),
-    ))),
-  );
-}
-
-const LIBELLES = {
-  reveil: 'Réveil (3 tornades)', vache: 'Abri', endormir: 'Endormir un voisin',
-  blocage: 'Échec (2 X)',
-  // Les combinaisons des cartes Tornade, sous le nom de leur carte.
-  spMega: 'Méga Tornade', spSommeil: 'Tornade du Sommeil', spFurieuse: 'Tornade Furieuse',
-};
-function libelleEffet(id) { return LIBELLES[id] || id; }
-
-function stat(valeur, libelle, sous) {
-  return h('div.stat',
-    h('div.lib', libelle),
-    h('div.val', valeur),
-    sous ? h('div.sous', sous) : null,
-  );
-}
-
-function histogramme(classes, dec) {
+function histogramme(classes) {
   if (!classes.length) return h('p.petit.muted', '—');
   const max = Math.max(...classes.map((c) => c.n));
   return h('div',
     h('div.histo', ...classes.map((c) => h('div.col', {
       style: { height: `${max ? (c.n / max) * 100 : 0}%` },
-      title: `${nombre(c.min, dec)} – ${nombre(c.max, dec)} min : ${c.n} parties`,
+      title: `${nombre(c.min, 1)} – ${nombre(c.max, 1)} min : ${c.n} parties`,
     }))),
-    h('div.histo-legende',
-      h('span', `${nombre(classes[0].min, dec)} min`),
-      h('span', `${nombre(classes[classes.length - 1].max, dec)} min`)),
-  );
+    h('div.histo-legende', h('span', `${nombre(classes[0].min, 1)} min`), h('span', `${nombre(classes[classes.length - 1].max, 1)} min`)));
 }
 
 function histogrammeEntier(classes) {
@@ -699,217 +361,25 @@ function histogrammeEntier(classes) {
   const max = Math.max(...classes.map((c) => c.n));
   return h('div',
     h('div.histo', ...classes.map((c) => h('div.col', {
-      style: { height: `${(c.n / max) * 100}%` },
-      title: `${c.valeur} manches : ${c.n} parties`,
+      style: { height: `${(c.n / max) * 100}%` }, title: `${c.valeur} manches : ${c.n} parties`,
     }, h('span', String(c.valeur))))),
-    h('div.histo-legende', h('span', 'manches'), h('span', '')),
-  );
+    h('div.histo-legende', h('span', 'manches'), h('span', '')));
 }
 
-function campagneCSV(r) {
-  const l = [];
-  l.push('indicateur;valeur');
-  l.push(`parties;${r.nbParties}`);
-  l.push(`graine;${r.graine}`);
-  l.push(`duree_moyenne_s;${Math.round(r.duree.moyenneMs / 1000)}`);
-  l.push(`duree_mediane_s;${Math.round(r.duree.medianeMs / 1000)}`);
-  l.push(`manches_moyennes;${r.manches.moyenne.toFixed(2)}`);
-  l.push(`duree_manche_moyenne_s;${Math.round(r.dureeManche.moyenneMs / 1000)}`);
-  l.push(`duree_manche_mediane_s;${Math.round(r.dureeManche.medianeMs / 1000)}`);
-  l.push(`duree_manche_p90_s;${Math.round(r.dureeManche.p90Ms / 1000)}`);
-  l.push(`collisions_par_partie;${r.collisions.parPartie.toFixed(2)}`);
-  l.push(`collisions_taux_reussite;${r.collisions.taux.toFixed(3)}`);
-  l.push(`lancers_par_partie;${r.totaux.lancersParPartie.toFixed(1)}`);
-  l.push('');
-  l.push('equipe;victoires;taux');
-  for (const [id, n] of Object.entries(r.victoires)) l.push(`${id};${n};${(n / r.nbParties).toFixed(3)}`);
-  l.push('');
-  l.push('siege;equipe;victoires;jetons_par_partie;touches_par_partie');
-  for (const s of r.parSiege) {
-    l.push(`${s.siege + 1};${s.equipe};${(s.victoires / r.nbParties).toFixed(3)};`
-      + `${(s.jetons / r.nbParties).toFixed(2)};${(s.touches / r.nbParties).toFixed(2)}`);
-  }
-  l.push('');
-  l.push('combinaison;total;par_partie');
-  for (const [id, n] of Object.entries(r.combos)) l.push(`${id};${n};${(n / r.nbParties).toFixed(2)}`);
-  l.push('');
-  l.push('carte;manches;duree_moyenne_s');
-  for (const c of r.parCarte) {
-    l.push(`${c.nom};${c.jouee};${Math.round(c.dureeTotale / Math.max(1, c.jouee) / 1000)}`);
-  }
-  return l.join('\n');
-}
-
-// ── Onglet Probabilités ──────────────────────────────────────────────────────
-function ongletProbas(rafraichir) {
-  const cfg = etat.cfg;
-  const loi = loiDuDe(cfg.faces);
-  const bloquant = cfg.symboleBloquant || 'x';
-  const seuil = cfg.combos.find((c) => c.id === 'blocage')?.requis?.[bloquant] ?? 2;
-  // Les combinaisons obligatoires mettent aussi fin à la possession du lot.
-  const arretsForces = cfg.combos
-    .filter((c) => c.obligatoire && c.id !== 'blocage')
-    .map((c) => ({ id: c.id, requis: c.requis }));
-  const optsBase = { bloquant, seuilBloquant: seuil, arretsForces };
-  const symbolesPresents = ORDRE_SYMBOLES.filter((s) => loi[s]);
-
+function campagneCSV(garde) {
+  const r = garde.resultat;
+  const fr = (x) => String(Math.round(x * 10000) / 10000).replace('.', ',');
   const lignes = [
-    ...cfg.combos.filter((c) => c.id !== 'blocage').map((c) => ({
-      nom: c.nom, requis: c.requis, source: 'tornade', estArretForce: !!c.obligatoire,
-    })),
-    // Les cartes du mode en cours : chaque mode a son paquet et ses exigences.
-    ...cartesDuJeu().filter((c) => c.combo).map((c) => ({
-      nom: c.court,
-      requis: requisCarte(cfg, c.combo),
-      source: 'journee',
-    })),
-  ].map((l) => {
-    const opts = {
-      ...optsBase,
-      prioritaire: l.source === 'journee',
-      estArretForce: !!l.estArretForce,
-    };
-    const exact = courseCombinaison(cfg.faces, cfg.desParLot, l.requis, opts);
-    const garde = courseAvecGarde(cfg.faces, cfg.desParLot, l.requis, opts, 20000);
-    return { ...l, ...exact, garde };
-  });
-
-  const ePerte = esperanceAvantPerte(cfg.faces, cfg.desParLot, optsBase);
-  // Lot perdu d'emblée : assez de symboles bloquants dès le premier jet.
-  const binBloquant = loiBinomiale(cfg.faces, cfg.desParLot, bloquant);
-  const pPerte1 = binBloquant.slice(seuil).reduce((a, b) => a + b, 0);
-
-  return h('div',
-    h('div.carte',
-      h('div.rangee',
-        h('div', { style: { flex: '1' } },
-          h('div.titre-section', { style: { margin: 0 } }, 'Dé courant'),
-          h('div.petit.muted', `${cfg.faces.length} faces · ${cfg.desParLot} dés par lot · `
-            + `lot perdu à ${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant}`
-            + (arretsForces.length
-              ? ` · ${arretsForces.map((a) => Object.entries(a.requis)
-                  .map(([sy, n]) => `${n} ${(SYMBOLES[sy] || {}).nom || sy}`).join(' + ')).join(', ')} force le passage`
-              : ''))),
-        h('button.btn.btn--petit', { onclick: () => { etat.onglet = 'simulation'; rafraichir(); } },
-          'Modifier les dés'),
-      ),
-      h('div.faces-edit', { style: { marginTop: '14px' } },
-        ...cfg.faces.map((f) => h('div.face-case', pastilleSymbole(f, 34),
-          h('span.mini.muted', NOM_SYM[f]))),
-      ),
-      h('table.tbl', { style: { marginTop: '16px' } },
-        h('thead', h('tr', h('th', 'Symbole'), h('th.num', 'Faces'), h('th.num', 'P(un dé)'),
-          ...Array.from({ length: cfg.desParLot + 1 }, (_, k) => h('th.num', `exactement ${k}`)))),
-        h('tbody', ...symbolesPresents.map((s) => {
-          const bin = loiBinomiale(cfg.faces, cfg.desParLot, s);
-          return h('tr',
-            h('td', h('div.rangee.rangee--serree', pastilleSymbole(s, 18), NOM_SYM[s])),
-            h('td.num', cfg.faces.filter((f) => f === s).length),
-            h('td.num', pourcent(loi[s], 1)),
-            ...bin.map((p) => h('td.num', pourcent(p, 1))),
-          );
-        })),
-      ),
-    ),
-
-    h('div.grille.grille--3', { style: { marginTop: '16px' } },
-      stat(nombre(ePerte, 2), 'lancers avant de perdre le lot',
-        'en relançant tout, sans jamais s’arrêter'),
-      stat(pourcent(pPerte1, 1), 'lot perdu dès le 1er lancer',
-        `${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant} d’un coup`),
-      stat(nombre(ePerte * ((cfg.dureeLancer + cfg.tempsReflexion) / 1000), 1) + ' s', 'temps moyen avec un lot',
-        `à ${cfg.dureeLancer + cfg.tempsReflexion} ms par cycle de lancer`),
-    ),
-
-    h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section', 'Chances de chaque combinaison'),
-      h('table.tbl',
-        h('thead', h('tr',
-          h('th', 'Combinaison'), h('th', 'Exigence'),
-          h('th.num', 'Au 1er lancer'), h('th.num', 'En relançant tout'),
-          h('th.num', 'En gardant les dés'), h('th.num', 'Lancers si réussie'),
-          h('th.num', 'Temps si réussie'))),
-        h('tbody', ...lignes.map((l) => h('tr',
-          h('td', l.nom, l.source === 'journee'
-            ? h('span.badge', { style: { marginLeft: '6px' } }, 'carte') : null),
-          h('td', h('div.rangee.rangee--serree', suiteSymboles(l.requis, 17))),
-          h('td.num', pourcent(l.premierLancer, 2)),
-          h('td.num', pourcent(l.reussite, 1)),
-          h('td.num', h('strong', pourcent(l.garde.reussite, 1))),
-          h('td.num', nombre(l.garde.lancersSiReussite, 2)),
-          h('td.num', `${nombre(l.garde.lancersSiReussite * (cfg.dureeLancer + cfg.tempsReflexion) / 1000, 1)} s`),
-        ))),
-      ),
-      h('div.encart', { style: { marginTop: '14px' } },
-        'Ces deux colonnes donnent la probabilité de servir la combinaison avant de perdre le lot — '
-        + `${seuil} ${(SYMBOLES[bloquant] || {}).nom || bloquant} qui se figent, ou une combinaison `
-        + 'obligatoire qui force le passage. « En relançant tout » est le calcul exact ; '
-        + '« en gardant les dés » estime par tirages la vraie façon de jouer, en conservant les dés '
-        + 'utiles d’un jet à l’autre. L’écart entre les deux mesure ce que rapporte la relance choisie.'),
-      h('p.mini.muted', { style: { marginTop: '10px' } },
-        'Les combinaisons de cartes Tornade l’emportent sur les combinaisons obligatoires au même '
-        + 'lancer : c’est ce qui rend la Tornade Furieuse — trois « X » — atteignable avant '
-        + 'l’Échec.'),
-    ),
-
-    h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section', 'Réussite au fil des lancers'),
-      h('p.petit.muted', 'Probabilité cumulée de servir la combinaison après n lancers en relançant '
-        + 'tout, en tenant compte du risque de perdre le lot.'),
-      h('table.tbl',
-        h('thead', h('tr', h('th', 'Combinaison'),
-          ...[1, 2, 3, 4, 5, 6, 8, 10].map((n) => h('th.num', `${n}`)))),
-        h('tbody', ...lignes.map((l) => {
-          const cum = [];
-          let s = 0;
-          for (let i = 0; i < 12; i++) { s += l.parLancer[i] || 0; cum.push(s); }
-          return h('tr', h('td', l.nom),
-            ...[1, 2, 3, 4, 5, 6, 8, 10].map((n) => h('td.num', pourcent(cum[n - 1] || 0, 1))));
-        })),
-      ),
-    ),
-  );
-}
-
-// ── Onglet Règles chiffrées ──────────────────────────────────────────────────
-function ongletRegles() {
-  const cfg = etat.cfg;
-  return h('div',
-    h('div.carte',
-      h('div.titre-section', 'Tableau de mise en place'),
-      h('table.tbl',
-        h('thead', h('tr', h('th.num', 'Joueurs'), h('th.num', 'Lots de dés'),
-          h('th.num', 'Jetons par équipe'), h('th.num', 'Jetons du Vert'),
-          h('th.num', 'Cartes pour gagner'), h('th', ''))),
-        h('tbody', ...NOMBRES_JOUEURS.map((n) => {
-          const m = infosMiseEnPlace(n);
-          return h('tr',
-            h('td.num', n), h('td.num', m.lots), h('td.num', m.jetons),
-            h('td.num', n % 2 ? m.jetonsVert : '—'), h('td.num', m.cartes),
-            h('td.mini.muted', ''));
-        })),
-      ),
-      h('p.mini.muted', { style: { marginTop: '8px' } },
-        'Le tableau des règles V4.5, de trois à huit joueurs. Chaque ligne se modifie dans '
-        + 'l’onglet Simulation.'),
-    ),
-
-    h('div.carte', { style: { marginTop: '16px' } },
-      h('div.titre-section', 'Cartes Tornade'),
-      h('table.tbl',
-        h('thead', h('tr', h('th', 'Carte'), h('th', 'Combinaison'), h('th', 'Effet'))),
-        h('tbody', ...cartesDuJeu().map((c) => h('tr',
-          h('td', { style: { fontWeight: '700' } }, c.nom),
-          h('td', c.combo
-            ? h('div.rangee.rangee--serree', suiteSymboles(requisCarte(cfg, c.combo), 18))
-            : h('span.mini.muted', 'effet permanent')),
-          h('td.petit', c.texte,
-            noteCarte(c, cfg) ? h('div.mini.muted', noteCarte(c, cfg)) : null),
-        ))),
-      ),
-      h('p.mini.muted', { style: { marginTop: '8px' } },
-        'Un seul paquet pour les trois façons de jouer, et les exigences se règlent carte par '
-        + 'carte dans les Réglages.'),
-    ),
-  );
+    `reglage;${garde.reglage}`, `joueurs;${r.table.nbJoueurs}`, `parties;${r.nbParties}`, `graine;${r.graine}`,
+    `marge_95;${fr(r.marge)}`, '', 'equipe;victoires;part;bas_95;haut_95',
+    ...r.parts.map((w) => [w.equipe, w.n, fr(w.part), fr(w.bas), fr(w.haut)].join(';')),
+    '', `duree_moyenne_s;${Math.round(r.duree.moyenneMs / 1000)}`, `duree_mediane_s;${Math.round(r.duree.medianeMs / 1000)}`,
+    `manches_moyenne;${fr(r.manches.moyenne)}`, `avantage_des;${fr(r.des.part)}`, `premiere_carte;${fr(r.premierGain.part)}`,
+    '', 'place;equipe;profil;victoires;lancers;reveils;abris;endormi;tourbillons',
+    ...r.parSiege.map((s) => [s.siege + 1, s.equipe, s.profil, s.victoires, s.lancers, s.reveils, s.abris, s.endormi, s.pousses].join(';')),
+    '', 'carte;manches;duree_moyenne_s;combinaison_sortie;' + r.parts.map((w) => w.equipe).join(';'),
+    ...r.parCarte.map((c) => [c.nom, c.jouee, Math.round(c.dureeTotale / c.jouee / 1000), c.manchesRealisee,
+      ...r.parts.map((w) => c.vainqueurs[w.equipe] || 0)].join(';')),
+  ];
+  return lignes.join('\n');
 }

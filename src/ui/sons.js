@@ -8,15 +8,15 @@
 // lui passe le contexte vivant ; une épreuve peut lui passer un contexte hors
 // ligne et mesurer ce qui en sort.
 
-import { store } from './store.js?v=1.96';
+import { store } from './store.js?v=2.01';
 
-export const SONS = ['reveil', 'endormi', 'vache', 'attrape'];
+export const SONS = ['reveil', 'endormi', 'abri', 'envol'];
 
 export const NOMS_SONS = {
   reveil: 'Réveil — la sonnerie',
   endormi: 'Endormissement — le ronflement',
-  vache: 'Abri — le meuglement',
-  attrape: 'Attrape — l’alarme',
+  abri: 'Abri — le meuglement',
+  envol: 'Envol — l’alarme',
 };
 
 // ── Briques ───────────────────────────────────────────────────────────────────
@@ -161,7 +161,7 @@ const RECETTES = {
   // Le meuglement : une scie grave qui monte puis retombe, sous un filtre qui
   // s'ouvre et se referme — c'est l'ouverture de la bouche qui fait le « eu »
   // entre les deux « m ».
-  vache(ctx, sortie, t0) {
+  abri(ctx, sortie, t0) {
     const d = 1.05;
     note(ctx, sortie, {
       type: 'sawtooth',
@@ -185,7 +185,7 @@ const RECETTES = {
 
   // L'alarme : deux tons qui alternent, secs et pressants. On n'a pas besoin de
   // comprendre, on a besoin de lever la tête.
-  attrape(ctx, sortie, t0) {
+  envol(ctx, sortie, t0) {
     const pas = 0.135;
     for (let i = 0; i < 6; i++) {
       const hz = i % 2 === 0 ? 990 : 1320;

@@ -3,10 +3,10 @@
 // Deux niveaux de lecture :
 //  1. la loi d'un lancer isolé (multinomiale) ;
 //  2. la course entre la combinaison recherchée et la façon de perdre le lot :
-//     deux X — qui se figent et ne se relancent jamais — font l'Échec. Chaîne de
-//     Markov absorbante sur le nombre de X déjà figés.
+//     les tornades se figent, et la troisième fait l'Envol. Chaîne de Markov
+//     absorbante sur le nombre de tornades déjà figées.
 
-import { comboServie } from './config.js?v=1.96';
+import { comboServie } from './config.js?v=2.01';
 
 const facto = [1];
 function fact(n) {
@@ -74,9 +74,9 @@ export function loiBinomiale(faces, nbDes, symbole) {
  *
  * @param {string[]} faces
  * @param {number}   nbDes
- * @param {object}   requis        combinaison recherchée, ex. { vache: 3 }
+ * @param {object}   requis        combinaison recherchée, ex. { grange: 3 }
  * @param {object}   opts
- * @param {string}   opts.bloquant       symbole qui fige le dé (défaut « x »)
+ * @param {string}   opts.bloquant       symbole qui fige le dé (défaut : la tornade)
  * @param {number}   opts.seuilBloquant  nombre de symboles figés qui rendent le lot
  * @param {object[]} opts.arretsForces   autres combinaisons qui rendent le lot d'office
  * @param {boolean}  opts.prioritaire    combinaison de carte Tornade : passe avant tout
@@ -84,7 +84,7 @@ export function loiBinomiale(faces, nbDes, symbole) {
  */
 export function courseCombinaison(faces, nbDes, requis, opts = {}) {
   const {
-    bloquant = 'x', seuilBloquant = 2, arretsForces = [],
+    bloquant = 'tornade', seuilBloquant = 3, arretsForces = [],
     prioritaire = false, estArretForce = false,
   } = opts;
 
@@ -118,7 +118,7 @@ export function courseCombinaison(faces, nbDes, requis, opts = {}) {
     T.push(tr);
   }
 
-  // Système triangulaire : les X ne se déverrouillent jamais.
+  // Système triangulaire : les tornades ne se déverrouillent jamais.
   const R = new Float64Array(nbEtats);
   const E = new Float64Array(nbEtats);
   for (let s = nbEtats - 1; s >= 0; s--) {
@@ -189,7 +189,7 @@ function esperanceConditionnelle(T, nbEtats, maxLancers = 400) {
  */
 export function courseAvecGarde(faces, nbDes, requis, opts = {}, tirages = 60000, alea = Math.random) {
   const {
-    bloquant = 'x', seuilBloquant = 2, arretsForces = [],
+    bloquant = 'tornade', seuilBloquant = 3, arretsForces = [],
     prioritaire = false, estArretForce = false,
   } = opts;
   let succes = 0, lancersTot = 0, lancersSucces = 0;

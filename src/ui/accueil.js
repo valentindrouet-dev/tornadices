@@ -1,22 +1,17 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=1.96';
-import { store } from './store.js?v=1.96';
-import { aller } from './app.js?v=1.96';
-import { eveillerSons } from './sons.js?v=1.96';
-import { lancerPartie, partieEnCours } from './table.js?v=1.96';
+import { h, remplacer } from './dom.js?v=2.01';
+import { store } from './store.js?v=2.01';
+import { aller } from './app.js?v=2.01';
+import { eveillerSons } from './sons.js?v=2.01';
+import { lancerPartie, partieEnCours } from './table.js?v=2.01';
 import {
-  construireConfig, variables, nombresJoueursPermis, joueursDansBornes,
-  ecartsAuxOfficielles, nomParDefaut, NOMS_ORIGINE,
-} from './variables.js?v=1.96';
-import {
-  infosMiseEnPlace, placement, PROFILS_IA, profilIA, COULEURS_EQUIPE,
-  bornerJoueurs,
-} from '../core/config.js?v=1.96';
-import { emblemeEquipe } from './icons.js?v=1.96';
-import { randomSeed } from '../core/rng.js?v=1.96';
-import { ID_OFFICIELLES, selectionnerProfil, retablirIntegre } from './profils.js?v=1.96';
+  configPartie, nombresJoueursPermis, joueursDansBornes, ecartsAuxOfficielles, nomParDefaut, graineDePartie,
+} from './reglages.js?v=2.01';
+import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.01';
+import { emblemeEquipe } from './icons.js?v=2.01';
+import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.01';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
@@ -24,12 +19,9 @@ export function reglagesJoueurs(nb) {
   const out = [];
   for (let i = 0; i < nb; i++) {
     const s = (enregistres && enregistres[i]) || {};
-    // Un nom changé ici reste le sien ; sinon la place prend le nom réglé. Un
-    // enregistrement d'avant la v1.86 n'a pas la marque : un nom qui n'est pas
-    // celui d'origine de sa place a forcément été choisi.
+    // Un nom changé ici reste le sien ; sinon la place prend le nom réglé.
     const defaut = nomParDefaut(i);
-    const perso = s.nomPerso === true
-      || (s.nomPerso === undefined && !!s.nom && s.nom !== NOMS_ORIGINE[i]);
+    const perso = s.nomPerso === true;
     out.push({
       nom: perso && s.nom ? s.nom : defaut,
       nomPerso: perso && !!s.nom,
@@ -42,10 +34,7 @@ export function reglagesJoueurs(nb) {
 }
 
 export function vueAccueil() {
-  // Une table enregistree a neuf joueurs date d'avant la v1.49 : on la ramene
-  // dans les bornes plutot que de proposer un effectif qui n'existe plus.
-  // Et la ramène dans les bornes réglées : de combien à combien de joueurs.
-  let nb = joueursDansBornes(bornerJoueurs(store.get('nbJoueurs', 6)));
+  let nb = joueursDansBornes(store.get('nbJoueurs', 6));
   let joueurs = reglagesJoueurs(nb);
 
   const racine = h('div.page.page-accueil');
@@ -60,11 +49,7 @@ export function vueAccueil() {
     // Les navigateurs refusent d'ouvrir le son tant qu'on n'a rien cliqué : ce
     // bouton est le geste qu'il leur faut.
     eveillerSons();
-    const v = variables();
-    lancerPartie(
-      construireConfig(nb), joueurs,
-      v.graineManuelle ? (v.graine || randomSeed()) : randomSeed(),
-    );
+    lancerPartie(configPartie(nb), joueurs, graineDePartie());
     aller('/table');
   }
 
@@ -106,8 +91,7 @@ export function vueAccueil() {
       nbHumains > 1
         ? h('div.encart.encart--info', { style: { marginTop: '18px' } },
             `${nbHumains} joueurs humains partagent le même écran. TornaDice se joue en simultané : `
-            + 'chacun agit depuis son propre panneau, en bas de la table. À deux mains sur un clavier '
-            + 'cela reste jouable, au-delà mieux vaut confier les autres sièges à des IA.')
+            + 'chacun lance depuis son propre panneau, en bas de la table (Espace, A et K au clavier).')
         : null,
     );
   }
@@ -123,8 +107,8 @@ export function vueAccueil() {
         h('strong.encart-titre', 'Attention, vous ne jouez pas avec les règles officielles !'),
         h('div.pousse'),
         h('button.btn.btn--petit', {
-          title: 'Passer sur le réglage « Règles officielles », tel qu’il a été validé',
-          onclick: () => { retablirIntegre(ID_OFFICIELLES); selectionnerProfil(ID_OFFICIELLES); dessiner(); },
+          title: 'Passer sur le réglage « Règles officielles »',
+          onclick: () => { selectionnerProfil(ID_OFFICIELLES); dessiner(); },
         }, 'Jouer avec les règles officielles'),
       ),
       h('ul.ecarts-officielles', ...montres.map((e) => h('li',
@@ -136,7 +120,7 @@ export function vueAccueil() {
   }
 
   function carteJoueurs() {
-    const mep = infosMiseEnPlace(nb);
+    const cfg = configPartie(nb);
     return h('div.carte.carte-joueurs',
       h('div.titre-section', 'Joueurs'),
       h('div.rangee', { style: { marginBottom: '16px' } },
@@ -152,18 +136,18 @@ export function vueAccueil() {
         ...joueurs.map((j) => ligneJoueur(j)),
       ),
       h('div.encart', { style: { marginTop: '16px' } },
-        `Mise en place à ${nb} : ${mep.lots} lots · `
-        + `${mep.jetons} jetons par équipe${nb % 2 ? ` (Vert : ${mep.jetonsVert})` : ''} · `
-        + `${mep.cartes} cartes Tornade pour gagner.`
-),
+        `À ${nb} joueurs : ${cfg.lots} lots de ${cfg.desParLot} dés · `
+        + `${cfg.abris} Abri${cfg.abris > 1 ? 's' : ''} pour gagner la manche · `
+        + `${cfg.cartesPourGagner} cartes Tornade pour gagner`
+        + (nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert}).` : '.')),
     );
   }
 
   function ligneJoueur(j) {
-    const eq = COULEURS_EQUIPE[j.equipe];
+    const eq = EQUIPES[j.equipe];
     return h('div.rangee.rangee--serree.ligne-joueur',
       h('span', {
-        title: eq.nom,
+        title: eq.animal,
         style: {
           width: '13px', height: '13px', borderRadius: '50%', flex: 'none',
           background: eq.hex, boxShadow: `0 0 0 3px ${eq.clair}`,
@@ -194,16 +178,9 @@ export function vueAccueil() {
       ),
       // L'emblème de l'équipe : les vaches, les poules, le cowboy.
       h('span.badge.badge--joueur', { class: `badge--${j.equipe}` },
-        emblemeEquipe(eq.embleme, 20), eq.emblemeNom),
+        emblemeEquipe(eq.embleme, 20), eq.un),
     );
   }
-
-  /**
-   * Les réglages de la partie, modifiables ici même. Ce qui décide de la forme
-   * d'une partie — le mode, les lots, les cartes — n'a pas à faire changer de
-   * page : on le règle, on lance. La page Réglages garde le reste.
-   */
-
 
   dessiner();
   return racine;

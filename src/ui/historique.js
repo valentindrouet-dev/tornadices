@@ -1,15 +1,15 @@
 // Historique des parties réellement jouées à la table.
 
-import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=1.96';
-import { historique, viderHistorique, historiqueCSV } from './store.js?v=1.96';
-import { COULEURS_EQUIPE } from '../core/config.js?v=1.96';
-import { aller } from './app.js?v=1.96';
-import { dernierePartie } from './resultats.js?v=1.96';
+import { h, remplacer, dureeLongue, nombre, telecharger } from './dom.js?v=2.01';
+import { historique, viderHistorique, historiqueCSV } from './store.js?v=2.01';
+import { EQUIPES } from '../core/config.js?v=2.01';
+import { aller } from './app.js?v=2.01';
+import { dernierePartie } from './resultats.js?v=2.01';
 
 /** Le vainqueur d'une partie de l'historique. */
 function badgeVainqueur(p) {
-  const eq = COULEURS_EQUIPE[p.vainqueur] || {};
-  return h('span.badge', { class: `badge--${p.vainqueur}` }, eq.nom || p.vainqueur);
+  const eq = EQUIPES[p.vainqueur] || {};
+  return h('span.badge', { class: `badge--${p.vainqueur}` }, eq.animal || p.vainqueur);
 }
 
 export function vueHistorique() {

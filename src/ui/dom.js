@@ -74,7 +74,7 @@ export function remplacer(el, ...enfants) {
 }
 
 // ── Formats ───────────────────────────────────────────────────────────────────
-export const pourcent = (x, dec = 1) => `${(x * 100).toFixed(dec)} %`;
+export const pourcent = (x, dec = 1) => `${(x * 100).toFixed(dec).replace('.', ',')} %`;
 
 export function duree(ms) {
   if (!isFinite(ms)) return '—';
@@ -91,7 +91,7 @@ export function dureeLongue(ms) {
   return `${m} min ${String(s % 60).padStart(2, '0')} s`;
 }
 
-export const nombre = (x, dec = 1) => (isFinite(x) ? x.toFixed(dec) : '—');
+export const nombre = (x, dec = 1) => (isFinite(x) ? x.toFixed(dec).replace('.', ',') : '—');
 
 export function telecharger(nomFichier, contenu, type = 'text/csv;charset=utf-8') {
   const blob = new Blob([contenu], { type });

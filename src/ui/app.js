@@ -1,24 +1,21 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=1.96';
-import { VERSION } from '../version.js?v=1.96';
-import { vueAccueil } from './accueil.js?v=1.96';
-import { vueTable, partieEnCours } from './table.js?v=1.96';
-import { vueLabo } from './labo.js?v=1.96';
-import { vueVariables } from './variables.js?v=1.96';
-import { vueHistorique } from './historique.js?v=1.96';
-import { vueVersions } from './versions.js?v=1.96';
-import { vueRegles } from './regles.js?v=1.96';
-import { vueResultats } from './resultats.js?v=1.96';
-import { vueFiche } from './fiche.js?v=1.96';
+import { h, remplacer } from './dom.js?v=2.01';
+import { VERSION } from '../version.js?v=2.01';
+import { vueAccueil } from './accueil.js?v=2.01';
+import { vueTable, partieEnCours } from './table.js?v=2.01';
+import { vueLabo } from './labo.js?v=2.01';
+import { vueReglages } from './reglages.js?v=2.01';
+import { vueHistorique } from './historique.js?v=2.01';
+import { vueVersions } from './versions.js?v=2.01';
+import { vueRegles } from './regles.js?v=2.01';
+import { vueResultats } from './resultats.js?v=2.01';
 
 const ROUTES = {
   '': vueAccueil,
   '/': vueAccueil,
   '/table': vueTable,
-  '/reglages': vueVariables,
-  // L'ancienne adresse reste valable : un lien déjà posé ne doit pas se briser.
-  '/variables': vueVariables,
+  '/reglages': vueReglages,
   '/labo': vueLabo,
   '/historique': vueHistorique,
   '/versions': vueVersions,
@@ -26,8 +23,6 @@ const ROUTES = {
   // La page de fin de partie. Elle s'ouvre seule au coup de sifflet final, et
   // reste consultable ensuite : l'instantané vit dans le navigateur.
   '/resultats': vueResultats,
-  // La fiche de règles de la partie réglée, prête à imprimer.
-  '/fiche': vueFiche,
 };
 
 function cheminCourant() {

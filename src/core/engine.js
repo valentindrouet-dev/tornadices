@@ -1,455 +1,240 @@
-// Moteur TornaDice — simulation à événements datés.
+// Moteur TornaDice V6 — simulation à événements datés, en temps virtuel (ms).
+// La table fait avancer l'horloge au rythme réel, le Laboratoire d'un trait :
+// mêmes règles, donc les statistiques décrivent la partie que l'on joue.
 //
-// Le temps est virtuel (millisecondes). Chaque étape d'un joueur est un événement
-// planifié dans une file de priorité. La table de jeu fait avancer l'horloge au
-// rythme réel ; le Laboratoire la fait avancer d'un trait. Mêmes règles, donc les
-// statistiques décrivent bien la partie que l'on joue.
-//
-// Un tour de lot suit toujours le même cycle physique :
-//   réflexion → les dés roulent (dureeLancer) → on regarde le résultat
-//   (dureeConstat) → le lot traverse jusqu'au voisin (dureePassage).
-// Toute combinaison servie est jouée d'office : on ne relance pas par-dessus.
+// Cycle d'un lot : réflexion → les dés roulent (dureeLancer) → constat
+// (dureeConstat) → le lot traverse vers le voisin (dureePassage).
+// Une combinaison formée est jouée d'office, puis le lot part. On ne passe
+// jamais son lot sans combinaison. Un lot qui arrive chez un joueur qui en
+// tient déjà un le force à passer le sien : c'est le tourbillon.
 
-import { makeRng } from './rng.js?v=1.96';
+import { makeRng } from './rng.js?v=2.01';
 import {
-  CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, ALERTES, profilIA,
-  placement, infosMiseEnPlace, comboServie, exigenceVide,
-  comboDeclencheur, attrapeEmporteManche,
-  requisPourEquipe, cartesEnJeu, requisCarte, cartesDuJeu, carteALaTable,
-  modeManche, estImmediat, estCompromis, estJeton, refugePour, sensRotation,
-  comboRefusable, comboIneluctable, jetonsSurTornade, nomDansPhrase,
-} from './config.js?v=1.96';
+  CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, profilIA, placement, comboServie,
+  carteALaTable, requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
+} from './config.js?v=2.01';
 
-// Le symbole que chaque combinaison ordinaire demande : c'est par lui qu'on sait
-// si une IA a obtenu ce qu'elle visait, ou tout autre chose.
-const SYMBOLE_DE_COMBO = {
-  reveil: 'tornade', vache: 'vache', endormir: 'zzz', blocage: 'x',
-};
+// Le symbole qu'il faut garder pour viser chaque combinaison de base.
+const SYMBOLE_DE_COMBO = { reveil: 'soleil', abri: 'grange', sommeil: 'lune', envol: 'tornade' };
 
-// ── File de priorité (tas binaire) ────────────────────────────────────────────
-class FileEvenements {
+// File de priorité (tas binaire), ordonnée par date puis par ordre d'entrée.
+class File {
   constructor() { this.a = []; this.seq = 0; }
   get taille() { return this.a.length; }
+  get tete() { return this.a[0]; }
+  avant(x, y) { return x._t !== y._t ? x._t < y._t : x._s < y._s; }
   pousser(t, ev) {
     ev._t = t; ev._s = this.seq++;
     const a = this.a;
-    a.push(ev);
-    let i = a.length - 1;
+    let i = a.push(ev) - 1;
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (this.avant(a[i], a[p])) { [a[i], a[p]] = [a[p], a[i]]; i = p; } else break;
+      if (!this.avant(a[i], a[p])) break;
+      [a[i], a[p]] = [a[p], a[i]]; i = p;
     }
   }
-  avant(x, y) { return x._t !== y._t ? x._t < y._t : x._s < y._s; }
-  get tete() { return this.a[0]; }
   retirer() {
     const a = this.a;
     const top = a[0];
     const last = a.pop();
     if (a.length) {
       a[0] = last;
-      let i = 0;
-      for (;;) {
+      for (let i = 0; ;) {
         const g = 2 * i + 1, d = g + 1;
         let m = i;
         if (g < a.length && this.avant(a[g], a[m])) m = g;
         if (d < a.length && this.avant(a[d], a[m])) m = d;
         if (m === i) break;
-        [a[i], a[m]] = [a[m], a[i]];
-        i = m;
+        [a[i], a[m]] = [a[m], a[i]]; i = m;
       }
     }
     return top;
   }
 }
 
-function statsVides() {
-  return {
-    // `combos` compte tout ; `combosCartes` isole celles des cartes Tornade, qui
-    // ne se jouent qu'une manche sur douze et n'ont donc rien à voir avec les
-    // fréquences des combinaisons de base.
-    lancers: 0, passes: 0, combos: {}, combosCartes: {},
-    collisionsTentees: 0, collisionsReussies: 0,
-    foisTouche: 0, foisEndormi: 0, jetonsRetournes: 0,
-    tempsAvecLot: 0, reveils: 0, jetonsParSource: {},
-  };
-}
+const statsVides = () => ({
+  lancers: 0, combos: {}, combosCartes: {}, reveils: 0, foisEndormi: 0, abris: 0,
+  pousses: 0, tempsAvecLot: 0,
+});
 
 export class Moteur {
   /**
-   * @param {object} cfg  configuration complète (voir config.js)
-   * @param {Array}  specJoueurs  [{nom, type:'humain'|'ia', profil:'equilibre', equipe?}]
+   * @param {object} cfg          configuration complète (config.js, configDepuis)
+   * @param {Array}  specJoueurs  [{ nom, type: 'humain'|'ia', profil }]
    * @param {string|number} graine
+   * @param {object} [opts]       journal: false coupe le journal (campagnes)
    */
-  constructor(cfg, specJoueurs, graine) {
+  constructor(cfg, specJoueurs, graine, opts = {}) {
     this.cfg = cfg;
     this.graine = graine;
     this.rng = makeRng(graine);
+    this.avecJournal = opts.journal !== false;
     this.now = 0;
-    this.file = new FileEvenements();
+    this.file = new File();
     this.journal = [];
     this.termine = false;
     this.vainqueur = null;
     this.raisonFin = null;
     this.manche = 0;
-    this.sens = 1; // +1 = horaire
-    this.duel = null;
+    // « Placez la Carte Rotation sur une face aléatoire. » +1 = horaire.
+    this.sens = this.rng() < 0.5 ? 1 : -1;
     this.transits = [];        // lots en train de traverser la table
+    this.transition = null;    // entre deux manches
+    this.choixSens = null;     // la Carte Rotation attend une réponse
+    this.statsManches = [];
     this.compteurLot = 0;
     this.compteurTransit = 0;
-    this.evenementsTraites = 0;
-    this.onJournal = null;     // crochet UI
+    // Crochets de l'interface, tous facultatifs.
+    this.onJournal = null;     // (entree)
     this.onEtatChange = null;
-    this.onMouvement = null;   // (idDepart, idArrivee, motif, lot, duree)
-    this.onCombinaison = null; // (idJoueur, idCombo) — dès que les dés la montrent
-    this.onAnnonce = null;     // (texte, couleur) — bandeau au centre de la table
-    this.onJeton = null;       // (idJoueur, equipe, nombre, source) — un jeton est retourné
-    this.onFlash = null;       // (type, idJoueur) — reveil | echec | endormi | attrape
-    this.onFinManche = null;   // ({vainqueur, porteursAvant, manche, duree})
-    this.onDebutManche = null; // ({manche, carte, porteurs})
-    this.transition = null;    // entre deux manches : les dés reviennent au centre
-    // Règle « carte de sens » : la décision en attente entre deux manches.
-    this.choixSens = null;
-    this.onChoixSens = null;   // (choix) — la carte de sens attend une réponse
+    this.onMouvement = null;   // (idDepart, idArrivee, motif, { des }, duree)
+    this.onCombinaison = null; // (idJoueur, idCombo, couleur)
+    this.onAnnonce = null;     // (texte, couleur, idJoueur, options)
+    this.onJeton = null;       // (idJoueur, equipe) — un Jeton Équipe est posé
+    this.onFlash = null;       // (type, idJoueur) — reveil | abri | envol | endormi
+    this.onFinManche = null;
+    this.onDebutManche = null;
+    this.onChoixSens = null;
 
-    this._initJoueurs(specJoueurs);
-    this._initEquipes();
-    this._initPioche();
-    this.statsManches = [];
-    this._demarrerManche(true);
-  }
-
-  // ── Mise en place ───────────────────────────────────────────────────────────
-  _initJoueurs(spec) {
-    const n = this.cfg.nbJoueurs;
-    const sieges = placement(n);
-    this.joueurs = [];
-    for (let i = 0; i < n; i++) {
-      const s = spec[i] || {};
-      const base = s.type === 'humain' ? PROFIL_HUMAIN : profilIA(s.profil);
-      const equipe = s.equipe || sieges[i];
-      this.joueurs.push({
-        id: i,
-        nom: s.nom || `Joueur ${i + 1}`,
-        siege: i,
-        equipe,
-        type: s.type === 'humain' ? 'humain' : 'ia',
-        profil: { ...base },
-        // Chaque joueur a sa propre vitesse et son adresse, tirées autour du profil.
-        vitesse: Math.max(60, this.rng.normal(base.reflexe, base.ecartReflexe, 80)),
-        adresse: Math.min(0.95, Math.max(0.05, base.adresse + this.rng.normal(0, 0.06))),
-        esquive: Math.min(0.95, Math.max(0.05, base.esquive + this.rng.normal(0, 0.06))),
-        eveille: false,
-        lots: [],
-        lancersLot: 0,
-        attente: null,       // état d'attente pour un joueur humain
-        departEnAttente: null, // lot déjà engagé vers le voisin
-        planifie: false,
-        fige: false,         // une étape est en cours, le joueur ne peut rien faire
-        stats: statsVides(),
-        objectif: null,      // ce que l'IA cherche avec le lot qu'elle tient
-        _lotDepuis: 0,
-      });
-    }
-  }
-
-  _initEquipes() {
-    const mep = infosMiseEnPlace(this.cfg.nbJoueurs);
-    const presentes = new Set(this.joueurs.map((j) => j.equipe));
+    const sieges = placement(cfg.nbJoueurs);
+    this.joueurs = sieges.map((equipe, i) => {
+      const s = specJoueurs[i] || {};
+      const humain = s.type === 'humain';
+      const base = humain ? PROFIL_HUMAIN : profilIA(s.profil);
+      return {
+        id: i, siege: i, equipe, nom: s.nom || `Joueur ${i + 1}`,
+        type: humain ? 'humain' : 'ia', profil: base,
+        vitesse: Math.max(60, this.rng.normal(base.reflexe, base.ecart, 80)),
+        eveille: false, lots: [], lancersLot: 0,
+        attente: null,          // ce qu'un joueur humain peut faire
+        departEnAttente: null,  // lot engagé vers le voisin, le temps du constat
+        planifie: false, fige: false, objectif: null,
+        stats: statsVides(), _lotDepuis: 0,
+      };
+    });
     this.equipes = {};
     for (const id of ['bleu', 'jaune', 'vert']) {
-      if (!presentes.has(id)) continue;
-      this.equipes[id] = {
-        id,
-        jetons: id === 'vert'
-          ? (this.cfg.jetonsVert ?? mep.jetonsVert)
-          : (this.cfg.jetons ?? mep.jetons),
-        retournes: 0,
-        cartes: [],
-      };
+      if (sieges.includes(id)) this.equipes[id] = { id, cartes: [], abris: 0, objectif: cfg.abris };
     }
-  }
-
-  _initPioche() {
-    // Un seul paquet pour les trois façons de jouer : les cartes cochées.
-    const ids = cartesEnJeu(this.cfg).slice();
-    const cartes = ids
-      .map((id) => CARTES_PAR_ID[id])
-      .filter(Boolean)
-      .filter((c) => !c.minJoueurs || this.cfg.nbJoueurs >= c.minJoueurs)
-      // Une carte qui désigne un animal absent ne désignerait personne : pas de
-      // Cow-Boy qu'à trois joueurs.
-      .filter((c) => carteALaTable(c, this.cfg));
-    const chauffe = cartes.filter((c) => c.toujoursPremiere);
-    let reste = cartes.filter((c) => !c.toujoursPremiere);
-    if (this.cfg.melangerCartes !== false) reste = this.rng.shuffle(reste);
-    this.pioche = [...chauffe, ...reste];
-    if (!this.pioche.length) this.pioche = [cartesDuJeu()[0]];
+    const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id])
+      .filter((c) => c && carteALaTable(c, cfg.nbJoueurs));
+    const reste = cartes.filter((c) => !c.premiere);
+    this.pioche = [...cartes.filter((c) => c.premiere),
+      ...(cfg.melangerCartes ? this.rng.shuffle(reste) : reste)];
+    if (!this.pioche.length) this.pioche = [CARTES_PAR_ID.chauffe];
+    // L'équipe qui reçoit les lots : les Jaunes à la première manche.
+    this.equipeDes = 'jaune';
+    this._demarrerManche(true);
   }
 
   // ── Manches ─────────────────────────────────────────────────────────────────
   _demarrerManche(premiere = false) {
     this.manche += 1;
     this._comboCarteManche = 0;
-    // Ce que la manche vaudra en cartes, et comment elle a été prise : deux
-    // choses que les cartes Tornade savent modifier.
-    this._bonusCartes = 0;
-    this._mancheParAttrape = false;
-    // D'où vient le sens de la manche qui commence — deux règles au choix.
-    const regleSens = sensRotation(this.cfg);
-    if (regleSens === 'alterne' && !premiere) this.sens = -this.sens;
-    // « perdants » : rien à faire ici. La carte de sens posée sur la table ne
-    // bouge qu'entre deux manches, quand ceux qui reçoivent les dés décident de
-    // la retourner ou de la laisser — c'est déjà fait quand on arrive ici.
-    if (regleSens === 'perdants') this._cloreChoixSens();
+    if (this.choixSens && !this.choixSens.decide) this.choisirSens(false);
+    this.choixSens = null;
     this.debutManche = this.now;
     this.carte = this.pioche[0] || null;
-    this.passif = (this.carte && this.carte.effetPassif) || {};
-
+    this.passif = (this.carte && this.carte.passif) || {};
     for (const j of this.joueurs) {
-      j.eveille = false;
-      j.lots = [];
-      j.lancersLot = 0;
-      j.attente = null;
-      j.planifie = false;
-      j.fige = false;
-      j.departEnAttente = null;
-      j.objectif = null;
+      j.eveille = false; j.lots = []; j.lancersLot = 0; j.attente = null;
+      j.planifie = false; j.fige = false; j.departEnAttente = null; j.objectif = null;
     }
-    // Les jetons repartent à zéro : chaque manche est une course neuve. Ceux qui
-    // sont en jeu reviennent sur la carte Tornade — ou face cachée devant leur
-    // équipe, selon l'endroit réglé.
-    for (const e of Object.values(this.equipes)) { e.retournes = 0; e.refuge = 0; e.emportes = 0; }
-    // La Tornade Jalouse : l'équipe seule en tête aux cartes pose un jeton de
-    // plus, le temps de la manche.
+    // Tornade Jalouse : l'équipe seule en tête doit réussir un Abri de plus.
+    const meneur = this.passif.abriMeneur ? this._seulEnTete() : null;
     for (const e of Object.values(this.equipes)) {
-      if (e.jetonsBase === undefined) e.jetonsBase = e.jetons;
-      e.jetons = e.jetonsBase;
+      e.abris = 0;
+      e.objectif = this.cfg.abris + (e === meneur ? this.passif.abriMeneur : 0);
     }
-    if (this.passif.jetonMeneur) {
-      const meneur = this._seulEnTete();
-      if (meneur) {
-        meneur.jetons = meneur.jetonsBase + this.passif.jetonMeneur;
-        this._log(`${this._eq(meneur.id).Le} ${this._eq(meneur.id).v('mène', 'mènent')} : `
-          + `${this._eq(meneur.id).v('il pose', 'ils posent')} un jeton de plus dans la Tornade.`, 'manche');
-      }
-    }
-    // Ce que la Tornade du jour demande de mettre à l'Abri, une fois pour la
-    // manche : la carte ne changera plus d'ici la fin.
-    this.refugeRequis = estCompromis(this.cfg) ? refugePour(this.cfg, this.carte) : 0;
-
     const porteurs = this._porteursDeDepart();
     for (const pid of porteurs) {
       this.joueurs[pid]._lotDepuis = this.now;
       this.joueurs[pid].lots.push(this._nouveauLot());
     }
-
-    this._log(
-      `Manche ${this.manche} — ${this.carte ? this.carte.nom : 'sans carte'} · sens ${this.sens > 0 ? 'horaire' : 'antihoraire'}`,
-      'manche',
-    );
-
-    if (this.onDebutManche) {
-      this.onDebutManche({ manche: this.manche, carte: this.carte, porteurs, premiere });
+    this._log(`Manche ${this.manche} — ${this.carte ? this.carte.nom : 'sans carte'} · sens `
+      + (this.sens > 0 ? 'horaire' : 'antihoraire'), 'manche');
+    if (meneur) {
+      this._log(`${nomDansPhrase(meneur.id).Le} ${nomDansPhrase(meneur.id).v('mène', 'mènent')} : `
+        + 'un Abri de plus à réussir.', 'manche');
     }
+    if (this.onDebutManche) this.onDebutManche({ manche: this.manche, carte: this.carte, porteurs, premiere });
     for (const pid of porteurs) this._planifier(pid);
-
     // Garde-fou : une manche qui s'éternise est arrêtée d'office.
-    this.file.pousser(this.now + (this.cfg.dureeMaxManche || 900000), {
-      type: 'gardeManche', manche: this.manche,
-    });
+    this.file.pousser(this.now + this.cfg.dureeMaxManche, { type: 'gardeManche', manche: this.manche });
   }
 
-  // Manche 1 : l'équipe de départ prend les lots — les Jaunes selon la règle,
-  // et le Vert avec elle. Le réglage « Qui commence » permet d'ouvrir sur les
-  // Bleus, ou sur le Vert seul.
-  // Manches suivantes : les perdants de la manche précédente — ou les gagnants
-  // si la Tornade des Tricheurs était en jeu.
+  /**
+   * Qui tient un lot au début de la manche : chaque joueur de l'équipe qui
+   * reçoit les dés, puis le Cow-boy — il récupère toujours le lot restant —,
+   * puis les autres s'il reste des lots (Tornade Chargée, réglages).
+   */
   _porteursDeDepart() {
-    // Deux Tornades jouent sur le nombre de lots : la Mini en retire un, la
-    // Chargée en ajoute un. Jamais moins d'un lot — sans quoi il ne se passerait
-    // plus rien — ni plus qu'il n'y a de joueurs, personne n'en tenant deux.
-    const nbLots = Math.max(1, Math.min(
-      this.joueurs.length,
-      (this.cfg.lots || 1) - (this.passif.lotsEnMoins || 0) + (this.passif.lotsEnPlus || 0),
-    ));
-    let candidats;
-    if (this._prochainsPorteurs && this._prochainsPorteurs.length) {
-      candidats = this._prochainsPorteurs;
-      this._prochainsPorteurs = null;
-    } else {
-      const depart = this.cfg.equipeDepart || 'jaune';
-      candidats = this.joueurs
-        // Le Vert n'a pas d'équipe à qui succéder : il ouvre avec celle qui
-        // commence, sauf quand c'est lui qu'on a désigné — il est seul alors.
-        .filter((j) => j.equipe === depart || (depart !== 'vert' && j.equipe === 'vert'))
-        .map((j) => j.id);
-    }
-    if (!candidats.length) candidats = this.joueurs.map((j) => j.id);
-
-    // Un joueur ne commence jamais avec deux lots : on prend des porteurs
-    // distincts, répartis le plus loin possible les uns des autres.
-    const out = [];
-    const m = candidats.length;
-    const pris = Math.min(nbLots, m);
-    for (let k = 0; k < pris; k++) {
-      const id = candidats[Math.round((k * m) / pris) % m];
-      if (!out.includes(id)) out.push(id);
-    }
-    // S'il reste des lots à placer, on complète avec les autres joueurs.
-    if (out.length < Math.min(nbLots, this.joueurs.length)) {
-      for (const j of this.joueurs) {
-        if (out.length >= Math.min(nbLots, this.joueurs.length)) break;
-        if (!out.includes(j.id)) out.push(j.id);
-      }
-    }
-    return out;
+    const nbLots = Math.max(1, Math.min(this.joueurs.length, this.cfg.lots + (this.passif.lotsEnPlus || 0)));
+    const rang = (j) => (j.equipe === this.equipeDes ? 0 : j.equipe === 'vert' ? 1 : 2);
+    return this.joueurs.slice().sort((a, b) => rang(a) - rang(b) || a.id - b.id)
+      .slice(0, nbLots).map((j) => j.id);
   }
 
-  // ── La carte de sens ────────────────────────────────────────────────────────
-  // Une carte posée au milieu de la table indique le sens de circulation. Elle
-  // ne tourne pas toute seule : à la fin d'une manche, ceux qui reçoivent les
-  // dés — les perdants — la retournent s'ils y ont intérêt, ou la laissent.
-  //
-  // Ce que vaut un sens, à la table, tient en deux gestes : on ne peut attraper
-  // que son voisin d'aval, et on ne peut être attrapé que par son voisin
-  // d'amont. Choisir le sens, c'est donc choisir sa proie et son prédateur.
+  /** L'équipe seule en tête aux cartes, ou rien en cas d'égalité. */
+  _seulEnTete() {
+    const equipes = Object.values(this.equipes);
+    const max = Math.max(...equipes.map((e) => e.cartes.length));
+    const tete = equipes.filter((e) => e.cartes.length === max);
+    return max > 0 && tete.length === 1 ? tete[0] : null;
+  }
 
-  /**
-   * Le goût d'un joueur pour l'attrape, entre 0 et 1 — la part du X, celui de
-   * l'Échec qui porte l'attrape, dans ce qu'il vise une fois réveillé. L'Équilibré emprunte trois styles à tour de
-   * rôle : c'est leur moyenne qui le décrit, pas celui du lot en cours.
-   * Un humain ne se laisse pas prévoir : on le suppose à mi-chemin.
-   */
-  _appetitAttaque(x) {
-    if (this.cfg.sansAttrape) return 0;
-    if (x.type === 'humain') return 0.5;
-    const p = x.profil;
-    const styles = p.styles && p.styles.length
-      ? p.styles.map((id) => PROFILS_IA[id]).filter(Boolean)
-      : [p];
-    if (!styles.length) return 0.5;
-    let total = 0;
-    for (const s of styles) {
-      const vise = (s.vise && s.vise.eveille) || {};
-      const somme = Object.values(vise).reduce((a, b) => a + b, 0);
-      total += somme ? (vise.x || 0) / somme : 0;
+  /** L'équipe « perdante » que désigne le Cow-boy : celle qui a le moins de cartes. */
+  _designeeParLeVert() {
+    const { bleu, jaune } = this.equipes;
+    if (bleu.cartes.length !== jaune.cartes.length) {
+      return bleu.cartes.length < jaune.cartes.length ? 'bleu' : 'jaune';
     }
-    return total / styles.length;
+    return this.rng() < 0.5 ? 'bleu' : 'jaune';
   }
 
-  /**
-   * Ce que rapporte un sens à un camp : ce qu'il peut prendre à son voisin
-   * d'aval, moins ce que son voisin d'amont peut lui prendre.
-   *
-   * Trois choses comptent, et ce sont celles que l'on peut lire à la table :
-   * l'adresse de celui qui attrape, l'esquive de celui qu'on attrape, et le
-   * goût de chacun pour le contact — un voisin d'amont qui ne cherche que
-   * l'Échec n'est pas le même danger qu'un joueur qui court à l'abri. On
-   * ajoute une base à ce goût : une combinaison servie est jouée d'office, même
-   * par qui ne la visait pas.
-   */
-  _scoreSens(joueurs, s) {
-    // Sans attrape, le sens ne donne ni proie ni chasseur : aucun ne vaut mieux.
-    if (this.cfg.sansAttrape) return 0;
-    const n = this.joueurs.length;
-    let score = 0;
-    for (const j of joueurs) {
-      const proie = this.joueurs[(j.siege + s + n) % n];
-      const chasseur = this.joueurs[(j.siege - s + n) % n];
-      // Une proie qui garde longtemps son lot est plus souvent à portée : on
-      // n'attrape que le voisin qui tient quelque chose.
-      const exposition = Math.min(1.5, (proie.profil.lancersAvantPasse || 8) / 8);
-      score += (0.5 + this._appetitAttaque(j)) * j.adresse * (1 - proie.esquive) * exposition;
-      score -= (0.5 + this._appetitAttaque(chasseur)) * chasseur.adresse * (1 - j.esquive);
-    }
-    return score;
-  }
-
-  /** Le sens que l'IA retiendrait pour ce camp. */
-  _sensConseille(joueurs) {
-    const garde = this._scoreSens(joueurs, this.sens);
-    const inverse = this._scoreSens(joueurs, -this.sens);
-    // Retourner la carte pour un gain nul n'est pas une décision : on ne la
-    // touche que si l'autre sens vaut nettement mieux.
-    return inverse > garde + 0.02 ? -this.sens : this.sens;
-  }
-
-  /**
-   * Ouvre la décision de fin de manche. Une table sans humain parmi les
-   * perdants tranche aussitôt ; sinon la carte attend le temps de la
-   * transition, et rester sans rien faire la laisse en place.
-   */
-  _ouvrirChoixSens(porteurs) {
-    const joueurs = porteurs.map((id) => this.joueurs[id]).filter(Boolean);
-    if (!joueurs.length) { this.choixSens = null; return; }
-    const conseil = this._sensConseille(joueurs);
+  // ── La Carte Rotation ───────────────────────────────────────────────────────
+  // L'équipe qui reçoit les dés peut la retourner entre deux manches. Une table
+  // sans humain dans cette équipe tranche aussitôt, à pile ou face : aucun sens
+  // n'avantage un camp, et le Laboratoire doit voir passer les deux.
+  _ouvrirChoixSens() {
+    const joueurs = this.joueurs.filter((j) => j.equipe === this.equipeDes);
     this.choixSens = {
-      joueurs: joueurs.map((j) => j.id),
-      equipes: [...new Set(joueurs.map((j) => j.equipe))],
-      sens: this.sens,
-      conseil,
-      // Un seul humain parmi les perdants suffit : c'est lui qui décide, la
-      // table ne retourne pas la carte à sa place.
-      humain: joueurs.some((j) => j.type === 'humain'),
-      decide: false,
-      inverse: false,
+      joueurs: joueurs.map((j) => j.id), equipes: [this.equipeDes], sens: this.sens,
+      humain: joueurs.some((j) => j.type === 'humain'), decide: false, inverse: false,
     };
-    if (!this.choixSens.humain) this.choisirSens(conseil !== this.sens);
+    if (!this.choixSens.humain) this.choisirSens(this.rng() < 0.5);
     else if (this.onChoixSens) this.onChoixSens(this.choixSens);
   }
 
-  /**
-   * Retourne la carte de sens, ou la laisse. Ouvert à la table de jeu : c'est
-   * le geste d'un joueur humain.
-   * @returns {boolean} vrai si la décision a été prise ici.
-   */
+  /** Retourne la Carte Rotation, ou la laisse. Rend vrai si la décision est prise ici. */
   choisirSens(inverser) {
     const c = this.choixSens;
     if (!c || c.decide) return false;
     c.decide = true;
     c.inverse = !!inverser;
-    if (c.inverse) {
-      this.sens = -this.sens;
-      this._log(
-        `Carte de sens retournée — la manche suivante se jouera en sens `
-        + `${this.sens > 0 ? 'horaire' : 'antihoraire'}.`,
-        'manche',
-      );
-    } else {
-      this._log('Carte de sens laissée en place.', 'manche');
-    }
-    if (this.transition) this.transition.sensChoisi = { ...c };
+    if (c.inverse) this.sens = -this.sens;
+    this._log(c.inverse
+      ? `Carte Rotation retournée : sens ${this.sens > 0 ? 'horaire' : 'antihoraire'}.`
+      : 'Carte Rotation laissée en place.', 'manche');
     if (this.onChoixSens) this.onChoixSens(c);
     if (this.onEtatChange) this.onEtatChange();
     return true;
   }
 
-  /** La manche commence : ce qui n'a pas été décidé ne l'est plus. */
-  _cloreChoixSens() {
-    if (this.choixSens && !this.choixSens.decide) this.choisirSens(false);
-    this.choixSens = null;
-  }
-
   _nouveauLot() {
     return {
       id: ++this.compteurLot,
-      des: Array.from({ length: this.cfg.desParLot }, () => ({
-        sym: null,        // null = face « ? », le dé n'a pas encore été lancé
-        verrou: false,    // un X ne se relance jamais
-        roule: false,     // ce dé est en train de tourner
-        finRoule: 0,
-      })),
-      lance: false,       // tous les dés ont une face et aucun ne tourne
+      // sym null = face « ? » ; verrou = tornade figée ; roule = dé en l'air.
+      des: Array.from({ length: this.cfg.desParLot }, () => ({ sym: null, verrou: false, roule: false, finRoule: 0 })),
+      lance: false,
     };
   }
 
-  // ── Boucle d'exécution ──────────────────────────────────────────────────────
+  // ── Boucle ──────────────────────────────────────────────────────────────────
   /** Avance jusqu'à l'instant t (table de jeu, temps réel). */
   avancerJusqua(t) {
     let garde = 0;
-    while (!this.termine && this.file.taille && this.file.tete._t <= t) {
-      if (++garde > 20000) break;
+    while (!this.termine && this.file.taille && this.file.tete._t <= t && ++garde < 20000) {
       const ev = this.file.retirer();
       this.now = ev._t;
       this._traiter(ev);
@@ -461,59 +246,41 @@ export class Moteur {
   /** Déroule la partie jusqu'à son terme (Laboratoire). */
   jouerJusquAuBout(maxEvenements = 600000) {
     let n = 0;
-    while (!this.termine && this.file.taille && n < maxEvenements) {
+    while (!this.termine && this.file.taille && n++ < maxEvenements) {
       const ev = this.file.retirer();
       this.now = ev._t;
       this._traiter(ev);
-      n++;
     }
     if (!this.termine) this._finPartie(null, 'limite');
     return this.resultat();
   }
 
   _traiter(ev) {
-    this.evenementsTraites++;
     if (this.termine) return;
+    const j = ev.pid != null ? this.joueurs[ev.pid] : null;
     switch (ev.type) {
-      case 'action': {
-        const j = this.joueurs[ev.pid];
+      case 'action':
         j.planifie = false;
         if (!j.lots.length || j.fige) return;
-        if (j.type === 'humain') { this._attenteHumaine(j); return; }
-        this._decisionIA(j);
+        if (j.type === 'humain') this._attenteHumaine(j);
+        else if (!this._desEnLAir(j.lots[0])) this._demarrerLancer(j, this._choixDesIA(j, j.lots[0]));
         return;
-      }
-      case 'finLancer': {
-        const j = this.joueurs[ev.pid];
-        // Si le lot a été poussé de côté entre-temps, ce jet ne compte plus.
-        if (j.lots[0] !== ev.lot) return;
-        this._finLancer(j, ev.des);
+      case 'finLancer':
+        // Si le lot a été poussé entre-temps, ce jet ne compte plus.
+        if (j.lots[0] === ev.lot) this._finLancer(j, ev.des);
         return;
-      }
-      case 'depart': {
-        const j = this.joueurs[ev.pid];
+      case 'depart':
         if (!j.lots.includes(ev.lot)) {
-          // Le lot est déjà parti — poussé, ou envoyé d'avance à l'arrivée d'un
-          // autre. On ne dégèle que si rien d'autre n'attend de partir.
           if (j.departEnAttente && j.departEnAttente.lot === ev.lot) j.departEnAttente = null;
           if (!j.departEnAttente) j.fige = false;
           return;
         }
-        // Le joueur a pu changer de combinaison pendant le temps de constat :
-        // c'est l'attente en cours qui fait foi, pas ce qui était planifié.
-        const d = (j.departEnAttente && j.departEnAttente.lot === ev.lot) ? j.departEnAttente : ev;
-        this._depart(j, ev.lot, d.motif, d.dispo, d.choix);
+        this._depart(j, ev.lot, ev.motif, ev.dispo);
         return;
-      }
+      case 'arrivee': this._arrivee(ev.transitId); return;
       case 'nouvelleManche':
         this.transition = null;
         this._demarrerManche(false);
-        return;
-      case 'arrivee':
-        this._arrivee(ev.transitId);
-        return;
-      case 'duel':
-        this._resoudreDuel();
         return;
       case 'gardeManche':
         if (ev.manche === this.manche) {
@@ -531,262 +298,107 @@ export class Moteur {
     if (j.planifie || j.fige || this.termine || !j.lots.length) return;
     if (j.type === 'humain') { this._attenteHumaine(j); return; }
     j.planifie = true;
-    this.file.pousser(this.now + this._tempsReflexion(j), { type: 'action', pid });
+    const base = this.cfg.tempsReflexion * (j.vitesse / j.profil.reflexe) * (this.passif.lenteur || 1);
+    this.file.pousser(this.now + Math.max(40, this.rng.normal(base, this.cfg.ecartReflexion, 40)),
+      { type: 'action', pid });
   }
 
-  _tempsReflexion(j) {
-    const lent = this.passif.lenteur || 1;
-    const base = (this.cfg.tempsReflexion ?? 300) * (j.vitesse / (j.profil.reflexe || 800));
-    return Math.max(40, this.rng.normal(base * lent, this.cfg.ecartReflexion ?? 120, 40));
-  }
-
-  /**
-   * Rythme irrégulier : `variance` étire ou raccourcit chaque durée, coup par
-   * coup. À 0 le tempo est mécanique — la durée annoncée est celle qu'on
-   * observe ; à 0,3 elle va du simple 70 % au 130 %. Le tirage passe par le
-   * générateur de la partie, donc une même graine redonne le même rythme.
-   */
+  /** Rythme irrégulier : `variance` étire ou raccourcit chaque durée. */
   _varier(ms) {
-    const v = this.cfg.variance || 0;
-    if (!v || ms <= 0) return ms;
-    return Math.max(0, ms * (1 + (this.rng() * 2 - 1) * v));
-  }
-
-  _dureeLancer() {
-    const lent = this.passif.lenteur || 1;
-    return Math.max(60, this._varier((this.cfg.dureeLancer ?? 1000) * lent));
+    const v = this.cfg.variance;
+    return v && ms > 0 ? Math.max(0, ms * (1 + (this.rng() * 2 - 1) * v)) : ms;
   }
 
   // ── Dés ─────────────────────────────────────────────────────────────────────
-  /** Vrai quand tous les dés sont posés : aucune face vide, aucun dé en l'air. */
   _lotPose(lot) { return lot.des.every((d) => d.sym && !d.roule); }
-
   _desEnLAir(lot) { return lot.des.some((d) => d.roule); }
 
-  /** Pose les dés d'un jet. Les dés bloqués gardent leur face, toujours. */
   _poserDes(lot, indices) {
     const faces = this.cfg.faces;
-    const bloquant = this.cfg.symboleBloquant || 'x';
     for (const i of indices) {
       const d = lot.des[i];
       if (!d || !d.roule) continue;
       d.sym = faces[this.rng.int(faces.length)];
       d.roule = false;
       d.finRoule = 0;
-      // La Tornade du Chaos : les X ne se figent plus, on les relance aussi.
-      if (d.sym === bloquant && !this.passif.sansVerrou) d.verrou = true;
+      // Une tornade se fige — sauf sous la Tornade du Chaos.
+      if (d.sym === SYMBOLE_FIGE && !this.passif.sansVerrou) d.verrou = true;
     }
     lot.lance = this._lotPose(lot);
   }
 
-  _compter(lot) {
-    const c = {};
-    for (const d of lot.des) if (d.sym && !d.roule) c[d.sym] = (c[d.sym] || 0) + 1;
-    return c;
-  }
-
-  /** Tirage pondéré parmi des symboles ; un poids nul ne sort jamais. */
-  _tirerPondere(poids) {
-    const entrees = Object.entries(poids || {}).filter(([, p]) => p > 0);
-    if (!entrees.length) return null;
-    const total = entrees.reduce((a, [, p]) => a + p, 0);
-    let x = this.rng() * total;
-    for (const [sym, p] of entrees) { x -= p; if (x <= 0) return sym; }
-    return entrees[entrees.length - 1][0];
-  }
-
   /**
-   * Ce que l'IA cherche avec ce lot. Le tirage vaut pour toute la possession :
-   * changer d'objectif à chaque jet reviendrait à ne rien poursuivre. Il est
-   * repris quand la Tornade change d'état, car les objectifs ne sont plus les
-   * mêmes une fois réveillé.
+   * Le symbole que l'IA cherche avec ce lot. Le tirage vaut pour toute la
+   * possession, et il est repris quand la Tornade change d'état.
    */
-  /** Le dé peut-il sortir ce symbole ? */
-  _deProduit(sym) {
-    return (this.cfg.faces || []).includes(sym);
-  }
-
-  /**
-   * Symbole que réclame la combinaison portant l'attrape — le X de l'Échec.
-   * C'est celui qu'une IA agressive vise, et qui ne vaut rien sans cible.
-   */
-  _symboleAttrape() {
-    const id = comboDeclencheur(this.cfg);
-    const combo = (this.cfg.combos || []).find((c) => c.id === id);
-    let vise = null, mieux = 0;
-    for (const [sym, n] of Object.entries((combo && combo.requis) || {})) {
-      if (n > mieux) { vise = sym; mieux = n; }
-    }
-    return vise;
-  }
-
   _objectifIA(j, lot) {
     const etat = j.eveille ? 'eveille' : 'endormi';
-    // La cible entre dans la clé : dès que le voisin prend ou lâche un lot,
-    // l'objectif est repris. Sans cela, un Agressif s'entêterait à chercher
-    // l'attrape tout un lot durant alors que personne n'est là à attraper.
-    const cible = this._suivant(j).lots.length > 0;
-    const cle = `${lot.id}:${etat}:${cible ? 'cible' : 'vide'}`;
+    const cle = `${lot.id}:${etat}`;
     if (j.objectif && j.objectif.cle === cle) return j.objectif.sym;
-    // « Équilibré » emprunte le style d'un autre profil, le temps d'un lot.
-    const source = j.profil.styles
-      ? (PROFILS_IA[this.rng.pick(j.profil.styles)] || j.profil)
-      : j.profil;
-
-    // Deux envies sont écartées : celles que le dé ne peut pas produire — sur un
-    // dé réglé sans X, un Agressif chercherait le X jusqu'à épuisement — et
-    // l'attrape quand le voisin a les mains vides. Reste le coup utile du moment
-    // pour qui ne visait plus rien.
-    // Sans attrape à la table, chercher l'Échec ne sert à rien.
-    const attrape = cible && !this.cfg.sansAttrape ? null : this._symboleAttrape();
-    const brut = Object.entries((source.vise && source.vise[etat]) || {});
-    const retenu = brut.filter(([sym]) => sym !== attrape && this._deProduit(sym));
-    const poids = retenu.length
-      ? Object.fromEntries(retenu)
-      : { [j.eveille ? 'vache' : 'tornade']: 1 };
-
-    const sym = this._tirerPondere(poids);
-    j.objectif = { cle, sym, style: source.id };
+    const p = j.profil;
+    const style = p.styles ? PROFILS_IA[this.rng.pick(p.styles)] : p;
+    const poids = Object.entries(style.vise[etat]).filter(([s]) => this.cfg.faces.includes(s));
+    let sym = j.eveille ? 'grange' : 'soleil';
+    let x = this.rng() * poids.reduce((t, [, n]) => t + n, 0);
+    for (const [s, n] of poids) { x -= n; if (x <= 0) { sym = s; break; } }
+    j.objectif = { cle, sym };
     return sym;
   }
 
-  /** Le profil qui gouverne le lot en cours — celui emprunté, le cas échéant. */
-  _styleCourant(j) {
-    const s = j.objectif && j.objectif.style;
-    return (s && PROFILS_IA[s]) || j.profil;
-  }
-
-  /** Indices des dés qu'une IA choisit de relancer : elle garde ceux qui servent. */
+  /** Les dés qu'une IA relance : elle garde ceux qui servent son objectif. */
   _choixDesIA(j, lot) {
-    const libres = lot.des.map((d, i) => ({ d, i })).filter(({ d }) => !d.verrou);
-    if (!lot.lance) return libres.map(({ i }) => i);
+    const libres = [];
+    for (let i = 0; i < lot.des.length; i++) if (!lot.des[i].verrou) libres.push(i);
+    if (!lot.lance) return libres;
     const objectif = this._objectifIA(j, lot);
-    if (!objectif) return libres.map(({ i }) => i);
-
-    // Sert l'objectif : le symbole visé.
-    const sert = (d) => d.sym === objectif;
-    const garde = libres.filter(({ d }) => sert(d));
-    const aRelancer = libres.filter(({ d }) => !sert(d));
-
-    // La bévue de l'Idiot : relancer un dé utile, ou garder un dé qui ne l'est pas.
-    const bevue = j.profil.bevue || 0;
-    if (bevue && this.rng() < bevue) {
-      if (garde.length && this.rng() < 0.5) aRelancer.push(this.rng.pick(garde));
-      else if (aRelancer.length) aRelancer.splice(this.rng.int(aRelancer.length), 1);
+    const garde = libres.filter((i) => lot.des[i].sym === objectif);
+    let relance = libres.filter((i) => lot.des[i].sym !== objectif);
+    // La bévue de l'Idiot : relancer un dé utile, ou garder un dé inutile.
+    if (j.profil.bevue && this.rng() < j.profil.bevue) {
+      if (garde.length && this.rng() < 0.5) relance.push(this.rng.pick(garde));
+      else if (relance.length) relance = relance.filter((_, k) => k !== this.rng.int(relance.length));
     }
-
-    // Tout garder n'est pas une option : sans relance, le joueur resterait figé.
-    return aRelancer.length ? aRelancer.map(({ i }) => i) : libres.map(({ i }) => i);
+    return relance.length ? relance : libres;
   }
 
   // ── Combinaisons ────────────────────────────────────────────────────────────
+  /** Les combinaisons que les dés posés du joueur servent, jouables dans son état. */
   combosDisponibles(j) {
     const lot = j.lots[0];
     if (!lot || !this._lotPose(lot)) return [];
-    const c = this._compter(lot);
+    const compte = {};
+    for (const d of lot.des) compte[d.sym] = (compte[d.sym] || 0) + 1;
     const out = [];
-    // Une exigence vide ne compte pas : elle serait toujours servie.
-    const servie = (requis) => !exigenceVide(requis) && comboServie(c, requis);
-
-    for (const combo of this.cfg.combos) {
-      // Le Vert peut avoir ses propres exigences, quand l'asymétrie est en jeu.
-      const requis = requisPourEquipe(this.cfg, combo.id, combo.requis, j.equipe);
-      if (!servie(requis)) continue;
-      if (combo.face === 'endormie' && j.eveille) continue;
-      if (combo.face === 'active' && !j.eveille) continue;
-      out.push({
-        id: combo.id, source: 'tornade',
-        combo: requis === combo.requis ? combo : { ...combo, requis },
-        obligatoire: !!combo.obligatoire,
-      });
+    const etat = j.eveille ? 'eveille' : 'endormi';
+    for (const c of this.cfg.combos) {
+      if ((c.etat === 'tous' || c.etat === etat) && comboServie(compte, c.requis)) {
+        out.push({ id: c.id, source: 'role', nom: c.nom, requis: c.requis, couleur: c.couleur });
+      }
     }
-    if (this.carte && this.carte.combo) {
-      const requis = requisPourEquipe(
-        this.cfg, this.carte.combo.id, requisCarte(this.cfg, this.carte.combo), j.equipe,
-      );
-      if (servie(requis)) {
-        out.push({
-          id: this.carte.combo.id, source: 'journee',
-          combo: { ...this.carte.combo, requis }, obligatoire: true,
-        });
+    const carte = this.carte;
+    if (carte && carte.combo) {
+      const requis = requisCarte(this.cfg, carte);
+      if (comboServie(compte, requis)) {
+        out.push({ id: carte.id, source: 'carte', nom: carte.nom, requis, couleur: 'carte', effet: carte.combo.effet });
       }
     }
     return out;
   }
 
-  /**
-   * Toute combinaison servie est jouée : on ne relance jamais par-dessus.
-   * Reste à savoir laquelle, quand plusieurs sortent au même jet.
-   */
-  _comboAJouer(j, dispo) {
+  /** Celle qu'on joue : la carte Tornade d'abord, puis l'ordre de PRIORITE_COMBOS. */
+  _comboAJouer(dispo) {
     if (!dispo.length) return null;
-    const estEchec = (d) => !!(d.combo && d.combo.echec);
-    const reveil = dispo.find((d) => d.id === 'reveil');
-    const carte = dispo.find((d) => d.source === 'journee');
-    if (carte) {
-      // La carte du jour prime — mais le dormeur qui a sorti ses soleils au même
-      // jet se réveille quand même : le Réveil s'applique en toutes circonstances.
-      return reveil ? { ...carte, reveilAussi: true } : carte;
+    const carte = dispo.find((d) => d.source === 'carte');
+    // Le dormeur qui sort ses soleils au même jet se réveille quand même.
+    if (carte) return dispo.some((d) => d.id === 'reveil') ? { ...carte, reveilAussi: true } : carte;
+    for (const id of PRIORITE_COMBOS) {
+      const d = dispo.find((x) => x.id === id);
+      if (d) return d;
     }
-    if (reveil) return reveil;                                 // puis le Réveil, d'office
-    const attrape = dispo.find((d) => d.obligatoire && !estEchec(d));
-    if (attrape) return attrape;                               // puis l'attrape
-    const autres = dispo.filter((d) => !estEchec(d));
-    if (autres.length) {
-      autres.sort((a, b) => this._noterCombo(j, b) - this._noterCombo(j, a));
-      return autres[0];
-    }
-    return dispo.find((d) => d.id === 'blocage') || null;       // bloqué en dernier
+    return dispo[0];
   }
 
-  /**
-   * Entre quelles combinaisons un joueur humain peut trancher, quand un même jet
-   * en sert plusieurs : c'est à lui de dire laquelle il joue.
-   * Un échec ne se choisit pas, et l'Échec ne se choisit jamais contre mieux.
-   */
-  _optionsDeChoix(j, dispo) {
-    if (j.type !== 'humain' || dispo.length < 2) return null;
-    if (dispo.some((d) => d.combo && d.combo.echec)) return null;
-    // Le Réveil ne se discute pas : un dormeur qui le sort se réveille.
-    if (dispo.some((d) => d.id === 'reveil')) return null;
-    // La combinaison de la carte du jour est jouée d'office : elle vaut mieux que
-    // tout ce qu'on pourrait lui préférer, il n'y a pas à hésiter.
-    if (dispo.some((d) => d.source === 'journee')) return null;
-    const options = dispo.filter((d) => d.id !== 'blocage');
-    return options.length > 1 ? options : null;
-  }
-
-  /** Le joueur tranche pendant le temps de constat. Sans réponse, le défaut tient. */
-  choisirCombo(pid, comboId) {
-    const j = this.joueurs[pid];
-    const d = j && j.departEnAttente;
-    if (!d || !d.options) return false;
-    const opt = d.options.find((o) => o.id === comboId);
-    if (!opt) return false;
-    d.dispo = opt;
-    d.motif = 'combo';
-    d.options = null;
-    if (this.onEtatChange) this.onEtatChange();
-    return true;
-  }
-
-  /**
-   * Entre deux combinaisons servies au même jet, l'IA joue celle qui va dans son
-   * sens : le Pénible endort plutôt que de se réveiller, le Logique fait l'inverse.
-   */
-  _noterCombo(j, d) {
-    const base = { vache: 100, reveil: 90, endormir: 70 }[d.id] ?? 10;
-    const sym = SYMBOLE_DE_COMBO[d.id];
-    if (!sym || j.type === 'humain') return base;
-    const source = this._styleCourant(j);
-    const etat = j.eveille ? 'eveille' : 'endormi';
-    const gout = (source.vise && source.vise[etat] && source.vise[etat][sym]) || 0;
-    return base + gout * 120;
-  }
-
-  _voisinsEveilles(j) { return this._voisinsDirects(j).filter((v) => v.eveille); }
-
-  _voisinsDirects(j) {
+  _voisins(j) {
     const n = this.joueurs.length;
     return [this.joueurs[(j.siege + 1) % n], this.joueurs[(j.siege - 1 + n) % n]];
   }
@@ -796,61 +408,28 @@ export class Moteur {
     return this.joueurs[(j.siege + this.sens + n) % n];
   }
 
-  _precedent(j) {
-    const n = this.joueurs.length;
-    return this.joueurs[(j.siege - this.sens + n) % n];
-  }
-
   // ── Cycle d'un lancer ───────────────────────────────────────────────────────
-  /** L'IA décide : relancer une partie des dés, ou rendre le lot. */
-  _decisionIA(j) {
-    const lot = j.lots[0];
-    const p = j.profil;
-    if (this._desEnLAir(lot)) return;      // des dés tournent encore
-    if (this._lotPose(lot)) {
-      // Stop ou encore : le danger vient du joueur précédent s'il tient un lot.
-      const menace = this._precedent(j).lots.length > 0 ? p.peur : 0;
-      const seuil = Math.max(1, this.rng.normal(p.lancersAvantPasse, p.ecartLancers, 1));
-      const tension = (j.lancersLot / seuil) * (1 + menace * 0.35);
-      // Quand on ne peut pas passer, on garde le lot jusqu'à la combinaison.
-      if (tension >= 1 && this.cfg.peutPasser !== false) { this._demanderDepart(j, 'passe'); return; }
-      if (lot.des.every((d) => d.verrou)) { this._demanderDepart(j, 'passe'); return; }
-    }
-    this._demarrerLancer(j, this._choixDesIA(j, lot));
-  }
-
-  /**
-   * Met en rotation les dés désignés. Chaque dé roule pour son propre compte :
-   * on peut en relancer un pendant qu'un autre tourne encore.
-   */
+  /** Met en rotation les dés désignés (tous les dés libres si `indices` est vide). */
   _demarrerLancer(j, indices) {
     const lot = j.lots[0];
     if (!lot || j.fige) return false;
     const premier = lot.des.some((d) => d.sym === null);
-    const cible = lot.des
-      .map((d, i) => i)
-      .filter((i) => {
-        const d = lot.des[i];
-        if (d.verrou || d.roule) return false;
-        if (premier && d.sym === null) return true;   // un lot neuf part en entier
-        return !indices || !indices.length || indices.includes(i);
-      });
+    let cible = [];
+    lot.des.forEach((d, i) => {
+      if (d.verrou || d.roule) return;
+      // Un lot neuf part en entier.
+      if ((premier && d.sym === null) || !indices || !indices.length || indices.includes(i)) cible.push(i);
+    });
     if (!cible.length) return false;
-
     // Tornade Paisible : un seul dé à la fois.
-    const lances = (this.passif.unParUn && !premier && cible.length > 1) ? [cible[0]] : cible;
-    const duree = this._dureeLancer();
-    for (const i of lances) {
-      lot.des[i].roule = true;
-      lot.des[i].finRoule = this.now + duree;
-    }
+    if (this.passif.unParUn && !premier) cible = [cible[0]];
+    const duree = Math.max(60, this._varier(this.cfg.dureeLancer * (this.passif.lenteur || 1)));
+    for (const i of cible) { lot.des[i].roule = true; lot.des[i].finRoule = this.now + duree; }
     lot.lance = false;
     j.attente = null;
     j.lancersLot++;
     j.stats.lancers++;
-    this.file.pousser(this.now + duree, {
-      type: 'finLancer', pid: j.id, lot, des: lances,
-    });
+    this.file.pousser(this.now + duree, { type: 'finLancer', pid: j.id, lot, des: cible });
     if (this.onEtatChange) this.onEtatChange();
     return true;
   }
@@ -860,161 +439,77 @@ export class Moteur {
     const lot = j.lots[0];
     this._poserDes(lot, indices);
     if (!this._lotPose(lot)) {
-      // D'autres dés sont encore en l'air : on attend qu'ils retombent.
       if (j.type === 'humain') this._attenteHumaine(j);
       return;
     }
-
-    // On signale toute combinaison visible, même injouable : c'est ce qui allume
-    // les alertes autour de la table.
-    // Le halo autour du joueur annonce ce qui va se produire — donc seulement
-    // les combinaisons réellement jouables, pas celles que les dés montrent sans
-    // qu'elles puissent servir.
     const dispo = this.combosDisponibles(j);
-    if (this.onCombinaison) for (const d of dispo) this.onCombinaison(j.id, d.id);
-    const choisi = this._comboAJouer(j, dispo);
+    if (this.onCombinaison) for (const d of dispo) this.onCombinaison(j.id, d.id, d.couleur);
+    const choisi = this._comboAJouer(dispo);
     if (choisi) {
-      // Avec le choix ouvert, une combinaison ordinaire peut être laissée de
-      // côté pour relancer et viser autre chose. L'IA tranche tout de suite ;
-      // l'humain reçoit « Relancer » parmi ses options, et l'obtient d'office
-      // s'il ne dit rien — sans quoi le réglage ne changerait rien pour lui.
-      if (comboRefusable(this.cfg, choisi) && this._refuseLaCombo(j, choisi)) {
-        // L'humain garde son lot en main : il relance s'il veut, ou encaisse la
-        // combinaison d'un bouton. L'IA, elle, a déjà tranché.
-        if (j.type === 'humain') this._attenteHumaine(j, dispo.filter((d) => !comboIneluctable(d)));
-        else this._planifier(j.id);
-        return;
-      }
-      if (choisi.combo && choisi.combo.echec) this._flash('echec', j.id);
-      this._demanderDepart(
-        j, this._attrapeAuDepart(j, choisi) ? 'attrape' : 'combo', choisi, null,
-        this._optionsDeChoix(j, dispo),
-      );
-      return;
-    }
-    this._planifier(j.id);
+      if (choisi.id === 'envol') this._flash('envol', j.id);
+      this._demanderDepart(j, 'combo', choisi);
+    } else if (lot.des.every((d) => d.verrou)) {
+      // Plus aucun dé à relancer et rien de formé : le lot ne peut que partir.
+      this._demanderDepart(j, 'bloque');
+    } else this._planifier(j.id);
   }
 
-  /**
-   * Relance-t-on par-dessus la combinaison servie ?
-   *
-   * Il faut d'abord pouvoir : un lot dont tous les dés sont figés ne se relance
-   * pas, et l'on ne s'entête pas au-delà de sa patience. Ensuite vouloir : une
-   * IA garde ce qu'elle visait et refuse le reste — c'est tout l'intérêt du
-   * réglage, ne pas se réveiller quand on cherchait à endormir. L'humain, lui,
-   * garde toujours la main : on lui pose la question.
-   */
-  _refuseLaCombo(j, choisi) {
-    const lot = j.lots[0];
-    if (!lot || lot.des.every((d) => d.verrou)) return false;
-    if (j.type === 'humain') return true;
-    // Passé sa patience, l'IA prend ce qui vient plutôt que de tourner en rond.
-    const seuil = Math.max(1, (j.profil.lancersAvantPasse || 8) * 1.5);
-    if (j.lancersLot >= seuil) return false;
-    const vise = this._objectifIA(j, lot);
-    const sym = SYMBOLE_DE_COMBO[choisi.id];
-    return !!vise && !!sym && vise !== sym;
-  }
-
-  /**
-   * Le lot part-il en tentant d'attraper ? C'est l'Échec qui porte le contact,
-   * quels que soient les dés qu'on lui a réglés. Il part de toute façon ; il
-   * n'attrape que si le joueur suivant tient un lot — et, règle décochable, si
-   * l'on est réveillé.
-   */
-  _attrapeAuDepart(j, choisi) {
-    // Sans attrape, l'Échec pousse le lot comme n'importe quel départ : le
-    // voisin qui en tient un doit s'arrêter et le passer à son tour.
-    if (this.cfg.sansAttrape) return false;
-    if (choisi.id !== comboDeclencheur(this.cfg)) return false;
-    if (this.cfg.attrapeEveille !== false && !j.eveille) return false;
-    return this._suivant(j).lots.length > 0;
-  }
-
-  /**
-   * Le lot va partir. On laisse d'abord le temps de voir le résultat : sans cette
-   * pause, les dés changent de main avant qu'on ait compris ce qui s'est passé.
-   */
-  _demanderDepart(j, motif, dispo = null, choix = null, options = null) {
+  /** Le lot va partir : on laisse le temps de voir le résultat (constat). */
+  _demanderDepart(j, motif, dispo = null) {
     const lot = j.lots[0];
     if (!lot || j.fige) return;
     j.fige = true;
     j.attente = null;
-    j.departEnAttente = { lot, motif, dispo, choix, options, ouvertA: this.now };
-    // Le temps de constat suffit à lire le résultat ; trancher entre plusieurs
-    // combinaisons demande un peu plus — ce délai est du temps de jeu lui aussi.
-    const constat = motif === 'interruption' ? 0
-      : options ? (this.cfg.dureeChoix ?? this.cfg.dureeConstat ?? 900)
-        : this._varier(this.cfg.dureeConstat ?? 900);
-    j.departEnAttente.expire = this.now + constat;
-    this.file.pousser(this.now + constat, {
-      type: 'depart', pid: j.id, lot, motif, dispo, choix,
-    });
+    const constat = this._varier(this.cfg.dureeConstat);
+    j.departEnAttente = { lot, motif, dispo, ouvertA: this.now, expire: this.now + constat };
+    this.file.pousser(this.now + constat, { type: 'depart', pid: j.id, lot, motif, dispo });
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  /** Le lot quitte la main du joueur et traverse la table. */
-  _depart(j, lot, motif, dispo, choix) {
+  /** Le lot quitte la main du joueur ; l'effet de la combinaison s'applique. */
+  _depart(j, lot, motif, dispo) {
     j.departEnAttente = null;
     j.fige = false;
-    if (dispo) j.stats.combos[dispo.id] = (j.stats.combos[dispo.id] || 0) + 1;
-    // La combinaison de la carte se compte à part : c'est la seule façon de
-    // savoir à quelle fréquence une carte est réellement réalisée, sans la
-    // confondre avec les combinaisons de base qui sortent en même temps.
-    if (dispo && dispo.source === 'journee') {
-      this._comboCarteManche += 1;
-      j.stats.combosCartes[dispo.id] = (j.stats.combosCartes[dispo.id] || 0) + 1;
+    if (dispo) {
+      const compteur = dispo.source === 'carte' ? j.stats.combosCartes : j.stats.combos;
+      compteur[dispo.id] = (compteur[dispo.id] || 0) + 1;
+      if (dispo.source === 'carte') this._comboCarteManche += 1;
     }
-    const q = this._envoyerLot(j, lot, motif, dispo);
-    if (motif === 'combo') j.stats.passes--;   // jouer une combinaison n'est pas rendre le lot
-
-    if (motif === 'attrape') this._tenterAttrape(j, q);
-    else if (motif === 'combo' && dispo) this._effetCombo(j, dispo, choix || {});
-
+    this._envoyerLot(j, lot, motif, dispo);
+    if (dispo) this._effet(j, dispo);
     if (!this.termine && j.lots.length) this._planifier(j.id);
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  /** Retire le lot de la main du joueur et l'envoie traverser vers son voisin. */
+  /** Retire le lot de la main du joueur et l'envoie vers son voisin. */
   _envoyerLot(j, lot, motif, dispo = null) {
     const k = j.lots.indexOf(lot);
     if (k >= 0) j.lots.splice(k, 1);
     j.lancersLot = 0;
     j.attente = null;
-    j.stats.passes++;
+    if (motif === 'pousse') j.stats.pousses++;
     if (!j.lots.length) j.stats.tempsAvecLot += this.now - j._lotDepuis;
-
-    // Le lot repart vierge : le voisin le recevra faces « ? », à lancer.
-    const desFinaux = lot.des.map((d) => d.sym);
+    const montrer = this.avecJournal || this.onMouvement;
+    const desFinaux = montrer ? lot.des.map((d) => d.sym) : null;
+    // Le lot repart vierge : le voisin le reçoit faces « ? », à lancer.
     for (const d of lot.des) { d.verrou = false; d.roule = false; d.sym = null; d.finRoule = 0; }
     lot.lance = false;
-
     const q = this._suivant(j);
-    const duree = Math.max(0, this._varier(this.cfg.dureePassage ?? 1000));
-    const transit = {
-      id: ++this.compteurTransit, lot, de: j.id, vers: q.id, motif,
-      depart: this.now, arrivee: this.now + duree,
-    };
+    const duree = Math.max(0, this._varier(this.cfg.dureePassage));
+    const transit = { id: ++this.compteurTransit, lot, de: j.id, vers: q.id, motif, depart: this.now, arrivee: this.now + duree };
     this.transits.push(transit);
     this.file.pousser(transit.arrivee, { type: 'arrivee', transitId: transit.id });
-    if (this.onMouvement) {
-      this.onMouvement(j.id, q.id, motif, { des: desFinaux.map((sym) => ({ sym })) }, duree);
+    if (this.onMouvement) this.onMouvement(j.id, q.id, motif, { des: desFinaux.map((sym) => ({ sym })) }, duree);
+    if (this.avecJournal) {
+      this._log(j.nom, 'tour', j.id, {
+        des: this._desOrdonnes(desFinaux, dispo && dispo.requis),
+        issue: dispo ? `${dispo.nom} !` : motif === 'pousse' ? 'Tourbillon' : 'Bloqué',
+        couleur: dispo ? dispo.couleur : 'gris',
+      });
     }
-
-    this._log(j.nom, 'tour', j.id, {
-      des: this._desOrdonnes(desFinaux, (motif === 'combo' || motif === 'attrape') && dispo && dispo.combo
-        ? dispo.combo.requis : null),
-      issue: this._issueDuTour(motif, dispo),
-      couleur: this._couleurDuTour(motif, dispo),
-      reussi: motif === 'combo' && dispo && dispo.id !== 'blocage',
-    });
-    return q;
   }
 
-  /**
-   * Les dés d'un tour, dans l'ordre où le journal les montre : d'abord ceux qui
-   * font la combinaison jouée, symbole par symbole, puis les autres.
-   */
+  /** Les dés d'un tour, ceux de la combinaison jouée d'abord. */
   _desOrdonnes(des, requis) {
     if (!requis) return des;
     const autres = des.slice();
@@ -1028,591 +523,176 @@ export class Moteur {
     return [...servent, ...autres];
   }
 
-  /** Ce que le joueur a obtenu au moment où le lot lui échappe. */
-  _issueDuTour(motif, dispo) {
-    if (motif === 'interruption') return 'Touché !';
-    if (motif === 'attrape' && dispo && dispo.id === 'blocage') return 'Échec — attrape !';
-    if (motif === 'passe') return 'Passé';
-    if (motif === 'pousse') return 'Poussé';
-    if (motif === 'attrape') return 'Attrape !';
-    if (motif === 'combo' && dispo) {
-      if (dispo.id === 'blocage') return 'Échec';
-      if (dispo.source === 'journee') return `${this.carte.court} !`;
-      const def = this.cfg.combos.find((c) => c.id === dispo.id);
-      return `${def ? def.nom : dispo.id} !`;
-    }
-    return '—';
-  }
-
-  /** Couleur de la ligne de journal : celle de la combinaison réalisée. */
-  _couleurDuTour(motif, dispo) {
-    if (motif === 'interruption') return 'jaune';   // conséquence d'une attrape
-    if (motif === 'attrape') return 'jaune';
-    if (motif === 'combo' && dispo) {
-      if (dispo.source === 'journee') return 'carte';
-      return ALERTES[dispo.id] || 'gris';
-    }
-    return 'gris';                                   // passé, poussé
-  }
-
-  /** Le lot atteint son destinataire. */
+  /** Le lot atteint son destinataire — qui passe le sien s'il en tenait un. */
   _arrivee(transitId) {
     const k = this.transits.findIndex((t) => t.id === transitId);
     if (k < 0) return;
     const t = this.transits.splice(k, 1)[0];
-    // D'où vient le lot : la table le fait entrer par le côté de celui qui l'a passé.
     t.lot.venuDe = t.de;
-    // La manche s'est terminée pendant le vol : le lot n'a plus de raison d'être.
     if (this.termine || this.transition) return;
     const q = this.joueurs[t.vers];
-
-    // Un joueur ne tient jamais deux lots : quand deux se rencontrent, celui
-    // qu'il avait en main est poussé aussitôt vers le voisin suivant. Sauf en
-    // mode cumulé, où les lots s'empilent et attendent leur tour.
-    if (!this.cfg.lotsCumules) {
-      if (q.departEnAttente) {
-        // Son lot était déjà sur le départ : on le fait partir tout de suite.
-        const d = q.departEnAttente;
-        this._depart(q, d.lot, d.motif, d.dispo, d.choix);
-        if (this.termine || this.transition) return;
-      }
-      if (q.lots.length) {
-        const pousse = q.lots[0];
-        for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
-        this._envoyerLot(q, pousse, 'pousse');
-      }
+    if (q.departEnAttente) {
+      // Sa combinaison était formée : elle est jouée tout de suite.
+      const d = q.departEnAttente;
+      this._depart(q, d.lot, d.motif, d.dispo);
+      if (this.termine || this.transition) return;
     }
-
-    const premier = !q.lots.length;
-    if (premier) q._lotDepuis = this.now;
+    if (q.lots.length) {
+      const pousse = q.lots[0];
+      for (const d of pousse.des) { d.roule = false; d.finRoule = 0; }
+      this._envoyerLot(q, pousse, 'pousse');
+    }
+    q._lotDepuis = this.now;
     q.lots.push(t.lot);
-    if (premier || !this.cfg.lotsCumules) {
-      q.fige = false;
-      q.planifie = false;
-    }
+    q.fige = false;
+    q.planifie = false;
     this._planifier(q.id);
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  // ── Attrape ─────────────────────────────────────────────────────────────────
-  _tenterAttrape(j, q) {
-    if (!q.lots.length) {
-      this._log(`${j.nom} lance son lot vers ${q.nom} — les mains sont vides, pas de contact.`,
-        'collision', j.id);
-      return;
-    }
-    j.stats.collisionsTentees++;
-    this._log(`${j.nom} tente d’attraper ${q.nom} !`, 'collision', j.id);
-    this._flash('attrape', j.id);
-
-    if (j.type === 'humain' || q.type === 'humain') {
-      const fenetre = this.cfg.fenetreReflexe ?? 900;
-      this.duel = {
-        toucheurId: j.id, cibleId: q.id, ouvertA: this.now, fenetre,
-        actionToucheur: null, actionCible: null,
-      };
-      this.file.pousser(this.now + fenetre, { type: 'duel' });
-      return;
-    }
-    this._resoudreAttrape(j, q, null, null);
-  }
-
-  _resoudreDuel() {
-    if (!this.duel) return;
-    const { toucheurId, cibleId, actionToucheur, actionCible } = this.duel;
-    this.duel = null;
-    this._resoudreAttrape(
-      this.joueurs[toucheurId], this.joueurs[cibleId], actionToucheur, actionCible,
-    );
-  }
-
-  /** Réflexe d'un joueur humain pendant la fenêtre d'attrape. */
-  reflexeHumain(pid, action) {
-    if (!this.duel) return false;
-    const d = this.duel;
-    const dt = this.now - d.ouvertA;
-    if (pid === d.toucheurId && action === 'toucher' && d.actionToucheur == null) {
-      d.actionToucheur = dt; return true;
-    }
-    if (pid === d.cibleId && action === 'esquiver' && d.actionCible == null) {
-      d.actionCible = dt; return true;
-    }
-    return false;
-  }
-
-  _resoudreAttrape(j, q, dtToucheur, dtCible) {
-    const fenetre = this.cfg.fenetreReflexe ?? 900;
-    let p = j.adresse * (1 - 0.5 * q.esquive) * ((this.cfg.adresseBase ?? 0.55) / 0.55);
-    if (dtToucheur != null) p += Math.max(0, 0.45 * (1 - dtToucheur / fenetre));
-    else if (j.type === 'humain') p -= 0.35;
-    if (dtCible != null) p -= Math.max(0, 0.4 * (1 - dtCible / fenetre));
-    p = Math.min(0.97, Math.max(0.02, p));
-
-    if (this.rng() < p) {
-      j.stats.collisionsReussies++;
-      q.stats.foisTouche++;
-      this._log(`Touché ! ${j.nom} accroche ${q.nom}.`, 'touche', j.id);
-      // Un contact réussi emporte la manche au lieu d'un seul jeton : la
-      // variante du mode de base, et la règle sans les points, où il n'y a
-      // plus de jeton à prendre.
-      if (attrapeEmporteManche(this.cfg)) {
-        // Compromis : le contact envoie valser un jeton de l'adversaire dans la
-        // tornade. Le geste est ce qui emporte la manche — on le compte, la
-        // table le montre sur la carte Tornade.
-        if (estCompromis(this.cfg)) {
-          const cible = this.equipes[q.equipe];
-          if (cible) cible.emportes = (cible.emportes || 0) + 1;
-          this._log(
-            `${j.nom} envoie un jeton ${this._eq(q.equipe).de} dans la tornade — `
-            + `${this._eq(j.equipe).le} ${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`,
-            'combo', j.id,
-          );
-          this._annoncer(
-            `${q.nom} part dans la tornade — ${this._eq(j.equipe).le} `
-            + `${this._eq(j.equipe).v('gagne', 'gagnent')} la manche !`,
-            'jaune', j.id,
-          );
-        } else {
-          this._log(
-            `Le contact réussit — ${this._eq(j.equipe).le} `
-            + `${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`, 'combo', j.id,
-          );
-          this._annoncer(
-            `Attrape ${q.nom} — ${this._eq(j.equipe).le} `
-            + `${this._eq(j.equipe).v('gagne', 'gagnent')} la manche !`, 'jaune', j.id,
-          );
-        }
-        // La Tornade électrique paie double une manche prise au contact : il
-        // faut donc savoir comment celle-ci a été gagnée.
-        this._mancheParAttrape = true;
-        this._finManche(j.equipe, { joueur: j, raison: 'attrape', cible: q });
-        return;
-      }
-      this._annoncer(`Attrape ${q.nom} !`, 'jaune', j.id);
-      // La cible lâche aussitôt le lot qu'elle jouait, sans temps de constat.
-      if (q.lots.length && !q.fige) this._demanderDepart(q, 'interruption');
-      this._retournerJeton(j, 1, 'collision');
-    } else {
-      this._log(`Raté — ${q.nom} s’en sort.`, 'collision', q.id);
-    }
-    if (!this.termine) this._planifier(q.id);
-  }
-
-  // ── Effets des combinaisons ─────────────────────────────────────────────────
-  _effetCombo(j, dispo, choix = {}) {
-    // Le Réveil sorti au même jet que la carte du jour s'applique avec elle.
-    if (dispo.reveilAussi && !j.eveille) {
-      j.eveille = true; j.stats.reveils++;
-      this._flash('reveil', j.id);
-      this._annoncer('Réveil !', 'or', j.id);
-    }
-    const effet = dispo.source === 'journee' ? dispo.combo.effet : dispo.id;
-    switch (effet) {
-      case 'reveil':
-        j.eveille = true; j.stats.reveils++;
-        this._flash('reveil', j.id);
-        this._annoncer('Réveil !', 'or', j.id);
-        break;
-      case 'blocage':
-        break;
-      case 'vache':
-        this._retournerJeton(j, 1, 'vache');
-        break;
-      case 'endormir': {
-        const cible = choix.cibleId != null
-          ? this.joueurs[choix.cibleId]
-          : this._choisirEndormi(j);
-        if (cible && cible.eveille) {
-          cible.eveille = false;
-          cible.stats.foisEndormi++;
-          this._flash('endormi', cible.id);
-          this._annoncer(`Endort ${cible.nom}`, 'nuit', j.id);
-        } else {
-          // Les trois ZzZ sont sortis : la combinaison est jouée et le lot part,
-          // même si les deux voisins dorment déjà.
-          this._log(`${j.nom} sort ses ZzZ, mais ses deux voisins dorment déjà.`, 'combo', j.id);
-          this._annoncer('Voisins déjà endormis', 'nuit', j.id);
-        }
+  // ── Effets ──────────────────────────────────────────────────────────────────
+  _effet(j, dispo) {
+    if (dispo.reveilAussi && !j.eveille) this._reveiller(j);
+    switch (dispo.source === 'carte' ? dispo.effet : dispo.id) {
+      case 'reveil': this._reveiller(j); break;
+      case 'abri': this._abri(j); break;
+      case 'sommeil': {
+        const cible = this._choisirEndormi(j);
+        if (cible) this._endormir(cible, j);
+        else this._annoncer('Voisins déjà endormis', 'nuit', j.id);
         break;
       }
       case 'endormirVoisins': {
-        const noms = [];
-        for (const v of this._voisinsDirects(j)) {
-          if (v.eveille) {
-            v.eveille = false; v.stats.foisEndormi++; noms.push(v.nom);
-            this._flash('endormi', v.id);
-          }
-        }
-        this._annoncer(
-          noms.length ? `Endort ${noms.join(' et ')}` : 'Endort ses voisins', 'nuit', j.id,
-        );
+        const noms = this._voisins(j).filter((v) => v.eveille).map((v) => { this._endormir(v, null); return v.nom; });
+        this._annoncer(noms.length ? `Endort ${noms.join(' et ')}` : 'Voisins déjà endormis', 'nuit', j.id);
         break;
       }
       case 'gagnerManche':
-        this._log(`${j.nom} sort la combinaison de la carte — la manche est remportée sur-le-champ !`, 'combo', j.id);
         this._finManche(j.equipe, { joueur: j, raison: 'carte' });
-        return;
-      default:
         break;
+      default: // envol : le lot est parti, rien d'autre
     }
   }
 
+  _reveiller(j) {
+    j.eveille = true;
+    j.stats.reveils++;
+    this._flash('reveil', j.id);
+    this._annoncer('Réveil !', 'or', j.id);
+  }
+
+  _endormir(cible, auteur) {
+    cible.eveille = false;
+    cible.stats.foisEndormi++;
+    this._flash('endormi', cible.id);
+    if (auteur) this._annoncer(`Endort ${cible.nom}`, 'nuit', auteur.id);
+  }
+
+  /** Le voisin réveillé qu'on endort : un adversaire d'abord, le mieux placé. */
   _choisirEndormi(j) {
-    const eveilles = this._voisinsEveilles(j);
-    const adverses = eveilles.filter((v) => v.equipe !== j.equipe);
-    const pool = adverses.length ? adverses : eveilles;
-    if (!pool.length) return null;
-    pool.sort((a, b) => (this.equipes[b.equipe]?.retournes || 0) - (this.equipes[a.equipe]?.retournes || 0));
-    return pool[0];
+    const note = (v) => (v.equipe !== j.equipe ? 100 : 0) + this.equipes[v.equipe].cartes.length * 10
+      + this.equipes[v.equipe].abris * 5 + (v.lots.length ? 1 : 0);
+    return this._voisins(j).filter((v) => v.eveille).sort((a, b) => note(b) - note(a))[0] || null;
   }
 
-  /** L'équipe seule en tête aux cartes, ou rien en cas d'égalité. */
-  _seulEnTete() {
-    const equipes = Object.values(this.equipes);
-    const max = Math.max(...equipes.map((e) => e.cartes.length));
-    const tete = equipes.filter((e) => e.cartes.length === max);
-    return max > 0 && tete.length === 1 ? tete[0] : null;
+  /** Un Abri : l'équipe gagne la manche — ou pose un Jeton Équipe s'il en faut plusieurs. */
+  _abri(j) {
+    const eq = this.equipes[j.equipe];
+    eq.abris++;
+    j.stats.abris++;
+    this._flash('abri', j.id);
+    if (eq.abris >= eq.objectif) { this._finManche(j.equipe, { joueur: j, raison: 'abri' }); return; }
+    if (this.onJeton) this.onJeton(j.id, j.equipe);
+    const reste = eq.objectif - eq.abris;
+    this._annoncer(`Abri ! Encore ${reste}`, 'vert', j.id);
+    this._log(`${j.nom} pose un Jeton Équipe sur la Tornade — ${nomDansPhrase(j.equipe).nom} : `
+      + `${eq.abris}/${eq.objectif}.`, 'jeton', j.id);
   }
 
-  _coequipiers(j) { return this.joueurs.filter((x) => x.equipe === j.equipe && x.id !== j.id); }
-
-  /**
-   * Le nom d'une équipe, et son accord : « les Bleus remportent », « le Vert
-   * remporte ». Le journal et les annonces en ont besoin à chaque phrase.
-   */
-  _eq(id) { return nomDansPhrase(id, this.cfg); }
-
-  _nomEquipe(id) { return this._eq(id).nom; }
-
-  /**
-   * Où en est une équipe sur les jetons : combien sont en jeu, combien elle en a
-   * mis à couvert, combien il en reste dans la tornade.
-   *
-   * Un seul endroit le sait, pour le moteur comme pour la table. Le compte des
-   * jetons en jeu dépend du mode — tout le stock de l'équipe avec les jetons, ce
-   * que la Tornade du jour retient en Compromis — et jamais de l'endroit où ils
-   * sont posés : « Où sont les jetons » ne change que le geste.
-   */
-  suiviJetons(equipeId) {
+  /** Les Abris d'une équipe dans la manche : { total, faits }. */
+  suiviAbris(equipeId) {
     const e = this.equipes[equipeId];
-    if (!e) return { total: 0, faits: 0, restants: 0 };
-    const total = estCompromis(this.cfg)
-      ? Math.min(this.refugeRequis || 1, this.cfg.jetonsRefuge || 3)
-      : e.jetons;
-    const faits = estCompromis(this.cfg) ? (e.refuge || 0) : (e.retournes || 0);
-    return { total, faits, restants: Math.max(0, total - faits) };
+    return e ? { total: e.objectif, faits: e.abris } : { total: 0, faits: 0 };
   }
 
-  /**
-   * Ce que l'Abri vient de faire, dit selon l'endroit où sont les jetons : on en
-   * sort un de la carte Tornade, ou on le retourne devant son équipe.
-   */
-  _texteAbri(j, n, suivi) {
-    const E = this._eq(j.equipe);
-    const eq = E.nom;
-    const combien = n > 1 ? `${n} jetons` : 'un jeton';
-    const titre = n > 1 ? `${n} abris` : 'Abri';
-    if (jetonsSurTornade(this.cfg)) {
-      const lui = E.v('lui', 'leur');
-      const reste = suivi.restants === 0 ? `plus aucun ${E.v('des siens', 'des leurs')} dedans`
-        : suivi.restants === 1 ? `il ${lui} en reste un dedans`
-          : `il ${lui} en reste ${suivi.restants} dedans`;
-      return {
-        journal: `${j.nom} sort ${combien} de la Tornade — ${eq} : ${reste}.`,
-        annonce: `${titre} ! ${eq} ${suivi.restants} dans la Tornade`,
-      };
-    }
-    if (estCompromis(this.cfg)) {
-      return {
-        journal: `${j.nom} met ${combien} à l’Abri — ${eq} ${suivi.faits}/${suivi.total}.`,
-        annonce: `${titre} ! ${eq} ${suivi.faits}/${suivi.total}`,
-      };
-    }
-    return {
-      journal: `${j.nom} retourne ${n} jeton${n > 1 ? 's' : ''} — ${eq} ${suivi.faits}/${suivi.total}.`,
-      annonce: `${titre} ! ${eq} ${suivi.faits}/${suivi.total}`,
-    };
+  cartesPourGagner(equipeId) {
+    return equipeId === 'vert' ? this.cfg.cartesVert : this.cfg.cartesPourGagner;
   }
 
-  _retournerJeton(j, n = 1, source = 'vache') {
-    // Compromis : le compte ne va pas jusqu'au stock de l'équipe, mais jusqu'à ce
-    // que la Tornade du jour demande. Quand elle y est, elle emporte la manche
-    // sur-le-champ — ses animaux sont à couvert.
-    if (estCompromis(this.cfg)) { this._poserAuRefuge(j, n, source); return; }
-    // Manche « immédiat » : rien ne se compte. La combinaison qui aurait
-    // retourné un jeton arrête la manche sur-le-champ, et l'équipe prend la
-    // carte Tornade. L'attrape ne passe plus par ici — elle emporte la manche
-    // depuis `_resoudreAttrape` — mais la garde reste : rien ne doit pouvoir
-    // gagner une manche au nom d'un jeton qui n'existe pas.
-    if (estImmediat(this.cfg)) {
-      if (source === 'collision') return;
-      this._annoncer(`Abri ! ${this._eq(j.equipe).Le} ${this._eq(j.equipe).v('prend', 'prennent')} la manche`,
-        'vert', j.id);
-      if (this.onJeton) this.onJeton(j.id, j.equipe, 1, source);
-      this._log(`${j.nom} sort l’Abri — ${this._eq(j.equipe).le} `
-        + `${this._eq(j.equipe).v('remporte', 'remportent')} la manche.`,
-        'jeton', j.id);
-      j.stats.jetonsRetournes += 1;
-      j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + 1;
-      this._finManche(j.equipe, { joueur: j, raison: 'vache' });
-      return;
-    }
-
-    const eq = this.equipes[j.equipe];
-    const avant = eq.retournes;
-    eq.retournes = Math.min(eq.jetons, eq.retournes + n);
-    const gagnes = eq.retournes - avant;
-    j.stats.jetonsRetournes += gagnes;
-    if (gagnes > 0) {
-      j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + gagnes;
-      // Le jeton quitte la carte Tornade pour la main du joueur — ou, s'il était
-      // resté devant son équipe, il rejoint le compteur de celle-ci.
-      if (this.onJeton) this.onJeton(j.id, j.equipe, gagnes, source);
-      const dit = this._texteAbri(j, gagnes, this.suiviJetons(j.equipe));
-      this._log(dit.journal, 'jeton', j.id);
-      this._annoncer(dit.annonce, 'vert', j.id);
-    }
-    if (eq.retournes >= eq.jetons) {
-      // Le dernier jeton pris d'un contact réussi : la manche est gagnée en
-      // rattrapant, et la Tornade Électrique paie double.
-      if (source === 'collision') this._mancheParAttrape = true;
-      this._finManche(j.equipe, { joueur: j, raison: 'jetons' });
-    }
-  }
-
-  /**
-   * Compromis : mettre à couvert des jetons de sa couleur.
-   *
-   * La Tornade du jour dit combien il en faut — de un à trois. Le dernier emporte
-   * la manche sur-le-champ. Une équipe ne peut pas en sauver plus qu'elle n'en a :
-   * trois, par défaut. Selon « Où sont les jetons », on les sort de la carte
-   * Tornade ou on les pose sur la carte Refuge ; le compte est le même.
-   */
-  _poserAuRefuge(j, n = 1, source = 'vache') {
-    // Une collision réussie ne passe pas par ici : elle emporte la manche
-    // depuis `_resoudreAttrape`, en envoyant valser un jeton adverse. Réglée
-    // sur « un jeton », elle n'a simplement rien à poser.
-    if (source === 'collision') return;
-    const eq = this.equipes[j.equipe];
-    if (!eq) return;
-    const plafond = Math.min(this.refugeRequis, this.cfg.jetonsRefuge || 3);
-    const avant = eq.refuge;
-    eq.refuge = Math.min(plafond, eq.refuge + n);
-    const poses = eq.refuge - avant;
-    if (poses <= 0) return;
-    j.stats.jetonsRetournes += poses;
-    j.stats.jetonsParSource[source] = (j.stats.jetonsParSource[source] || 0) + poses;
-    if (this.onJeton) this.onJeton(j.id, j.equipe, poses, source);
-    const dit = this._texteAbri(j, poses, this.suiviJetons(j.equipe));
-    this._log(dit.journal, 'jeton', j.id);
-    this._annoncer(dit.annonce, 'vert', j.id);
-    if (eq.refuge >= plafond) this._finManche(j.equipe, { joueur: j, raison: 'refuge' });
-  }
-
-  /**
-   * Les cartes que la Tornade en jeu ajoute au vainqueur, prises sur le dessus
-   * de la pioche et gardées face cachée dans sa pile. Une équipe qui en gagne
-   * deux d'un coup se rapproche d'autant de la victoire.
-   *
-   * S'y ajoute le vol de la Tornade F5 : le vainqueur prend une carte à une
-   * autre équipe au lieu d'en piocher une — un point pour lui, un de moins pour
-   * elle, ce qui compte double au classement.
-   */
-  _cartesEnPlus(equipeId) {
-    const p = this.passif || {};
-    const eq = this.equipes[equipeId];
-    let bonus = this._bonusCartes;
-    if (p.doubleSi && p.doubleSi === equipeId) bonus = Math.max(bonus, 1);
-    // La Tornade du siècle vaut double pour qui la remporte, quel qu'il soit.
-    if (p.doubleTous) bonus = Math.max(bonus, 1);
-    if (p.doubleSiAttrape && this._mancheParAttrape) bonus = Math.max(bonus, 1);
-
-    for (let k = 0; k < bonus && this.pioche.length; k++) {
-      const prise = this.pioche.shift();
-      eq.cartes.push(prise.id);
-      this._log(
-        `${this._eq(equipeId).Le} ${this._eq(equipeId).v('prend', 'prennent')} une seconde carte, `
-        + 'face cachée.', 'manche',
-      );
-    }
-
-    if (p.volerCarte) {
-      const victime = this._plusRicheAutreQue(equipeId);
-      if (victime) {
-        eq.cartes.push(victime.cartes.pop());
-        this._log(
-          `${this._eq(equipeId).Le} ${this._eq(equipeId).v('vole', 'volent')} une carte `
-          + `${this._eq(victime.id).a}.`, 'manche',
-        );
-      } else {
-        this._log('Aucune carte à voler.', 'manche');
-      }
-    }
-  }
-
-  /** « en sortant l’Abri », « en attrapant Jade »… — la raison, en clair. */
-  _motifVictoire(cause) {
-    switch (cause.raison) {
-      case 'vache':
-        return 'en sortant l’Abri';
-      case 'refuge':
-        return jetonsSurTornade(this.cfg)
-          ? 'en sortant ses animaux de la Tornade'
-          : 'en mettant ses animaux à l’Abri';
-      case 'jetons':
-        return jetonsSurTornade(this.cfg)
-          ? 'en sortant son dernier jeton de la Tornade'
-          : 'en retournant le dernier jeton';
-      case 'attrape':
-        if (!cause.cible) return 'à l’attrape';
-        return estCompromis(this.cfg)
-          ? `en envoyant ${cause.cible.nom} dans la tornade`
-          : `en attrapant ${cause.cible.nom}`;
-      case 'carte':
-        return this.carte
-          ? `avec la combinaison de « ${this.carte.court} »`
-          : 'avec la combinaison de la carte';
-      default:
-        return 'à cette manche';
-    }
-  }
-
-  /** L'équipe adverse la mieux fournie en cartes, s'il y en a une. */
-  _plusRicheAutreQue(equipeId) {
-    let best = null;
-    for (const e of Object.values(this.equipes)) {
-      if (e.id === equipeId || !e.cartes.length) continue;
-      if (!best || e.cartes.length > best.cartes.length) best = e;
-    }
-    return best;
-  }
-
-  // ── Fin de manche / de partie ───────────────────────────────────────────────
+  // ── Fin de manche, fin de partie ────────────────────────────────────────────
   _finManche(equipeId, cause = {}) {
     if (this.termine) return;
-    const duree = this.now - this.debutManche;
     const carte = this.carte;
-    // Qui a emporté la manche, et par quoi : la table l'annonce en toutes
-    // lettres au centre, plutôt que de laisser deviner d'où vient le point.
-    if (equipeId && cause.joueur) {
-      this._annoncer(
-        `${cause.joueur.nom} fait gagner ${this._eq(equipeId).le} `
-        + this._motifVictoire(cause),
-        // Au centre de la table, et non sur un siège : c'est le moment de la
-        // manche que tout le monde regarde.
-        equipeId, null, { manche: true },
-      );
+    const eq = equipeId ? this.equipes[equipeId] : null;
+    const nom = equipeId ? nomDansPhrase(equipeId) : null;
+    if (eq && cause.joueur) {
+      this._annoncer(`${cause.joueur.nom} fait gagner ${nom.le} `
+        + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : 'en rejoignant l’Abri'),
+      equipeId, null, { manche: true });
     }
-    let compte = false;
-    if (equipeId && carte && !carte.neCompted) {
-      this.equipes[equipeId].cartes.push(carte.id);
-      compte = true;
-    }
+    const compte = !!(eq && carte && !carte.sansGain);
+    if (compte) eq.cartes.push(carte.id);
     this.statsManches.push({
-      manche: this.manche,
-      carte: carte ? carte.id : null,
-      // Combien de fois la combinaison de la carte a été réalisée pendant la
-      // manche où elle était en jeu : c'est de là que sort son taux de sortie.
-      comboCarte: this._comboCarteManche,
-      vainqueur: equipeId,
-      // Qui a conclu, et par quoi. La page de résultats en fait le récit de la
-      // partie manche par manche : sans cela on ne sait que l'équipe gagnante.
-      joueur: cause.joueur ? cause.joueur.id : null,
-      nomJoueur: cause.joueur ? cause.joueur.nom : null,
-      raison: cause.raison || null,
-      cible: cause.cible ? cause.cible.nom : null,
-      sens: this.sens,
-      duree,
-      compte,
+      manche: this.manche, carte: carte ? carte.id : null, comboCarte: this._comboCarteManche,
+      vainqueur: equipeId, joueur: cause.joueur ? cause.joueur.id : null,
+      nomJoueur: cause.joueur ? cause.joueur.nom : null, raison: cause.raison || null,
+      sens: this.sens, duree: this.now - this.debutManche, compte, equipeDes: this.equipeDes,
     });
-    if (equipeId) {
-      this._log(
-        `${this._eq(equipeId).Le} ${this._eq(equipeId).v('remporte', 'remportent')} la manche ${this.manche}`
-        + (compte ? ` et prend « ${carte.nom} ».` : ` (${carte ? carte.nom : 'carte'} défaussée).`),
-        'manche',
-      );
+    if (eq) {
+      this._log(`${nom.Le} ${nom.v('remporte', 'remportent')} la manche ${this.manche}`
+        + (compte ? ` et ${nom.v('prend', 'prennent')} « ${carte.nom} ».` : ` (${carte.nom} défaussée).`), 'manche');
     }
-
-    if (this.pioche.length) this.pioche.shift();
-    // La carte jouée quittée, les Tornades qui donnent davantage se servent sur
-    // le dessus de la pioche — face cachée, comme à la table.
-    if (compte) this._cartesEnPlus(equipeId);
-
-    if (equipeId) {
-      const eq = this.equipes[equipeId];
-      if (eq.cartes.length >= this._cartesPourGagner(equipeId)) {
-        this._finPartie(equipeId, 'cartes');
-        return;
+    this.pioche.shift();
+    if (compte) {
+      // Les cartes qui valent double se servent sur le dessus de la pioche.
+      const p = this.passif;
+      if ((p.double || p.doublePour === equipeId) && this.pioche.length) {
+        eq.cartes.push(this.pioche.shift().id);
+        this._log(`${nom.Le} ${nom.v('prend', 'prennent')} une seconde carte, face cachée.`, 'manche');
+      }
+      if (p.volerCarte) {
+        const victime = Object.values(this.equipes).filter((e) => e !== eq && e.cartes.length)
+          .sort((a, b) => b.cartes.length - a.cartes.length)[0];
+        if (victime) {
+          eq.cartes.push(victime.cartes.pop());
+          this._log(`${nom.Le} ${nom.v('vole', 'volent')} une carte ${nomDansPhrase(victime.id).a}.`, 'manche');
+        }
       }
     }
+    if (eq && eq.cartes.length >= this.cartesPourGagner(equipeId)) { this._finPartie(equipeId, 'cartes'); return; }
     if (!this.pioche.length) { this._finPartie(this._meneur(), 'pioche'); return; }
-    if (this.manche >= (this.cfg.manchesMax || 40)) { this._finPartie(this._meneur(), 'manchesMax'); return; }
+    if (this.manche >= this.cfg.manchesMax) { this._finPartie(this._meneur(), 'manchesMax'); return; }
 
-    const triche = carte && carte.effetPassif && carte.effetPassif.gagnantPrendLesDes;
-    if (equipeId) {
-      this._prochainsPorteurs = triche
-        ? this.joueurs.filter((j) => j.equipe === equipeId).map((j) => j.id)
-        : this.joueurs.filter((j) => j.equipe !== equipeId).map((j) => j.id);
-    } else {
-      this._prochainsPorteurs = null;
+    // Qui reçoit les dés : les perdants — les gagnants sous la Tornade des
+    // Tricheurs. Si le Cow-boy gagne, c'est lui qui désigne l'équipe « perdante ».
+    if (equipeId === 'vert') this.equipeDes = this._designeeParLeVert();
+    else if (equipeId) {
+      this.equipeDes = this.passif.gagnantsGardentLesDes ? equipeId : (equipeId === 'bleu' ? 'jaune' : 'bleu');
     }
-
-    // On vide la file : la manche précédente ne doit rien laisser traîner.
     const porteursAvant = this.joueurs.filter((j) => j.lots.length).map((j) => j.id);
-    this.file = new FileEvenements();
-    this.duel = null;
+    this.file = new File();
     this.transits = [];
     for (const j of this.joueurs) {
       j.lots = []; j.fige = false; j.planifie = false; j.attente = null;
       j.lancersLot = 0; j.departEnAttente = null;
     }
-
-    // Les dés reviennent au centre, puis repartent vers les perdants : ce
-    // temps mort est du temps de jeu, comme à une vraie table.
-    const dureeTransition = Math.max(0, this.cfg.dureeTransition ?? 3000);
-    this.transition = {
-      vainqueur: equipeId,
-      manche: this.manche,
-      prochaine: this.manche + 1,
-      debut: this.now,
-      fin: this.now + dureeTransition,
-      carteSuivante: this.pioche[0] || null,
-    };
-    // La carte de sens se retourne maintenant, entre deux manches : ceux qui
-    // reçoivent les dés en décident, et la table doit pouvoir le montrer avant
-    // que la manche suivante ne s'ouvre.
-    this.choixSens = null;
-    if (sensRotation(this.cfg) === 'perdants' && this._prochainsPorteurs) {
-      this._ouvrirChoixSens(this._prochainsPorteurs);
-    }
+    const duree = this.cfg.dureeTransition;
+    this.transition = { vainqueur: equipeId, manche: this.manche, debut: this.now, fin: this.now + duree, carteSuivante: this.pioche[0] };
+    this._ouvrirChoixSens();
     if (this.onFinManche) {
       this.onFinManche({
-        vainqueur: equipeId, porteursAvant, manche: this.manche,
-        duree: dureeTransition, carteSuivante: this.pioche[0] || null,
-        choixSens: this.choixSens,
+        vainqueur: equipeId, porteursAvant, manche: this.manche, duree,
+        carteSuivante: this.pioche[0], choixSens: this.choixSens,
       });
     }
-    this.file.pousser(this.now + dureeTransition, { type: 'nouvelleManche' });
+    this.file.pousser(this.now + duree, { type: 'nouvelleManche' });
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  /**
-   * Le Vert joue seul contre deux équipes : son objectif se règle à part, pour
-   * pouvoir l'alléger ou l'alourdir sans toucher aux Bleus ni aux Jaunes.
-   */
-  _cartesPourGagner(equipeId) {
-    const base = this.cfg.cartesPourGagner;
-    if (equipeId !== 'vert') return base;
-    const vert = this.cfg.cartesVert;
-    return vert == null || vert === '' ? base : vert;
-  }
-
   _meneur() {
-    let best = null;
-    for (const e of Object.values(this.equipes)) {
-      if (!best || e.cartes.length > best.cartes.length) best = e;
-    }
-    return best ? best.id : null;
+    const tri = Object.values(this.equipes).sort((a, b) => b.cartes.length - a.cartes.length);
+    // Une égalité en tête ne désigne personne.
+    return tri.length > 1 && tri[0].cartes.length === tri[1].cartes.length ? null : tri[0].id;
   }
 
   _finPartie(equipeId, raison) {
@@ -1621,50 +701,23 @@ export class Moteur {
     this.raisonFin = raison;
     this.duree = this.now;
     this.transits = [];
-    this._log(
-      equipeId
-        ? `Fin de partie — ${this._eq(equipeId).le} ${this._eq(equipeId).v('l’emporte', 'l’emportent')} `
-          + `avec ${this.equipes[equipeId].cartes.length} cartes Tornade.`
-        : 'Fin de partie sans vainqueur.',
-      'fin',
-    );
+    this._log(equipeId
+      ? `Fin de partie — ${nomDansPhrase(equipeId).le} ${nomDansPhrase(equipeId).v('l’emporte', 'l’emportent')} `
+        + `avec ${this.equipes[equipeId].cartes.length} cartes Tornade.`
+      : 'Fin de partie sans vainqueur.', 'fin');
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  // ── Interface joueur humain ─────────────────────────────────────────────────
-  _attenteHumaine(j, combos = null) {
+  // ── Joueur humain ───────────────────────────────────────────────────────────
+  _attenteHumaine(j) {
     const lot = j.lots[0];
     if (!lot || j.fige) { j.attente = null; return; }
-    j.attente = {
-      // On peut relancer tout dé libre, y compris pendant qu'un autre tourne.
-      indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule),
-      peutPasser: !this._desEnLAir(lot) && this._lotPose(lot),
-      // Les combinaisons qu'on tient sans être obligé de les jouer : le réglage
-      // « on peut relancer par-dessus » les propose au lieu de les appliquer.
-      combos: combos && combos.length ? combos : null,
-    };
+    // On peut relancer tout dé libre, même pendant qu'un autre tourne.
+    j.attente = { indicesLibres: lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule) };
     if (this.onEtatChange) this.onEtatChange();
   }
 
-  /**
-   * Le joueur encaisse une combinaison qu'il tenait sans y être obligé. C'est le
-   * pendant du réglage « on peut relancer par-dessus » : rien ne part tant qu'il
-   * ne l'a pas dit.
-   */
-  jouerComboHumain(pid, comboId) {
-    const j = this.joueurs[pid];
-    if (this.termine || !j || j.type !== 'humain' || j.fige || !j.lots.length) return false;
-    if (!j.attente || !j.attente.combos) return false;
-    const choisi = j.attente.combos.find((d) => d.id === comboId);
-    if (!choisi) return false;
-    j.attente = null;
-    this._demanderDepart(
-      j, this._attrapeAuDepart(j, choisi) ? 'attrape' : 'combo', choisi, null, null,
-    );
-    return true;
-  }
-
-  /** Relance les dés désignés (tous si `indices` est absent). */
+  /** Relance les dés désignés (tous les dés libres si `indices` est absent). */
   lancerHumain(pid, indices = null) {
     const j = this.joueurs[pid];
     if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
@@ -1673,33 +726,16 @@ export class Moteur {
     return lance;
   }
 
-  /** Rend le lot au voisin. */
-  passerHumain(pid) {
-    const j = this.joueurs[pid];
-    if (this.termine || j.type !== 'humain' || !j.lots.length || j.fige) return false;
-    if (this.cfg.peutPasser === false) return false;
-    const lot = j.lots[0];
-    if (this._desEnLAir(lot) || !this._lotPose(lot)) return false;
-    this._demanderDepart(j, 'passe');
-    return true;
-  }
-
-  // ── Journal & résultat ──────────────────────────────────────────────────────
-  /**
-   * Un moment qui compte. `pid` désigne le joueur concerné : l'annonce s'affiche
-   * au-dessus de sa zone de jeu, d'où le texte sans son nom — on le lit dessous.
-   */
-  _annoncer(texte, couleur = 'bleu', pid = null, options = null) {
+  // ── Journal et résultat ─────────────────────────────────────────────────────
+  _annoncer(texte, couleur, pid = null, options = null) {
     if (this.onAnnonce) this.onAnnonce(texte, couleur, pid, options);
   }
 
-  /** Un moment à souligner d'un éclat de couleur. L'affichage décide du reste. */
-  _flash(type, pid) {
-    if (this.onFlash) this.onFlash(type, pid);
-  }
+  _flash(type, pid) { if (this.onFlash) this.onFlash(type, pid); }
 
   _log(texte, type = 'info', pid = null, extra = null) {
-    const e = { t: this.now, texte, type, pid, manche: this.manche, ...(extra || {}) };
+    if (!this.avecJournal) return;
+    const e = { t: this.now, texte, type, pid, manche: this.manche, ...extra };
     this.journal.push(e);
     if (this.journal.length > 400) this.journal.splice(0, this.journal.length - 400);
     if (this.onJournal) this.onJournal(e);
@@ -1707,26 +743,13 @@ export class Moteur {
 
   resultat() {
     return {
-      graine: this.graine,
-      // La façon de jouer la manche : le compte rendu en a besoin pour lire les
-      // chiffres, et elle ne se devine pas d'après eux.
-      mode: modeManche(this.cfg),
-      vainqueur: this.vainqueur,
-      raison: this.raisonFin,
-      manches: this.manche,
-      duree: this.duree ?? this.now,
-      equipes: Object.fromEntries(
-        Object.entries(this.equipes).map(([k, e]) => [k, { cartes: e.cartes.length, jetons: e.jetons }]),
-      ),
+      graine: this.graine, vainqueur: this.vainqueur, raison: this.raisonFin,
+      manches: this.manche, duree: this.duree ?? this.now,
+      equipes: Object.fromEntries(Object.values(this.equipes).map((e) => [e.id, { cartes: e.cartes.length }])),
       joueurs: this.joueurs.map((j) => ({
-        id: j.id, nom: j.nom, equipe: j.equipe, siege: j.siege, type: j.type,
-        profil: j.profil.id, stats: j.stats,
+        id: j.id, nom: j.nom, equipe: j.equipe, siege: j.siege, type: j.type, profil: j.profil.id, stats: j.stats,
       })),
       statsManches: this.statsManches,
     };
   }
-}
-
-export function creerMoteur(cfg, specJoueurs, graine) {
-  return new Moteur(cfg, specJoueurs, graine);
 }

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Passe le site à une nouvelle version : `node scripts/version.mjs 1.8`
+// Passe le site à une nouvelle version et note ce qui change :
+//   node scripts/version.mjs 2.02 "Première note" "Deuxième note"
+// Les notes entrent en tête de src/journal.js (la page Versions).
 //
 // Les navigateurs mettent chaque module ES en cache sous son URL. Sans
 // empreinte, une nouvelle livraison peut continuer de servir les anciens
@@ -12,9 +14,10 @@ import { fileURLToPath } from 'node:url';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const version = process.argv[2];
+const notes = process.argv.slice(3).map((n) => n.trim()).filter(Boolean);
 
 if (!version || !/^\d+\.\d+$/.test(version)) {
-  console.error('Usage : node scripts/version.mjs <majeure.mineure>   (ex. 1.8)');
+  console.error('Usage : node scripts/version.mjs <majeure.mineure> ["note" …]   (ex. 2.02 "Ce qui change")');
   process.exit(1);
 }
 
@@ -30,7 +33,7 @@ function fichiersJs(dossier) {
 }
 
 // Les imports relatifs, avec ou sans empreinte déjà posée.
-const IMPORT = /(\bfrom\s*['"]|\bimport\s*['"])(\.{1,2}\/[^'"?]+?\.js)(\?v=[^'"]*)?(['"])/g;
+const IMPORT = /(\bfrom\s*['"]|\bimport\s*\(?\s*['"])(\.{1,2}\/[^'"?]+?\.js)(\?v=[^'"]*)?(['"])/g;
 
 let touches = 0;
 for (const chemin of fichiersJs(join(racine, 'src'))) {
@@ -57,4 +60,17 @@ writeFileSync(cheminHtml, readFileSync(cheminHtml, 'utf8')
   .replace(/(href="\.\/(?:assets\/[^"?]+|manifest\.webmanifest))(\?v=[^"]*)?"/g, `$1?v=${version}"`));
 
 console.log(`Version ${version} — ${touches} fichier(s) réestampillé(s), index.html mis à jour.`);
-console.log('Pensez à ajouter les notes de version dans src/version.js.');
+
+// Les notes de version, en tête du journal.
+if (notes.length) {
+  const cheminJournal = join(racine, 'src/journal.js');
+  const journal = readFileSync(cheminJournal, 'utf8');
+  const [a, m, j] = new Date().toISOString().slice(0, 10).split('-');
+  const entree = `  {\n    version: '${version}',\n    date: '${j}/${m}/${a}',\n    notes: [\n`
+    + notes.map((n) => `      ${JSON.stringify(n)},\n`).join('') + '    ],\n  },\n';
+  if (journal.includes(`version: '${version}'`)) console.log('Le journal a déjà cette version : notes non ajoutées.');
+  else {
+    writeFileSync(cheminJournal, journal.replace('export const CHANGELOG = [\n', `export const CHANGELOG = [\n${entree}`));
+    console.log(`${notes.length} note(s) ajoutée(s) au journal.`);
+  }
+} else console.log('Aucune note : ajoutez-les en arguments pour les inscrire au journal.');
