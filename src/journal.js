@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.03',
+    date: '16/11/2026',
+    notes: [
+      "Nouvelles faces de dés : la grange, la lune, le soleil et la tornade sont maintenant les dés imprimés, corps blanc cerné de noir compris. Elles remplacent les anciens dessins partout — sièges, panneau de lancer, journal, Carte Rôle, cartes Tornade, Réglages, Laboratoire et Règles. Le dé pas encore lancé et le dé qui roule reprennent le même cadre.",
+    ],
+  },
+  {
     version: '2.02',
     date: '16/11/2026',
     notes: [

@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : des milliers de parties jouées par le moteur de
 // la table, avec les règles du réglage actif, et ce qu'on peut en conclure.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.02';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.02';
-import { store } from './store.js?v=2.02';
-import { aller } from './app.js?v=2.02';
-import { randomSeed, makeRng } from '../core/rng.js?v=2.02';
-import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.02';
-import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.02';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.03';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.03';
+import { store } from './store.js?v=2.03';
+import { aller } from './app.js?v=2.03';
+import { randomSeed, makeRng } from '../core/rng.js?v=2.03';
+import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.03';
+import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.03';
 import {
   EQUIPES, PROFILS_IA, CARTES_PAR_ID, SYMBOLES, ORDRE_SYMBOLES, configDepuis, placement, requisCarte,
   carteALaTable, tailleRequis,
-} from '../core/config.js?v=2.02';
-import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.02';
-import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.02';
+} from '../core/config.js?v=2.03';
+import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.03';
+import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.03';
 
 const PARTIES = [200, 1000, 5000, 20000];
 const etat = { onglet: 'simulation', enCours: null };

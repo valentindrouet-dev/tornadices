@@ -3,11 +3,11 @@
 
 // ── Dés ──────────────────────────────────────────────────────────────────────
 export const SYMBOLES = {
-  soleil: { id: 'soleil', nom: 'Réveil', couleur: '#f0951c' },
-  grange: { id: 'grange', nom: 'Abri', couleur: '#82dc0a' },
-  lune: { id: 'lune', nom: 'Sommeil', couleur: '#8ba6f5' },
+  soleil: { id: 'soleil', nom: 'Réveil', couleur: '#f29816' },
+  grange: { id: 'grange', nom: 'Abri', couleur: '#69b527' },
+  lune: { id: 'lune', nom: 'Sommeil', couleur: '#89a2f7' },
   // La tornade rouge : un dé qui l'affiche ne se relance plus.
-  tornade: { id: 'tornade', nom: 'Tornade', couleur: '#e2000f' },
+  tornade: { id: 'tornade', nom: 'Tornade', couleur: '#d30710' },
 };
 export const ORDRE_SYMBOLES = ['soleil', 'grange', 'lune', 'tornade'];
 export const SYMBOLE_FIGE = 'tornade';

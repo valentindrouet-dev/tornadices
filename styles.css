@@ -288,31 +288,22 @@ input[type=number] { background: var(--fond-doux); }
 input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-offset: 1px; }
 
 /* ── Symboles et dés ──────────────────────────────────────────────────────── */
-.pastille-sym { display: inline-block; vertical-align: middle; }
-.pastille-sym svg { width: 100%; height: 100%; display: block; }
-[data-sym=cloche] { color: #d98614; }
-[data-sym=vache]  { color: #35814a; }
-[data-sym=zzz]    { color: #5468bb; }
-[data-sym=etoile] { color: #cf3f39; }
-[data-sym=vide]   { color: #b6ada0; }
+.pastille-sym { display: inline-block; vertical-align: middle; line-height: 0; }
+.pastille-sym img, .de img, .de svg { width: 100%; height: 100%; display: block; }
 
+/* Le dé est son image : corps blanc cerné de noir compris. La boîte ne porte
+   que la taille et les états (figé, cliquable, qui roule). */
 .de {
   width: 46px; height: 46px;
-  background: #fff;
-  border: 1px solid var(--bord-fort);
-  border-radius: 11px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), inset 0 -2px 0 rgba(0, 0, 0, .035);
-  display: grid; place-items: center;
-  padding: 4px;
-  flex: none;
-  transition: transform .1s, box-shadow .13s, border-color .13s;
+  border-radius: 22%;
+  flex: none; line-height: 0;
+  transition: transform .1s, box-shadow .13s;
 }
-.de svg { width: 100%; height: 100%; }
-.de--grand { width: 76px; height: 76px; border-radius: 17px; padding: 5px; }
-.de--petit { width: 36px; height: 36px; border-radius: 10px; padding: 3px; }
-.de--mini { width: 22px; height: 22px; border-radius: 6px; padding: 1px; border-width: 1px; }
+.de--grand { width: 76px; height: 76px; }
+.de--petit { width: 36px; height: 36px; }
+.de--mini { width: 22px; height: 22px; }
 /* Un X est figé : il clignote en rouge et ne se relance jamais. */
-.de--verrou { border-color: #e2000f; animation: clignoteX .85s ease-in-out infinite; }
+.de--verrou { animation: clignoteX .85s ease-in-out infinite; }
 @keyframes clignoteX {
   0%, 100% { box-shadow: 0 0 0 3px rgba(226, 0, 15, .30); }
   50% { box-shadow: 0 0 0 7px rgba(226, 0, 15, .04); }
@@ -320,7 +311,6 @@ input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-
 /* Un dé qui roule : la face défile et le dé bascule. */
 .de--roule {
   animation: roulement .34s linear infinite;
-  border-color: var(--accent-bord);
   box-shadow: 0 4px 10px rgba(20, 60, 110, .18);
 }
 @keyframes roulement {
@@ -331,9 +321,9 @@ input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-
   100% { transform: rotate(360deg) scale(1); }
 }
 .de--cliquable { cursor: pointer; }
-.de--cliquable:hover { transform: translateY(-3px) scale(1.04); border-color: var(--accent); }
+.de--cliquable:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 0 0 3px var(--accent-bord); }
 .etat-depart { color: var(--accent-fonce); font-weight: 700; }
-.de--inconnu { border-style: dashed; border-color: var(--gris-clair); }
+.de--inconnu { opacity: .8; }
 .de--anim { animation: roule .32s ease; }
 @keyframes roule {
   0% { transform: rotate(-16deg) scale(.82); }
@@ -412,7 +402,6 @@ input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--couleur-eq, var(--accent)) 34%, transparent), var(--ombre);
 }
 .siege--eveille .entete { color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 60%, #08131c); }
-.siege--eveille .de { border-color: color-mix(in srgb, var(--couleur-eq, var(--accent)) 40%, #fff); }
 .siege .des-mini {
   display: flex; flex-wrap: wrap; gap: 4px;
   margin-top: 7px; min-height: 36px; align-items: center;
@@ -425,7 +414,6 @@ input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-
 .siege .des-mini .de {
   width: var(--de-siege, 36px);
   height: var(--de-siege, 36px);
-  border-radius: calc(var(--de-siege, 36px) * .28);
 }
 .siege .profil-siege {
   font-family: var(--police-texte); font-size: 10.5px; font-weight: 600; color: var(--gris);
@@ -622,11 +610,8 @@ input:focus, select:focus { outline: 2px solid rgba(30, 131, 204, .35); outline-
 .carte-tornade-bandeau--moyen .l1 { font-size: 2.6em; }
 .carte-tornade-bandeau--long .l1 { font-size: 2.1em; }
 .carte-tornade-des { display: flex; gap: .4em; justify-content: center; margin: .1em 0 .8em; }
-.carte-tornade-de {
-  background: #fff; border: .22em solid #1c1410; border-radius: .6em;
-  padding: .22em; line-height: 0;
-}
-.carte-tornade-de .pastille-sym { width: 2.3em !important; height: 2.3em !important; }
+.carte-tornade-de { line-height: 0; }
+.carte-tornade-de .pastille-sym { width: 3.1em !important; height: 3.1em !important; }
 .carte-tornade-filet {
   display: flex; align-items: center; gap: .45em;
   width: 100%; margin-bottom: .7em; color: var(--tornade-orange);

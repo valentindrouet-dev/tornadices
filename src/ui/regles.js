@@ -1,15 +1,15 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.02';
-import { store } from './store.js?v=2.02';
-import { aller } from './app.js?v=2.02';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.02';
+import { h, remplacer } from './dom.js?v=2.03';
+import { store } from './store.js?v=2.03';
+import { aller } from './app.js?v=2.03';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.03';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
   configDepuis, placement, requisCarte, carteALaTable, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.02';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.02';
+} from '../core/config.js?v=2.03';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.03';
 
 const ETATS = { endormi: 'Face endormie', eveille: 'Face réveillée', tous: 'Les deux faces' };
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
