@@ -8,11 +8,11 @@
 // jamais son lot sans combinaison. Un lot qui arrive chez un joueur qui en
 // tient déjà un le force à passer le sien : c'est le tourbillon.
 
-import { makeRng } from './rng.js?v=2.03';
+import { makeRng } from './rng.js?v=2.04';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, profilIA, placement, comboServie,
-  carteALaTable, requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
-} from './config.js?v=2.03';
+  requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
+} from './config.js?v=2.04';
 
 // Le symbole qu'il faut garder pour viser chaque combinaison de base.
 const SYMBOLE_DE_COMBO = { reveil: 'soleil', abri: 'grange', sommeil: 'lune', envol: 'tornade' };
@@ -117,7 +117,7 @@ export class Moteur {
       if (sieges.includes(id)) this.equipes[id] = { id, cartes: [], abris: 0, objectif: 0 };
     }
     const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id])
-      .filter((c) => c && carteALaTable(c, cfg.nbJoueurs));
+      .filter(Boolean);
     const reste = cartes.filter((c) => !c.premiere);
     this.pioche = [...cartes.filter((c) => c.premiere),
       ...(cfg.melangerCartes ? this.rng.shuffle(reste) : reste)];
@@ -167,10 +167,10 @@ export class Moteur {
   /**
    * Qui tient un lot au début de la manche : chaque joueur de l'équipe qui
    * reçoit les dés, puis le Cow-boy — il récupère toujours le lot restant —,
-   * puis les autres s'il reste des lots (Tornade Chargée, réglages).
+   * puis les autres s'il reste des lots (réglages).
    */
   _porteursDeDepart() {
-    const nbLots = Math.max(1, Math.min(this.joueurs.length, this.cfg.lots + (this.passif.lotsEnPlus || 0)));
+    const nbLots = Math.max(1, Math.min(this.joueurs.length, this.cfg.lots));
     const rang = (j) => (j.equipe === this.equipeDes ? 0 : j.equipe === 'vert' ? 1 : 2);
     return this.joueurs.slice().sort((a, b) => rang(a) - rang(b) || a.id - b.id)
       .slice(0, nbLots).map((j) => j.id);
@@ -322,8 +322,8 @@ export class Moteur {
       d.sym = faces[this.rng.int(faces.length)];
       d.roule = false;
       d.finRoule = 0;
-      // Une tornade se fige — sauf sous la Tornade du Chaos.
-      if (d.sym === SYMBOLE_FIGE && !this.passif.sansVerrou) d.verrou = true;
+      // Une tornade se fige : ce dé ne se relance plus.
+      if (d.sym === SYMBOLE_FIGE) d.verrou = true;
     }
     lot.lance = this._lotPose(lot);
   }
@@ -568,6 +568,12 @@ export class Moteur {
         this._annoncer(noms.length ? `Endort ${noms.join(' et ')}` : 'Voisins déjà endormis', 'nuit', j.id);
         break;
       }
+      case 'reveillerEquipe': {
+        const dormeurs = this.joueurs.filter((x) => x.equipe === j.equipe && !x.eveille);
+        for (const x of dormeurs) this._reveiller(x);
+        this._annoncer(dormeurs.some((x) => x !== j) ? 'Réveille son équipe' : 'Équipe déjà réveillée', 'or', j.id);
+        break;
+      }
       case 'gagnerManche':
         this._finManche(j.equipe, { joueur: j, raison: 'carte' });
         break;
@@ -631,7 +637,7 @@ export class Moteur {
         + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : 'en récupérant le dernier jeton'),
       equipeId, null, { manche: true });
     }
-    const compte = !!(eq && carte && !carte.sansGain);
+    const compte = !!(eq && carte);
     if (compte) eq.cartes.push(carte.id);
     this.statsManches.push({
       manche: this.manche, carte: carte ? carte.id : null, comboCarte: this._comboCarteManche,
@@ -641,7 +647,7 @@ export class Moteur {
     });
     if (eq) {
       this._log(`${nom.Le} ${nom.v('remporte', 'remportent')} la manche ${this.manche}`
-        + (compte ? ` et ${nom.v('prend', 'prennent')} « ${carte.nom} ».` : ` (${carte.nom} défaussée).`), 'manche');
+        + ` et ${nom.v('prend', 'prennent')} « ${carte.nom} ».`, 'manche');
     }
     this.pioche.shift();
     if (compte) {

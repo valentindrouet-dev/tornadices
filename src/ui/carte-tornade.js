@@ -11,8 +11,8 @@
 // plus grande, quand on la retourne en début de manche — il suffit de changer la
 // taille de police du bloc.
 
-import { h } from './dom.js?v=2.03';
-import { pastilleSymbole } from './icons.js?v=2.03';
+import { h } from './dom.js?v=2.04';
+import { pastilleSymbole } from './icons.js?v=2.04';
 
 /**
  * Le titre sur deux lignes, comme sur le carton : « Tornade du Sommeil » donne

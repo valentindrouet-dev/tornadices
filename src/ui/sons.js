@@ -8,7 +8,7 @@
 // lui passe le contexte vivant ; une épreuve peut lui passer un contexte hors
 // ligne et mesurer ce qui en sort.
 
-import { store } from './store.js?v=2.03';
+import { store } from './store.js?v=2.04';
 
 export const SONS = ['reveil', 'endormi', 'abri', 'envol'];
 
@@ -219,7 +219,8 @@ export function rendreSon(ctx, nom, sortie = null, t0 = 0) {
 let ctx = null;
 let maitre = null;
 
-export function sonsActifs() { return store.get('sons', true) !== false; }
+// Coupés tant qu'on ne les allume pas, aux Réglages ou à la table.
+export function sonsActifs() { return store.get('sons', false) === true; }
 export function volumeSons() {
   const v = Number(store.get('volumeSons', 0.7));
   return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.7;

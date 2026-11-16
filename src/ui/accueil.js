@@ -1,17 +1,17 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=2.03';
-import { store } from './store.js?v=2.03';
-import { aller } from './app.js?v=2.03';
-import { eveillerSons } from './sons.js?v=2.03';
-import { lancerPartie, partieEnCours } from './table.js?v=2.03';
+import { h, remplacer } from './dom.js?v=2.04';
+import { store } from './store.js?v=2.04';
+import { aller } from './app.js?v=2.04';
+import { eveillerSons } from './sons.js?v=2.04';
+import { lancerPartie, partieEnCours } from './table.js?v=2.04';
 import {
   configPartie, nombresJoueursPermis, joueursDansBornes, ecartsAuxOfficielles, nomParDefaut, graineDePartie,
-} from './reglages.js?v=2.03';
-import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.03';
-import { emblemeEquipe } from './icons.js?v=2.03';
-import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.03';
+} from './reglages.js?v=2.04';
+import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.04';
+import { emblemeEquipe } from './icons.js?v=2.04';
+import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.04';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);

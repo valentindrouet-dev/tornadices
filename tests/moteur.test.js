@@ -4,7 +4,7 @@
 import { Moteur } from '../src/core/engine.js';
 import {
   configDepuis, configParDefaut, placement, MISE_EN_PLACE, NOMBRES_JOUEURS, CARTES, COMBOS,
-  FACES_OFFICIELLES, ecartsDeRegles, comboServie, carteALaTable, CARTES_PAR_ID, PROFILS_IA,
+  FACES_OFFICIELLES, ecartsDeRegles, comboServie, CARTES_PAR_ID, PROFILS_IA,
 } from '../src/core/config.js';
 import { lancerCampagne, creerCampagne, wilson } from '../src/core/sim.js';
 import { probaLancerUnique, courseCombinaison, courseAvecGarde } from '../src/core/proba.js';
@@ -45,7 +45,9 @@ verifier('un réglage se lit comme un écart',
   ecartsDeRegles({ jetons: { 6: 1 } }, {}, 6).length === 1 && ecartsDeRegles({ jetons: { 6: 1 } }, {}, 4).length === 0);
 verifier('réglages hors bornes ramenés', configDepuis({ desParLot: 99, lots: { 4: -3 } }, 4).desParLot === 12
   && configDepuis({ lots: { 4: -3 } }, 4).lots === 1 && configDepuis({}, 9).nbJoueurs === 6);
-verifier('Cow-Boy seulement à 3 joueurs', carteALaTable(CARTES_PAR_ID.cowboy, 3) && !carteALaTable(CARTES_PAR_ID.cowboy, 5));
+verifier('le paquet : 11 cartes imprimées, Silencieuse et Jalouse',
+  CARTES.map((c) => c.id).join() === 'chauffe,paisible,maladroite,tricheurs,chapardeuse,siecle,mega,sommeil,vaches,poules,reveilEquipe,silencieuse,jalouse'
+  && CARTES_PAR_ID.chauffe.texte === 'Jouez cette Carte Tornade en premier');
 verifier('combinaison vide jamais servie', !comboServie({ soleil: 5 }, {}) && comboServie({ soleil: 3 }, { soleil: 3 }));
 
 // ── 2. Parties menées à terme, invariants ────────────────────────────────────
@@ -61,7 +63,7 @@ for (const n of NOMBRES_JOUEURS) {
     m._demanderDepart = (j, motif, dispo) => { if (dispo && dispo.id === 'abri' && !j.eveille) noter('Abri endormi'); depart(j, motif, dispo); };
     const poser = m._poserDes.bind(m);
     m._poserDes = (lot, indices) => {
-      if (!m.passif.sansVerrou && indices.some((i) => lot.des[i].verrou)) noter('dé figé relancé');
+      if (indices.some((i) => lot.des[i].verrou)) noter('dé figé relancé');
       poser(lot, indices);
     };
     // La manche se gagne au dernier jeton : autant d'Abris que de jetons posés.
@@ -79,7 +81,7 @@ for (const n of NOMBRES_JOUEURS) {
       m.avancerJusqua(t);
       if (m.termine || m.transition) continue;
       const lots = m.joueurs.reduce((s, j) => s + j.lots.length, 0) + m.transits.length;
-      const attendu = Math.min(n, cfg.lots + (m.passif.lotsEnPlus || 0));
+      const attendu = Math.min(n, cfg.lots);
       if (lots !== attendu) noter(`${lots} lots au lieu de ${attendu}`);
       if (m.joueurs.some((j) => j.lots.length > 1)) noter('deux lots dans une main');
     }
@@ -88,7 +90,6 @@ for (const n of NOMBRES_JOUEURS) {
     if (r.raison === 'cartes' && r.equipes[r.vainqueur].cartes < m.cartesPourGagner(r.vainqueur)) noter('vainqueur sans ses cartes');
     const chauffe = m.statsManches[0];
     if (chauffe.carte !== 'chauffe' || (chauffe.vainqueur && !chauffe.compte)) noter('Chauffe mal jouée');
-    if (m.statsManches.some((s) => s.carte === 'cowboy') && n !== 3) noter('Cow-Boy hors de sa table');
   }
   verifier(`${n} joueurs : 40 parties conformes`, ok, detail);
 }
@@ -174,22 +175,20 @@ console.log('\nCartes Tornade');
   m.jouerJusquAuBout();
   verifier('Paisible : un dé à la fois', unParUn && m.statsManches.length === 2);
 
-  m = manche2('chaos', 4);
-  let verrou = false;
-  const poser = m._poserDes.bind(m);
-  m._poserDes = (lot, i) => { poser(lot, i); if (lot.des.some((d) => d.verrou)) verrou = true; };
-  m.jouerJusquAuBout();
-  verifier('Chaos : aucune tornade figée', !verrou);
+  // Tornade du Réveil : quatre soleils réveillent toute l'équipe.
+  m = manche2('reveilEquipe', 6);
+  const lanceur = m.joueurs[0];
+  for (const j of m.joueurs) j.eveille = false;
+  m._effet(lanceur, { source: 'carte', id: 'reveilEquipe', effet: 'reveillerEquipe' });
+  verifier('Réveil : toute l’équipe se réveille, pas les autres',
+    m.joueurs.every((j) => j.eveille === (j.equipe === lanceur.equipe)));
 
-  m = manche2('chargee', 4);
-  verifier('Chargée : un lot de plus', m.joueurs.reduce((s, j) => s + j.lots.length, 0) + m.transits.length === 3);
-
-  let double = true, vole = false, jalouse = false, combos = { mega: 0, sommeil: 0, furieuse: 0 };
+  let double = true, vole = false, jalouse = false, combos = { mega: 0, sommeil: 0, reveilEquipe: 0 };
   for (let g = 0; g < 30; g++) {
     const r = new Moteur(avecCarte('siecle', 4), ia(4), `siecle-${g}`).jouerJusquAuBout();
     // Pioche de deux cartes : la seconde carte du Siècle n'existe pas, deux cartes gagnées en tout.
     if (r.equipes.bleu.cartes + r.equipes.jaune.cartes !== 2) double = false;
-    const s = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'paisible', 'chapardeuse', 'siecle', 'chaos'], melangerCartes: false },
+    const s = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'paisible', 'chapardeuse', 'siecle', 'maladroite'], melangerCartes: false },
       ia(4), `vol-${g}`);
     s.jouerJusquAuBout();
     const [, p, ch] = s.statsManches;
@@ -204,7 +203,7 @@ console.log('\nCartes Tornade');
       const autre = meneur === 'bleu' ? 'jaune' : 'bleu';
       if (meneur && j.statsManches[0].vainqueur === meneur) jalouse = j.suiviAbris(meneur).total === 3 && j.suiviAbris(autre).total === 2;
     }
-    for (const id of ['mega', 'sommeil', 'furieuse']) {
+    for (const id of ['mega', 'sommeil', 'reveilEquipe']) {
       const x = new Moteur(avecCarte(id, 4), ia(4), `combo-${id}-${g}`).jouerJusquAuBout();
       combos[id] += x.statsManches[1] ? x.statsManches[1].comboCarte : 0;
     }
@@ -212,18 +211,18 @@ console.log('\nCartes Tornade');
   verifier('Siècle : pas de seconde carte quand la pioche est vide', double);
   verifier('Chapardeuse : la partie va au bout avec un vol possible', vole);
   verifier('Jalouse : un Abri de plus pour l’équipe en tête', jalouse);
-  verifier('les combinaisons de carte sortent (Sommeil, Furieuse)', combos.sommeil > 0 && combos.furieuse > 0,
+  verifier('les combinaisons de carte sortent (Sommeil, Réveil)', combos.sommeil > 0 && combos.reveilEquipe > 0,
     JSON.stringify(combos));
   // Siècle et cartes doubles avec une vraie pioche.
-  const d = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'siecle', 'paisible', 'chaos'], melangerCartes: false }, ia(4), 'double');
+  const d = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'siecle', 'paisible', 'maladroite'], melangerCartes: false }, ia(4), 'double');
   while (!d.termine && d.manche < 3) d.avancerJusqua(d.now + 500);
   const gagnees = (m, n) => m.equipes[m.statsManches[1].vainqueur].cartes.length - (m.statsManches[0].vainqueur === m.statsManches[1].vainqueur ? 1 : 0) === n;
   verifier('Siècle : deux cartes d’un coup', gagnees(d, 2));
-  const v = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'vaches', 'paisible', 'chaos'], melangerCartes: false }, ia(4), 'vaches');
+  const v = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'vaches', 'paisible', 'maladroite'], melangerCartes: false }, ia(4), 'vaches');
   while (!v.termine && v.manche < 3) v.avancerJusqua(v.now + 500);
   verifier('Tornade de Vaches : double pour les Bleus seulement',
     gagnees(v, v.statsManches[1].vainqueur === 'bleu' ? 2 : 1));
-  verifier('toutes les cartes ont un nom et un texte', CARTES.every((x) => x.nom && x.texte) && CARTES.length === 16);
+  verifier('toutes les cartes ont un nom et un texte', CARTES.every((x) => x.nom && x.texte) && CARTES.length === 13);
 }
 
 // ── 6. Probabilités : le calcul exact et le moteur disent la même chose ──────

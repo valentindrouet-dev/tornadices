@@ -2,6 +2,14 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.04',
+    date: '16/11/2026',
+    notes: [
+      "Les cartes Tornade sont celles du Print & Play V6, avec leurs textes : Chauffe (« Jouez cette Carte Tornade en premier »), Paisible, Maladroite, Tricheurs, Chapardeuse, Siècle, Méga Tornade, Sommeil, Vaches, Poules, et une nouvelle carte — quatre soleils : « Vous réveillez toute votre équipe ». La Tornade Silencieuse et la Tornade Jalouse restent, à l’essai. La Tornade Chargée, la Tornade de Cow-Boy, la Tornade Furieuse et la Tornade du Chaos sont retirées.",
+      "Table : les noms par défaut des places sont Valentin, Sylvain, Justine, Noël, Clément et Budi, et les sons sont coupés tant qu’on ne les allume pas.",
+    ],
+  },
+  {
     version: '2.03',
     date: '16/11/2026',
     notes: [

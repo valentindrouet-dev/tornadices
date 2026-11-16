@@ -1,15 +1,15 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.03';
-import { store } from './store.js?v=2.03';
-import { aller } from './app.js?v=2.03';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.03';
+import { h, remplacer } from './dom.js?v=2.04';
+import { store } from './store.js?v=2.04';
+import { aller } from './app.js?v=2.04';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.04';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
-  configDepuis, placement, requisCarte, carteALaTable, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.03';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.03';
+  configDepuis, placement, requisCarte, noteCarte, bornerJoueurs,
+} from '../core/config.js?v=2.04';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.04';
 
 const ETATS = { endormi: 'Face endormie', eveille: 'Face réveillée', tous: 'Les deux faces' };
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
@@ -30,7 +30,7 @@ export function vueRegles() {
     const sieges = placement(nb);
     const impair = nb % 2 === 1;
     const combo = (id) => cfg.combos.find((c) => c.id === id);
-    const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id]).filter((c) => carteALaTable(c, nb));
+    const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id]);
     const nbFaces = (sym) => cfg.faces.filter((f) => f === sym).length;
 
     remplacer(racine,
@@ -125,7 +125,7 @@ export function vueRegles() {
       ),
 
       h('div.carte',
-        h('div.titre-section', `Les cartes Tornade — ${cartes.length} dans la pioche à ${nb} joueurs`),
+        h('div.titre-section', `Les cartes Tornade — ${cartes.length} dans la pioche`),
         h('div.liste-cartes.liste-cartes--regles', ...cartes.map((c) => {
           const requis = requisCarte(cfg, c);
           const note = noteCarte(c, cfg);

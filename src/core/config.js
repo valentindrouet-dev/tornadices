@@ -86,51 +86,40 @@ export function placement(nb) {
 }
 
 // ── Cartes Tornade ───────────────────────────────────────────────────────────
+// Les onze cartes imprimées, avec leur texte, puis deux cartes à l'essai.
 // `combo` : combinaison ouverte pendant la manche, jouable endormi comme éveillé.
 // `passif` : ce que la carte change pour tous pendant la manche.
-// `table` : effectifs où la carte entre dans la pioche (absent = tous).
 export const CARTES = [
   // Toujours la première de la partie. Elle se gagne comme les autres.
-  { id: 'chauffe', nom: 'Tornade de Chauffe', texte: 'La première tornade de la partie : aucun effet particulier',
-    premiere: true },
-  { id: 'paisible', nom: 'Tornade Paisible', texte: 'Vous ne pouvez relancer les dés que un par un',
+  { id: 'chauffe', nom: 'Tornade de Chauffe', texte: 'Jouez cette Carte Tornade en premier', premiere: true },
+  { id: 'paisible', nom: 'Tornade Paisible', texte: 'Vous ne pouvez relancer les dés que UN par UN',
     passif: { unParUn: true } },
-  { id: 'maladroite', nom: 'Tornade Maladroite', texte: 'Vous lancez les dés de votre autre main',
+  { id: 'maladroite', nom: 'Tornade Maladroite', texte: 'Vous lancez les dés de votre autre Main',
     passif: { lenteur: 1.35 } },
-  { id: 'chargee', nom: 'Tornade Chargée', texte: 'Vous jouez avec un lot de dés supplémentaire',
-    passif: { lotsEnPlus: 1 } },
   { id: 'tricheurs', nom: 'Tornade des Tricheurs',
-    texte: 'L’équipe gagnante commence la manche suivante avec les lots de dés',
+    texte: 'L’équipe gagnante commence la manche suivante avec les lots de Dés',
     passif: { gagnantsGardentLesDes: true } },
   { id: 'chapardeuse', nom: 'Tornade Chapardeuse',
     texte: 'L’équipe gagnante vole une Carte Tornade à l’équipe adverse', passif: { volerCarte: true } },
-  { id: 'cowboy', nom: 'Tornade de Cow-Boy', texte: 'Le Cow-Boy gagne 2 Cartes Tornade à cette manche',
-    passif: { doublePour: 'vert' }, table: [3] },
   { id: 'siecle', nom: 'Tornade du Siècle', texte: 'Vous gagnez 2 Cartes Tornade à cette manche',
     passif: { double: true } },
   { id: 'mega', nom: 'Méga Tornade', texte: 'Vous gagnez immédiatement la Manche',
     combo: { requis: { grange: 5 }, effet: 'gagnerManche' } },
   { id: 'sommeil', nom: 'Tornade du Sommeil', texte: 'Vous endormez vos 2 voisins',
     combo: { requis: { lune: 4 }, effet: 'endormirVoisins' } },
-  // Mêmes dés que l'Envol : la carte passe d'abord, l'Envol gagne donc la manche.
-  { id: 'furieuse', nom: 'Tornade Furieuse', texte: 'Vous gagnez immédiatement la Manche',
-    combo: { requis: { tornade: 3 }, effet: 'gagnerManche' } },
   { id: 'vaches', nom: 'Tornade de Vaches', texte: 'Les Vaches gagnent 2 Cartes Tornade à cette manche',
     passif: { doublePour: 'bleu' } },
   { id: 'poules', nom: 'Tornade de Poules', texte: 'Les Poules gagnent 2 Cartes Tornade à cette manche',
     passif: { doublePour: 'jaune' } },
+  { id: 'reveilEquipe', nom: 'Tornade du Réveil', texte: 'Vous réveillez toute votre équipe',
+    combo: { requis: { soleil: 4 }, effet: 'reveillerEquipe' } },
   // Carte de table : le site ne peut pas l'arbitrer, la manche se joue normalement.
   { id: 'silencieuse', nom: 'Tornade Silencieuse',
     texte: 'Interdit de parler : un joueur qui parle passe immédiatement son lot', physique: true },
   { id: 'jalouse', nom: 'Tornade Jalouse', texte: 'L’équipe qui mène doit réussir 1 Abri de plus',
     passif: { abriMeneur: 1 } },
-  { id: 'chaos', nom: 'Tornade du Chaos', texte: 'Tous les dés peuvent être relancés, même les tornades',
-    passif: { sansVerrou: true } },
 ];
 export const CARTES_PAR_ID = Object.fromEntries(CARTES.map((c) => [c.id, c]));
-
-/** La carte entre-t-elle dans la pioche à cet effectif ? */
-export const carteALaTable = (carte, nb) => !carte.table || carte.table.includes(Number(nb));
 
 /** L'exigence de la combinaison d'une carte, réglages compris. */
 export function requisCarte(cfg, carte) {
@@ -142,7 +131,6 @@ export function requisCarte(cfg, carte) {
 /** Ce qu'il faut savoir d'une carte à cette table, ou ''. */
 export function noteCarte(carte, cfg) {
   if (carte.physique) return 'Carte de table : à l’écran, la manche se joue normalement.';
-  if (carte.table) return `Dans la pioche à ${carte.table.join(', ')} joueurs seulement.`;
   const des = tailleRequis(requisCarte(cfg, carte));
   return des > cfg.desParLot ? `Demande ${des} dés : impossible avec des lots de ${cfg.desParLot}.` : '';
 }

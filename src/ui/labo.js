@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : des milliers de parties jouées par le moteur de
 // la table, avec les règles du réglage actif, et ce qu'on peut en conclure.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.03';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.03';
-import { store } from './store.js?v=2.03';
-import { aller } from './app.js?v=2.03';
-import { randomSeed, makeRng } from '../core/rng.js?v=2.03';
-import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.03';
-import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.03';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.04';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.04';
+import { store } from './store.js?v=2.04';
+import { aller } from './app.js?v=2.04';
+import { randomSeed, makeRng } from '../core/rng.js?v=2.04';
+import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.04';
+import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.04';
 import {
   EQUIPES, PROFILS_IA, CARTES_PAR_ID, SYMBOLES, ORDRE_SYMBOLES, configDepuis, placement, requisCarte,
-  carteALaTable, tailleRequis,
-} from '../core/config.js?v=2.03';
-import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.03';
-import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.03';
+  tailleRequis,
+} from '../core/config.js?v=2.04';
+import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.04';
+import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.04';
 
 const PARTIES = [200, 1000, 5000, 20000];
 const etat = { onglet: 'simulation', enCours: null };
@@ -124,7 +124,7 @@ export function vueLabo() {
         + (p.nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (Cow-boy : ${cfg.jetonsVert}) · ` : ' · ')
         + `${cfg.cartesPourGagner} cartes pour gagner`
         + (p.nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert})` : '')
-        + ` · ${cfg.cartes.filter((id) => carteALaTable(CARTES_PAR_ID[id], p.nb)).length} cartes dans la pioche`),
+        + ` · ${cfg.cartes.length} cartes dans la pioche`),
       h('div.rangee.rangee--serree', { style: { marginBottom: '6px' } },
         h('span.petit', { style: { flex: '1' } }, 'Caractère des IA'),
         h('select', {
@@ -302,7 +302,7 @@ export function vueLabo() {
     const seuil = envol.requis.tornade || 99;
     const lignes = [
       ...cfg.combos.map((c) => ({ ...c, source: 'role' })),
-      ...cfg.cartes.map((id) => CARTES_PAR_ID[id]).filter((c) => c.combo && carteALaTable(c, p.nb))
+      ...cfg.cartes.map((id) => CARTES_PAR_ID[id]).filter((c) => c.combo)
         .map((c) => ({ id: c.id, nom: c.nom, requis: requisCarte(cfg, c), etat: 'tous', source: 'carte' })),
     ];
     const rng = makeRng('probas');
