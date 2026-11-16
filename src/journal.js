@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.06',
+    date: '16/11/2026',
+    notes: [
+      "À la table, sous le journal, deux cases à cocher pour « tout relancer » (barre Espace ou bouton) : ne pas relancer les Soleils quand on est endormi, ne pas relancer les Abris quand on est réveillé. On peut alors marteler Espace sans défaire ce qu’on a déjà. Le choix est gardé d’une partie à l’autre ; cliquer un dé le relance toujours, quel qu’il soit.",
+    ],
+  },
+  {
     version: '2.05',
     date: '16/11/2026',
     notes: [

@@ -1480,6 +1480,15 @@ button.lien {
   .siege-jetons:empty { display: none; }
 }
 
+/* Sous le journal : ce que « tout relancer » épargne. */
+.options-lancer { display: grid; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--bord-fort); }
+.option-lancer { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.35; cursor: pointer; }
+.option-lancer input { flex: none; margin-top: 2px; }
+.touche {
+  display: inline-block; padding: 0 5px; border: 1px solid var(--bord-fort); border-bottom-width: 2px;
+  border-radius: 5px; background: var(--fond-doux); font-size: 10.5px; font-weight: 800; white-space: nowrap;
+}
+
 /* La Carte Rôle du joueur, à droite de la table : deux faces dos à dos. */
 .carte-role {
   height: 100%; box-sizing: border-box; border-radius: 16px; padding: 14px;

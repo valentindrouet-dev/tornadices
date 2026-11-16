@@ -2,8 +2,8 @@
 // Chaque partie a sa graine, `${graine}#${numéro}` : une campagne se rejoue à
 // l'identique, d'un trait ou par tranches.
 
-import { Moteur } from './engine.js?v=2.05';
-import { CARTES_PAR_ID, COMBOS } from './config.js?v=2.05';
+import { Moteur } from './engine.js?v=2.06';
+import { CARTES_PAR_ID, COMBOS } from './config.js?v=2.06';
 
 /** Format de l'agrégat. À incrémenter dès qu'un champ change : le Laboratoire écarte les résultats d'avant. */
 export const SCHEMA_RESULTAT = 3;

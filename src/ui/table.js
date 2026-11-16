@@ -4,17 +4,17 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.05';
+import { h, remplacer, duree, vider } from './dom.js?v=2.06';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.05';
-import { Moteur } from '../core/engine.js?v=2.05';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.05';
-import { ajouterHistorique } from './store.js?v=2.05';
-import { enregistrerPartie } from './resultats.js?v=2.05';
-import { aller } from './app.js?v=2.05';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.05';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.05';
+} from './icons.js?v=2.06';
+import { Moteur } from '../core/engine.js?v=2.06';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.06';
+import { ajouterHistorique, store } from './store.js?v=2.06';
+import { enregistrerPartie } from './resultats.js?v=2.06';
+import { aller } from './app.js?v=2.06';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.06';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.06';
 
 let moteur = null;
 let vitesse = 1;
@@ -473,9 +473,41 @@ export function vueTable() {
     carteEquipe.classList.toggle('carte-equipe--eveillee', carteRetournee);
   }
 
+  // « Tout relancer » peut épargner les dés qu'on cherche : les soleils tant
+  // qu'on dort, les Abris une fois réveillé. On martèle alors la touche sans
+  // défaire ce qui est acquis. Le choix est gardé d'une partie à l'autre.
+  const aide = { soleils: false, abris: false, ...store.get('aideLancer', {}) };
+  const caseAide = (cle, texte) => h('label.option-lancer',
+    h('input', {
+      type: 'checkbox', checked: aide[cle],
+      onchange: (e) => {
+        aide[cle] = e.target.checked;
+        store.set('aideLancer', aide);
+        // La case ne garde pas le focus : Espace doit lancer les dés, pas la décocher.
+        e.target.blur();
+      },
+    }),
+    h('span', h('span.touche', 'Barre ESPACE'), ` ${texte}`));
+
+  /** Relance tous les dés libres — sauf ceux que les cases demandent de garder. */
+  function toutRelancer(j) {
+    const lot = j.lots[0];
+    if (!lot) return false;
+    const garde = j.eveille ? (aide.abris && 'grange') : (aide.soleils && 'soleil');
+    if (!garde || lot.des.some((d) => d.sym === null)) return moteur.lancerHumain(j.id, null);
+    const autres = lot.des.map((d, i) => i).filter((i) => !lot.des[i].verrou && !lot.des[i].roule && lot.des[i].sym !== garde);
+    if (autres.length) return moteur.lancerHumain(j.id, autres);
+    // Il ne reste que des dés à garder : on attend ceux qui roulent. Si plus
+    // rien ne roule, le lot serait bloqué — on relance tout.
+    return lot.des.some((d) => d.roule) ? false : moteur.lancerHumain(j.id, null);
+  }
+
   const zoneCote = h('div.colonne-cote',
     h('div.carte.carte--equipe', carteEquipe),
-    h('div.carte', h('div.titre-section', 'Journal'), zoneJournal),
+    h('div.carte', h('div.titre-section', 'Journal'), zoneJournal,
+      humains.length ? h('div.options-lancer',
+        caseAide('soleils', 'Ne pas relancer les Soleils quand je suis endormi'),
+        caseAide('abris', 'Ne pas relancer les Abris quand je suis réveillé')) : null),
   );
 
   racine.appendChild(zoneEntete);
@@ -898,7 +930,7 @@ export function vueTable() {
     for (const j of humains) {
       if (!j.lots.length) continue;
       const t = toucheDe.get(j.id);
-      if (ev.code === t.lancer) { moteur.lancerHumain(j.id, null); ev.preventDefault(); return; }
+      if (ev.code === t.lancer) { toutRelancer(j); ev.preventDefault(); return; }
     }
   }
 
@@ -1126,7 +1158,7 @@ export function vueTable() {
         // Au doigt, le libellé reste court et ne change pas de largeur.
         h('button.btn.btn--primaire', {
           disabled: !peutAgir || !libres.length,
-          onclick: () => moteur.lancerHumain(j.id, null),
+          onclick: () => toutRelancer(j),
         }, surMobile()
           ? (lot.lance ? 'Tout relancer' : 'Lancer')
           : (lot.lance ? `Tout relancer (${t.libLancer})` : `Lancer (${t.libLancer})`)),
