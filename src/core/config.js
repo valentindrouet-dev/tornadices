@@ -69,7 +69,7 @@ export const NOMBRES_JOUEURS = [3, 4, 5, 6];
 export const JOUEURS_MIN = 3;
 export const JOUEURS_MAX = 6;
 export const MISE_EN_PLACE = {
-  3: { lots: 2, jetons: 2, jetonsVert: 2, cartes: 4 },
+  3: { lots: 2, jetons: 2, jetonsVert: 2, cartes: 3 },
   4: { lots: 2, jetons: 2, cartes: 4 },
   5: { lots: 3, jetons: 2, jetonsVert: 1, cartes: 4 },
   6: { lots: 3, jetons: 3, cartes: 4 },
@@ -219,7 +219,8 @@ export function configDepuis(reglages = {}, nb = 6) {
     combosCartes: {},
     melangerCartes: r.melangerCartes !== false,
     dureeMaxManche: 1_800_000,
-    manchesMax: entier(r.manchesMax, 1, 200, 40),
+    // Garde-fou. Dix suffisent : à 4 cartes et trois camps au plus, la dixième manche désigne un vainqueur.
+    manchesMax: entier(r.manchesMax, 1, 200, 10),
   };
   for (const c of CARTES) {
     if (c.combo && r.combosCartes && r.combosCartes[c.id]) {

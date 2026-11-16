@@ -4,17 +4,17 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.04';
+import { h, remplacer, duree, vider } from './dom.js?v=2.05';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.04';
-import { Moteur } from '../core/engine.js?v=2.04';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.04';
-import { ajouterHistorique } from './store.js?v=2.04';
-import { enregistrerPartie } from './resultats.js?v=2.04';
-import { aller } from './app.js?v=2.04';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.04';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.04';
+} from './icons.js?v=2.05';
+import { Moteur } from '../core/engine.js?v=2.05';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.05';
+import { ajouterHistorique } from './store.js?v=2.05';
+import { enregistrerPartie } from './resultats.js?v=2.05';
+import { aller } from './app.js?v=2.05';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.05';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.05';
 
 let moteur = null;
 let vitesse = 1;

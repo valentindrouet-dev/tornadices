@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.05',
+    date: '16/11/2026',
+    notes: [
+      "Règles officielles : à trois joueurs, il faut 3 cartes Tornade pour gagner (4 aux autres effectifs), pour les équipes comme pour le Cow-boy. Le garde-fou passe de 40 à 10 manches au plus : avec 4 cartes à réunir et trois camps au maximum, la dixième manche désigne forcément un vainqueur.",
+    ],
+  },
+  {
     version: '2.04',
     date: '16/11/2026',
     notes: [

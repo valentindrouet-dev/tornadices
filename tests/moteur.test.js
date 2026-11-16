@@ -34,8 +34,9 @@ verifier('Jetons Équipe : autant que de joueurs par équipe, 2 par joueur à tr
   && configParDefaut(3).jetonsVert === 2 && configParDefaut(5).jetonsVert === 1);
 verifier('le Cow-boy suit les équipes quand on ne règle que les leurs',
   configDepuis({ cartes: { 5: 6 } }, 5).cartesVert === 6 && configDepuis({ jetons: { 5: 4 } }, 5).jetonsVert === 1);
-verifier('4 cartes pour gagner, 5 dés par lot',
-  [3, 4, 5, 6].every((n) => configParDefaut(n).cartesPourGagner === 4 && configParDefaut(n).desParLot === 5));
+verifier('cartes pour gagner : 3 à trois joueurs, 4 sinon ; 5 dés par lot ; 10 manches au plus',
+  [3, 4, 5, 6].map((n) => configParDefaut(n).cartesPourGagner).join() === '3,4,4,4' && configParDefaut(3).cartesVert === 3
+  && configParDefaut(5).cartesVert === 4 && configParDefaut(6).desParLot === 5 && configParDefaut(6).manchesMax === 10);
 verifier('faces : 2 Réveil, 2 Sommeil, 1 Abri, 1 Tornade',
   FACES_OFFICIELLES.slice().sort().join() === 'grange,lune,lune,soleil,soleil,tornade');
 verifier('quatre combinaisons à 3 dés', COMBOS.map((c) => c.id).join() === 'reveil,abri,sommeil,envol'
