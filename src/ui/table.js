@@ -4,17 +4,17 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.01';
+import { h, remplacer, duree, vider } from './dom.js?v=2.02';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.01';
-import { Moteur } from '../core/engine.js?v=2.01';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase, effetCombo } from '../core/config.js?v=2.01';
-import { ajouterHistorique } from './store.js?v=2.01';
-import { enregistrerPartie } from './resultats.js?v=2.01';
-import { aller } from './app.js?v=2.01';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.01';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.01';
+} from './icons.js?v=2.02';
+import { Moteur } from '../core/engine.js?v=2.02';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.02';
+import { ajouterHistorique } from './store.js?v=2.02';
+import { enregistrerPartie } from './resultats.js?v=2.02';
+import { aller } from './app.js?v=2.02';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.02';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.02';
 
 let moteur = null;
 let vitesse = 1;
@@ -226,16 +226,20 @@ export function vueTable() {
     const zh = zoneTable.clientHeight;
     if (!zw || !zh || surMobile()) {
       elCentre.style.removeProperty('--echelle-centre');
+      for (const el of elSieges) delete el.dataset.pile;
       return;
     }
 
     const marge = 12;
     const larg = elSieges[0]?.offsetWidth || 196;
     const haut = elSieges[0]?.offsetHeight || 130;
+    // Au-dessus de chaque siège, la place des jetons qu'il a récupérés : le cercle
+    // descend d'autant, pour que la pile du siège du haut reste sur la table.
+    const pile = 60;
     const cx = zw / 2;
-    const cy = zh / 2;
+    const cy = zh / 2 + pile / 2;
     const rx = Math.max(60, zw / 2 - larg / 2 - marge);
-    const ry = Math.max(60, zh / 2 - haut / 2 - 6);
+    const ry = Math.max(60, zh / 2 - haut / 2 - 6 - pile / 2);
 
     CENTRE.x = 50;
     CENTRE.y = (cy / zh) * 100;
@@ -253,7 +257,26 @@ export function vueTable() {
       return { x, x0: x - l / 2, x1: x + l / 2, y0: y - t / 2, y1: y + t / 2 };
     });
 
-    const cadres = sieges;
+    // La pile se pose au-dessus du siège, sans le toucher ; faute de place, sur
+    // le côté. Le siège du bas la met de côté d'emblée : au-dessus de lui, c'est
+    // la place de la carte Tornade.
+    const cadres = sieges.map((s) => ({ ...s }));
+    const libre = (r, soi) => r.x0 >= 0 && r.x1 <= zw && r.y0 >= 0 && r.y1 <= zh
+      && sieges.every((s) => s === soi || r.x1 <= s.x0 || s.x1 <= r.x0 || r.y1 <= s.y0 || s.y1 <= r.y0);
+    sieges.forEach((s, i) => {
+      const mi = (s.y0 + s.y1) / 2;
+      const zones = {
+        haut: { x0: s.x - 75, x1: s.x + 75, y0: s.y0 - pile, y1: s.y0 },
+        droite: { x0: s.x1, x1: s.x1 + 60, y0: mi - 58, y1: mi + 58 },
+        gauche: { x0: s.x0 - 60, x1: s.x0, y0: mi - 58, y1: mi + 58 },
+      };
+      const dehors = s.x >= cx ? 'droite' : 'gauche';
+      const dedans = dehors === 'droite' ? 'gauche' : 'droite';
+      const ordre = i === siegeBas ? ['droite', 'gauche', 'haut'] : ['haut', dehors, dedans];
+      const choix = ordre.find((o) => libre(zones[o], s)) || 'haut';
+      elSieges[i].dataset.pile = choix;
+      cadres.push(zones[choix]);
+    });
 
     if (elTapis) {
       elTapis.style.left = `${((cx - rx) / zw) * 100}%`;
@@ -381,19 +404,25 @@ export function vueTable() {
     }, duree + 180);
   }
 
-  // À plusieurs Abris par manche, chaque Abri pose un Jeton Équipe sur la carte
-  // Tornade. Le jeton vole du siège à sa case, qui ne se remplit qu'à l'arrivée.
-  const jetonsEnVol = new Map();   // équipe → jetons encore en l'air
-  const cartesVues = new Map();    // équipe → cartes gagnées au dernier affichage
-  const jetonsPoses = (e) => Math.max(0, Math.min(e.objectif, e.abris) - (jetonsEnVol.get(e.id) || 0));
+  // Les Jetons Équipe sont posés sur la carte Tornade ; chaque Abri en fait
+  // sortir un, qui vole jusqu'au siège du joueur et s'y pose pour le reste de la
+  // manche. La case se vide au départ, la pile ne grossit qu'à l'arrivée.
+  const jetonsSauves = new Map();   // pid → jetons récupérés, posés ou en route
+  const volsVersSiege = new Map();  // pid → jetons encore en l'air
+  const pilesVues = new Map();      // pid → pile montrée au dernier affichage
+  const cartesVues = new Map();     // équipe → cartes gagnées au dernier affichage
+  const jetonsSurCarte = (e) => Math.max(0, e.objectif - e.abris);
+  const jetonsAuSiege = (pid) => Math.max(0, (jetonsSauves.get(pid) || 0) - (volsVersSiege.get(pid) || 0));
 
   function volJeton(pid, equipeId) {
     const siege = elSieges[pid];
     if (!siege) return;
-    const cible = elCarte.querySelector(`.tornade-jeton--${equipeId}:not(.on)`) || elCarte;
+    jetonsSauves.set(pid, (jetonsSauves.get(pid) || 0) + 1);
+    // Le dernier jeton de la rangée : c'est lui qui part.
+    const cases = elCarte.querySelectorAll(`.tornade-jeton--${equipeId}.on`);
     const zone = zoneTable.getBoundingClientRect();
-    const a = siege.getBoundingClientRect();
-    const b = cible.getBoundingClientRect();
+    const a = (cases[cases.length - 1] || elCarte).getBoundingClientRect();
+    const b = (siege.querySelector('.siege-jetons') || siege).getBoundingClientRect();
     const x0 = a.left + a.width / 2;
     const y0 = a.top + a.height / 2;
     const el = h('div.jeton-vol', { html: dessinJeton(equipeId) });
@@ -404,17 +433,19 @@ export function vueTable() {
     el.style.setProperty('--dx', `${b.left + b.width / 2 - x0}px`);
     el.style.setProperty('--dy', `${b.top + b.height / 2 - y0}px`);
     el.style.setProperty('--duree', `${Math.max(220, 850 / vitesse)}ms`);
-    jetonsEnVol.set(equipeId, (jetonsEnVol.get(equipeId) || 0) + 1);
+    volsVersSiege.set(pid, (volsVersSiege.get(pid) || 0) + 1);
     zoneTable.appendChild(el);
     // La fin réelle de l'animation, pas une minuterie : en pause le vol se fige.
     el.addEventListener('animationend', () => {
       el.remove();
-      jetonsEnVol.set(equipeId, Math.max(0, (jetonsEnVol.get(equipeId) || 0) - 1));
+      volsVersSiege.set(pid, Math.max(0, (volsVersSiege.get(pid) || 0) - 1));
     }, { once: true });
   }
 
+  // Nouvelle manche : tous les jetons retournent sur la carte Tornade.
   function viderJetonsEnVol() {
-    jetonsEnVol.clear();
+    jetonsSauves.clear();
+    volsVersSiege.clear();
     for (const el of zoneTable.querySelectorAll('.jeton-vol')) el.remove();
   }
 
@@ -432,7 +463,7 @@ export function vueTable() {
           h('div.carte-role-etat', etat === 'endormi' ? 'Endormi' : 'Réveillé'))),
       ...moteur.cfg.combos.filter((c) => c.etat === 'tous' || c.etat === etat).map((c) => h('div.carte-role-combo',
         h('div.carte-role-des', suiteSymboles(c.requis, 24)),
-        h('div', h('strong', c.nom), h('div.mini', effetCombo(c, moteur.cfg)))))));
+        h('div', h('strong', c.nom), h('div.mini', c.effet))))));
   const carteEquipe = h('div.carte-equipe-retournable', { class: joueurLu.eveille ? 'carte-equipe--eveillee' : '' },
     h('div.carte-equipe-interieur', faceRole('endormi'), faceRole('eveille')));
   let carteRetournee = joueurLu.eveille;
@@ -918,6 +949,10 @@ export function vueTable() {
       // Entre deux manches, les dés sont repartis au centre : le siège n'en
       // montre plus, même si le moteur ne les a pas encore retirés des mains.
       const lot = enTransition ? null : j.lots[0];
+      // Les jetons qu'il a récupérés, posés au-dessus de son siège.
+      const pile = jetonsAuSiege(j.id);
+      const vientDeSePoser = pile > (pilesVues.get(j.id) || 0);
+      pilesVues.set(j.id, pile);
       el.classList.toggle('siege--porteur', !!lot);
       el.classList.toggle('siege--endormi', !j.eveille);
       el.classList.toggle('siege--eveille', j.eveille);
@@ -928,7 +963,12 @@ export function vueTable() {
       const des = lot
         ? lot.des.map((d) => `${d.roule ? 'R' : d.sym}${d.verrou ? '*' : ''}`).join(',')
         : '';
-      siChange(el, `${j.eveille}|${j.fige}|${des}`, () => [
+      siChange(el, `${j.eveille}|${j.fige}|${des}|${pile}`, () => [
+        h('div.siege-jetons', { title: pile ? `${pile} Jeton${pile > 1 ? 's' : ''} Équipe récupéré${pile > 1 ? 's' : ''}` : '' },
+          ...Array.from({ length: pile }, (_, k) => h('span.siege-jeton', {
+            class: vientDeSePoser && k === pile - 1 ? 'siege-jeton--arrive' : '',
+            html: dessinJeton(j.equipe),
+          }))),
         h('div.entete',
           emblemeEquipe(EQUIPES[j.equipe].embleme, 22),
           h('span', {
@@ -950,17 +990,16 @@ export function vueTable() {
   }
 
   function peindreCentre() {
-    // À plusieurs Abris par manche, les Jetons Équipe posés font partie de la
-    // carte : elle se repeint quand l'un d'eux s'y pose.
+    // Les Jetons Équipe posés sur la carte en font partie : elle se repeint
+    // quand l'un d'eux la quitte.
     const equipes = Object.values(moteur.equipes);
-    const avecJetons = equipes.some((e) => e.objectif > 1);
-    const sigJetons = avecJetons ? equipes.map((e) => `${e.id}:${jetonsPoses(e)}/${e.objectif}`).join() : '';
+    const sigJetons = equipes.map((e) => `${e.id}:${jetonsSurCarte(e)}/${e.objectif}`).join();
     let centreChange = siChange(elCarte, `${moteur.carte?.id}|${moteur.manche}|${sigJetons}`, () => (
       moteur.carte
         ? carteTornadeDessinee(moteur.carte, {
             requis: requisCarte(moteur.cfg, moteur.carte),
             texte: texteCarte(moteur.carte.texte),
-            jetons: avecJetons ? blocJetonsCarte() : null,
+            jetons: blocJetonsCarte(),
           })
         : null
     ));
@@ -1008,16 +1047,17 @@ export function vueTable() {
     }));
   }
 
-  /** Les Jetons Équipe posés sur la carte Tornade : une rangée par équipe, une case par Abri à réussir. */
+  /** Les Jetons Équipe sur la carte Tornade : une rangée par équipe, un jeton par Abri encore à réussir. */
   function blocJetonsCarte() {
     return h('div.tornade-jetons',
       ...Object.values(moteur.equipes).map((e) => {
-        const poses = jetonsPoses(e);
+        // Ils sortent par la fin : la case vidée se voit à sa place.
+        const poses = jetonsSurCarte(e);
         return h('div.tornade-jetons-eq', { style: { '--couleur-eq': EQUIPES[e.id].hex } },
           ...Array.from({ length: e.objectif }, (_, k) => h('div', {
             class: `tornade-jeton tornade-jeton--${e.id}${k < poses ? ' on' : ''}`,
             html: k < poses ? dessinJeton(e.id) : '',
-            title: `${EQUIPES[e.id].animal} : ${poses} Abri${poses > 1 ? 's' : ''} sur ${e.objectif}`,
+            title: `${EQUIPES[e.id].animal} : encore ${poses} jeton${poses > 1 ? 's' : ''} sur ${e.objectif}`,
           })),
         );
       }),

@@ -2,6 +2,15 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.02',
+    date: '16/11/2026',
+    notes: [
+      "Les Jetons Équipe suivent la règle : au début de chaque manche, chaque équipe en pose sur la carte Tornade autant qu’elle a de joueurs — 2 à quatre et cinq joueurs (1 pour le Cow-boy à cinq), 3 à six. À trois joueurs, c’est 2 jetons par joueur : 2 Vaches, 2 Poules, 2 Cow-boy. Chaque Abri en récupère un, qui va se poser au-dessus du joueur, et l’équipe qui récupère son dernier jeton gagne la manche. La v2.01 faisait gagner la manche au premier Abri jusqu’à cinq joueurs.",
+      "La Tornade de Chauffe se gagne comme les autres cartes Tornade et compte dans les quatre à réunir. Son texte, qui disait le contraire, est remplacé par une mention neutre.",
+      "Réglages : la mise en place a une ligne « Jetons Équipe sur la Tornade » et une ligne pour le Cow-boy. Les Règles reprennent la mise en place, l’Abri et la fin de manche dans les termes de la règle.",
+    ],
+  },
+  {
     version: '2.01',
     date: '16/11/2026',
     notes: [

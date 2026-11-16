@@ -1,3 +1,3 @@
 // Compteur de version — tenu par `node scripts/version.mjs`.
-export const VERSION = '2.01';
+export const VERSION = '2.02';
 export const BUILD_DATE = '2026-11-16';

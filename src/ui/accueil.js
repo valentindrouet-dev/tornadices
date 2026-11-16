@@ -1,17 +1,17 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=2.01';
-import { store } from './store.js?v=2.01';
-import { aller } from './app.js?v=2.01';
-import { eveillerSons } from './sons.js?v=2.01';
-import { lancerPartie, partieEnCours } from './table.js?v=2.01';
+import { h, remplacer } from './dom.js?v=2.02';
+import { store } from './store.js?v=2.02';
+import { aller } from './app.js?v=2.02';
+import { eveillerSons } from './sons.js?v=2.02';
+import { lancerPartie, partieEnCours } from './table.js?v=2.02';
 import {
   configPartie, nombresJoueursPermis, joueursDansBornes, ecartsAuxOfficielles, nomParDefaut, graineDePartie,
-} from './reglages.js?v=2.01';
-import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.01';
-import { emblemeEquipe } from './icons.js?v=2.01';
-import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.01';
+} from './reglages.js?v=2.02';
+import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.02';
+import { emblemeEquipe } from './icons.js?v=2.02';
+import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.02';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
@@ -137,7 +137,8 @@ export function vueAccueil() {
       ),
       h('div.encart', { style: { marginTop: '16px' } },
         `À ${nb} joueurs : ${cfg.lots} lots de ${cfg.desParLot} dés · `
-        + `${cfg.abris} Abri${cfg.abris > 1 ? 's' : ''} pour gagner la manche · `
+        + `${cfg.jetons} Jetons Équipe par équipe sur la Tornade`
+        + (nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (Cow-boy : ${cfg.jetonsVert}) · ` : ' · ')
         + `${cfg.cartesPourGagner} cartes Tornade pour gagner`
         + (nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert}).` : '.')),
     );

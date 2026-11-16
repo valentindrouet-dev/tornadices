@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : des milliers de parties jouées par le moteur de
 // la table, avec les règles du réglage actif, et ce qu'on peut en conclure.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.01';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.01';
-import { store } from './store.js?v=2.01';
-import { aller } from './app.js?v=2.01';
-import { randomSeed, makeRng } from '../core/rng.js?v=2.01';
-import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.01';
-import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.01';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.02';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.02';
+import { store } from './store.js?v=2.02';
+import { aller } from './app.js?v=2.02';
+import { randomSeed, makeRng } from '../core/rng.js?v=2.02';
+import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.02';
+import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.02';
 import {
   EQUIPES, PROFILS_IA, CARTES_PAR_ID, SYMBOLES, ORDRE_SYMBOLES, configDepuis, placement, requisCarte,
   carteALaTable, tailleRequis,
-} from '../core/config.js?v=2.01';
-import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.01';
-import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.01';
+} from '../core/config.js?v=2.02';
+import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.02';
+import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.02';
 
 const PARTIES = [200, 1000, 5000, 20000];
 const etat = { onglet: 'simulation', enCours: null };
@@ -120,7 +120,8 @@ export function vueLabo() {
         }, String(n)))),
       ),
       h('p.mini.muted', { style: { margin: '8px 0 12px' } },
-        `${cfg.lots} lots de ${cfg.desParLot} dés · ${cfg.abris} Abri${cfg.abris > 1 ? 's' : ''} par manche · `
+        `${cfg.lots} lots de ${cfg.desParLot} dés · ${cfg.jetons} Jetons Équipe par équipe`
+        + (p.nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (Cow-boy : ${cfg.jetonsVert}) · ` : ' · ')
         + `${cfg.cartesPourGagner} cartes pour gagner`
         + (p.nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert})` : '')
         + ` · ${cfg.cartes.filter((id) => carteALaTable(CARTES_PAR_ID[id], p.nb)).length} cartes dans la pioche`),

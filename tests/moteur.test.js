@@ -29,7 +29,11 @@ verifier('équipes alternées, Cow-boy à effectif impair',
   placement(4).join() === 'bleu,jaune,bleu,jaune' && placement(5).join() === 'bleu,jaune,bleu,jaune,vert'
   && placement(3).join() === 'bleu,jaune,vert');
 verifier('lots : 2, 2, 3, 3', [3, 4, 5, 6].map((n) => configParDefaut(n).lots).join() === '2,2,3,3');
-verifier('2 Abris à 6 joueurs, 1 sinon', [3, 4, 5, 6].map((n) => configParDefaut(n).abris).join() === '1,1,1,2');
+verifier('Jetons Équipe : autant que de joueurs par équipe, 2 par joueur à trois',
+  [3, 4, 5, 6].map((n) => configParDefaut(n).jetons).join() === '2,2,2,3'
+  && configParDefaut(3).jetonsVert === 2 && configParDefaut(5).jetonsVert === 1);
+verifier('le Cow-boy suit les équipes quand on ne règle que les leurs',
+  configDepuis({ cartes: { 5: 6 } }, 5).cartesVert === 6 && configDepuis({ jetons: { 5: 4 } }, 5).jetonsVert === 1);
 verifier('4 cartes pour gagner, 5 dés par lot',
   [3, 4, 5, 6].every((n) => configParDefaut(n).cartesPourGagner === 4 && configParDefaut(n).desParLot === 5));
 verifier('faces : 2 Réveil, 2 Sommeil, 1 Abri, 1 Tornade',
@@ -38,7 +42,7 @@ verifier('quatre combinaisons à 3 dés', COMBOS.map((c) => c.id).join() === 're
   && COMBOS.every((c) => Object.values(c.requis).join() === '3'));
 verifier('aucun écart sans réglage', NOMBRES_JOUEURS.every((n) => ecartsDeRegles({}, {}, n).length === 0));
 verifier('un réglage se lit comme un écart',
-  ecartsDeRegles({ abris: { 6: 1 } }, {}, 6).length === 1 && ecartsDeRegles({ abris: { 6: 1 } }, {}, 4).length === 0);
+  ecartsDeRegles({ jetons: { 6: 1 } }, {}, 6).length === 1 && ecartsDeRegles({ jetons: { 6: 1 } }, {}, 4).length === 0);
 verifier('réglages hors bornes ramenés', configDepuis({ desParLot: 99, lots: { 4: -3 } }, 4).desParLot === 12
   && configDepuis({ lots: { 4: -3 } }, 4).lots === 1 && configDepuis({}, 9).nbJoueurs === 6);
 verifier('Cow-Boy seulement à 3 joueurs', carteALaTable(CARTES_PAR_ID.cowboy, 3) && !carteALaTable(CARTES_PAR_ID.cowboy, 5));
@@ -60,6 +64,15 @@ for (const n of NOMBRES_JOUEURS) {
       if (!m.passif.sansVerrou && indices.some((i) => lot.des[i].verrou)) noter('dé figé relancé');
       poser(lot, indices);
     };
+    // La manche se gagne au dernier jeton : autant d'Abris que de jetons posés.
+    const attendus = { bleu: cfg.jetons, jaune: cfg.jetons, vert: cfg.jetonsVert };
+    if (g === 0 && Object.values(m.equipes).some((e) => e.objectif !== attendus[e.id])) noter('jetons de départ faux');
+    const fin = m._finManche.bind(m);
+    m._finManche = (eq, cause) => {
+      if (cause && cause.raison === 'abri' && m.equipes[eq].abris !== m.equipes[eq].objectif) noter('manche gagnée avant le dernier jeton');
+      if (Object.values(m.equipes).some((e) => e.abris > e.objectif)) noter('plus d’Abris que de jetons');
+      fin(eq, cause);
+    };
     let t = 0;
     while (!m.termine && t < 4e6) {
       t += 700;
@@ -73,7 +86,8 @@ for (const n of NOMBRES_JOUEURS) {
     const r = m.resultat();
     if (!m.termine) noter('partie sans fin');
     if (r.raison === 'cartes' && r.equipes[r.vainqueur].cartes < m.cartesPourGagner(r.vainqueur)) noter('vainqueur sans ses cartes');
-    if (m.statsManches[0].carte !== 'chauffe' || m.statsManches[0].compte) noter('Chauffe mal jouée');
+    const chauffe = m.statsManches[0];
+    if (chauffe.carte !== 'chauffe' || (chauffe.vainqueur && !chauffe.compte)) noter('Chauffe mal jouée');
     if (m.statsManches.some((s) => s.carte === 'cowboy') && n !== 3) noter('Cow-Boy hors de sa table');
   }
   verifier(`${n} joueurs : 40 parties conformes`, ok, detail);
@@ -125,10 +139,8 @@ console.log('\nAbris et tourbillon');
 {
   const r6 = lancerCampagne(configParDefaut(6), ia(6), 'abris6', 60);
   const r4 = lancerCampagne(configParDefaut(4), ia(4), 'abris4', 60);
-  const abris = (r) => r.parSiege.reduce((s, x) => s + x.abris, 0);
-  const manchesAbri = (r) => r.totaux.manches - Object.values(r.combosCartes).reduce((s, x) => s + x, 0);
-  verifier('4 joueurs : un Abri par manche gagnée', abris(r4) <= r4.totaux.manches && abris(r4) >= manchesAbri(r4) - 2);
-  verifier('6 joueurs : il faut plusieurs Abris', abris(r6) > 1.5 * manchesAbri(r6));
+  verifier('la Chauffe se gagne comme une autre carte',
+    r6.parCarte.find((c) => c.id === 'chauffe').jouee === 60 && r6.premierGain.parties === 60);
   verifier('le tourbillon existe', r6.totaux.pousses > 0 && r4.totaux.pousses > 0);
   // Un lot qui arrive chez un porteur le force à passer le sien.
   const m = new Moteur(configParDefaut(4), ia(4), 'tourbillon');
@@ -175,8 +187,8 @@ console.log('\nCartes Tornade');
   let double = true, vole = false, jalouse = false, combos = { mega: 0, sommeil: 0, furieuse: 0 };
   for (let g = 0; g < 30; g++) {
     const r = new Moteur(avecCarte('siecle', 4), ia(4), `siecle-${g}`).jouerJusquAuBout();
-    // Pioche de deux cartes : la seconde carte du Siècle n'existe pas, une seule est gagnée.
-    if (r.equipes[r.statsManches[1].vainqueur].cartes !== 1) double = false;
+    // Pioche de deux cartes : la seconde carte du Siècle n'existe pas, deux cartes gagnées en tout.
+    if (r.equipes.bleu.cartes + r.equipes.jaune.cartes !== 2) double = false;
     const s = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'paisible', 'chapardeuse', 'siecle', 'chaos'], melangerCartes: false },
       ia(4), `vol-${g}`);
     s.jouerJusquAuBout();
@@ -190,7 +202,7 @@ console.log('\nCartes Tornade');
     if (!j.termine) {
       const meneur = j.statsManches[1].vainqueur;
       const autre = meneur === 'bleu' ? 'jaune' : 'bleu';
-      if (j.suiviAbris(meneur).total === 2 && j.suiviAbris(autre).total === 1) jalouse = true; else jalouse = jalouse && false;
+      if (meneur && j.statsManches[0].vainqueur === meneur) jalouse = j.suiviAbris(meneur).total === 3 && j.suiviAbris(autre).total === 2;
     }
     for (const id of ['mega', 'sommeil', 'furieuse']) {
       const x = new Moteur(avecCarte(id, 4), ia(4), `combo-${id}-${g}`).jouerJusquAuBout();
@@ -205,11 +217,12 @@ console.log('\nCartes Tornade');
   // Siècle et cartes doubles avec une vraie pioche.
   const d = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'siecle', 'paisible', 'chaos'], melangerCartes: false }, ia(4), 'double');
   while (!d.termine && d.manche < 3) d.avancerJusqua(d.now + 500);
-  verifier('Siècle : deux cartes d’un coup', d.equipes[d.statsManches[1].vainqueur].cartes.length === 2);
+  const gagnees = (m, n) => m.equipes[m.statsManches[1].vainqueur].cartes.length - (m.statsManches[0].vainqueur === m.statsManches[1].vainqueur ? 1 : 0) === n;
+  verifier('Siècle : deux cartes d’un coup', gagnees(d, 2));
   const v = new Moteur({ ...configParDefaut(4), cartes: ['chauffe', 'vaches', 'paisible', 'chaos'], melangerCartes: false }, ia(4), 'vaches');
   while (!v.termine && v.manche < 3) v.avancerJusqua(v.now + 500);
   verifier('Tornade de Vaches : double pour les Bleus seulement',
-    v.equipes[v.statsManches[1].vainqueur].cartes.length === (v.statsManches[1].vainqueur === 'bleu' ? 2 : 1));
+    gagnees(v, v.statsManches[1].vainqueur === 'bleu' ? 2 : 1));
   verifier('toutes les cartes ont un nom et un texte', CARTES.every((x) => x.nom && x.texte) && CARTES.length === 16);
 }
 

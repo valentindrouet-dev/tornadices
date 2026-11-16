@@ -1458,6 +1458,43 @@ button.lien {
 .combo-regle--nuit { border-left-color: #8ba6f5; }
 .combo-regle--rouge { border-left-color: #e2000f; }
 
+/* Les jetons qu'un joueur a sortis de la tornade, posés au-dessus de son siège
+   jusqu'à la fin de la manche. Hors du flux : le siège garde sa taille. */
+.siege-jetons {
+  position: absolute; left: 50%; bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  display: flex; pointer-events: none;
+}
+/* Les jetons sauvés se chevauchent un peu, comme une pile posée sur la table :
+   quatre tiennent encore dans la largeur d'un siège. */
+.siege-jeton + .siege-jeton { margin-left: -12px; }
+.siege-jeton {
+  width: 46px; height: 46px; border-radius: 50%; flex: none;
+  background: var(--couleur-eq, var(--accent));
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(20, 55, 95, .3);
+  display: grid; place-items: center;
+}
+/* Pas la place au-dessus : la pile se range sur le côté du siège, en colonne. */
+.siege[data-pile="gauche"] .siege-jetons, .siege[data-pile="droite"] .siege-jetons {
+  bottom: auto; top: 50%; transform: translateY(-50%); flex-direction: column;
+}
+.siege[data-pile="gauche"] .siege-jetons { left: auto; right: calc(100% + 12px); }
+.siege[data-pile="droite"] .siege-jetons { left: calc(100% + 12px); }
+.siege[data-pile="gauche"] .siege-jeton + .siege-jeton,
+.siege[data-pile="droite"] .siege-jeton + .siege-jeton { margin-left: 0; margin-top: -12px; }
+/* Seul le jeton qui vient de se poser s'annonce : le siège se repeint à chaque
+   lancer, la pile ne doit pas clignoter pour autant. */
+.siege-jeton--arrive { animation: jetonArrive .5s ease-out; }
+.siege-jeton svg { width: 30px; height: 30px; display: block; }
+.siege-jeton:has(> .jeton-img) { background: none; border: 0; }
+@media (max-width: 860px) {
+  .siege-jetons { position: static; transform: none; justify-content: center; margin-bottom: 6px; }
+  .siege-jeton { width: 36px; height: 36px; }
+  .siege-jeton + .siege-jeton { margin-left: -9px; }
+  .siege-jetons:empty { display: none; }
+}
+
 /* La Carte Rôle du joueur, à droite de la table : deux faces dos à dos. */
 .carte-role {
   height: 100%; box-sizing: border-box; border-radius: 16px; padding: 14px;

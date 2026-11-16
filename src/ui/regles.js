@@ -1,15 +1,15 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.01';
-import { store } from './store.js?v=2.01';
-import { aller } from './app.js?v=2.01';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.01';
+import { h, remplacer } from './dom.js?v=2.02';
+import { store } from './store.js?v=2.02';
+import { aller } from './app.js?v=2.02';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.02';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
-  configDepuis, placement, requisCarte, carteALaTable, effetCombo, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.01';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.01';
+  configDepuis, placement, requisCarte, carteALaTable, noteCarte, bornerJoueurs,
+} from '../core/config.js?v=2.02';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.02';
 
 const ETATS = { endormi: 'Face endormie', eveille: 'Face réveillée', tous: 'Les deux faces' };
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
@@ -62,6 +62,9 @@ export function vueRegles() {
               impair ? ' ; le Cow-boy récupère toujours le lot restant en début de manche.' : '.'),
             h('li', 'La pioche est face cachée', cfg.melangerCartes ? ', mélangée' : ', dans l’ordre',
               '. La Tornade de Chauffe ouvre toujours la partie.'),
+            h('li', 'Sur la carte Tornade, placez ', v(pluriel(cfg.jetons, 'Jeton'), pluriel(ref.jetons, 'Jeton')), ' Équipe par équipe',
+              impair && cfg.jetonsVert !== cfg.jetons ? [' et ', v(cfg.jetonsVert, ref.jetonsVert), ' pour le Cow-boy'] : null,
+              nb === 3 ? ' : deux par joueur à trois.' : ' : autant que de joueurs dans l’équipe.'),
             h('li', 'La Carte Rotation est posée sur une face au hasard : elle donne le sens dans lequel passent les lots.'),
           ),
           h('div.rangee.rangee--serree', { style: { marginTop: '10px' } },
@@ -77,8 +80,8 @@ export function vueRegles() {
             h('li', 'Une combinaison formée est jouée aussitôt : on ne relance pas ses dés. Puis le lot passe au voisin, dans le sens de la Carte Rotation.'),
             h('li', h('strong', 'Tourbillon'), ' : si le voisin tient déjà un lot en cours, il doit immédiatement passer le sien, et ainsi de suite.'),
           ),
-          h('p', 'La manche est gagnée par la combinaison ', h('strong', 'Abri'), ' — ou par la combinaison de certaines cartes Tornade. '
-            + 'L’équipe victorieuse remporte la Carte Tornade.'),
+          h('p', 'Une équipe gagne la manche en récupérant son ', h('strong', 'dernier Jeton Équipe'), ' (combinaison Abri) — ou par la '
+            + 'combinaison ou l’effet de certaines cartes Tornade. Elle s’empare de la Carte Tornade, et les jetons reviennent sur la suivante.'),
           h('p', 'L’équipe perdante débute la manche suivante avec les lots, et peut retourner la Carte Rotation.',
             impair ? ' Si le Cow-boy gagne, il désigne l’équipe « perdante ».' : ''),
         ),
@@ -91,11 +94,9 @@ export function vueRegles() {
           h('div',
             h('div', h('strong', c.nom), ' — ', v(Object.entries(c.requis).map(([s, n]) => `${n} ${SYMBOLES[s].nom}`).join(' + '),
               Object.entries(ref.combos[i].requis).map(([s, n]) => `${n} ${SYMBOLES[s].nom}`).join(' + '))),
-            h('div.petit', c.id === 'abri' && cfg.abris > 1
-              ? ['Posez 1 Jeton Équipe sur la Carte Tornade : la première équipe à en placer ', v(cfg.abris, ref.abris), ' gagne la manche.']
-              : c.id === 'abri' ? ['Votre équipe gagne immédiatement la manche', ref.abris !== cfg.abris ? [' (', v(pluriel(cfg.abris, 'Abri'), pluriel(ref.abris, 'Abri')), ')'] : null, '.']
-                : c.id === 'envol' ? 'Passez immédiatement votre lot au joueur suivant, sans relancer. S’il tient un lot, vous le forcez à passer aussi.'
-                  : effetCombo(c, cfg)),
+            h('div.petit', c.id === 'envol'
+              ? 'Passez immédiatement votre lot au joueur suivant, sans relancer. S’il tient un lot, vous le forcez à passer aussi.'
+              : c.effet),
             h('div.mini.muted', ETATS[c.etat]))))),
         h('p.petit.muted', { style: { marginTop: '10px' } },
           'Le dé : ', ...ORDRE_SYMBOLES.filter((s) => nbFaces(s)).flatMap((s, i, tous) => [

@@ -8,11 +8,11 @@
 // jamais son lot sans combinaison. Un lot qui arrive chez un joueur qui en
 // tient déjà un le force à passer le sien : c'est le tourbillon.
 
-import { makeRng } from './rng.js?v=2.01';
+import { makeRng } from './rng.js?v=2.02';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, profilIA, placement, comboServie,
   carteALaTable, requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
-} from './config.js?v=2.01';
+} from './config.js?v=2.02';
 
 // Le symbole qu'il faut garder pour viser chaque combinaison de base.
 const SYMBOLE_DE_COMBO = { reveil: 'soleil', abri: 'grange', sommeil: 'lune', envol: 'tornade' };
@@ -90,7 +90,7 @@ export class Moteur {
     this.onMouvement = null;   // (idDepart, idArrivee, motif, { des }, duree)
     this.onCombinaison = null; // (idJoueur, idCombo, couleur)
     this.onAnnonce = null;     // (texte, couleur, idJoueur, options)
-    this.onJeton = null;       // (idJoueur, equipe) — un Jeton Équipe est posé
+    this.onJeton = null;       // (idJoueur, equipe) — un Jeton Équipe quitte la carte Tornade
     this.onFlash = null;       // (type, idJoueur) — reveil | abri | envol | endormi
     this.onFinManche = null;
     this.onDebutManche = null;
@@ -114,7 +114,7 @@ export class Moteur {
     });
     this.equipes = {};
     for (const id of ['bleu', 'jaune', 'vert']) {
-      if (sieges.includes(id)) this.equipes[id] = { id, cartes: [], abris: 0, objectif: cfg.abris };
+      if (sieges.includes(id)) this.equipes[id] = { id, cartes: [], abris: 0, objectif: 0 };
     }
     const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id])
       .filter((c) => c && carteALaTable(c, cfg.nbJoueurs));
@@ -140,11 +140,12 @@ export class Moteur {
       j.eveille = false; j.lots = []; j.lancersLot = 0; j.attente = null;
       j.planifie = false; j.fige = false; j.departEnAttente = null; j.objectif = null;
     }
-    // Tornade Jalouse : l'équipe seule en tête doit réussir un Abri de plus.
+    // Les Jetons Équipe reviennent sur la carte Tornade. Tornade Jalouse :
+    // l'équipe seule en tête en a un de plus à récupérer.
     const meneur = this.passif.abriMeneur ? this._seulEnTete() : null;
     for (const e of Object.values(this.equipes)) {
       e.abris = 0;
-      e.objectif = this.cfg.abris + (e === meneur ? this.passif.abriMeneur : 0);
+      e.objectif = (e.id === 'vert' ? this.cfg.jetonsVert : this.cfg.jetons) + (e === meneur ? this.passif.abriMeneur : 0);
     }
     const porteurs = this._porteursDeDepart();
     for (const pid of porteurs) {
@@ -155,7 +156,7 @@ export class Moteur {
       + (this.sens > 0 ? 'horaire' : 'antihoraire'), 'manche');
     if (meneur) {
       this._log(`${nomDansPhrase(meneur.id).Le} ${nomDansPhrase(meneur.id).v('mène', 'mènent')} : `
-        + 'un Abri de plus à réussir.', 'manche');
+        + 'un Jeton Équipe de plus à récupérer.', 'manche');
     }
     if (this.onDebutManche) this.onDebutManche({ manche: this.manche, carte: this.carte, porteurs, premiere });
     for (const pid of porteurs) this._planifier(pid);
@@ -595,18 +596,18 @@ export class Moteur {
     return this._voisins(j).filter((v) => v.eveille).sort((a, b) => note(b) - note(a))[0] || null;
   }
 
-  /** Un Abri : l'équipe gagne la manche — ou pose un Jeton Équipe s'il en faut plusieurs. */
+  /** Un Abri : un Jeton Équipe quitte la carte Tornade ; au dernier, l'équipe gagne la manche. */
   _abri(j) {
     const eq = this.equipes[j.equipe];
     eq.abris++;
     j.stats.abris++;
     this._flash('abri', j.id);
-    if (eq.abris >= eq.objectif) { this._finManche(j.equipe, { joueur: j, raison: 'abri' }); return; }
     if (this.onJeton) this.onJeton(j.id, j.equipe);
     const reste = eq.objectif - eq.abris;
+    if (reste <= 0) { this._finManche(j.equipe, { joueur: j, raison: 'abri' }); return; }
     this._annoncer(`Abri ! Encore ${reste}`, 'vert', j.id);
-    this._log(`${j.nom} pose un Jeton Équipe sur la Tornade — ${nomDansPhrase(j.equipe).nom} : `
-      + `${eq.abris}/${eq.objectif}.`, 'jeton', j.id);
+    this._log(`${j.nom} récupère un Jeton Équipe — ${nomDansPhrase(j.equipe).nom} : `
+      + `encore ${reste} sur la Tornade.`, 'jeton', j.id);
   }
 
   /** Les Abris d'une équipe dans la manche : { total, faits }. */
@@ -627,7 +628,7 @@ export class Moteur {
     const nom = equipeId ? nomDansPhrase(equipeId) : null;
     if (eq && cause.joueur) {
       this._annoncer(`${cause.joueur.nom} fait gagner ${nom.le} `
-        + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : 'en rejoignant l’Abri'),
+        + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : 'en récupérant le dernier jeton'),
       equipeId, null, { manche: true });
     }
     const compte = !!(eq && carte && !carte.sansGain);

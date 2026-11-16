@@ -20,7 +20,7 @@ export const COMBOS = [
   { id: 'reveil', nom: 'Réveil', requis: { soleil: 3 }, etat: 'endormi', couleur: 'or',
     effet: 'Retournez votre Carte Rôle sur sa face réveillée.' },
   { id: 'abri', nom: 'Abri', requis: { grange: 3 }, etat: 'eveille', couleur: 'vert',
-    effet: 'Votre équipe gagne la manche.' },
+    effet: 'Récupérez 1 Jeton Équipe sur la Carte Tornade. La première équipe à récupérer son dernier jeton gagne la manche.' },
   { id: 'sommeil', nom: 'Sommeil', requis: { lune: 3 }, etat: 'eveille', couleur: 'nuit',
     effet: 'Endormez un de vos voisins, s’il est réveillé.' },
   { id: 'envol', nom: 'Envol', requis: { tornade: 3 }, etat: 'tous', couleur: 'rouge',
@@ -28,13 +28,6 @@ export const COMBOS = [
 ];
 // Quand un même jet en sert plusieurs : la première de cette liste est jouée.
 export const PRIORITE_COMBOS = ['reveil', 'abri', 'sommeil', 'envol'];
-
-/** L'effet d'une combinaison à cette table : l'Abri change quand il en faut plusieurs. */
-export function effetCombo(combo, cfg) {
-  return combo.id === 'abri' && cfg && cfg.abris > 1
-    ? `Posez 1 Jeton Équipe sur la Carte Tornade : au ${cfg.abris}ᵉ, votre équipe gagne la manche.`
-    : combo.effet;
-}
 
 /** Vrai si le compte de faces `compte` sert l'exigence `requis` (non vide). */
 export function comboServie(compte, requis) {
@@ -70,16 +63,16 @@ export function nomDansPhrase(id) {
 }
 
 // ── Mise en place ────────────────────────────────────────────────────────────
-// `abris` : Abris à réussir pour gagner la manche. À 6 joueurs, chaque Abri pose
-// un Jeton Équipe sur la carte Tornade, et il en faut 2.
+// `jetons` : Jetons Équipe posés sur la carte Tornade en début de manche — autant
+// que de joueurs dans l'équipe, 2 par joueur à trois. Chaque Abri en récupère un.
 export const NOMBRES_JOUEURS = [3, 4, 5, 6];
 export const JOUEURS_MIN = 3;
 export const JOUEURS_MAX = 6;
 export const MISE_EN_PLACE = {
-  3: { lots: 2, abris: 1, cartes: 4 },
-  4: { lots: 2, abris: 1, cartes: 4 },
-  5: { lots: 3, abris: 1, cartes: 4 },
-  6: { lots: 3, abris: 2, cartes: 4 },
+  3: { lots: 2, jetons: 2, jetonsVert: 2, cartes: 4 },
+  4: { lots: 2, jetons: 2, cartes: 4 },
+  5: { lots: 3, jetons: 2, jetonsVert: 1, cartes: 4 },
+  6: { lots: 3, jetons: 3, cartes: 4 },
 };
 export const bornerJoueurs = (n) => Math.min(JOUEURS_MAX, Math.max(JOUEURS_MIN, Math.round(Number(n)) || JOUEURS_MAX));
 
@@ -97,8 +90,9 @@ export function placement(nb) {
 // `passif` : ce que la carte change pour tous pendant la manche.
 // `table` : effectifs où la carte entre dans la pioche (absent = tous).
 export const CARTES = [
-  { id: 'chauffe', nom: 'Tornade de Chauffe', texte: 'Cette tornade ne rapporte pas de Carte Tornade',
-    sansGain: true, premiere: true },
+  // Toujours la première de la partie. Elle se gagne comme les autres.
+  { id: 'chauffe', nom: 'Tornade de Chauffe', texte: 'La première tornade de la partie : aucun effet particulier',
+    premiere: true },
   { id: 'paisible', nom: 'Tornade Paisible', texte: 'Vous ne pouvez relancer les dés que un par un',
     passif: { unParUn: true } },
   { id: 'maladroite', nom: 'Tornade Maladroite', texte: 'Vous lancez les dés de votre autre main',
@@ -183,7 +177,9 @@ export const RYTHME = {
   dureeLancer: 1000, dureeConstat: 900, dureePassage: 1000, dureeTransition: 2600,
   tempsReflexion: 300, ecartReflexion: 120, variance: 0,
 };
-export const TABLES = ['lots', 'abris', 'cartes', 'cartesVert'];
+export const TABLES = ['lots', 'jetons', 'jetonsVert', 'cartes', 'cartesVert'];
+// Les lignes du Cow-boy, et celle des équipes dont elles héritent.
+const TABLE_DES_EQUIPES = { jetonsVert: 'jetons', cartesVert: 'cartes' };
 
 const entier = (x, min, max, defaut) => {
   const n = Math.round(Number(x));
@@ -192,9 +188,11 @@ const entier = (x, min, max, defaut) => {
 
 /** La valeur d'une table de mise en place à cet effectif, réglage ou V6. */
 export function valeurTable(reglages, table, nb) {
-  const officiel = MISE_EN_PLACE[nb][table === 'cartesVert' ? 'cartes' : table];
+  const equipes = TABLE_DES_EQUIPES[table];
+  const v6 = MISE_EN_PLACE[nb][table];
+  // Sans valeur V6 propre au Cow-boy, il suit ce qui est réglé pour les équipes.
+  const repli = v6 ?? valeurTable(reglages, equipes, nb);
   const t = reglages && reglages[table];
-  const repli = table === 'cartesVert' ? valeurTable(reglages, 'cartes', nb) : officiel;
   return entier(t && t[nb], 1, 12, repli);
 }
 
@@ -225,7 +223,8 @@ export function configDepuis(reglages = {}, nb = 6) {
     faces,
     combos: COMBOS.map((c) => ({ ...c, requis: requisPropre(r.combos && r.combos[c.id], c.requis) })),
     lots: valeurTable(r, 'lots', nbJoueurs),
-    abris: valeurTable(r, 'abris', nbJoueurs),
+    jetons: valeurTable(r, 'jetons', nbJoueurs),
+    jetonsVert: valeurTable(r, 'jetonsVert', nbJoueurs),
     cartesPourGagner: valeurTable(r, 'cartes', nbJoueurs),
     cartesVert: valeurTable(r, 'cartesVert', nbJoueurs),
     cartes: cartesEnJeu(r),
@@ -256,7 +255,8 @@ const REGLES = [
   ['desParLot', 'Dés par lot'],
   ['faces', 'Faces du dé', (c) => c.faces.map((f) => SYMBOLES[f].nom).join(' · ')],
   ['lots', 'Lots en jeu'],
-  ['abris', 'Abris pour gagner la manche'],
+  ['jetons', 'Jetons Équipe sur la Tornade'],
+  ['jetonsVert', 'Jetons Équipe sur la Tornade (Cow-boy)', (c) => (c.nbJoueurs % 2 ? c.jetonsVert : null)],
   ['cartesPourGagner', 'Cartes pour gagner'],
   ['cartesVert', 'Cartes pour gagner (Cow-boy)', (c) => (c.nbJoueurs % 2 ? c.cartesVert : null)],
   ['cartes', 'Cartes Tornade en jeu', (c) => `${c.cartes.length} cartes`, (c) => c.cartes.join()],

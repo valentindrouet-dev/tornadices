@@ -1,7 +1,7 @@
 // Faces des dés et emblèmes d'équipe, en SVG inline (aucune ressource externe).
 // Chaque face reprend le dé imprimé : une pastille de couleur, un dessin noir.
 
-import { SYMBOLES } from '../core/config.js?v=2.01';
+import { SYMBOLES } from '../core/config.js?v=2.02';
 
 const svg = (contenu, vb = '0 0 100 100') =>
   `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${contenu}</svg>`;

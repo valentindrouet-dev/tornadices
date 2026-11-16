@@ -1,11 +1,11 @@
 // Compte rendu de la dernière partie jouée à la table. L'instantané est figé au
 // coup de sifflet final et gardé dans le navigateur.
 
-import { h, duree, dureeLongue, telecharger } from './dom.js?v=2.01';
-import { store } from './store.js?v=2.01';
-import { aller } from './app.js?v=2.01';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.01';
-import { EQUIPES, CARTES_PAR_ID, PROFILS_IA, nomDansPhrase } from '../core/config.js?v=2.01';
+import { h, duree, dureeLongue, telecharger } from './dom.js?v=2.02';
+import { store } from './store.js?v=2.02';
+import { aller } from './app.js?v=2.02';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.02';
+import { EQUIPES, CARTES_PAR_ID, PROFILS_IA, nomDansPhrase } from '../core/config.js?v=2.02';
 
 /** Format de l'instantané : un compte rendu d'une autre version est écarté. */
 export const SCHEMA_PARTIE = 5;
@@ -17,7 +17,7 @@ export function enregistrerPartie(moteur) {
     quand: new Date().toISOString().slice(0, 16).replace('T', ' '),
     resultat: moteur.resultat(),
     contexte: {
-      nbJoueurs: cfg.nbJoueurs, lots: cfg.lots, abris: cfg.abris, desParLot: cfg.desParLot,
+      nbJoueurs: cfg.nbJoueurs, lots: cfg.lots, jetons: cfg.jetons, desParLot: cfg.desParLot,
       cartesPourGagner: cfg.cartesPourGagner, cartesVert: cfg.cartesVert,
       combos: cfg.combos.map((c) => ({ id: c.id, nom: c.nom, requis: c.requis })),
     },
