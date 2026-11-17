@@ -2,8 +2,8 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.07';
-import { VERSION } from '../version.js?v=2.07';
+import { h } from './dom.js?v=2.08';
+import { VERSION } from '../version.js?v=2.08';
 
 const PORTRAITS = {};
 
@@ -100,6 +100,61 @@ const CAMPS = [
   },
 ];
 
+// L'inspiration : Claude Ponti. Ses images sont protégées : on renvoie vers
+// elles (éditeur, lieux, expositions) au lieu de les recopier sur le site.
+const PONTI = [
+  {
+    theme: 'Les poussins par milliers',
+    pourquoi: 'La foule de petits bonshommes qui grouillent, se ressemblent tous et ont chacun leur idée : les Nadoes.',
+    liens: [
+      ['Pétronille et ses 120 petits', 'https://www.ecoledesloisirs.fr/livre/petronille-ses-120-petits', 'Une mère, cent vingt petits, et une forêt de plantes carnivores.'],
+      ['Mille secrets de poussins', 'https://www.ecoledesloisirs.fr/livre/mille-secrets-poussins', 'L’encyclopédie des poussins : leurs inventions, leurs manies.'],
+      ['Pouss’Poussins', 'https://www.ecoledesloisirs.fr/livre/pousspoussins', ''],
+      ['Tromboline et Foulbazar : Dans rien', 'https://www.ecoledesloisirs.fr/livre/tromboline-foulbazar-rien', 'Deux poussins qui font des expériences — et un titre qui va bien aux Nadoes de « Rien ».'],
+    ],
+  },
+  {
+    theme: 'Blaise, tempêtes et catastrophes',
+    pourquoi: 'Blaise le poussin masqué et sa bande débouchent une « tempêteuse », font des courses de chaises et '
+      + 'voient arriver le « Kontrôleur de Kastatroffe » après l’orage : la tornade comme terrain de jeu.',
+    liens: [
+      ['À l’aise, Blaise !', 'https://www.ecoledesloisirs.fr/livre/a-laise-blaise', ''],
+      ['Blaise 3 en 1', 'https://www.ecoledesloisirs.fr/livre/blaise-3-1', 'Trois aventures réunies.'],
+      ['Blaise dompteur de tache', 'https://www.ecoledesloisirs.fr/livre/blaise-dompteur-tache', 'Une tache d’encre au sale caractère.'],
+    ],
+  },
+  {
+    theme: 'Monstres improbables',
+    pourquoi: 'Des monstres plus étranges qu’effrayants, avec des noms qu’on invente en les disant : le modèle du Docteur Nado et de son Générateur.',
+    liens: [
+      ['Le jour du Mange-poussin', 'https://www.ecoledesloisirs.fr/livre/jour-du-mange-poussin', ''],
+      ['Ma vallée', 'https://www.ecoledesloisirs.fr/livre/ma-vallee', 'Le pays des Touims, et un Tue-Planète qui voyage dans l’univers.'],
+      ['L’Arbre sans fin', 'https://www.ecoledesloisirs.fr/livre/arbre-fin', ''],
+    ],
+  },
+  {
+    theme: 'Mondes à explorer',
+    pourquoi: 'Des cartes, des pays entiers, des machines et des mots-valises — « Siégoteuil » est déjà un mot de Ponti.',
+    liens: [
+      ['L’Avie d’Isée', 'https://www.ecoledesloisirs.fr/livre/avie-disee', ''],
+      ['La Venture d’Isée', 'https://www.ecoledesloisirs.fr/livre/venture-disee', ''],
+      ['Au fond du jardin', 'https://www.ecoledesloisirs.fr/livre/au-fond-du-jardin', ''],
+    ],
+  },
+  {
+    theme: 'Pour tout voir',
+    pourquoi: 'L’œuvre entière, ses poussins en vrai et une grande exposition à venir.',
+    liens: [
+      ['Claude Ponti chez l’école des loisirs', 'https://www.ecoledesloisirs.fr/auteur/claude-ponti', 'La bibliographie complète, plus de soixante-dix albums.'],
+      ['Le livret Ponti de l’éditeur (PDF)', 'https://www.ecoledesloisirs.fr/sites/default/files/auteurs_pdf/livret_ponti_bd.pdf', ''],
+      ['Le Poussin endormi, Jardin des Plantes de Nantes', 'https://mymodernmet.com/fr/claude-ponti-poussin-endormi-topiaire/', 'Ses poussins géants en buis, installés avec le Voyage à Nantes.'],
+      ['Les installations des jardins de Nantes', 'https://metropole.nantes.fr/que-faire-nantes/balade-autour-des-installations-artistiques-dans-les-parcs-et-jardins', ''],
+      ['« Claude Ponti et l’enfance », Musée de l’Homme', 'https://75.agendaculturel.fr/exposition/claude-ponti-et-l-enfance.html', 'Paris, du 3 février 2027 au 2 janvier 2028.'],
+      ['Claude Ponti sur Wikipédia', 'https://fr.wikipedia.org/wiki/Claude_Ponti', ''],
+    ],
+  },
+];
+
 const IMAGES_JEU = [
   { titre: 'Logo', src: 'assets/logo-tornadice.png', large: true },
   { titre: 'Dé — Réveil', src: 'assets/des/soleil.webp' },
@@ -165,6 +220,18 @@ export function vueLore() {
       h('p.lore-motivation.lore-motivation--camp', h('strong', 'Ce qui les fait voler : '), camp.motivation),
       camp.membres.length ? h('div.lore-persos', ...camp.membres.map((p) => personnage(p, camp))) : null,
     )),
+
+    h('div.carte.lore-ponti',
+      h('div.titre-section', 'Inspiration : Claude Ponti'),
+      h('p', 'La référence de TornaDice : les engins volants bricolés, les petits bonshommes par milliers, les poussins, '
+        + 'les monstres improbables et les mots inventés. Ses images sont protégées par le droit d’auteur : '
+        + 'plutôt que de les recopier ici, cette page renvoie vers les endroits où les regarder.'),
+      h('div.lore-refs', ...PONTI.map((g) => h('div.lore-ref',
+        h('h3', g.theme),
+        h('p.mini.muted', g.pourquoi),
+        h('ul', ...g.liens.map(([titre, url, note]) => h('li',
+          h('a', { href: url, target: '_blank', rel: 'noopener' }, titre),
+          note ? h('span.mini.muted', ` — ${note}`) : null))))))),
 
     h('div.carte',
       h('div.titre-section', 'Images du jeu'),

@@ -2,8 +2,8 @@
 // (assets/des) ; le dé pas encore lancé et le dé qui roule sont dessinés ici,
 // dans le même cadre.
 
-import { SYMBOLES } from '../core/config.js?v=2.07';
-import { VERSION } from '../version.js?v=2.07';
+import { SYMBOLES } from '../core/config.js?v=2.08';
+import { VERSION } from '../version.js?v=2.08';
 
 // Le corps du dé, comme sur les images : carré arrondi blanc, cerné de noir.
 const de = (contenu) => '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'

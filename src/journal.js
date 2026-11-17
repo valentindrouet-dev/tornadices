@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.08',
+    date: '17/11/2026',
+    notes: [
+      "Lore : une section « Inspiration : Claude Ponti » réunit les références — les poussins par milliers (Pétronille et ses 120 petits, Mille secrets de poussins…), Blaise et ses tempêtes, les monstres improbables (Le jour du Mange-poussin, Ma vallée…), les mondes à explorer, et pour tout voir : la bibliographie de l’éditeur, le Poussin endormi du Jardin des Plantes de Nantes et l’exposition du Musée de l’Homme en 2027. Les images de Claude Ponti sont protégées : la page renvoie vers elles plutôt que de les recopier.",
+    ],
+  },
+  {
     version: '2.07',
     date: '17/11/2026',
     notes: [

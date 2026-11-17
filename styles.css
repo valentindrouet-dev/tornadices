@@ -1526,6 +1526,11 @@ button.lien {
 .lore-image--carte img { aspect-ratio: 3 / 4; }
 .lore-image--large { grid-column: span 2; }
 .lore-image--large img { aspect-ratio: 539 / 376; }
+.lore-refs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 6px; }
+.lore-ref { padding: 12px 14px; border-radius: var(--r-s); background: var(--fond-doux); border: 1px solid var(--bord); }
+.lore-ref h3 { margin: 0 0 4px; font-family: var(--police-jeu); font-weight: 400; font-size: 17px; color: var(--accent-fonce); }
+.lore-ref ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13.5px; }
+.lore-ref a { color: var(--accent-fonce); font-weight: 700; }
 @media (max-width: 860px) {
   .lore-persos { grid-template-columns: minmax(0, 1fr); }
   .lore-perso { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: none; align-items: start; }
