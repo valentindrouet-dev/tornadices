@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.09';
-import { VERSION } from '../version.js?v=2.09';
-import { plancheInspiration } from './planche.js?v=2.09';
+import { h } from './dom.js?v=2.10';
+import { VERSION } from '../version.js?v=2.10';
+import { plancheInspiration } from './planche.js?v=2.10';
 
 const PORTRAITS = {};
 
@@ -22,15 +22,14 @@ const CAMPS = [
       + 'puis les îles, et elle a tout rangé n’importe où, en l’air. Les Budies ont décollé avec ce qu’ils avaient '
       + 'sous la main : un avion, une armure, un paon.',
     ],
-    motivation: 'Atteindre l’Abri, le seul endroit du monde où le vent ne souffle pas, et y mettre tout le monde à l’abri, '
-      + 'bananes comprises. Ensuite, et seulement ensuite, éteindre le Générateur.',
+    motivation: 'Sortir de la tornade. Tous, les trois, et si possible avec les bananes.',
     membres: [
       {
         id: 'big-budi', nom: 'Big Budi', titre: 'Orang-outan, pilote du Bananavion',
         texte: 'Le meilleur pilote de l’archipel, et aussi le seul, ce qui facilite les concours. Son Bananavion '
           + 'roule à la purée de banane. Chaque tornade lui en arrache un régime : il vole donc vite, '
           + 'et il compte beaucoup.',
-        motivation: 'Il a promis de ramener tout le monde à l’Abri. Une promesse de Budi, ça ne s’envole pas, '
+        motivation: 'Sortir de la tornade, et ne laisser personne dedans. Une promesse de Budi, ça ne s’envole pas, '
           + 'même dans une tornade.',
       },
       {
@@ -38,15 +37,15 @@ const CAMPS = [
         texte: 'Pour ne pas être emporté, ce poulpe très savant s’est fabriqué une armure en forme de pieuvre. '
           + 'Puis une deuxième par-dessus, au cas où. Puis une troisième, au cas où le cas où. '
           + 'L’ensemble fait des bulles. Personne ne sait pourquoi, pas même lui, et il y pense souvent.',
-        motivation: 'Comprendre le Générateur pour savoir l’arrêter. Il a huit bras pour tourner les boutons, '
-          + 'mais ils sont tous à l’intérieur.',
+        motivation: 'Sortir de la tornade en calculant. C’est lui qui a compris que la tornade était faite de dés, '
+          + 'et depuis il compte les faces sur ses huit bras — qui sont tous à l’intérieur, ce qui le gêne pour lancer.',
       },
       {
         id: 'helipaon', nom: 'Hélipaon', titre: 'Paon-hélicoptère',
         texte: 'Quand il fait la roue, il la fait si vite qu’il décolle. Il regarde droit devant lui avec des yeux '
           + 'où il n’y a rien du tout, ce qui ne l’empêche pas de couper une tornade en rondelles.',
-        motivation: 'Il n’a pas remarqué la tempête. Il croit que tout ce vent, ce sont des applaudissements, '
-          + 'et il veut saluer jusqu’au dernier rang.',
+        motivation: 'Sortir de la tornade, sans très bien savoir qu’il y est : il croit que tout ce vent, '
+          + 'ce sont des applaudissements. Il suit les deux autres, en saluant.',
       },
     ],
   },
@@ -60,12 +59,11 @@ const CAMPS = [
       'Les Nadoes sont de petits bonshommes noirs, tous pareils, et toujours un de plus qu’on croyait. '
       + 'Ils naissent de la suie du Générateur : à chaque tornade, il en tousse une poignée. '
       + 'Un Nado tout neuf ouvre les yeux en plein ciel, et la première chose qu’il apprend, c’est tomber.',
-      'Alors le Docteur leur a fait une promesse : « Aidez-moi, et chacun de vous aura sa place dans l’Abri, '
-      + 'là où l’on ne tombe plus jamais. » Les Nadoes ont dit oui tous ensemble, ce qui fait beaucoup de oui.',
+      'Le Docteur les employait pour graisser le Générateur et ramasser les dés tombés. Quand la machine s’est '
+      + 'emballée, ils étaient dessus, dedans et dessous. Ils ont attrapé tout ce qui pouvait voler, et même ce qui ne pouvait pas.',
     ],
-    motivation: 'Avoir leur place dans l’Abri, pour arrêter de tomber. Pour la gagner, ils font deux choses : '
-      + 'ils aident le Docteur à faire des tornades, et ils chassent les Budies du ciel, parce que chaque Budi '
-      + 'à l’Abri, c’est une place de moins pour un Nado. Ils n’ont jamais compté les places. Le Docteur non plus.',
+    motivation: 'Sortir de la tornade, et ne plus jamais tomber. Ils n’ont rien contre les Budies, '
+      + 'sauf qu’il n’y a pas de place pour tout le monde dans une trouée de nuages.',
     membres: [
       {
         id: 'baignoire', nom: 'La Baignoire', titre: 'Propulsée à la bonde',
@@ -99,13 +97,12 @@ const CAMPS = [
     texte: [
       'Il est assis à califourchon sur son Générateur, qui vole grâce aux tornades qui lui sortent des fe… '
       + 'du réacteur arrière. Du Générateur. On parle du Générateur.',
-      'Il ne peut pas descendre : c’est lui qui tient le volant des tornades. S’il lâche, elles iront souffler '
-      + 'n’importe où, et pas là où il l’a annoncé.',
+      'Il avait chargé son Générateur de dés pipés, pour que la tornade sorte à tous les coups. Mais le hasard '
+      + 'a toujours été plus fort que lui : les dés se sont mis à tourner tout seuls, de plus en plus vite, '
+      + 'et le Docteur s’est retrouvé au milieu de sa propre tornade.',
     ],
-    motivation: 'Avoir raison pour toujours. Pour ça, il veut deux choses : que le monde entier soit tornade, '
-      + 'pour que sa prévision soit juste partout, et s’installer ensuite dans l’Abri, tout seul, au calme, '
-      + 'pour le regarder avoir raison. Il joue donc contre tout le monde : les Budies veulent éteindre son '
-      + 'Générateur, et les Nadoes croient qu’il va partager l’Abri avec eux. Il n’a jamais eu l’intention de partager.',
+    motivation: 'Sortir de sa tornade, lui aussi, et le premier : il a toujours détesté arriver après les autres. '
+      + 'Il joue seul parce qu’il ne fait confiance à personne — ni aux Budies, ni à ses Nadoes, ni surtout aux dés.',
     membres: [],
   },
 ];
@@ -207,19 +204,32 @@ export function vueLore() {
     h('div.carte.lore-intro',
       h('div.titre-section', 'L’histoire'),
       h('p', 'Pendant vingt ans, ', h('strong', 'Viktor Nado'), ' a présenté la météo à la télévision. Il annonçait '
-        + '« Soleil », et il pleuvait. Il annonçait « Nuit calme », et l’orage arrachait les volets. Vingt ans de '
-        + 'prévisions fausses, vingt ans de lettres de téléspectateurs qui commençaient toutes par « Monsieur, '
-        + 'aujourd’hui encore… ».'),
-      h('p', 'Un matin, on l’a remplacé par un pigeon qui se trompait moins souvent. Viktor est rentré chez lui, '
-        + 'il a fermé la porte à double tour, et il a réfléchi très fort. Puisque le temps ne fait jamais ce qu’il '
-        + 'annonce, il annoncera ce que le temps va faire : il le fabriquera lui-même. Trois ans plus tard, il '
-        + 'sortait de son garage à califourchon sur le ', h('strong', 'Générateur à Tornades'), '.'),
-      h('p', 'Depuis, chaque matin, il annonce « Tornade ». Et chaque matin, il a raison.'),
-      h('p', 'Il ne reste qu’un endroit où le vent ne souffle pas : ', h('strong', 'l’Abri'), '. Les ',
-        h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ' veulent l’atteindre pour se mettre à l’abri. Les ',
-        h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'), ' veulent l’atteindre parce qu’on le leur a promis. '
-        + 'Le Docteur veut l’atteindre pour le garder pour lui. Tout le monde court vers le même endroit, en volant, '
-        + 'dans une tornade. C’est ça, une partie de TornaDice.'),
+        + '« Soleil », et il pleuvait. Il annonçait « Nuit calme », et l’orage arrachait les volets. Un matin, on l’a '
+        + 'remplacé par un pigeon qui se trompait moins souvent.'),
+      h('p', 'Viktor est rentré chez lui et il a réfléchi très fort. S’il se trompait toujours, c’est que le temps ne se '
+        + 'prévoit pas : ', h('strong', 'il se joue aux dés'), '. Quelque part là-haut, quelqu’un lance des dés à quatre '
+        + 'temps — du soleil, de la nuit, des éclaircies et des tornades — et le ciel fait ce qui sort.'),
+      h('p', 'Alors il a construit le ', h('strong', 'Générateur à Tornades'), ' : un gobelet géant qui lance des dés par '
+        + 'milliers et les fait tourner en l’air. Un dé qui tourne fait un tourbillon ; des milliers de dés qui tournent '
+        + 'ensemble font une tornade. Pour être sûr de son coup, il a pipé la face tornade avec du plomb.'),
+      h('p', 'Ça a marché. Trop bien. Les dés ont tourné tout seuls, de plus en plus vite, et la tornade a avalé les îles '
+        + 'des ', h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ', les ',
+        h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'), ' qui travaillaient sur la machine, et le Docteur '
+        + 'lui-même. Maintenant, tout le monde tourne dedans, et ', h('strong', 'tout le monde veut en sortir'), '.'),
+    ),
+
+    h('div.carte.lore-des',
+      h('div.titre-section', 'Pourquoi des dés ?'),
+      h('p', 'Dans la tornade, les dés passent à portée de main. On en attrape un lot, on le lance, et ', h('strong',
+        'le temps qui sort décide de ce qui arrive à son engin'), ' :'),
+      h('ul.regles-liste',
+        h('li', h('strong', 'Trois soleils'), ' : le beau temps revient autour de l’engin, qui se remet droit, prêt à s’échapper.'),
+        h('li', h('strong', 'Trois éclaircies'), ' : une trouée s’ouvre dans les nuages, et un engin sort de la tornade.'),
+        h('li', h('strong', 'Trois nuits'), ' : on lance la nuit sur un voisin ; aveuglé, son engin repart de travers.'),
+        h('li', h('strong', 'Trois tornades'), ' : le vent arrache les dés et les pousse au voisin.'),
+      ),
+      h('p', 'Une face tornade ne se relance pas : elle est lestée du plomb du Docteur. Et les dés passent de main en '
+        + 'main parce que la tornade tourne — la Carte Rotation dit dans quel sens.'),
     ),
 
     ...CAMPS.map((camp) => h('section.carte.lore-camp', { style: { '--couleur-camp': camp.couleur, '--clair-camp': camp.clair } },

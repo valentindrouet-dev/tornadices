@@ -1,11 +1,11 @@
 // Compte rendu de la dernière partie jouée à la table. L'instantané est figé au
 // coup de sifflet final et gardé dans le navigateur.
 
-import { h, duree, dureeLongue, telecharger } from './dom.js?v=2.09';
-import { store } from './store.js?v=2.09';
-import { aller } from './app.js?v=2.09';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.09';
-import { EQUIPES, CARTES_PAR_ID, PROFILS_IA, nomDansPhrase } from '../core/config.js?v=2.09';
+import { h, duree, dureeLongue, telecharger } from './dom.js?v=2.10';
+import { store } from './store.js?v=2.10';
+import { aller } from './app.js?v=2.10';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.10';
+import { EQUIPES, CARTES_PAR_ID, PROFILS_IA, nomDansPhrase } from '../core/config.js?v=2.10';
 
 /** Format de l'instantané : un compte rendu d'une autre version est écarté. */
 export const SCHEMA_PARTIE = 5;

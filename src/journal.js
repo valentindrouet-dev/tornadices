@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.10',
+    date: '17/11/2026',
+    notes: [
+      "Lore : tout le monde veut simplement sortir de la tornade — les Budies, les Nadoes et le Docteur lui-même, pris dans sa propre machine. Nouvelle explication des dés : le temps se joue aux dés, le Générateur en lance des milliers qui font la tornade en tournant ; trois soleils redressent un engin, trois éclaircies le font sortir, trois nuits envoient le voisin de travers, trois tornades poussent les dés au voisin. La face tornade est lestée de plomb (elle ne se relance pas), et les dés tournent avec la tornade, dans le sens de la Carte Rotation.",
+    ],
+  },
+  {
     version: '2.09',
     date: '17/11/2026',
     notes: [
