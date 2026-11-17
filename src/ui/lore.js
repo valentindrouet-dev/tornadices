@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.12';
-import { VERSION } from '../version.js?v=2.12';
-import { plancheInspiration } from './planche.js?v=2.12';
+import { h } from './dom.js?v=2.13';
+import { VERSION } from '../version.js?v=2.13';
+import { plancheInspiration } from './planche.js?v=2.13';
 
 const PORTRAITS = {};
 
@@ -16,7 +16,7 @@ const CAMPS = [
     clair: '#fff1e2',
     accroche: 'Les rescapés',
     texte: [
-      'Avant, les Budies habitaient l’archipel de Budi : trois îles, quatre hamacs et neuf cent mille bananes. '
+      'Avant, les Budies habitaient Hamacapulco : trois îles, quatre hamacs et neuf cent mille bananes. '
       + 'Il ne s’y passait jamais rien, et c’était très bien comme ça.',
       'Un mardi, la première tornade du Docteur est arrivée sans prévenir. Elle a pris les bananes, puis les hamacs, '
       + 'puis les îles, et elle a tout rangé n’importe où, en l’air. Les Budies ont décollé avec ce qu’ils avaient '
@@ -26,7 +26,7 @@ const CAMPS = [
     membres: [
       {
         id: 'big-budi', nom: 'Big Budi', titre: 'Orang-outan, pilote du Bananavion',
-        texte: 'Le meilleur pilote de l’archipel, et aussi le seul, ce qui facilite les concours. Son Bananavion '
+        texte: 'Le meilleur pilote d’Hamacapulco, et aussi le seul, ce qui facilite les concours. Son Bananavion '
           + 'roule à la purée de banane. Chaque tornade lui en arrache un régime : il vole donc vite, '
           + 'et il compte beaucoup.',
         motivation: 'Sortir de la tornade, et ne laisser personne dedans. Une promesse de Budi, ça ne s’envole pas, '
@@ -41,7 +41,7 @@ const CAMPS = [
           + 'et depuis il compte les faces sur ses huit bras — qui sont tous à l’intérieur, ce qui le gêne pour lancer.',
       },
       {
-        id: 'helipaon', nom: 'Hélipaon', titre: 'Paon-hélicoptère',
+        id: 'gaston', nom: 'Gaston Tournepaon', titre: 'Paon-hélicoptère',
         texte: 'Quand il fait la roue, il la fait si vite qu’il décolle. Il regarde droit devant lui avec des yeux '
           + 'où il n’y a rien du tout, ce qui ne l’empêche pas de couper une tornade en rondelles.',
         motivation: 'Sortir de la tornade, sans très bien savoir qu’il y est : il croit que tout ce vent, '
@@ -66,10 +66,10 @@ const CAMPS = [
       + 'sauf qu’il n’y a pas de place pour tout le monde dans une trouée de nuages.',
     membres: [
       {
-        id: 'baignoire', nom: 'La Baignoire', titre: 'Propulsée à la bonde',
+        id: 'savonnef', nom: 'Le Savonnef', titre: 'Baignoire propulsée à la bonde',
         texte: 'Elle avance comme un hors-bord, poussée par le jet de sa bonde. Quand elle se retourne, elle se vide, '
           + 'et un entonnoir à l’arrière recueille la pluie pour repartir.',
-        motivation: 'C’était la baignoire du Docteur. Les Nadoes ne savent pas à quoi elle servait. '
+        motivation: 'C’était la baignoire du Docteur, d’où son nom : une nef, avec un savon dedans. Les Nadoes ne savent pas à quoi elle servait. '
           + 'Ils ont trouvé un savon dedans et s’en servent pour viser.',
       },
       {
@@ -80,11 +80,11 @@ const CAMPS = [
           + 'Le jour où deux Nadoes tomberont d’accord, le Siégoteuil tombera tout court.',
       },
       {
-        id: 'rien', nom: 'Rien', titre: 'Littéralement rien',
+        id: 'rien', nom: 'Rien', titre: 'Le seul engin qui porte le nom exact de ce qu’il est',
         texte: 'Une grappe de Nadoes qui se tiennent par les mains et par les pieds, sans aucun engin. '
           + 'Ils sont tellement nombreux qu’ils se sont persuadés de voler. Tant que personne ne leur dit le contraire, '
           + 'ça marche.',
-        motivation: 'Montrer qu’on peut voler avec rien. Surtout, ne leur parlez pas de coup de vent.',
+        motivation: 'Quand on leur demande sur quoi ils volent, ils répondent « Rien », et c’est vrai. Ils veulent prouver qu’on peut sortir d’une tornade avec rien. Surtout, ne leur parlez pas de coup de vent.',
       },
     ],
   },

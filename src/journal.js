@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.13',
+    date: '17/11/2026',
+    notes: [
+      "Lore : les Budies viennent d’Hamacapulco, le paon-hélicoptère s’appelle Gaston Tournepaon, la baignoire des Nadoes devient le Savonnef, et Rien garde son nom — c’est ce que répondent les Nadoes quand on leur demande sur quoi ils volent.",
+    ],
+  },
+  {
     version: '2.12',
     date: '17/11/2026',
     notes: [

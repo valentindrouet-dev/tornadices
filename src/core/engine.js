@@ -8,11 +8,11 @@
 // jamais son lot sans combinaison. Un lot qui arrive chez un joueur qui en
 // tient déjà un le force à passer le sien : c'est le tourbillon.
 
-import { makeRng } from './rng.js?v=2.12';
+import { makeRng } from './rng.js?v=2.13';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, profilIA, placement, comboServie,
   requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
-} from './config.js?v=2.12';
+} from './config.js?v=2.13';
 
 // Le symbole qu'il faut garder pour viser chaque combinaison de base.
 const SYMBOLE_DE_COMBO = { reveil: 'soleil', abri: 'grange', sommeil: 'lune', envol: 'tornade' };

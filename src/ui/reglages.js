@@ -2,21 +2,21 @@
 // le réglage actif (profils.js) ; les préférences de table — noms, effectifs,
 // graine — valent pour tous les réglages.
 
-import { h, remplacer, telecharger } from './dom.js?v=2.12';
-import { store } from './store.js?v=2.12';
-import { aller } from './app.js?v=2.12';
-import { suiteSymboles } from './icons.js?v=2.12';
-import { SONS, NOMS_SONS, sonsActifs, volumeSons, reglerSons, reglerVolume, jouerSon, eveillerSons } from './sons.js?v=2.12';
-import { randomSeed } from '../core/rng.js?v=2.12';
+import { h, remplacer, telecharger } from './dom.js?v=2.13';
+import { store } from './store.js?v=2.13';
+import { aller } from './app.js?v=2.13';
+import { suiteSymboles } from './icons.js?v=2.13';
+import { SONS, NOMS_SONS, sonsActifs, volumeSons, reglerSons, reglerVolume, jouerSon, eveillerSons } from './sons.js?v=2.13';
+import { randomSeed } from '../core/rng.js?v=2.13';
 import {
   SYMBOLES, ORDRE_SYMBOLES, COMBOS, CARTES, NOMBRES_JOUEURS, JOUEURS_MIN, JOUEURS_MAX, RYTHME,
   configDepuis, valeurTable, ecartsDeRegles, requisCarte, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.12';
+} from '../core/config.js?v=2.13';
 import {
   reglagesCourants, enregistrerReglages, reglesOfficielles, barreProfils, idActif, ID_OFFICIELLES,
   officiellesLocales, retablirOfficielles, fichierReglesOfficielles, validerReglesOfficielles,
   selectionnerProfil, nomActif,
-} from './profils.js?v=2.12';
+} from './profils.js?v=2.13';
 
 // ── Préférences de table ─────────────────────────────────────────────────────
 export const NOMS_ORIGINE = ['Valentin', 'Sylvain', 'Justine', 'Noël', 'Clément', 'Budi'];
