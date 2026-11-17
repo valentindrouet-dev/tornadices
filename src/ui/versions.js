@@ -1,11 +1,11 @@
 // Journal des versions. Il est long : on ne le charge qu'ici.
 
-import { h, remplacer } from './dom.js?v=2.08';
-import { VERSION, BUILD_DATE } from '../version.js?v=2.08';
+import { h, remplacer } from './dom.js?v=2.09';
+import { VERSION, BUILD_DATE } from '../version.js?v=2.09';
 
 export function vueVersions() {
   const liste = h('div', h('p.muted', 'Chargement du journal…'));
-  import('../journal.js?v=2.08').then(({ CHANGELOG }) => remplacer(liste,
+  import('../journal.js?v=2.09').then(({ CHANGELOG }) => remplacer(liste,
     ...CHANGELOG.map((v, i) => h('div', { class: `ligne-version${i === 0 ? ' actuelle' : ''}` },
       h('div.tete',
         h('span.num', v.version),

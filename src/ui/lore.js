@@ -2,8 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.08';
-import { VERSION } from '../version.js?v=2.08';
+import { h } from './dom.js?v=2.09';
+import { VERSION } from '../version.js?v=2.09';
+import { plancheInspiration } from './planche.js?v=2.09';
 
 const PORTRAITS = {};
 
@@ -15,33 +16,37 @@ const CAMPS = [
     clair: '#fff1e2',
     accroche: 'Les rescapés',
     texte: [
-      'Ils viennent de l’archipel de Budi, une poignée d’îles à bananes où il ne se passait jamais rien. '
-      + 'La première tornade du Doc a emporté la récolte, les hamacs et la moitié du paysage. Les Budies ont '
-      + 'décollé avec ce qu’ils avaient sous la main, et ils comptent bien atterrir ailleurs que dans le générateur.',
+      'Avant, les Budies habitaient l’archipel de Budi : trois îles, quatre hamacs et neuf cent mille bananes. '
+      + 'Il ne s’y passait jamais rien, et c’était très bien comme ça.',
+      'Un mardi, la première tornade du Docteur est arrivée sans prévenir. Elle a pris les bananes, puis les hamacs, '
+      + 'puis les îles, et elle a tout rangé n’importe où, en l’air. Les Budies ont décollé avec ce qu’ils avaient '
+      + 'sous la main : un avion, une armure, un paon.',
     ],
-    motivation: 'S’arracher au maelstrom, ramener tout le monde à l’Abri — et, si possible, récupérer les bananes en route.',
+    motivation: 'Atteindre l’Abri, le seul endroit du monde où le vent ne souffle pas, et y mettre tout le monde à l’abri, '
+      + 'bananes comprises. Ensuite, et seulement ensuite, éteindre le Générateur.',
     membres: [
       {
         id: 'big-budi', nom: 'Big Budi', titre: 'Orang-outan, pilote du Bananavion',
-        texte: 'Le meilleur pilote de l’archipel — et le seul. Son Bananavion carbure à la purée de banane : '
-          + 'chaque tornade qui passe lui arrache un régime de carburant, et il pilote au millilitre près, comme un chef.',
-        motivation: 'Il ne fuit pas pour lui. Il a promis de ramener tout le monde, et un Budi tient ses promesses — '
-          + 'surtout quand il tient le manche.',
+        texte: 'Le meilleur pilote de l’archipel, et aussi le seul, ce qui facilite les concours. Son Bananavion '
+          + 'roule à la purée de banane. Chaque tornade lui en arrache un régime : il vole donc vite, '
+          + 'et il compte beaucoup.',
+        motivation: 'Il a promis de ramener tout le monde à l’Abri. Une promesse de Budi, ça ne s’envole pas, '
+          + 'même dans une tornade.',
       },
       {
         id: 'octavius', nom: 'Octavius', titre: 'Une pieuvre dans une pieuvre (dans une pieuvre, dans…)',
-        texte: 'Pour survivre à la tempête, ce poulpe de génie s’est construit une armure de métal à sa propre image, '
-          + 'puis une autre par-dessus, au cas où, puis une autre. L’ensemble fait des bulles. Personne ne sait pourquoi, '
-          + 'pas même lui.',
-        motivation: 'Comprendre le Générateur pour l’éteindre. Il a déjà repéré le bouton d’arrêt ; il ne lui manque '
-          + 'qu’un bras pour l’atteindre. Il en a huit, mais ils sont tous à l’intérieur.',
+        texte: 'Pour ne pas être emporté, ce poulpe très savant s’est fabriqué une armure en forme de pieuvre. '
+          + 'Puis une deuxième par-dessus, au cas où. Puis une troisième, au cas où le cas où. '
+          + 'L’ensemble fait des bulles. Personne ne sait pourquoi, pas même lui, et il y pense souvent.',
+        motivation: 'Comprendre le Générateur pour savoir l’arrêter. Il a huit bras pour tourner les boutons, '
+          + 'mais ils sont tous à l’intérieur.',
       },
       {
         id: 'helipaon', nom: 'Hélipaon', titre: 'Paon-hélicoptère',
-        texte: 'Il fait tourner ses plumes à toute vitesse et s’envole, le regard parfaitement vide. '
-          + 'Ne le sous-estimez pas : un paon qui fait la roue à trois mille tours par minute découpe une tornade en rondelles.',
-        motivation: 'Il n’a pas vraiment compris qu’il y avait une tempête. Il croit qu’on l’applaudit, '
-          + 'et il compte bien saluer jusqu’au dernier rang.',
+        texte: 'Quand il fait la roue, il la fait si vite qu’il décolle. Il regarde droit devant lui avec des yeux '
+          + 'où il n’y a rien du tout, ce qui ne l’empêche pas de couper une tornade en rondelles.',
+        motivation: 'Il n’a pas remarqué la tempête. Il croit que tout ce vent, ce sont des applaudissements, '
+          + 'et il veut saluer jusqu’au dernier rang.',
       },
     ],
   },
@@ -52,34 +57,36 @@ const CAMPS = [
     clair: '#e3f0fc',
     accroche: 'Les petites mains du Doc',
     texte: [
-      'De petites créatures humanoïdes, toutes noires, toutes pareilles, et toujours beaucoup trop nombreuses. '
-      + 'Les Nadoes naissent de la suie du Générateur : chaque tornade en recrache une poignée. Ils volent en '
-      + 'myriades, à bord d’engins qui ne sont pas du tout conçus pour tenir en l’air.',
-      'Le Doc leur a promis une place dans l’Abri le jour où le monde entier ne sera plus que tornade. '
-      + 'Personne ne lui a demandé combien de places il y a dans l’Abri.',
+      'Les Nadoes sont de petits bonshommes noirs, tous pareils, et toujours un de plus qu’on croyait. '
+      + 'Ils naissent de la suie du Générateur : à chaque tornade, il en tousse une poignée. '
+      + 'Un Nado tout neuf ouvre les yeux en plein ciel, et la première chose qu’il apprend, c’est tomber.',
+      'Alors le Docteur leur a fait une promesse : « Aidez-moi, et chacun de vous aura sa place dans l’Abri, '
+      + 'là où l’on ne tombe plus jamais. » Les Nadoes ont dit oui tous ensemble, ce qui fait beaucoup de oui.',
     ],
-    motivation: 'Semer la destruction pour le Doc, et décrocher leur place à l’Abri avant la retombée — '
-      + 'car une tornade finit toujours par retomber, et personne n’a envie d’être dessous à ce moment-là.',
+    motivation: 'Avoir leur place dans l’Abri, pour arrêter de tomber. Pour la gagner, ils font deux choses : '
+      + 'ils aident le Docteur à faire des tornades, et ils chassent les Budies du ciel, parce que chaque Budi '
+      + 'à l’Abri, c’est une place de moins pour un Nado. Ils n’ont jamais compté les places. Le Docteur non plus.',
     membres: [
       {
         id: 'baignoire', nom: 'La Baignoire', titre: 'Propulsée à la bonde',
-        texte: 'Elle file comme un hors-bord, poussée par le jet de sa bonde. Quand elle se retourne, elle se vide ; '
-          + 'un entonnoir monté à l’arrière récupère l’eau de pluie pour repartir.',
-        motivation: 'C’était la baignoire du Doc. Les Nadoes ignorent à quoi elle servait avant ; '
-          + 'ils soupçonnent un rapport avec le savon, qu’ils utilisent comme projectile.',
+        texte: 'Elle avance comme un hors-bord, poussée par le jet de sa bonde. Quand elle se retourne, elle se vide, '
+          + 'et un entonnoir à l’arrière recueille la pluie pour repartir.',
+        motivation: 'C’était la baignoire du Docteur. Les Nadoes ne savent pas à quoi elle servait. '
+          + 'Ils ont trouvé un savon dedans et s’en servent pour viser.',
       },
       {
         id: 'siegoteuil', nom: 'Le Siégoteuil Volant', titre: 'Assemblage baroque',
-        texte: 'Des fauteuils, des chaises, des hélices, des ailes, des voiles et des volants — au pluriel : '
-          + 'aucun Nado n’a voulu laisser le sien. Ils s’y entassent et tentent, tant bien que mal, de voler.',
-        motivation: 'Chacun pilote dans une direction différente, et c’est précisément ce qui le maintient en l’air. '
-          + 'Le premier qui se met d’accord avec un autre fait tout tomber.',
+        texte: 'Des fauteuils, des chaises, des hélices, des ailes, des voiles et des volants : un volant par Nado, '
+          + 'personne n’a voulu prêter le sien.',
+        motivation: 'Chacun tourne son volant de son côté, et c’est ce qui le tient en l’air. '
+          + 'Le jour où deux Nadoes tomberont d’accord, le Siégoteuil tombera tout court.',
       },
       {
         id: 'rien', nom: 'Rien', titre: 'Littéralement rien',
-        texte: 'Une grappe de Nadoes accrochés les uns aux autres, persuadés que, nombreux comme ils sont, ils volent. '
-          + 'Tant que personne ne leur dit le contraire, ça marche.',
-        motivation: 'Prouver qu’on n’a besoin de rien pour voler. Au premier coup de vent, par contre…',
+        texte: 'Une grappe de Nadoes qui se tiennent par les mains et par les pieds, sans aucun engin. '
+          + 'Ils sont tellement nombreux qu’ils se sont persuadés de voler. Tant que personne ne leur dit le contraire, '
+          + 'ça marche.',
+        motivation: 'Montrer qu’on peut voler avec rien. Surtout, ne leur parlez pas de coup de vent.',
       },
     ],
   },
@@ -90,12 +97,15 @@ const CAMPS = [
     clair: '#f0eafb',
     accroche: 'Joueur solitaire',
     texte: [
-      'À califourchon sur son propre Générateur, il file dans le ciel, porté par les tornades qui lui sortent des fe… '
+      'Il est assis à califourchon sur son Générateur, qui vole grâce aux tornades qui lui sortent des fe… '
       + 'du réacteur arrière. Du Générateur. On parle du Générateur.',
+      'Il ne peut pas descendre : c’est lui qui tient le volant des tornades. S’il lâche, elles iront souffler '
+      + 'n’importe où, et pas là où il l’a annoncé.',
     ],
-    motivation: 'Avoir raison. Toujours. Pour cela, le Générateur ne doit jamais s’arrêter — et le bouton d’arrêt '
-      + 'est de l’autre côté de la machine, dont il n’a jamais réussi à faire le tour. Il joue seul contre tous : '
-      + 'les Budies le contredisent, et les Nadoes lui coûtent une fortune en suie.',
+    motivation: 'Avoir raison pour toujours. Pour ça, il veut deux choses : que le monde entier soit tornade, '
+      + 'pour que sa prévision soit juste partout, et s’installer ensuite dans l’Abri, tout seul, au calme, '
+      + 'pour le regarder avoir raison. Il joue donc contre tout le monde : les Budies veulent éteindre son '
+      + 'Générateur, et les Nadoes croient qu’il va partager l’Abri avec eux. Il n’a jamais eu l’intention de partager.',
     membres: [],
   },
 ];
@@ -187,7 +197,7 @@ function personnage(p, camp) {
       h('h3', p.nom),
       h('div.lore-titre', p.titre),
       h('p', p.texte),
-      h('p.lore-motivation', h('strong', 'Pourquoi il vole : '), p.motivation)));
+      h('p.lore-motivation', h('strong', 'Ce qu’il veut : '), p.motivation)));
 }
 
 export function vueLore() {
@@ -196,20 +206,20 @@ export function vueLore() {
 
     h('div.carte.lore-intro',
       h('div.titre-section', 'L’histoire'),
-      h('p', 'L’infâme docteur ', h('strong', 'Viktor Nado'), ' a mis tout son génie maléfique — et passablement '
-        + 'dérangé — dans une invention sans pareille : le ', h('strong', 'Générateur à Tornades'),
-        ', qui lui permet de répandre des tornades sur le monde entier.'),
-      h('p', 'Pourquoi ? Pendant vingt ans, Viktor a présenté la météo à la télévision régionale. Vingt ans de '
-        + '« grand soleil » sous des trombes d’eau, vingt ans de « nuit calme » emportée par l’orage, vingt ans de '
-        + 'courrier des téléspectateurs. Le jour où on l’a remplacé par un pigeon voyageur qui se trompait moins '
-        + 'souvent, il a juré que plus jamais le ciel ne le contredirait : puisque le temps refuse d’obéir à ses '
-        + 'prévisions, ce sont ses prévisions qui feront le temps. Désormais, chaque matin, il annonce « Tornade ». '
-        + 'Et il a toujours raison.'),
-      h('p', 'Pris dans la tempête, les malheureux ', h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'),
-        ' n’ont qu’une idée : s’arracher au maelstrom et rejoindre l’Abri, le seul endroit du monde où le vent ne '
-        + 'souffle jamais. Les ', h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'),
-        ', eux, sont en quête de destruction. Les deux équipes se disputent la domination des cieux — et leur survie, '
-        + 'car au fond, tous veulent la même chose : être encore là quand la tempête retombera.'),
+      h('p', 'Pendant vingt ans, ', h('strong', 'Viktor Nado'), ' a présenté la météo à la télévision. Il annonçait '
+        + '« Soleil », et il pleuvait. Il annonçait « Nuit calme », et l’orage arrachait les volets. Vingt ans de '
+        + 'prévisions fausses, vingt ans de lettres de téléspectateurs qui commençaient toutes par « Monsieur, '
+        + 'aujourd’hui encore… ».'),
+      h('p', 'Un matin, on l’a remplacé par un pigeon qui se trompait moins souvent. Viktor est rentré chez lui, '
+        + 'il a fermé la porte à double tour, et il a réfléchi très fort. Puisque le temps ne fait jamais ce qu’il '
+        + 'annonce, il annoncera ce que le temps va faire : il le fabriquera lui-même. Trois ans plus tard, il '
+        + 'sortait de son garage à califourchon sur le ', h('strong', 'Générateur à Tornades'), '.'),
+      h('p', 'Depuis, chaque matin, il annonce « Tornade ». Et chaque matin, il a raison.'),
+      h('p', 'Il ne reste qu’un endroit où le vent ne souffle pas : ', h('strong', 'l’Abri'), '. Les ',
+        h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ' veulent l’atteindre pour se mettre à l’abri. Les ',
+        h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'), ' veulent l’atteindre parce qu’on le leur a promis. '
+        + 'Le Docteur veut l’atteindre pour le garder pour lui. Tout le monde court vers le même endroit, en volant, '
+        + 'dans une tornade. C’est ça, une partie de TornaDice.'),
     ),
 
     ...CAMPS.map((camp) => h('section.carte.lore-camp', { style: { '--couleur-camp': camp.couleur, '--clair-camp': camp.clair } },
@@ -217,9 +227,11 @@ export function vueLore() {
         h('h2', camp.nom),
         h('span.lore-accroche', camp.accroche)),
       ...camp.texte.map((t) => h('p', t)),
-      h('p.lore-motivation.lore-motivation--camp', h('strong', 'Ce qui les fait voler : '), camp.motivation),
+      h('p.lore-motivation.lore-motivation--camp', h('strong', camp.membres.length ? 'Ce qu’ils veulent : ' : 'Ce qu’il veut : '), camp.motivation),
       camp.membres.length ? h('div.lore-persos', ...camp.membres.map((p) => personnage(p, camp))) : null,
     )),
+
+    plancheInspiration(),
 
     h('div.carte.lore-ponti',
       h('div.titre-section', 'Inspiration : Claude Ponti'),

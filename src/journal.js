@@ -2,6 +2,14 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.09',
+    date: '17/11/2026',
+    notes: [
+      "Lore réécrit dans un ton plus conte, et des motivations plus claires : tout le monde veut l’Abri, le seul endroit où le vent ne souffle pas. Les Budies pour s’y mettre à l’abri ; les Nadoes, nés de la suie du Générateur et qui ne savent que tomber, parce que le Docteur leur y a promis une place — d’où la chasse aux Budies, chaque Budi à l’Abri prenant une place ; le Docteur, ancien présentateur météo qui s’est toujours trompé, pour couvrir le monde de tornades et avoir enfin raison partout, puis garder l’Abri pour lui seul.",
+      "Lore : une planche d’inspiration privée. On y dépose ses propres images (glisser-déposer ou choix de fichiers), elles restent dans le navigateur — jamais envoyées ni publiées avec le site — et s’agrandissent d’un clic.",
+    ],
+  },
+  {
     version: '2.08',
     date: '17/11/2026',
     notes: [
