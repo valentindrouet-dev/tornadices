@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.11',
+    date: '17/11/2026',
+    notes: [
+      "Lore : nouvelle origine de la tornade. Viktor Nado, savant reconnu de la météo, se trompait toujours avec son savoir ; il s’est mis à jouer la météo aux dés, puis à en lancer toujours plus pour affiner ses prévisions, avec une machine pour les lancer tous à la fois. Un matin, il y en avait tellement que la machine s’est emballée : le Générateur de dés est devenu un Générateur de tornades de dés, qui a tout emporté — Budies, Nadoes et le Docteur lui-même.",
+    ],
+  },
+  {
     version: '2.10',
     date: '17/11/2026',
     notes: [

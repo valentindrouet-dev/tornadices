@@ -2,7 +2,7 @@
 // ce navigateur (IndexedDB). Elles ne sont ni envoyées, ni publiées avec le
 // site — c'est la place des scans et des références sous droits.
 
-import { h, remplacer } from './dom.js?v=2.10';
+import { h, remplacer } from './dom.js?v=2.11';
 
 const BASE = 'tornadice-planche';
 const TABLE = 'images';

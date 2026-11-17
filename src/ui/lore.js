@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.10';
-import { VERSION } from '../version.js?v=2.10';
-import { plancheInspiration } from './planche.js?v=2.10';
+import { h } from './dom.js?v=2.11';
+import { VERSION } from '../version.js?v=2.11';
+import { plancheInspiration } from './planche.js?v=2.11';
 
 const PORTRAITS = {};
 
@@ -59,7 +59,7 @@ const CAMPS = [
       'Les Nadoes sont de petits bonshommes noirs, tous pareils, et toujours un de plus qu’on croyait. '
       + 'Ils naissent de la suie du Générateur : à chaque tornade, il en tousse une poignée. '
       + 'Un Nado tout neuf ouvre les yeux en plein ciel, et la première chose qu’il apprend, c’est tomber.',
-      'Le Docteur les employait pour graisser le Générateur et ramasser les dés tombés. Quand la machine s’est '
+      'Le Docteur les employait pour remplir le Générateur et ramasser les dés tombés. Quand la machine s’est '
       + 'emballée, ils étaient dessus, dedans et dessous. Ils ont attrapé tout ce qui pouvait voler, et même ce qui ne pouvait pas.',
     ],
     motivation: 'Sortir de la tornade, et ne plus jamais tomber. Ils n’ont rien contre les Budies, '
@@ -97,9 +97,7 @@ const CAMPS = [
     texte: [
       'Il est assis à califourchon sur son Générateur, qui vole grâce aux tornades qui lui sortent des fe… '
       + 'du réacteur arrière. Du Générateur. On parle du Générateur.',
-      'Il avait chargé son Générateur de dés pipés, pour que la tornade sorte à tous les coups. Mais le hasard '
-      + 'a toujours été plus fort que lui : les dés se sont mis à tourner tout seuls, de plus en plus vite, '
-      + 'et le Docteur s’est retrouvé au milieu de sa propre tornade.',
+      'Il voulait seulement prévoir le temps. Il a fini au milieu du pire temps qui soit, et c’est lui qui l’a fabriqué.',
     ],
     motivation: 'Sortir de sa tornade, lui aussi, et le premier : il a toujours détesté arriver après les autres. '
       + 'Il joue seul parce qu’il ne fait confiance à personne — ni aux Budies, ni à ses Nadoes, ni surtout aux dés.',
@@ -203,17 +201,19 @@ export function vueLore() {
 
     h('div.carte.lore-intro',
       h('div.titre-section', 'L’histoire'),
-      h('p', 'Pendant vingt ans, ', h('strong', 'Viktor Nado'), ' a présenté la météo à la télévision. Il annonçait '
-        + '« Soleil », et il pleuvait. Il annonçait « Nuit calme », et l’orage arrachait les volets. Un matin, on l’a '
-        + 'remplacé par un pigeon qui se trompait moins souvent.'),
-      h('p', 'Viktor est rentré chez lui et il a réfléchi très fort. S’il se trompait toujours, c’est que le temps ne se '
-        + 'prévoit pas : ', h('strong', 'il se joue aux dés'), '. Quelque part là-haut, quelqu’un lance des dés à quatre '
-        + 'temps — du soleil, de la nuit, des éclaircies et des tornades — et le ciel fait ce qui sort.'),
-      h('p', 'Alors il a construit le ', h('strong', 'Générateur à Tornades'), ' : un gobelet géant qui lance des dés par '
-        + 'milliers et les fait tourner en l’air. Un dé qui tourne fait un tourbillon ; des milliers de dés qui tournent '
-        + 'ensemble font une tornade. Pour être sûr de son coup, il a pipé la face tornade avec du plomb.'),
-      h('p', 'Ça a marché. Trop bien. Les dés ont tourné tout seuls, de plus en plus vite, et la tornade a avalé les îles '
-        + 'des ', h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ', les ',
+      h('p', 'Le docteur ', h('strong', 'Viktor Nado'), ' était un savant reconnu, spécialiste de la météo. Il avait '
+        + 'tout lu, tout mesuré, tout calculé. Et il se trompait tout le temps : il annonçait du soleil, il pleuvait ; '
+        + 'il annonçait une nuit calme, l’orage arrachait les volets.'),
+      h('p', 'Puisque son savoir ne servait à rien, il a essayé autre chose : ', h('strong', 'jouer la météo aux dés'),
+        '. Un dé avec du soleil, de la nuit, des éclaircies et des tornades ; il le lançait chaque matin, et il annonçait '
+        + 'ce qui sortait. Ce n’était pas beaucoup mieux.'),
+      h('p', 'Alors il a lancé deux dés, pour être plus précis. Puis dix. Puis cent. Plus il y avait de dés, se disait-il, '
+        + 'plus la prévision serait fine. Pour les lancer tous à la fois, il a construit une machine : le ',
+        h('strong', 'Générateur de dés'), '.'),
+      h('p', 'Il en a mis tellement dedans qu’un matin, la machine s’est emballée. Des milliers de dés se sont mis à '
+        + 'tourner ensemble, de plus en plus vite, de plus en plus haut, jusqu’à former une tornade. Le Générateur de dés '
+        + 'était devenu un ', h('strong', 'Générateur de tornades de dés'), ', et il emportait tout.'),
+      h('p', 'Il a avalé les îles des ', h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ', les ',
         h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'), ' qui travaillaient sur la machine, et le Docteur '
         + 'lui-même. Maintenant, tout le monde tourne dedans, et ', h('strong', 'tout le monde veut en sortir'), '.'),
     ),
@@ -228,7 +228,7 @@ export function vueLore() {
         h('li', h('strong', 'Trois nuits'), ' : on lance la nuit sur un voisin ; aveuglé, son engin repart de travers.'),
         h('li', h('strong', 'Trois tornades'), ' : le vent arrache les dés et les pousse au voisin.'),
       ),
-      h('p', 'Une face tornade ne se relance pas : elle est lestée du plomb du Docteur. Et les dés passent de main en '
+      h('p', 'Une face tornade ne se relance pas : le dé est happé par le vent. Et les dés passent de main en '
         + 'main parce que la tornade tourne — la Carte Rotation dit dans quel sens.'),
     ),
 
