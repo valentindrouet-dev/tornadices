@@ -6,7 +6,7 @@
 //     les tornades se figent, et la troisième fait l'Envol. Chaîne de Markov
 //     absorbante sur le nombre de tornades déjà figées.
 
-import { comboServie } from './config.js?v=2.06';
+import { comboServie } from './config.js?v=2.07';
 
 const facto = [1];
 function fact(n) {

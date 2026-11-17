@@ -1,15 +1,16 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=2.06';
-import { VERSION } from '../version.js?v=2.06';
-import { vueAccueil } from './accueil.js?v=2.06';
-import { vueTable, partieEnCours } from './table.js?v=2.06';
-import { vueLabo } from './labo.js?v=2.06';
-import { vueReglages } from './reglages.js?v=2.06';
-import { vueHistorique } from './historique.js?v=2.06';
-import { vueVersions } from './versions.js?v=2.06';
-import { vueRegles } from './regles.js?v=2.06';
-import { vueResultats } from './resultats.js?v=2.06';
+import { h, remplacer } from './dom.js?v=2.07';
+import { VERSION } from '../version.js?v=2.07';
+import { vueAccueil } from './accueil.js?v=2.07';
+import { vueTable, partieEnCours } from './table.js?v=2.07';
+import { vueLabo } from './labo.js?v=2.07';
+import { vueReglages } from './reglages.js?v=2.07';
+import { vueHistorique } from './historique.js?v=2.07';
+import { vueVersions } from './versions.js?v=2.07';
+import { vueRegles } from './regles.js?v=2.07';
+import { vueLore } from './lore.js?v=2.07';
+import { vueResultats } from './resultats.js?v=2.07';
 
 const ROUTES = {
   '': vueAccueil,
@@ -20,6 +21,7 @@ const ROUTES = {
   '/historique': vueHistorique,
   '/versions': vueVersions,
   '/regles': vueRegles,
+  '/lore': vueLore,
   // La page de fin de partie. Elle s'ouvre seule au coup de sifflet final, et
   // reste consultable ensuite : l'instantané vit dans le navigateur.
   '/resultats': vueResultats,
@@ -55,6 +57,7 @@ function barre() {
     lien('Laboratoire', '/labo'),
     lien('Historique', '/historique'),
     lien('Règles', '/regles'),
+    lien('Lore', '/lore'),
     lien('Versions', '/versions'),
   );
 

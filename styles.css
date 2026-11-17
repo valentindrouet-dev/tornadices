@@ -1489,6 +1489,50 @@ button.lien {
   border-radius: 5px; background: var(--fond-doux); font-size: 10.5px; font-weight: 800; white-space: nowrap;
 }
 
+/* ── Lore et images ──────────────────────────────────────────────────────── */
+.page-lore p { margin: 0 0 9px; line-height: 1.55; }
+.lore-intro p { font-size: 15px; max-width: 900px; }
+.lore-camp { border-top: 5px solid var(--couleur-camp); }
+.lore-camp-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.lore-camp-tete h2 { margin: 0; color: var(--couleur-camp); }
+.lore-accroche {
+  font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--couleur-camp); background: var(--clair-camp); padding: 3px 9px; border-radius: 999px;
+}
+.lore-motivation { color: var(--encre-doux); }
+.lore-motivation--camp { background: var(--clair-camp); border-left: 3px solid var(--couleur-camp); padding: 8px 12px; border-radius: 8px; }
+.lore-persos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.lore-perso {
+  display: grid; grid-template-rows: auto 1fr; gap: 10px; padding: 14px;
+  border-radius: var(--r-s); background: var(--fond-doux); border: 1px solid var(--bord);
+}
+.lore-perso h3 { margin: 0; font-family: var(--police-jeu); font-weight: 400; font-size: 19px; color: var(--couleur-camp); }
+.lore-titre { font-size: 12px; font-weight: 700; color: var(--gris); margin: 2px 0 8px; }
+.lore-perso p { font-size: 13.5px; }
+.lore-portrait { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; }
+.lore-portrait--vide {
+  aspect-ratio: 5 / 2; display: grid; place-items: center; font-family: var(--police-jeu); font-size: 44px;
+  color: var(--couleur-camp); background: var(--clair-camp);
+  border: 2px dashed color-mix(in srgb, var(--couleur-camp) 45%, transparent);
+}
+.lore-galerie { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.lore-image {
+  display: grid; gap: 6px; justify-items: center; align-content: start; padding: 10px;
+  border-radius: var(--r-s); background: var(--fond-doux); border: 1px solid var(--bord);
+  color: var(--encre-doux); font-size: 12px; font-weight: 700; text-align: center; text-decoration: none;
+}
+.lore-image:hover { border-color: var(--accent-bord); }
+.lore-image img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.lore-image--carte img { aspect-ratio: 3 / 4; }
+.lore-image--large { grid-column: span 2; }
+.lore-image--large img { aspect-ratio: 539 / 376; }
+@media (max-width: 860px) {
+  .lore-persos { grid-template-columns: minmax(0, 1fr); }
+  .lore-perso { grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: none; align-items: start; }
+  .lore-portrait { aspect-ratio: 1; }
+  .lore-portrait--vide { font-size: 38px; }
+}
+
 /* La Carte Rôle du joueur, à droite de la table : deux faces dos à dos. */
 .carte-role {
   height: 100%; box-sizing: border-box; border-radius: 16px; padding: 14px;

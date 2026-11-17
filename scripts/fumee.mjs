@@ -36,7 +36,7 @@ const chrome = ['/opt/pw-browsers/chromium', '/opt/pw-browsers/chromium-1194/chr
 const navigateur = await chromium.launch(chrome && !chrome.endsWith('chromium') ? { executablePath: chrome } : {});
 
 const echecs = [];
-const PAGES = ['/', '/reglages', '/labo', '/regles', '/historique', '/versions', '/resultats'];
+const PAGES = ['/', '/reglages', '/labo', '/regles', '/lore', '/historique', '/versions', '/resultats'];
 const ECRANS = { bureau: { width: 1440, height: 900 }, telephone: { width: 390, height: 844 } };
 
 for (const [nom, viewport] of Object.entries(ECRANS)) {

@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.07',
+    date: '17/11/2026',
+    notes: [
+      "Nouvel onglet « Lore » : l’histoire de TornaDice. Le docteur Viktor Nado, ancien présentateur météo qui s’est toujours trompé, fabrique désormais le temps qu’il annonce ; les Budies (Big Budi, Octavius, Hélipaon) fuient le maelstrom pour rejoindre l’Abri ; les Nadoes (la Baignoire, le Siégoteuil Volant, Rien) sèment la destruction pour gagner leur place à l’Abri. Chaque camp et chaque personnage a sa motivation, et une place réservée pour son portrait. La page réunit aussi les images du jeu : logo, dés, jetons, Carte Rotation et cartes Tornade.",
+    ],
+  },
+  {
     version: '2.06',
     date: '16/11/2026',
     notes: [
