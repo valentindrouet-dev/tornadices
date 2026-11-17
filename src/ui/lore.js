@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.11';
-import { VERSION } from '../version.js?v=2.11';
-import { plancheInspiration } from './planche.js?v=2.11';
+import { h } from './dom.js?v=2.12';
+import { VERSION } from '../version.js?v=2.12';
+import { plancheInspiration } from './planche.js?v=2.12';
 
 const PORTRAITS = {};
 
@@ -216,20 +216,6 @@ export function vueLore() {
       h('p', 'Il a avalé les îles des ', h('strong', { style: { color: CAMPS[0].couleur } }, 'Budies'), ', les ',
         h('strong', { style: { color: CAMPS[1].couleur } }, 'Nadoes'), ' qui travaillaient sur la machine, et le Docteur '
         + 'lui-même. Maintenant, tout le monde tourne dedans, et ', h('strong', 'tout le monde veut en sortir'), '.'),
-    ),
-
-    h('div.carte.lore-des',
-      h('div.titre-section', 'Pourquoi des dés ?'),
-      h('p', 'Dans la tornade, les dés passent à portée de main. On en attrape un lot, on le lance, et ', h('strong',
-        'le temps qui sort décide de ce qui arrive à son engin'), ' :'),
-      h('ul.regles-liste',
-        h('li', h('strong', 'Trois soleils'), ' : le beau temps revient autour de l’engin, qui se remet droit, prêt à s’échapper.'),
-        h('li', h('strong', 'Trois éclaircies'), ' : une trouée s’ouvre dans les nuages, et un engin sort de la tornade.'),
-        h('li', h('strong', 'Trois nuits'), ' : on lance la nuit sur un voisin ; aveuglé, son engin repart de travers.'),
-        h('li', h('strong', 'Trois tornades'), ' : le vent arrache les dés et les pousse au voisin.'),
-      ),
-      h('p', 'Une face tornade ne se relance pas : le dé est happé par le vent. Et les dés passent de main en '
-        + 'main parce que la tornade tourne — la Carte Rotation dit dans quel sens.'),
     ),
 
     ...CAMPS.map((camp) => h('section.carte.lore-camp', { style: { '--couleur-camp': camp.couleur, '--clair-camp': camp.clair } },

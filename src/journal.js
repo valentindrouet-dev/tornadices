@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.12',
+    date: '17/11/2026',
+    notes: [
+      "Lore : le paragraphe « Pourquoi des dés ? » est retiré.",
+    ],
+  },
+  {
     version: '2.11',
     date: '17/11/2026',
     notes: [
