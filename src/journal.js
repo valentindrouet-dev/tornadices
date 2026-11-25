@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.16',
+    date: '25/11/2026',
+    notes: [
+      "Thème Engins : la combinaison des trois lunes s’appelle désormais « Retourne ! » (au lieu de « Dégage ! ») : on retourne l’engin d’un voisin à l’envers.",
+    ],
+  },
+  {
     version: '2.15',
     date: '25/11/2026',
     notes: [

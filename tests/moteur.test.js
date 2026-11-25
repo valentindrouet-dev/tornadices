@@ -323,7 +323,7 @@ console.log('\nThèmes');
   const { Moteur: MoteurV } = await import(`../src/core/engine.js${v}`);
   appliquerTheme('engins');
   const engins = E.jaune.animal === 'Budies' && E.bleu.animal === 'Nadoes' && E.vert.un === 'Docteur'
-    && C.map((c) => c.nom).join('|') === 'Redresse !|Sauvé !|Dégage !|Pousse !' && K.vaches.nom === 'Tornade des Nadoes'
+    && C.map((c) => c.nom).join('|') === 'Redresse !|Sauvé !|Retourne !|Pousse !' && K.vaches.nom === 'Tornade des Nadoes'
     && MOTS.eveille === 'Redressé' && E.jaune.embleme === 'banane';
   const m = new MoteurV(cpd(5), ia(5), 'theme');
   const r = m.jouerJusquAuBout();

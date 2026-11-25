@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.15';
-import { VERSION } from '../version.js?v=2.15';
-import { plancheInspiration } from './planche.js?v=2.15';
+import { h } from './dom.js?v=2.16';
+import { VERSION } from '../version.js?v=2.16';
+import { plancheInspiration } from './planche.js?v=2.16';
 
 const PORTRAITS = {};
 

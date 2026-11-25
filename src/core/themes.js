@@ -4,7 +4,7 @@
 // restent les mêmes. `appliquerTheme` réécrit en place les objets de config.js,
 // que toutes les pages lisent déjà.
 
-import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.15';
+import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.16';
 
 export const THEMES = {
   ranch: { id: 'ranch', nom: 'Ranch' },
@@ -46,7 +46,7 @@ const VALEURS = {
     combos: {
       reveil: { nom: 'Redresse !', effet: 'Votre engin se redresse dans la tornade : retournez votre Carte Rôle face redressée.' },
       abri: { nom: 'Sauvé !', effet: 'Récupérez 1 jeton de votre équipe au milieu de la tornade. La première équipe à récupérer son dernier jeton gagne la manche.' },
-      sommeil: { nom: 'Dégage !', effet: 'Envoyez l’engin d’un voisin à l’envers, s’il est redressé.' },
+      sommeil: { nom: 'Retourne !', effet: 'Retournez l’engin d’un voisin à l’envers, s’il est redressé.' },
       envol: { nom: 'Pousse !', effet: 'La tornade pousse votre lot au joueur suivant.' },
     },
     cartes: {
@@ -54,7 +54,7 @@ const VALEURS = {
       poules: { nom: 'Tornade des Budies', texte: 'Les Budies gagnent 2 Cartes Tornade à cette manche' },
     },
     mots: {
-      endormi: 'À l’envers', eveille: 'Redressé', endort: 'Dégage', dejaEndormis: 'Voisins déjà à l’envers',
+      endormi: 'À l’envers', eveille: 'Redressé', endort: 'Retourne', dejaEndormis: 'Voisins déjà à l’envers',
       reveilleEquipe: 'Redresse son équipe', equipeEveillee: 'Équipe déjà redressée',
       gagneParAbri: 'en récupérant son dernier jeton', faceDepart: 'face « à l’envers »',
     },
