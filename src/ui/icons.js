@@ -2,8 +2,8 @@
 // (assets/des) ; le dé pas encore lancé et le dé qui roule sont dessinés ici,
 // dans le même cadre.
 
-import { SYMBOLES } from '../core/config.js?v=2.13';
-import { VERSION } from '../version.js?v=2.13';
+import { SYMBOLES } from '../core/config.js?v=2.14';
+import { VERSION } from '../version.js?v=2.14';
 
 // Le corps du dé, comme sur les images : carré arrondi blanc, cerné de noir.
 const de = (contenu) => '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
@@ -33,6 +33,9 @@ export const JETONS_EMBLEME = {
   vache: 'assets/jetons/vache.png',
   poule: 'assets/jetons/poule.png',
   cowboy: 'assets/jetons/cowboy.png',
+  banane: 'assets/jetons/banane.svg',
+  nado: 'assets/jetons/nado.svg',
+  de: 'assets/jetons/de.svg',
 };
 
 /** Emblème d'équipe, à poser à côté d'un nom. */

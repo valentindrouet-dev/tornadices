@@ -2,21 +2,21 @@
 // le réglage actif (profils.js) ; les préférences de table — noms, effectifs,
 // graine — valent pour tous les réglages.
 
-import { h, remplacer, telecharger } from './dom.js?v=2.13';
-import { store } from './store.js?v=2.13';
-import { aller } from './app.js?v=2.13';
-import { suiteSymboles } from './icons.js?v=2.13';
-import { SONS, NOMS_SONS, sonsActifs, volumeSons, reglerSons, reglerVolume, jouerSon, eveillerSons } from './sons.js?v=2.13';
-import { randomSeed } from '../core/rng.js?v=2.13';
+import { h, remplacer, telecharger } from './dom.js?v=2.14';
+import { store } from './store.js?v=2.14';
+import { aller } from './app.js?v=2.14';
+import { suiteSymboles } from './icons.js?v=2.14';
+import { SONS, NOMS_SONS, sonsActifs, volumeSons, reglerSons, reglerVolume, jouerSon, eveillerSons } from './sons.js?v=2.14';
+import { randomSeed } from '../core/rng.js?v=2.14';
 import {
   SYMBOLES, ORDRE_SYMBOLES, COMBOS, CARTES, NOMBRES_JOUEURS, JOUEURS_MIN, JOUEURS_MAX, RYTHME,
-  configDepuis, valeurTable, ecartsDeRegles, requisCarte, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.13';
+  configDepuis, valeurTable, ecartsDeRegles, requisCarte, noteCarte, bornerJoueurs, EQUIPES,
+} from '../core/config.js?v=2.14';
 import {
   reglagesCourants, enregistrerReglages, reglesOfficielles, barreProfils, idActif, ID_OFFICIELLES,
   officiellesLocales, retablirOfficielles, fichierReglesOfficielles, validerReglesOfficielles,
   selectionnerProfil, nomActif,
-} from './profils.js?v=2.13';
+} from './profils.js?v=2.14';
 
 // ── Préférences de table ─────────────────────────────────────────────────────
 export const NOMS_ORIGINE = ['Valentin', 'Sylvain', 'Justine', 'Noël', 'Clément', 'Budi'];
@@ -57,9 +57,9 @@ export const ecartsAuxOfficielles = (nb) => ecartsDeRegles(reglagesCourants(), r
 const LIGNES_MEP = [
   ['lots', 'Lots de dés en jeu'],
   ['jetons', 'Jetons Équipe sur la Tornade'],
-  ['jetonsVert', '… pour le Cow-boy'],
+  ['jetonsVert', () => `… pour le ${EQUIPES.vert.un}`],
   ['cartes', 'Cartes Tornade pour gagner'],
-  ['cartesVert', '… pour le Cow-boy'],
+  ['cartesVert', () => `… pour le ${EQUIPES.vert.un}`],
 ];
 const LIBELLES_RYTHME = {
   dureeLancer: 'Les dés roulent', dureeConstat: 'On constate le jet', dureePassage: 'Le lot traverse',
@@ -139,14 +139,14 @@ export function vueReglages() {
   }
 
   function carteMiseEnPlace(r, off) {
-    const equipes = (nb) => `${Math.floor(nb / 2)} + ${Math.floor(nb / 2)}${nb % 2 ? ' + Cow-boy' : ''}`;
+    const equipes = (nb) => `${Math.floor(nb / 2)} + ${Math.floor(nb / 2)}${nb % 2 ? ` + ${EQUIPES.vert.un}` : ''}`;
     return h('div.carte',
       h('div.titre-section', 'Mise en place'),
       h('div.tbl-defile', h('table.tbl.tbl--reglages',
         h('thead', h('tr', h('th', 'Joueurs'), ...NOMBRES_JOUEURS.map((n) => h('th.num', String(n))))),
         h('tbody',
-          h('tr', h('td', 'Vaches + Poules'), ...NOMBRES_JOUEURS.map((n) => h('td.num.mini.muted', equipes(n)))),
-          ...LIGNES_MEP.map(([table, libelle]) => h('tr', h('td', libelle),
+          h('tr', h('td', `${EQUIPES.bleu.animal} + ${EQUIPES.jaune.animal}`), ...NOMBRES_JOUEURS.map((n) => h('td.num.mini.muted', equipes(n)))),
+          ...LIGNES_MEP.map(([table, libelle]) => h('tr', h('td', typeof libelle === 'function' ? libelle() : libelle),
             ...NOMBRES_JOUEURS.map((n) => h('td.num', table.endsWith('Vert') && n % 2 === 0
               ? h('span.muted', '—')
               : champNb(valeurTable(r, table, n), {
@@ -166,8 +166,8 @@ export function vueReglages() {
       ),
       h('p.mini.muted', { style: { marginTop: '8px' } },
         'Jetons Équipe : par équipe, posés sur la carte Tornade au début de chaque manche ; chaque Abri en récupère un, '
-        + 'et l’équipe qui récupère son dernier gagne la manche. Les Jaunes reçoivent les lots à la première manche, '
-        + 'puis l’équipe perdante ; le Cow-boy prend toujours le lot restant.'),
+        + `et l’équipe qui récupère son dernier gagne la manche. Les ${EQUIPES.jaune.animal} reçoivent les lots à la première manche, `
+        + `puis l’équipe perdante ; le ${EQUIPES.vert.un} prend toujours le lot restant.`),
     );
   }
 

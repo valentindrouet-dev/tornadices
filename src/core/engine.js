@@ -8,11 +8,12 @@
 // jamais son lot sans combinaison. Un lot qui arrive chez un joueur qui en
 // tient déjà un le force à passer le sien : c'est le tourbillon.
 
-import { makeRng } from './rng.js?v=2.13';
+import { makeRng } from './rng.js?v=2.14';
 import {
   CARTES_PAR_ID, PROFILS_IA, PROFIL_HUMAIN, profilIA, placement, comboServie,
   requisCarte, nomDansPhrase, PRIORITE_COMBOS, SYMBOLE_FIGE,
-} from './config.js?v=2.13';
+} from './config.js?v=2.14';
+import { MOTS, cri } from './themes.js?v=2.14';
 
 // Le symbole qu'il faut garder pour viser chaque combinaison de base.
 const SYMBOLE_DE_COMBO = { reveil: 'soleil', abri: 'grange', sommeil: 'lune', envol: 'tornade' };
@@ -102,7 +103,7 @@ export class Moteur {
       const humain = s.type === 'humain';
       const base = humain ? PROFIL_HUMAIN : profilIA(s.profil);
       return {
-        id: i, siege: i, equipe, nom: s.nom || `Joueur ${i + 1}`,
+        id: i, siege: i, equipe, nom: s.nom || `Joueur ${i + 1}`, perso: s.perso || null,
         type: humain ? 'humain' : 'ia', profil: base,
         vitesse: Math.max(60, this.rng.normal(base.reflexe, base.ecart, 80)),
         eveille: false, lots: [], lancersLot: 0,
@@ -504,7 +505,7 @@ export class Moteur {
     if (this.avecJournal) {
       this._log(j.nom, 'tour', j.id, {
         des: this._desOrdonnes(desFinaux, dispo && dispo.requis),
-        issue: dispo ? `${dispo.nom} !` : motif === 'pousse' ? 'Tourbillon' : 'Bloqué',
+        issue: dispo ? cri(dispo.nom) : motif === 'pousse' ? 'Tourbillon' : 'Bloqué',
         couleur: dispo ? dispo.couleur : 'gris',
       });
     }
@@ -560,18 +561,18 @@ export class Moteur {
       case 'sommeil': {
         const cible = this._choisirEndormi(j);
         if (cible) this._endormir(cible, j);
-        else this._annoncer('Voisins déjà endormis', 'nuit', j.id);
+        else this._annoncer(MOTS.dejaEndormis, 'nuit', j.id);
         break;
       }
       case 'endormirVoisins': {
         const noms = this._voisins(j).filter((v) => v.eveille).map((v) => { this._endormir(v, null); return v.nom; });
-        this._annoncer(noms.length ? `Endort ${noms.join(' et ')}` : 'Voisins déjà endormis', 'nuit', j.id);
+        this._annoncer(noms.length ? `${MOTS.endort} ${noms.join(' et ')}` : MOTS.dejaEndormis, 'nuit', j.id);
         break;
       }
       case 'reveillerEquipe': {
         const dormeurs = this.joueurs.filter((x) => x.equipe === j.equipe && !x.eveille);
         for (const x of dormeurs) this._reveiller(x);
-        this._annoncer(dormeurs.some((x) => x !== j) ? 'Réveille son équipe' : 'Équipe déjà réveillée', 'or', j.id);
+        this._annoncer(dormeurs.some((x) => x !== j) ? MOTS.reveilleEquipe : MOTS.equipeEveillee, 'or', j.id);
         break;
       }
       case 'gagnerManche':
@@ -581,18 +582,24 @@ export class Moteur {
     }
   }
 
+  /** Le nom d'une combinaison de base, tel que le thème le donne. */
+  _nomCombo(id) {
+    const c = this.cfg.combos.find((x) => x.id === id);
+    return c ? c.nom : id;
+  }
+
   _reveiller(j) {
     j.eveille = true;
     j.stats.reveils++;
     this._flash('reveil', j.id);
-    this._annoncer('Réveil !', 'or', j.id);
+    this._annoncer(cri(this._nomCombo('reveil')), 'or', j.id);
   }
 
   _endormir(cible, auteur) {
     cible.eveille = false;
     cible.stats.foisEndormi++;
     this._flash('endormi', cible.id);
-    if (auteur) this._annoncer(`Endort ${cible.nom}`, 'nuit', auteur.id);
+    if (auteur) this._annoncer(`${MOTS.endort} ${cible.nom}`, 'nuit', auteur.id);
   }
 
   /** Le voisin réveillé qu'on endort : un adversaire d'abord, le mieux placé. */
@@ -611,7 +618,7 @@ export class Moteur {
     if (this.onJeton) this.onJeton(j.id, j.equipe);
     const reste = eq.objectif - eq.abris;
     if (reste <= 0) { this._finManche(j.equipe, { joueur: j, raison: 'abri' }); return; }
-    this._annoncer(`Abri ! Encore ${reste}`, 'vert', j.id);
+    this._annoncer(`${cri(this._nomCombo('abri'))} Encore ${reste}`, 'vert', j.id);
     this._log(`${j.nom} récupère un Jeton Équipe — ${nomDansPhrase(j.equipe).nom} : `
       + `encore ${reste} sur la Tornade.`, 'jeton', j.id);
   }
@@ -634,7 +641,7 @@ export class Moteur {
     const nom = equipeId ? nomDansPhrase(equipeId) : null;
     if (eq && cause.joueur) {
       this._annoncer(`${cause.joueur.nom} fait gagner ${nom.le} `
-        + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : 'en récupérant le dernier jeton'),
+        + (cause.raison === 'carte' ? `avec « ${carte.nom} »` : MOTS.gagneParAbri),
       equipeId, null, { manche: true });
     }
     const compte = !!(eq && carte);

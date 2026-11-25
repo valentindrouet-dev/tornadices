@@ -1,15 +1,16 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.13';
-import { store } from './store.js?v=2.13';
-import { aller } from './app.js?v=2.13';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.13';
+import { h, remplacer } from './dom.js?v=2.14';
+import { store } from './store.js?v=2.14';
+import { aller } from './app.js?v=2.14';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.14';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
   configDepuis, placement, requisCarte, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.13';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.13';
+} from '../core/config.js?v=2.14';
+import { MOTS } from '../core/themes.js?v=2.14';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.14';
 
 const ETATS = { endormi: 'Face endormie', eveille: 'Face réveillée', tous: 'Les deux faces' };
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
@@ -28,8 +29,10 @@ export function vueRegles() {
       title: String(valeur) !== String(officielle) ? `Règle officielle : ${officielle}` : null,
     }, String(valeur));
     const sieges = placement(nb);
+    const B = EQUIPES.bleu, J = EQUIPES.jaune, V = EQUIPES.vert;
     const impair = nb % 2 === 1;
     const combo = (id) => cfg.combos.find((c) => c.id === id);
+    const abri = combo('abri');
     const cartes = cfg.cartes.map((id) => CARTES_PAR_ID[id]);
     const nbFaces = (sym) => cfg.faces.filter((f) => f === sym).length;
 
@@ -53,17 +56,18 @@ export function vueRegles() {
         h('div.carte',
           h('div.titre-section', 'Mise en place'),
           h('ol.regles-liste',
-            h('li', 'Deux équipes de même effectif, les ', h('strong', 'Vaches'), ' (bleus) et les ', h('strong', 'Poules'),
-              ' (jaunes), assises en alternance.',
-              impair ? [' À ', v(nb), ' joueurs, un ', h('strong', 'Cow-boy'), ' (vert) joue seul, entre un jaune et un bleu.'] : null),
-            h('li', 'Chacun pose sa Carte Rôle devant lui, ', h('strong', 'face endormie'), '.'),
+            h('li', 'Deux équipes de même effectif, les ', h('strong', B.animal), ` (${B.couleur}) et les `, h('strong', J.animal),
+              ` (${J.couleur}), assises en alternance.`,
+              impair ? [' À ', v(nb), ' joueurs, le ', h('strong', V.un), ` (${V.couleur}) joue seul, entre deux joueurs adverses.`] : null),
+            h('li', 'Chacun pose sa Carte Rôle devant lui, ', h('strong', MOTS.faceDepart), '.'),
             h('li', 'On joue avec ', v(pluriel(cfg.lots, 'lot'), pluriel(ref.lots, 'lot')), ' de ', v(cfg.desParLot, ref.desParLot),
-              ' dés. Chaque joueur jaune en reçoit un',
-              impair ? ' ; le Cow-boy récupère toujours le lot restant en début de manche.' : '.'),
+              ` dés. Chaque joueur des ${J.animal} en reçoit un`,
+              impair ? ` ; le ${V.un} récupère toujours le lot restant en début de manche.` : '.'),
             h('li', 'La pioche est face cachée', cfg.melangerCartes ? ', mélangée' : ', dans l’ordre',
               '. La Tornade de Chauffe ouvre toujours la partie.'),
-            h('li', 'Sur la carte Tornade, placez ', v(pluriel(cfg.jetons, 'Jeton'), pluriel(ref.jetons, 'Jeton')), ' Équipe par équipe',
-              impair && cfg.jetonsVert !== cfg.jetons ? [' et ', v(cfg.jetonsVert, ref.jetonsVert), ' pour le Cow-boy'] : null,
+            h('li', 'Sur la carte Tornade, placez ', v(pluriel(cfg.jetons, 'Jeton'), pluriel(ref.jetons, 'Jeton')), ' par équipe',
+              impair && cfg.jetonsVert !== cfg.jetons ? [' et ', v(cfg.jetonsVert, ref.jetonsVert), ` pour le ${V.un}`] : null,
+              ` (${[J.jetons, B.jetons, impair ? V.jetons : null].filter(Boolean).join(', ')})`,
               nb === 3 ? ' : deux par joueur à trois.' : ' : autant que de joueurs dans l’équipe.'),
             h('li', 'La Carte Rotation est posée sur une face au hasard : elle donne le sens dans lequel passent les lots.'),
           ),
@@ -80,10 +84,10 @@ export function vueRegles() {
             h('li', 'Une combinaison formée est jouée aussitôt : on ne relance pas ses dés. Puis le lot passe au voisin, dans le sens de la Carte Rotation.'),
             h('li', h('strong', 'Tourbillon'), ' : si le voisin tient déjà un lot en cours, il doit immédiatement passer le sien, et ainsi de suite.'),
           ),
-          h('p', 'Une équipe gagne la manche en récupérant son ', h('strong', 'dernier Jeton Équipe'), ' (combinaison Abri) — ou par la '
+          h('p', 'Une équipe gagne la manche en récupérant son ', h('strong', 'dernier jeton'), ` (combinaison ${abri.nom}) — ou par la `
             + 'combinaison ou l’effet de certaines cartes Tornade. Elle s’empare de la Carte Tornade, et les jetons reviennent sur la suivante.'),
           h('p', 'L’équipe perdante débute la manche suivante avec les lots, et peut retourner la Carte Rotation.',
-            impair ? ' Si le Cow-boy gagne, il désigne l’équipe « perdante ».' : ''),
+            impair ? ` Si le ${V.un} gagne, il désigne l’équipe « perdante ».` : ''),
         ),
       ),
 
@@ -108,7 +112,7 @@ export function vueRegles() {
           h('div.titre-section', 'Fin de partie'),
           h('p', 'La première équipe à gagner ', v(pluriel(cfg.cartesPourGagner, 'Carte'), pluriel(ref.cartesPourGagner, 'Carte')),
             ' Tornade remporte la partie.',
-            impair && cfg.cartesVert !== cfg.cartesPourGagner ? [' Le Cow-boy gagne à ', v(cfg.cartesVert, ref.cartesVert), '.'] : null),
+            impair && cfg.cartesVert !== cfg.cartesPourGagner ? [` Le ${V.un} gagne à `, v(cfg.cartesVert, ref.cartesVert), '.'] : null),
           h('p.petit.muted', 'Si la pioche s’épuise avant, l’équipe qui a le plus de cartes l’emporte.'),
           h('div.titre-section', { style: { marginTop: '14px' } }, 'Incidents'),
           h('ul.regles-liste',

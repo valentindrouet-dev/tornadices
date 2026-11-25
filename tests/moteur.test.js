@@ -311,5 +311,30 @@ console.log('\nJoueur humain');
   verifier('partie avec humain menée à terme', m.termine && m.vainqueur);
 }
 
+// ── 9. Thèmes ────────────────────────────────────────────────────────────────
+console.log('\nThèmes');
+{
+  // Le moteur charge les modules avec leur empreinte de version : on charge les mêmes, sinon Node en
+  // garderait deux copies, et le thème appliqué ici n'atteindrait pas le moteur.
+  const { readFileSync } = await import('node:fs');
+  const v = readFileSync(new URL('../src/core/engine.js', import.meta.url), 'utf8').match(/themes\.js(\?v=[\d.]+)/)[1];
+  const { appliquerTheme, MOTS, cri, personnage } = await import(`../src/core/themes.js${v}`);
+  const { EQUIPES: E, COMBOS: C, CARTES_PAR_ID: K, configParDefaut: cpd } = await import(`../src/core/config.js${v}`);
+  const { Moteur: MoteurV } = await import(`../src/core/engine.js${v}`);
+  appliquerTheme('engins');
+  const engins = E.jaune.animal === 'Budies' && E.bleu.animal === 'Nadoes' && E.vert.un === 'Docteur'
+    && C.map((c) => c.nom).join('|') === 'Redresse !|Sauvé !|Dégage !|Pousse !' && K.vaches.nom === 'Tornade des Nadoes'
+    && MOTS.eveille === 'Redressé' && E.jaune.embleme === 'banane';
+  const m = new MoteurV(cpd(5), ia(5), 'theme');
+  const r = m.jouerJusquAuBout();
+  const issues = m.journal.filter((e) => e.type === 'tour').map((e) => e.issue);
+  appliquerTheme('ranch');
+  verifier('Engins : équipes, combinaisons, cartes et jetons renommés', engins);
+  verifier('Engins : pas de « ! ! » au journal', issues.length > 0 && issues.every((x) => !/!\s*!/.test(x)) && issues.includes('Redresse !'));
+  verifier('Ranch rétabli', E.jaune.animal === 'Poules' && C[0].nom === 'Réveil' && K.vaches.nom === 'Tornade de Vaches' && cri('Réveil') === 'Réveil !');
+  verifier('le thème ne change pas la partie', JSON.stringify(r) === JSON.stringify(new MoteurV(cpd(5), ia(5), 'theme').jouerJusquAuBout()));
+  verifier('personnages par rang dans l’équipe', personnage('jaune', null, 2).nom === 'Léon Tournepaon' && personnage('bleu', 'assemblage').nom === 'L’Assemblage');
+}
+
 console.log(echecs ? `\n${echecs} vérification(s) en échec.` : '\nToutes les vérifications passent.');
 process.exit(echecs ? 1 : 0);

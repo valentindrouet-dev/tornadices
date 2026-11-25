@@ -1,16 +1,18 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=2.13';
-import { VERSION } from '../version.js?v=2.13';
-import { vueAccueil } from './accueil.js?v=2.13';
-import { vueTable, partieEnCours } from './table.js?v=2.13';
-import { vueLabo } from './labo.js?v=2.13';
-import { vueReglages } from './reglages.js?v=2.13';
-import { vueHistorique } from './historique.js?v=2.13';
-import { vueVersions } from './versions.js?v=2.13';
-import { vueRegles } from './regles.js?v=2.13';
-import { vueLore } from './lore.js?v=2.13';
-import { vueResultats } from './resultats.js?v=2.13';
+import { h, remplacer } from './dom.js?v=2.14';
+import { VERSION } from '../version.js?v=2.14';
+import { vueAccueil } from './accueil.js?v=2.14';
+import { vueTable, partieEnCours } from './table.js?v=2.14';
+import { vueLabo } from './labo.js?v=2.14';
+import { vueReglages } from './reglages.js?v=2.14';
+import { vueHistorique } from './historique.js?v=2.14';
+import { vueVersions } from './versions.js?v=2.14';
+import { vueRegles } from './regles.js?v=2.14';
+import { vueLore } from './lore.js?v=2.14';
+import { store } from './store.js?v=2.14';
+import { THEMES, appliquerTheme, themeActuel, renommerConfig } from '../core/themes.js?v=2.14';
+import { vueResultats } from './resultats.js?v=2.14';
 
 const ROUTES = {
   '': vueAccueil,
@@ -54,6 +56,7 @@ function barre() {
       : null,
     chemin !== '/' ? lien('Accueil', '/') : null,
     lien('Réglages', '/reglages'),
+    basculeTheme(),
     lien('Laboratoire', '/labo'),
     lien('Historique', '/historique'),
     lien('Règles', '/regles'),
@@ -96,6 +99,24 @@ function barre() {
 
 let racine;
 
+/** Passe le site sur un thème : les noms, les couleurs et les jetons changent partout, même en pleine partie. */
+export function choisirTheme(id) {
+  appliquerTheme(id);
+  store.set('theme', themeActuel());
+  document.body.dataset.theme = themeActuel();
+  const partie = partieEnCours();
+  if (partie) renommerConfig(partie.cfg);
+}
+
+// L'interrupteur Ranch / Engins, dans la barre du haut.
+function basculeTheme() {
+  return h('div.segment.bascule-theme', { title: 'Habillage du jeu' },
+    ...Object.values(THEMES).map((t) => h('button', {
+      class: t.id === themeActuel() ? 'on' : '',
+      onclick: (e) => { e.stopPropagation(); choisirTheme(t.id); rendre(); },
+    }, t.nom)));
+}
+
 export function rendre() {
   const chemin = cheminCourant();
   const vue = ROUTES[chemin] || vueAccueil;
@@ -105,6 +126,7 @@ export function rendre() {
 
 export function demarrer(el) {
   racine = el;
+  choisirTheme(store.get('theme', 'ranch'));
   window.addEventListener('hashchange', rendre);
   rendre();
 }

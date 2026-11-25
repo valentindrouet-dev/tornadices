@@ -1,19 +1,19 @@
 // Laboratoire d'équilibrage : des milliers de parties jouées par le moteur de
 // la table, avec les règles du réglage actif, et ce qu'on peut en conclure.
 
-import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.13';
-import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.13';
-import { store } from './store.js?v=2.13';
-import { aller } from './app.js?v=2.13';
-import { randomSeed, makeRng } from '../core/rng.js?v=2.13';
-import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.13';
-import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.13';
+import { h, remplacer, pourcent, nombre, dureeLongue, telecharger } from './dom.js?v=2.14';
+import { emblemeEquipe, suiteSymboles } from './icons.js?v=2.14';
+import { store } from './store.js?v=2.14';
+import { aller } from './app.js?v=2.14';
+import { randomSeed, makeRng } from '../core/rng.js?v=2.14';
+import { creerCampagne, SCHEMA_RESULTAT } from '../core/sim.js?v=2.14';
+import { probaLancerUnique, courseAvecGarde, loiDuDe } from '../core/proba.js?v=2.14';
 import {
   EQUIPES, PROFILS_IA, CARTES_PAR_ID, SYMBOLES, ORDRE_SYMBOLES, configDepuis, placement, requisCarte,
   tailleRequis,
-} from '../core/config.js?v=2.13';
-import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.13';
-import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.13';
+} from '../core/config.js?v=2.14';
+import { barreProfils, reglagesCourants, nomActif } from './profils.js?v=2.14';
+import { nombresJoueursPermis, joueursDansBornes, nomParDefaut, ecartsAuxOfficielles } from './reglages.js?v=2.14';
 
 const PARTIES = [200, 1000, 5000, 20000];
 const etat = { onglet: 'simulation', enCours: null };
@@ -121,9 +121,9 @@ export function vueLabo() {
       ),
       h('p.mini.muted', { style: { margin: '8px 0 12px' } },
         `${cfg.lots} lots de ${cfg.desParLot} dés · ${cfg.jetons} Jetons Équipe par équipe`
-        + (p.nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (Cow-boy : ${cfg.jetonsVert}) · ` : ' · ')
+        + (p.nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (${EQUIPES.vert.un} : ${cfg.jetonsVert}) · ` : ' · ')
         + `${cfg.cartesPourGagner} cartes pour gagner`
-        + (p.nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert})` : '')
+        + (p.nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (${EQUIPES.vert.un} : ${cfg.cartesVert})` : '')
         + ` · ${cfg.cartes.length} cartes dans la pioche`),
       h('div.rangee.rangee--serree', { style: { marginBottom: '6px' } },
         h('span.petit', { style: { flex: '1' } }, 'Caractère des IA'),
@@ -231,7 +231,7 @@ export function vueLabo() {
             ? (ecartNet
               ? h('strong', 'L’écart entre les deux équipes est réel : 50 % est hors de l’intervalle.')
               : 'Aucun écart démontré entre les deux équipes : 50 % est dans l’intervalle.')
-            : 'Le Cow-boy joue seul contre deux équipes : sa part se règle avec ses cartes à gagner.'),
+            : `Le ${EQUIPES.vert.un} joue seul contre deux équipes : sa part se règle avec ses cartes à gagner.`),
       ),
 
       h('div.grille.grille--2',

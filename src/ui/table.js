@@ -4,17 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.13';
+import { h, remplacer, duree, vider } from './dom.js?v=2.14';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.13';
-import { Moteur } from '../core/engine.js?v=2.13';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.13';
-import { ajouterHistorique, store } from './store.js?v=2.13';
-import { enregistrerPartie } from './resultats.js?v=2.13';
-import { aller } from './app.js?v=2.13';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.13';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.13';
+} from './icons.js?v=2.14';
+import { Moteur } from '../core/engine.js?v=2.14';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.14';
+import { MOTS, themeActuel, personnageParId } from '../core/themes.js?v=2.14';
+import { ajouterHistorique, store } from './store.js?v=2.14';
+import { enregistrerPartie } from './resultats.js?v=2.14';
+import { aller } from './app.js?v=2.14';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.14';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.14';
 
 let moteur = null;
 let vitesse = 1;
@@ -84,7 +85,7 @@ function alerteDesCombos(dispo) {
  * On reprend la même mise en avant, sans toucher au texte de la carte — il
  * reste une simple phrase dans la configuration.
  */
-const MOTS_EN_AVANT = /(cartes? Tornade|Cow-?boy|Vaches|Poules|manche suivante)/gi;
+const MOTS_EN_AVANT = /(cartes? Tornade|Cow-?boy|Vaches|Poules|Budies|Nadoes|manche suivante)/gi;
 
 /** Le Jeton Équipe imprimé. */
 function dessinJeton(equipe) {
@@ -456,11 +457,14 @@ export function vueTable() {
   // réveillée, et la carte se retourne quand il se réveille ou s'endort.
   const joueurLu = moteur.joueurs.find((j) => j.type === 'humain') || moteur.joueurs[0];
   const eqLue = EQUIPES[joueurLu.equipe];
+  // Thème Engins : le personnage que le joueur incarne.
+  const persoLu = themeActuel() === 'engins' ? personnageParId(joueurLu.perso) : null;
   const faceRole = (etat) => h(`div.carte-equipe-face.carte-equipe-face--${etat === 'endormi' ? 'endormie' : 'eveillee'}`,
     h('div.carte-role', { class: `carte-role--${etat}`, style: { '--couleur-eq': eqLue.hex } },
       h('div.carte-role-tete', emblemeEquipe(eqLue.embleme, 44),
         h('div', h('div.carte-role-nom', eqLue.animal),
-          h('div.carte-role-etat', etat === 'endormi' ? 'Endormi' : 'Réveillé'))),
+          persoLu ? h('div.carte-role-perso', persoLu.nom) : null,
+          h('div.carte-role-etat', etat === 'endormi' ? MOTS.endormi : MOTS.eveille))),
       ...moteur.cfg.combos.filter((c) => c.etat === 'tous' || c.etat === etat).map((c) => h('div.carte-role-combo',
         h('div.carte-role-des', suiteSymboles(c.requis, 24)),
         h('div', h('strong', c.nom), h('div.mini', c.effet))))));
@@ -1008,9 +1012,11 @@ export function vueTable() {
           }, j.nom),
           j.type === 'ia' ? h('span.profil-siege', `(${j.profil.nom})`) : h('span.badge', 'vous'),
         ),
+        themeActuel() === 'engins' && personnageParId(j.perso)
+          ? h('div.perso-siege', personnageParId(j.perso).nom) : null,
         h('div.etat-tornade', { class: j.eveille ? 'etat--eveille' : 'etat--endormi' },
           h('span.tornade', pastilleSymbole(j.eveille ? 'soleil' : 'lune', 20)),
-          j.eveille ? 'Réveillé' : 'Endormi',
+          j.eveille ? MOTS.eveille : MOTS.endormi,
         ),
         h('div.des-mini',
           lot
@@ -1148,7 +1154,7 @@ export function vueTable() {
       h('div.rangee', { style: { marginBottom: '10px' } },
         emblemeEquipe(EQUIPES[j.equipe].embleme, 24),
         h('strong', j.nom),
-        h('span.petit.muted', j.eveille ? 'Réveillé' : 'Endormi'),
+        h('span.petit.muted', j.eveille ? MOTS.eveille : MOTS.endormi),
         h('div.pousse'),
         h('span.mini.muted.aide-clavier', `clic sur un dé : le relancer · ${t.libLancer} : tout relancer`),
       ),

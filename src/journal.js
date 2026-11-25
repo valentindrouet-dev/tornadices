@@ -2,6 +2,14 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.14',
+    date: '25/11/2026',
+    notes: [
+      "Nouveau : un interrupteur Ranch / Engins dans la barre du haut, à côté des Réglages, pour changer d’habillage à volonté, même en pleine partie. En Engins : l’équipe orange des Budies (Big Budi l’Orang-Outan Pilote, Octavius le Poulpe Savant, Léon Tournepaon le Paon Volant) récupère des jetons bananes ; l’équipe bleue des Nadoes (la Baignoire, l’Assemblage, les Nadoes volants) récupère des jetons Nadoes ; le Docteur Viktor Nado, en violet et seul, attrape des jetons dés. Les combinaisons deviennent Redresse !, Sauvé !, Dégage ! et Pousse !, et les états Redressé et À l’envers.",
+      "À l’accueil, en Engins, chaque joueur choisit son personnage dans son équipe ; il s’affiche sous son nom à la table et sur sa Carte Rôle. Les Tornades de Vaches et de Poules deviennent la Tornade des Nadoes et la Tornade des Budies. Le choix de thème est gardé d’une visite à l’autre ; les règles du jeu ne changent pas.",
+    ],
+  },
+  {
     version: '2.13',
     date: '17/11/2026',
     notes: [

@@ -1,17 +1,18 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=2.13';
-import { store } from './store.js?v=2.13';
-import { aller } from './app.js?v=2.13';
-import { eveillerSons } from './sons.js?v=2.13';
-import { lancerPartie, partieEnCours } from './table.js?v=2.13';
+import { h, remplacer } from './dom.js?v=2.14';
+import { store } from './store.js?v=2.14';
+import { aller } from './app.js?v=2.14';
+import { eveillerSons } from './sons.js?v=2.14';
+import { lancerPartie, partieEnCours } from './table.js?v=2.14';
 import {
   configPartie, nombresJoueursPermis, joueursDansBornes, ecartsAuxOfficielles, nomParDefaut, graineDePartie,
-} from './reglages.js?v=2.13';
-import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.13';
-import { emblemeEquipe } from './icons.js?v=2.13';
-import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.13';
+} from './reglages.js?v=2.14';
+import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.14';
+import { emblemeEquipe } from './icons.js?v=2.14';
+import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.14';
+import { PERSONNAGES, personnage, themeActuel } from '../core/themes.js?v=2.14';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
@@ -28,6 +29,7 @@ export function reglagesJoueurs(nb) {
       type: s.type || (i === 0 ? 'humain' : 'ia'),
       profil: profilIA(s.profil).id,
       equipe: sieges[i],
+      perso: s.perso || null,
     });
   }
   return out;
@@ -56,6 +58,13 @@ export function vueAccueil() {
   function dessiner() {
     const sieges = placement(nb);
     joueurs.forEach((j, i) => { j.equipe = sieges[i]; });
+    // Thème Engins : chacun incarne un personnage de son équipe. Sans choix (ou
+    // après un changement d'équipe), il prend celui de son rang dans l'équipe.
+    const rangs = {};
+    for (const j of joueurs) {
+      const rang = (rangs[j.equipe] = (rangs[j.equipe] ?? -1) + 1);
+      if (!(PERSONNAGES[j.equipe] || []).some((p) => p.id === j.perso)) j.perso = personnage(j.equipe, null, rang).id;
+    }
     const nbHumains = joueurs.filter((j) => j.type === 'humain').length;
 
     remplacer(racine,
@@ -138,9 +147,9 @@ export function vueAccueil() {
       h('div.encart', { style: { marginTop: '16px' } },
         `À ${nb} joueurs : ${cfg.lots} lots de ${cfg.desParLot} dés · `
         + `${cfg.jetons} Jetons Équipe par équipe sur la Tornade`
-        + (nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (Cow-boy : ${cfg.jetonsVert}) · ` : ' · ')
+        + (nb % 2 && cfg.jetonsVert !== cfg.jetons ? ` (${EQUIPES.vert.un} : ${cfg.jetonsVert}) · ` : ' · ')
         + `${cfg.cartesPourGagner} cartes Tornade pour gagner`
-        + (nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (Cow-boy : ${cfg.cartesVert}).` : '.')),
+        + (nb % 2 && cfg.cartesVert !== cfg.cartesPourGagner ? ` (${EQUIPES.vert.un} : ${cfg.cartesVert}).` : '.')),
     );
   }
 
@@ -177,10 +186,20 @@ export function vueAccueil() {
           value: p.id, selected: j.type === 'ia' && j.profil === p.id,
         }, `IA ${p.nom}`)),
       ),
-      // L'emblème de l'équipe : les vaches, les poules, le cowboy.
+      themeActuel() === 'engins' ? choixPersonnage(j) : null,
+      // L'emblème de l'équipe.
       h('span.badge.badge--joueur', { class: `badge--${j.equipe}` },
         emblemeEquipe(eq.embleme, 20), eq.un),
     );
+  }
+
+  function choixPersonnage(j) {
+    const liste = PERSONNAGES[j.equipe] || [];
+    if (liste.length < 2) return h('span.mini.muted.perso-fixe', liste[0] ? liste[0].nom : '');
+    return h('select.choix-perso', {
+      title: 'Personnage incarné',
+      onchange: (e) => { j.perso = e.target.value; sauver(); },
+    }, ...liste.map((p) => h('option', { value: p.id, selected: p.id === j.perso }, `${p.nom}, ${p.titre}`)));
   }
 
   dessiner();

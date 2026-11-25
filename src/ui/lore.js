@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.13';
-import { VERSION } from '../version.js?v=2.13';
-import { plancheInspiration } from './planche.js?v=2.13';
+import { h } from './dom.js?v=2.14';
+import { VERSION } from '../version.js?v=2.14';
+import { plancheInspiration } from './planche.js?v=2.14';
 
 const PORTRAITS = {};
 
@@ -41,7 +41,7 @@ const CAMPS = [
           + 'et depuis il compte les faces sur ses huit bras — qui sont tous à l’intérieur, ce qui le gêne pour lancer.',
       },
       {
-        id: 'gaston', nom: 'Gaston Tournepaon', titre: 'Paon-hélicoptère',
+        id: 'leon', nom: 'Léon Tournepaon', titre: 'Paon-hélicoptère',
         texte: 'Quand il fait la roue, il la fait si vite qu’il décolle. Il regarde droit devant lui avec des yeux '
           + 'où il n’y a rien du tout, ce qui ne l’empêche pas de couper une tornade en rondelles.',
         motivation: 'Sortir de la tornade, sans très bien savoir qu’il y est : il croit que tout ce vent, '
