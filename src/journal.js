@@ -2,6 +2,15 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.17',
+    date: '25/11/2026',
+    notes: [
+      "Visuel 3.0 : refonte graphique de toute l’interface, sans rien changer au jeu. L’arène devient l’intérieur de la tornade du Docteur, illustrée, avec quelques débris du lore qui tournent en arrière-plan (bananes, feuille tropicale, hélice, courants d’air) ; un ciel de nuages dérive derrière toutes les pages. Les joueurs ont des plaques à la couleur de leur faction, les scores des bannières, le journal devient un carnet de bord, les boutons prennent du relief.",
+      "Les trois factions ont leur palette officielle en thème Engins : Nadoes bleus (#2386D1), Budies orange (#F58B2A) et le Docteur Viktor Nado en violet (#9254CB), sur les jetons, les sièges, les scores et les badges. Chaque écran a son habillage : accueil en grande aventure, Réglages en plan d’atelier, Laboratoire aux couleurs violettes du Docteur, Historique en carnet d’observations, Règles en manuel de survie, Lore en carnet d’aventures.",
+      "Le bouton « ✦ Visuel 3.0 » de l’en-tête ramène d’un clic au visuel classique, identique à celui d’avant ; le choix est gardé d’une visite à l’autre.",
+    ],
+  },
+  {
     version: '2.16',
     date: '25/11/2026',
     notes: [

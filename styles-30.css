@@ -1,0 +1,313 @@
+/* TornaDice — visuel 3.0.
+   Un habillage, rien d'autre : toutes les règles ci-dessous ne s'appliquent que
+   quand <body data-visuel="30">. Le bouton « Visuel classique » de l'en-tête
+   les coupe d'un coup, et le site retrouve exactement son apparence d'avant.
+   Les éléments décoratifs (ciel, débris de l'arène) ne sont jamais cliquables. */
+
+/* Le bouton de bascule existe dans les deux visuels. */
+.bascule-visuel {
+  border: 1px solid var(--bord-fort); background: rgba(255, 255, 255, .82); color: var(--encre-doux);
+  border-radius: 999px; padding: 3px 11px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer;
+}
+.bascule-visuel:hover { border-color: var(--accent-bord); }
+.ciel-30, .arene-30 { display: none; }
+
+/* ── Jetons de design : les trois factions, l'encre, la crème, le ciel ─────── */
+body[data-visuel="30"] {
+  --encre-30: #192e42;
+  --creme-30: #fff4e3;
+  --ciel-30: #dcecf7;
+  --nadoes-profond: #15558f; --nadoes: #2386d1; --nadoes-clair: #d9edff;
+  --budies-profond: #a94f12; --budies: #f58b2a; --budies-clair: #ffe7c7;
+  --viktor-profond: #59288d; --viktor: #9254cb; --viktor-clair: #ede0fa; --viktor-lumineux: #c798f2;
+  --orange-bouton: #f58b2a; --orange-bouton-haut: #ffb25e; --orange-bouton-bord: #a94f12;
+  --ombre-30: 0 2px 0 rgba(25, 46, 66, .04), 0 18px 42px -14px rgba(21, 85, 143, .32);
+  --r-30: 24px;
+  color: var(--encre-30);
+  background: var(--ciel-30);
+}
+/* Chaque équipe reçoit trois tons, d'après son identifiant (bleu, jaune, vert) :
+   la présence et la place des factions restent celles de la partie. */
+body[data-visuel="30"] .equipe-bleu { --f: #3aa9f2; --f-profond: #1d6ea8; --f-clair: #e3f1fc; }
+body[data-visuel="30"] .equipe-jaune { --f: #e8b21f; --f-profond: #8f6c05; --f-clair: #fdf3d8; }
+body[data-visuel="30"] .equipe-vert { --f: #46b25e; --f-profond: #2b7141; --f-clair: #e4f5e9; }
+body[data-visuel="30"][data-theme="engins"] .equipe-bleu { --f: var(--nadoes); --f-profond: var(--nadoes-profond); --f-clair: var(--nadoes-clair); }
+body[data-visuel="30"][data-theme="engins"] .equipe-jaune { --f: var(--budies); --f-profond: var(--budies-profond); --f-clair: var(--budies-clair); }
+body[data-visuel="30"][data-theme="engins"] .equipe-vert { --f: var(--viktor); --f-profond: var(--viktor-profond); --f-clair: var(--viktor-clair); }
+
+/* ── Le ciel : l'intérieur de la tornade, derrière toutes les pages ───────── */
+body[data-visuel="30"]::before {
+  background:
+    radial-gradient(900px 620px at 85% -8%, rgba(255, 255, 255, .75), transparent 60%),
+    radial-gradient(700px 520px at 4% 30%, rgba(184, 218, 246, .8), transparent 64%),
+    radial-gradient(760px 560px at 96% 92%, rgba(255, 228, 190, .55), transparent 62%),
+    linear-gradient(180deg, #b9d9f3 0%, #dcecf7 38%, #eef5fb 70%, #fff4e3 100%);
+}
+body[data-visuel="30"] .ciel-30 {
+  display: block; position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+}
+.ciel-el { position: absolute; user-select: none; will-change: transform; }
+.ciel-el--1 { width: 300px; top: 9%; left: -4%; opacity: .75; animation: derive 70s linear infinite alternate; }
+.ciel-el--2 { width: 260px; top: 4%; right: 6%; opacity: .7; animation: derive 85s linear infinite alternate-reverse; }
+.ciel-el--3 { width: 200px; top: 46%; left: 2%; opacity: .55; animation: derive 95s linear infinite alternate; }
+.ciel-el--4 { width: 380px; bottom: -3%; right: -5%; opacity: .8; animation: derive 110s linear infinite alternate-reverse; }
+.ciel-el--5 { width: 150px; top: 36%; right: 3%; opacity: .6; animation: derive 75s linear infinite alternate; }
+.ciel-el--6 { width: 280px; top: 26%; left: 22%; opacity: .32; animation: souffle 26s ease-in-out infinite; }
+.ciel-el--7 { width: 260px; bottom: 16%; left: 30%; opacity: .28; animation: souffle 32s ease-in-out infinite reverse; }
+.ciel-el--8 { width: 260px; bottom: 6%; left: -3%; opacity: .5; animation: derive 90s linear infinite alternate-reverse; }
+@keyframes derive { from { transform: translateX(-40px); } to { transform: translateX(60px); } }
+@keyframes souffle {
+  0%, 100% { transform: translate(0, 0) rotate(-4deg); }
+  50% { transform: translate(50px, -14px) rotate(3deg); }
+}
+
+/* ── Typographie ─────────────────────────────────────────────────────────── */
+body[data-visuel="30"] h1 { font-size: 40px; color: var(--encre-30); text-shadow: 0 2px 0 #fff; }
+body[data-visuel="30"] .titre-section {
+  font-family: var(--police-jeu); font-weight: 400; font-synthesis: none;
+  font-size: 22px; letter-spacing: .03em; text-transform: none; color: var(--nadoes-profond);
+}
+
+/* ── En-tête ─────────────────────────────────────────────────────────────── */
+body[data-visuel="30"] .barre {
+  margin-top: 10px; padding: 12px 20px; border-radius: 26px;
+  background: rgba(255, 255, 255, .62); border: 2px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 12px 30px -16px rgba(21, 85, 143, .45);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  max-width: 1556px; box-sizing: border-box;
+}
+body[data-visuel="30"] .lien-nav {
+  border: 2px solid #fff; border-bottom-width: 3px; border-bottom-color: #c5d9ec;
+  background: rgba(255, 255, 255, .9); border-radius: 14px; font-weight: 800; color: var(--encre-30);
+}
+body[data-visuel="30"] .lien-nav.actif {
+  background: linear-gradient(180deg, var(--orange-bouton-haut), var(--orange-bouton));
+  border-color: var(--orange-bouton); border-bottom-color: var(--orange-bouton-bord); color: #fff;
+  text-shadow: 0 1px 0 rgba(120, 50, 0, .35);
+}
+body[data-visuel="30"] .pastille-version, body[data-visuel="30"] .bascule-visuel {
+  background: #fff; border: 2px solid var(--ciel-30); color: var(--nadoes-profond);
+}
+body[data-visuel="30"] .bascule-visuel { color: var(--viktor-profond); border-color: var(--viktor-clair); }
+
+/* ── Cartes : des panneaux de nuage ──────────────────────────────────────── */
+body[data-visuel="30"] .carte {
+  border-radius: var(--r-30);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(255, 251, 244, .93));
+  border: 2px solid #fff;
+  box-shadow: var(--ombre-30);
+}
+body[data-visuel="30"] .stat {
+  border-radius: 18px; background: #fff; border: 2px solid var(--ciel-30);
+  box-shadow: 0 6px 16px -10px rgba(21, 85, 143, .4);
+}
+body[data-visuel="30"] .stat .val { color: var(--nadoes-profond); }
+body[data-visuel="30"] .encart { border-radius: 14px; }
+
+/* ── Boutons : épais, avec du relief, comme des pièces de jeu ──────────────── */
+body[data-visuel="30"] .btn {
+  border-radius: 14px; border: 2px solid #d3e3f1; border-bottom-width: 4px; border-bottom-color: #b5cde2;
+  background: #fff; color: var(--encre-30); font-weight: 800;
+  transition: transform .08s, border-bottom-width .08s, filter .15s;
+}
+body[data-visuel="30"] .btn:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
+body[data-visuel="30"] .btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+body[data-visuel="30"] .btn--primaire {
+  background: linear-gradient(180deg, var(--orange-bouton-haut), var(--orange-bouton));
+  border-color: var(--orange-bouton); border-bottom-color: var(--orange-bouton-bord); color: #fff;
+  text-shadow: 0 1px 0 rgba(120, 50, 0, .35);
+}
+body[data-visuel="30"] .btn--primaire:hover:not(:disabled) { border-color: var(--orange-bouton); border-bottom-color: var(--orange-bouton-bord); }
+body[data-visuel="30"] .btn--grand { border-radius: 20px; padding: 16px 34px; font-size: 18px; }
+body[data-visuel="30"] .btn--danger { color: #b3261e; }
+body[data-visuel="30"] .btn--arme { background: #d4453f; color: #fff; }
+body[data-visuel="30"] .segment {
+  background: rgba(255, 255, 255, .85); border: 2px solid #fff; border-radius: 14px;
+  box-shadow: inset 0 1px 3px rgba(21, 85, 143, .12);
+}
+body[data-visuel="30"] .segment button.on {
+  background: linear-gradient(180deg, #4aa3e6, var(--nadoes)); color: #fff; border-radius: 10px;
+  box-shadow: 0 2px 0 var(--nadoes-profond);
+}
+body[data-visuel="30"] .chip.on, body[data-visuel="30"] .chip--profil.on {
+  background: linear-gradient(180deg, #4aa3e6, var(--nadoes)); border-color: var(--nadoes-profond); color: #fff;
+}
+body[data-visuel="30"] input[type=text], body[data-visuel="30"] input[type=number], body[data-visuel="30"] select {
+  border-radius: 12px; border: 2px solid #d3e3f1; background: #fff;
+}
+body[data-visuel="30"] .onglets button.on { color: var(--nadoes-profond); border-bottom-color: var(--orange-bouton); }
+
+/* ── Arène : l'intérieur de la tornade du Docteur ─────────────────────────── */
+body[data-visuel="30"] .tapis {
+  border: 0; border-radius: 50%;
+  background: url("assets/decor/arene-tornade.webp") center / 100% 100% no-repeat;
+  transform: scale(1.16);
+  filter: drop-shadow(0 18px 30px rgba(21, 85, 143, .18));
+}
+body[data-visuel="30"] .arene-30 { display: block; position: absolute; inset: 0; pointer-events: none; }
+.debris-30 { position: absolute; user-select: none; pointer-events: none; }
+.debris-30--1 { width: 16%; left: 42%; top: 6%; opacity: .28; animation: tourne 40s linear infinite; }
+.debris-30--2 { width: 14%; left: 64%; top: 20%; opacity: .35; animation: souffle 18s ease-in-out infinite; }
+.debris-30--3 { width: 6%; left: 22%; top: 30%; opacity: .45; animation: virevolte 14s ease-in-out infinite; }
+.debris-30--4 { width: 7%; left: 70%; top: 66%; opacity: .4; animation: virevolte 17s ease-in-out infinite reverse; }
+.debris-30--5 { width: 8%; left: 18%; top: 64%; opacity: .38; animation: tourne 22s linear infinite reverse; }
+/* L'énergie du Générateur : discrète, elle ne désigne aucun joueur. */
+.debris-30--6 { width: 16%; left: 56%; top: 80%; opacity: .2; animation: souffle 24s ease-in-out infinite reverse; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+@keyframes virevolte {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(14px, -18px) rotate(160deg); }
+}
+
+/* Sièges : des plaques de pilote, à la couleur de leur faction. */
+body[data-visuel="30"] .siege {
+  border-radius: 20px; border: 2.5px solid color-mix(in srgb, var(--f, #9fb8cf) 40%, #fff);
+  border-top: 6px solid var(--f, #9fb8cf);
+  background: rgba(255, 255, 255, .95);
+  box-shadow: 0 14px 28px -16px rgba(25, 46, 66, .55);
+}
+body[data-visuel="30"] .siege .entete { color: var(--f-profond, var(--encre-30)); }
+body[data-visuel="30"] .siege--endormi { background: linear-gradient(180deg, #f6f9fc, #e9f0f7); }
+body[data-visuel="30"] .siege--endormi .entete { color: #66788b; }
+body[data-visuel="30"] .siege--eveille {
+  background: linear-gradient(180deg, var(--f-clair, #fff), #fff 85%);
+  border-color: var(--f, #9fb8cf);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--f, #9fb8cf) 28%, transparent), 0 14px 28px -16px rgba(25, 46, 66, .55);
+}
+body[data-visuel="30"] .siege--porteur { animation: porteur 2.2s ease-in-out infinite; }
+@keyframes porteur {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--f, #2386d1) 30%, transparent), 0 14px 28px -16px rgba(25, 46, 66, .55); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--f, #2386d1) 14%, transparent), 0 14px 28px -16px rgba(25, 46, 66, .55); }
+}
+body[data-visuel="30"] .etat--eveille { background: var(--f-profond, var(--nadoes-profond)); border-color: var(--f, #fff); }
+body[data-visuel="30"] .perso-siege { color: var(--f-profond); }
+body[data-visuel="30"] .de { filter: drop-shadow(0 3px 2px rgba(25, 46, 66, .25)); }
+
+/* Scores : une bannière par faction. */
+body[data-visuel="30"] .score-equipe {
+  border-radius: 18px; background: linear-gradient(180deg, #fff, var(--f-clair, #fff));
+  border: 2.5px solid var(--f, #d3e3f1); box-shadow: 0 10px 20px -14px rgba(25, 46, 66, .6);
+}
+
+/* Pioche, carte rotation et centre : un peu plus de relief. */
+body[data-visuel="30"] .carte-tornade { filter: drop-shadow(0 16px 22px rgba(25, 46, 66, .3)); }
+body[data-visuel="30"] .pioche-pile, body[data-visuel="30"] .carte-sens img { filter: drop-shadow(0 10px 14px rgba(25, 46, 66, .25)); }
+
+/* Journal : un carnet de bord ligné. */
+body[data-visuel="30"] .journal {
+  border-radius: 14px;
+  background: repeating-linear-gradient(180deg, transparent 0 33px, rgba(35, 134, 209, .1) 33px 34px), #fffdf8;
+}
+body[data-visuel="30"] .journal .ligne--tour { border-radius: 10px; }
+
+/* Panneau du joueur humain, annonces et fin de manche. */
+body[data-visuel="30"] .panneau-humain {
+  border-radius: 24px; border: 2.5px solid #fff; background: rgba(255, 255, 255, .95); box-shadow: var(--ombre-30);
+}
+body[data-visuel="30"] .annonce {
+  font-family: var(--police-jeu); font-weight: 400; font-synthesis: none; font-size: 19px; letter-spacing: .02em;
+  border-width: 3px; border-radius: 16px; box-shadow: 0 10px 22px -10px rgba(25, 46, 66, .5);
+}
+body[data-visuel="30"] .transition {
+  border-radius: 26px; border: 3px solid #fff; background: rgba(255, 255, 255, .94);
+  box-shadow: 0 24px 50px -18px rgba(21, 85, 143, .55);
+}
+body[data-visuel="30"] .voile-carte { background: rgba(170, 205, 235, .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+body[data-visuel="30"] .carte--victoire {
+  border-radius: 28px; border: 3px solid var(--couleur-eq);
+  background: radial-gradient(600px 240px at 12% 50%, color-mix(in srgb, var(--couleur-eq) 22%, #fff), #fff 70%);
+}
+
+/* ── Accueil : la grande aventure ─────────────────────────────────────────── */
+body[data-visuel="30"][data-page="accueil"] .titre-jeu { position: relative; }
+body[data-visuel="30"][data-page="accueil"] .titre-jeu img {
+  max-width: min(560px, 92%); height: auto; animation: flotte 6s ease-in-out infinite;
+  filter: drop-shadow(0 18px 24px rgba(21, 85, 143, .3));
+}
+body[data-visuel="30"][data-page="accueil"] .titre-jeu::before,
+body[data-visuel="30"][data-page="accueil"] .titre-jeu::after {
+  content: ""; position: absolute; pointer-events: none; background: center / contain no-repeat;
+}
+body[data-visuel="30"][data-page="accueil"] .titre-jeu::before {
+  width: 220px; height: 130px; left: calc(50% - 400px); top: 58%; background-image: url("assets/decor/nuage-2.webp");
+}
+body[data-visuel="30"][data-page="accueil"] .titre-jeu::after {
+  width: 200px; height: 120px; right: calc(50% - 390px); top: 12%; background-image: url("assets/decor/nuage-volute.webp");
+}
+@keyframes flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+body[data-visuel="30"][data-page="accueil"] .carte-joueurs { position: relative; }
+body[data-visuel="30"][data-theme="engins"][data-page="accueil"] .carte-joueurs::after {
+  content: ""; position: absolute; right: -26px; top: -34px; width: 86px; height: 86px; pointer-events: none;
+  background: url("assets/decor/bananes.webp") center / contain no-repeat; transform: rotate(14deg);
+}
+body[data-visuel="30"] .ligne-joueur { background: rgba(255, 255, 255, .6); border-radius: 14px; padding: 4px 6px 4px 2px; }
+
+/* ── Réglages : le hangar des engins (un plan d'atelier) ──────────────────── */
+body[data-visuel="30"][data-page="reglages"] .carte {
+  background:
+    linear-gradient(rgba(35, 134, 209, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(35, 134, 209, .05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(180deg, #fff, #f8fbff);
+  border: 2px dashed #bcd6ee;
+}
+
+/* ── Laboratoire : les instruments du Docteur ─────────────────────────────── */
+body[data-visuel="30"][data-page="labo"]::before {
+  background:
+    radial-gradient(700px 520px at 92% 8%, rgba(199, 152, 242, .4), transparent 62%),
+    radial-gradient(640px 500px at 0% 90%, rgba(146, 84, 203, .16), transparent 64%),
+    linear-gradient(180deg, #cfdff3 0%, #e7e7f8 45%, #f4effb 100%);
+}
+body[data-visuel="30"][data-page="labo"] h1 { color: var(--viktor-profond); }
+body[data-visuel="30"][data-page="labo"] .titre-section { color: var(--viktor-profond); }
+body[data-visuel="30"][data-page="labo"] .carte { border-top: 5px solid var(--viktor-lumineux); }
+body[data-visuel="30"][data-page="labo"] .stat { border-left: 5px solid var(--viktor); }
+body[data-visuel="30"][data-page="labo"] .stat .val { color: var(--viktor-profond); }
+body[data-visuel="30"][data-page="labo"] .jauge-progres > div { background: linear-gradient(90deg, var(--viktor-lumineux), var(--viktor)); }
+body[data-visuel="30"][data-page="labo"] .histo .col { background: linear-gradient(180deg, var(--viktor-lumineux), var(--viktor)); }
+body[data-visuel="30"][data-page="labo"] .onglets button.on { color: var(--viktor-profond); border-bottom-color: var(--viktor); }
+
+/* ── Historique : le carnet d'observations ────────────────────────────────── */
+body[data-visuel="30"][data-page="historique"] .carte {
+  background:
+    linear-gradient(90deg, transparent 38px, rgba(212, 69, 63, .35) 38px 40px, transparent 40px),
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(35, 134, 209, .12) 31px 32px),
+    #fffdf6;
+}
+
+/* ── Règles : le manuel de survie ─────────────────────────────────────────── */
+body[data-visuel="30"][data-page="regles"] .carte { position: relative; background: #fffdf6; }
+body[data-visuel="30"][data-page="regles"] .carte::before {
+  content: ""; position: absolute; top: -10px; left: 28px; width: 86px; height: 22px; pointer-events: none;
+  background: rgba(245, 139, 42, .35); border-radius: 3px; transform: rotate(-4deg);
+}
+body[data-visuel="30"][data-page="regles"] .regles-liste li::marker { color: var(--budies-profond); font-weight: 800; }
+
+/* ── Lore : le carnet d'aventures illustré ────────────────────────────────── */
+body[data-visuel="30"][data-page="lore"] .carte { background: var(--creme-30); border: 2px solid #f6e3c4; }
+body[data-visuel="30"][data-page="lore"] .lore-perso { background: #fffaf1; border: 2px dashed #ecd2aa; }
+body[data-visuel="30"][data-page="lore"] .lore-portrait { transform: rotate(-1.5deg); box-shadow: 0 8px 18px -10px rgba(25, 46, 66, .5); }
+body[data-visuel="30"][data-page="lore"] .lore-perso:nth-child(even) .lore-portrait { transform: rotate(1.5deg); }
+body[data-visuel="30"][data-page="lore"] .lore-image:nth-child(odd) img { transform: rotate(-2deg); }
+body[data-visuel="30"][data-page="lore"] .lore-image:nth-child(even) img { transform: rotate(2deg); }
+
+/* ── Téléphone ────────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  body[data-visuel="30"] .barre { margin: 6px 8px 0; padding: 8px 12px; border-radius: 20px; }
+  .bascule-visuel { white-space: nowrap; font-size: 11px; padding: 3px 8px; }
+  body[data-visuel="30"] h1 { font-size: 30px; }
+  .ciel-el { width: 160px !important; }
+  body[data-visuel="30"][data-page="accueil"] .titre-jeu::before,
+  body[data-visuel="30"][data-page="accueil"] .titre-jeu::after,
+  body[data-visuel="30"][data-theme="engins"][data-page="accueil"] .carte-joueurs::after { display: none; }
+}
+
+/* Moins de mouvement : le décor se fige. */
+@media (prefers-reduced-motion: reduce) {
+  .ciel-el, .debris-30, body[data-visuel="30"] .siege--porteur,
+  body[data-visuel="30"][data-page="accueil"] .titre-jeu img { animation: none !important; }
+}
+
+@media print {
+  .ciel-30, .arene-30, .bascule-visuel { display: none !important; }
+}

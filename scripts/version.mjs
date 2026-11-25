@@ -56,7 +56,7 @@ writeFileSync(cheminVersion, readFileSync(cheminVersion, 'utf8')
 const cheminHtml = join(racine, 'index.html');
 writeFileSync(cheminHtml, readFileSync(cheminHtml, 'utf8')
   .replace(/(src="\.\/src\/main\.js)(\?v=[^"]*)?"/, `$1?v=${version}"`)
-  .replace(/(href="\.\/styles\.css)(\?v=[^"]*)?"/, `$1?v=${version}"`)
+  .replace(/(href="\.\/styles(?:-30)?\.css)(\?v=[^"]*)?"/g, `$1?v=${version}"`)
   .replace(/(href="\.\/(?:assets\/[^"?]+|manifest\.webmanifest))(\?v=[^"]*)?"/g, `$1?v=${version}"`));
 
 console.log(`Version ${version} — ${touches} fichier(s) réestampillé(s), index.html mis à jour.`);

@@ -4,7 +4,7 @@
 // restent les mêmes. `appliquerTheme` réécrit en place les objets de config.js,
 // que toutes les pages lisent déjà.
 
-import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.16';
+import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.17';
 
 export const THEMES = {
   ranch: { id: 'ranch', nom: 'Ranch' },
@@ -39,9 +39,9 @@ const VALEURS = {
   },
   engins: {
     equipes: {
-      bleu: { nom: 'Nadoes', animal: 'Nadoes', un: 'Nado', embleme: 'nado', hex: '#2f7fd1', clair: '#dcebfa', couleur: 'bleus', jetons: 'Jetons Nadoes' },
-      jaune: { nom: 'Budies', animal: 'Budies', un: 'Budie', embleme: 'banane', hex: '#f08a1c', clair: '#fde3c6', couleur: 'orange', jetons: 'Jetons Bananes' },
-      vert: { nom: 'Docteur', animal: 'Docteur Nado', un: 'Docteur', embleme: 'de', hex: '#7a4fc4', clair: '#ece3fa', couleur: 'violet', jetons: 'Jetons Dés' },
+      bleu: { nom: 'Nadoes', animal: 'Nadoes', un: 'Nado', embleme: 'nado', hex: '#2386d1', clair: '#d9edff', couleur: 'bleus', jetons: 'Jetons Nadoes' },
+      jaune: { nom: 'Budies', animal: 'Budies', un: 'Budie', embleme: 'banane', hex: '#f58b2a', clair: '#ffe7c7', couleur: 'orange', jetons: 'Jetons Bananes' },
+      vert: { nom: 'Docteur', animal: 'Docteur Nado', un: 'Docteur', embleme: 'de', hex: '#9254cb', clair: '#ede0fa', couleur: 'violet', jetons: 'Jetons Dés' },
     },
     combos: {
       reveil: { nom: 'Redresse !', effet: 'Votre engin se redresse dans la tornade : retournez votre Carte Rôle face redressée.' },

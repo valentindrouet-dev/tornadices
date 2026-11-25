@@ -1613,10 +1613,10 @@ button.lien {
 }
 
 /* ── Thème Engins : Budies orange, Nadoes bleus, Docteur violet ─────────────── */
-body[data-theme="engins"] { --bleu: #2f7fd1; --jaune: #f08a1c; --vert: #7a4fc4; }
-body[data-theme="engins"] .badge--bleu { background: #dcebfa; color: #1f5fa6; border-color: #b9d4f2; }
-body[data-theme="engins"] .badge--jaune { background: #fde3c6; color: #a9520a; border-color: #f6c994; }
-body[data-theme="engins"] .badge--vert { background: #ece3fa; color: #6a3fb4; border-color: #d3c2f0; }
+body[data-theme="engins"] { --bleu: #2386d1; --jaune: #f58b2a; --vert: #9254cb; }
+body[data-theme="engins"] .badge--bleu { background: #d9edff; color: #15558f; border-color: #b6d7f5; }
+body[data-theme="engins"] .badge--jaune { background: #ffe7c7; color: #a94f12; border-color: #f8c98f; }
+body[data-theme="engins"] .badge--vert { background: #ede0fa; color: #59288d; border-color: #c798f2; }
 .bascule-theme button { padding: 7px 12px; font-size: 13px; }
 .perso-siege { font-size: 11.5px; font-weight: 700; color: var(--couleur-eq); margin: -2px 0 4px; }
 .carte-role-perso { font-size: 13px; font-weight: 800; color: var(--couleur-eq); }

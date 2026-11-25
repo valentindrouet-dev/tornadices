@@ -1,18 +1,18 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=2.16';
-import { VERSION } from '../version.js?v=2.16';
-import { vueAccueil } from './accueil.js?v=2.16';
-import { vueTable, partieEnCours } from './table.js?v=2.16';
-import { vueLabo } from './labo.js?v=2.16';
-import { vueReglages } from './reglages.js?v=2.16';
-import { vueHistorique } from './historique.js?v=2.16';
-import { vueVersions } from './versions.js?v=2.16';
-import { vueRegles } from './regles.js?v=2.16';
-import { vueLore } from './lore.js?v=2.16';
-import { store } from './store.js?v=2.16';
-import { THEMES, appliquerTheme, themeActuel, renommerConfig } from '../core/themes.js?v=2.16';
-import { vueResultats } from './resultats.js?v=2.16';
+import { h, remplacer } from './dom.js?v=2.17';
+import { VERSION } from '../version.js?v=2.17';
+import { vueAccueil } from './accueil.js?v=2.17';
+import { vueTable, partieEnCours } from './table.js?v=2.17';
+import { vueLabo } from './labo.js?v=2.17';
+import { vueReglages } from './reglages.js?v=2.17';
+import { vueHistorique } from './historique.js?v=2.17';
+import { vueVersions } from './versions.js?v=2.17';
+import { vueRegles } from './regles.js?v=2.17';
+import { vueLore } from './lore.js?v=2.17';
+import { store } from './store.js?v=2.17';
+import { THEMES, appliquerTheme, themeActuel, renommerConfig } from '../core/themes.js?v=2.17';
+import { vueResultats } from './resultats.js?v=2.17';
 
 const ROUTES = {
   '': vueAccueil,
@@ -81,6 +81,12 @@ function barre() {
     h('button.pastille-version', {
       type: 'button', title: 'Journal des versions', onclick: () => aller('/versions'),
     }, `v${VERSION}`),
+    // Le visuel 3.0 se coupe d'un clic : l'habillage d'avant reste intact.
+    h('button.bascule-visuel', {
+      type: 'button',
+      title: visuel30() ? 'Revenir au visuel classique' : 'Passer au visuel 3.0',
+      onclick: () => { choisirVisuel(visuel30() ? 'classique' : '30'); rendre(); },
+    }, visuel30() ? '✦ Visuel 3.0' : 'Visuel classique'),
     h('div.espace'),
     lien('Accueil', '/', { classe: 'lien-accueil' }),
     bascule,
@@ -108,6 +114,28 @@ export function choisirTheme(id) {
   if (partie) renommerConfig(partie.cfg);
 }
 
+// ── Visuel 3.0 ou classique ───────────────────────────────────────────────────
+// Le visuel 3.0 n'est qu'un habillage : styles-30.css, actif quand le corps de la
+// page porte data-visuel="30", et un ciel décoratif posé derrière tout le reste.
+const visuel30 = () => document.body.dataset.visuel === '30';
+
+function choisirVisuel(v) {
+  const actif = v !== 'classique';
+  store.set('visuel', actif ? '30' : 'classique');
+  document.body.dataset.visuel = actif ? '30' : 'classique';
+  if (actif && !document.querySelector('.ciel-30')) document.body.prepend(cielDecoratif());
+}
+
+/** Nuages et souffles qui dérivent lentement, derrière la page. Purement décoratif. */
+function cielDecoratif() {
+  const deco = (src, cls) => h('img', { src: `assets/decor/${src}.webp`, alt: '', class: cls, draggable: 'false' });
+  return h('div.ciel-30', { 'aria-hidden': 'true' },
+    deco('nuage-1', 'ciel-el ciel-el--1'), deco('nuage-volute', 'ciel-el ciel-el--2'),
+    deco('nuage-3', 'ciel-el ciel-el--3'), deco('nuage-large', 'ciel-el ciel-el--4'),
+    deco('nuage-petit', 'ciel-el ciel-el--5'), deco('souffle-arc', 'ciel-el ciel-el--6'),
+    deco('souffle-vague', 'ciel-el ciel-el--7'), deco('nuage-vent', 'ciel-el ciel-el--8'));
+}
+
 // L'interrupteur Ranch / Engins, dans la barre du haut.
 function basculeTheme() {
   return h('div.segment.bascule-theme', { title: 'Habillage du jeu' },
@@ -120,6 +148,8 @@ function basculeTheme() {
 export function rendre() {
   const chemin = cheminCourant();
   const vue = ROUTES[chemin] || vueAccueil;
+  // Chaque écran a son habillage (visuel 3.0) : la feuille de style le lit ici.
+  document.body.dataset.page = (ROUTES[chemin] ? chemin : '/').replace(/^\//, '') || 'accueil';
   remplacer(racine, barre(), vue());
   window.scrollTo({ top: 0 });
 }
@@ -127,6 +157,7 @@ export function rendre() {
 export function demarrer(el) {
   racine = el;
   choisirTheme(store.get('theme', 'ranch'));
+  choisirVisuel(store.get('visuel', '30'));
   window.addEventListener('hashchange', rendre);
   rendre();
 }

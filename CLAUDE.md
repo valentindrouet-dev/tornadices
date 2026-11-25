@@ -7,10 +7,11 @@ Site statique : modules ES sans compilation, déployé tel quel sur GitHub Pages
 - `src/core/config.js` — les Règles V6 : symboles, combinaisons, cartes Tornade, mise en place, profils d'IA, `configDepuis(reglages, nb)`.
 - `src/core/engine.js` — le moteur (événements datés, temps virtuel, graine). Le même pour la table et le Laboratoire.
 - `src/core/sim.js` — campagnes (`creerCampagne`, `lancerCampagne`), intervalles de Wilson. `src/core/proba.js` — calculs exacts.
+- `src/core/themes.js` — habillages Ranch / Engins : noms, couleurs, jetons, personnages ; réécrit en place les objets de config.js.
 - `src/core/regles-officielles.js` — le réglage tenu pour officiel (vide = V6).
 - `src/ui/` — une page par fichier : `accueil`, `table`, `reglages`, `labo`, `regles`, `resultats`, `historique`, `versions`.
   `profils.js` = réglages enregistrés (source unique lue par toutes les pages), `store.js` = stockage local, `dom.js` = `h()`.
-- `styles.css` — feuille unique. `src/journal.js` — journal des versions (long : ne pas le lire, le script y écrit).
+- `styles.css` — feuille de base. `styles-30.css` — le visuel 3.0, entièrement limité à `body[data-visuel="30"]` (bouton de l’en-tête) ; `body[data-page]` permet d’habiller chaque écran. Décors : `assets/decor/`. `src/journal.js` — journal des versions (long : ne pas le lire, le script y écrit).
 
 ## Commandes
 - `node tests/moteur.test.js` — moteur, campagnes, probabilités (≈ 2 s).

@@ -2,9 +2,9 @@
 // Pour donner un portrait à un personnage, posez son image dans assets/lore/
 // et inscrivez-la dans PORTRAITS, sous l'identifiant du personnage.
 
-import { h } from './dom.js?v=2.16';
-import { VERSION } from '../version.js?v=2.16';
-import { plancheInspiration } from './planche.js?v=2.16';
+import { h } from './dom.js?v=2.17';
+import { VERSION } from '../version.js?v=2.17';
+import { plancheInspiration } from './planche.js?v=2.17';
 
 const PORTRAITS = {};
 
@@ -12,7 +12,7 @@ const CAMPS = [
   {
     id: 'budies',
     nom: 'Les Budies',
-    couleur: '#f08a1c',
+    couleur: '#f58b2a',
     clair: '#fff1e2',
     accroche: 'Les rescapés',
     texte: [
@@ -52,7 +52,7 @@ const CAMPS = [
   {
     id: 'nadoes',
     nom: 'Les Nadoes',
-    couleur: '#2f7fd1',
+    couleur: '#2386d1',
     clair: '#e3f0fc',
     accroche: 'Les petites mains du Doc',
     texte: [
@@ -91,8 +91,8 @@ const CAMPS = [
   {
     id: 'doc',
     nom: 'Le Docteur Viktor Nado',
-    couleur: '#7a4fc4',
-    clair: '#f0eafb',
+    couleur: '#9254cb',
+    clair: '#ede0fa',
     accroche: 'Joueur solitaire',
     texte: [
       'Il est assis à califourchon sur son Générateur, qui vole grâce aux tornades qui lui sortent des fe… '
