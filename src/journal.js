@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.15',
+    date: '25/11/2026',
+    notes: [
+      "Accueil : la liste des joueurs est remise d’aplomb. Chaque ligne suit les mêmes colonnes — le jeton de l’équipe, le nom, qui joue, et en Engins le personnage — et tient dans le cadre. Les personnages s’affichent par leur nom court ; leur description reste au survol. Au téléphone, le nom prend sa ligne et les choix passent dessous.",
+    ],
+  },
+  {
     version: '2.14',
     date: '25/11/2026',
     notes: [

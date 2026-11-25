@@ -173,7 +173,7 @@ a { color: var(--accent-fonce); }
 
 .grille { display: grid; gap: 16px; }
 /* L'accueil ne compose plus que la table : la carte des joueurs, seule, au centre. */
-.accueil-joueurs { max-width: 760px; margin: 0 auto; }
+.accueil-joueurs { max-width: 820px; margin: 0 auto; }
 /* Dans une grille, l'écart vient de `gap` : la marge qu'une carte prend sous la
    précédente, en pile, décalerait la seconde colonne vers le bas. */
 .grille > .carte + .carte { margin-top: 0; }
@@ -197,8 +197,19 @@ a { color: var(--accent-fonce); }
 /* Colonne de droite de la table : combinaisons et journal. */
 .colonne-cote { display: grid; gap: 16px; align-content: start; }
 /* Un joueur sur une ligne : pastille, nom, rôle, équipe. */
-.ligne-joueur { flex-wrap: nowrap; }
-.ligne-joueur select { flex: 0 1 auto; min-width: 0; }
+.lignes-joueurs { display: grid; gap: 8px; }
+.ligne-joueur {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) 170px; gap: 8px; align-items: center;
+  padding: 4px 4px 4px 0; border-radius: 12px;
+}
+.ligne-joueur--perso { grid-template-columns: 34px minmax(0, 1fr) 160px 190px; }
+.ligne-joueur input, .ligne-joueur select { width: 100%; min-width: 0; box-sizing: border-box; }
+.ligne-joueur-jeton { display: grid; place-items: center; }
+.ligne-joueur .choix-perso, .ligne-joueur .perso-fixe { border-color: color-mix(in srgb, var(--couleur-eq) 45%, var(--bord-fort)); }
+.ligne-joueur .perso-fixe {
+  font-size: 14px; font-weight: 700; color: var(--couleur-eq); padding: 0 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .muted { color: var(--gris); }
 .petit { font-size: 13px; }
 .mini { font-size: 12px; }
@@ -1083,9 +1094,11 @@ table.tbl td.num, table.tbl th.num { text-align: right; }
 
   /* La ligne d'un joueur ne tient pas dans 390 px : elle se replie au lieu de
      déborder de l'écran. */
-  .ligne-joueur { flex-wrap: wrap; }
-  .ligne-joueur input { flex: 1 1 130px; }
-  .ligne-joueur select { flex: 1 1 130px; }
+  /* Au téléphone : le nom sur une ligne, les choix dessous. */
+  .ligne-joueur, .ligne-joueur--perso { grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr); }
+  .ligne-joueur input { grid-column: 2 / 4; }
+  .ligne-joueur > select:first-of-type { grid-column: 2 / 3; }
+  .ligne-joueur:not(.ligne-joueur--perso) > select:first-of-type { grid-column: 2 / 4; }
 
   /* `display: contents` défait la grille sans toucher au bureau : les cartes
      deviennent frères de la rangée de boutons, et l'ordre se règle au doigt. */
