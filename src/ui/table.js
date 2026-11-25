@@ -4,18 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.17';
+import { h, remplacer, duree, vider } from './dom.js?v=2.18';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.17';
-import { Moteur } from '../core/engine.js?v=2.17';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.17';
-import { MOTS, themeActuel, personnageParId } from '../core/themes.js?v=2.17';
-import { ajouterHistorique, store } from './store.js?v=2.17';
-import { enregistrerPartie } from './resultats.js?v=2.17';
-import { aller } from './app.js?v=2.17';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.17';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.17';
+} from './icons.js?v=2.18';
+import { Moteur } from '../core/engine.js?v=2.18';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.18';
+import { MOTS, themeActuel, personnageParId } from '../core/themes.js?v=2.18';
+import { ajouterHistorique, store } from './store.js?v=2.18';
+import { enregistrerPartie } from './resultats.js?v=2.18';
+import { aller } from './app.js?v=2.18';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.18';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.18';
 
 let moteur = null;
 let vitesse = 1;
@@ -200,7 +200,7 @@ export function vueTable() {
   const elCentre = h('div.centre-table', h('div.centre-carte', elCarte), elPioche);
   // Le tapis est l'intérieur de la tornade ; au visuel 3.0, quelques débris du
   // lore y tournent en arrière-plan. Ils ne sont ni cliquables ni lus.
-  const debris = ['tourbillon', 'souffle-traits', 'banane', 'feuille', 'helice', 'souffle-violet']
+  const debris = ['tourbillon', 'vis', 'banane', 'feuille', 'helice', 'souffle-violet', 'engrenage']
     .map((nom, k) => h('img', { src: `assets/decor/${nom}.webp`, alt: '', class: `debris-30 debris-30--${k + 1}`, draggable: 'false' }));
   const zoneTable = h('div.table-zone', h('div.tapis', h('div.arene-30', { 'aria-hidden': 'true' }, ...debris)), elCentre);
   const elSieges = moteur.joueurs.map((j) => {

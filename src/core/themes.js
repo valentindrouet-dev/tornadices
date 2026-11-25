@@ -4,7 +4,7 @@
 // restent les mêmes. `appliquerTheme` réécrit en place les objets de config.js,
 // que toutes les pages lisent déjà.
 
-import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.17';
+import { EQUIPES, COMBOS, CARTES_PAR_ID } from './config.js?v=2.18';
 
 export const THEMES = {
   ranch: { id: 'ranch', nom: 'Ranch' },

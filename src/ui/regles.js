@@ -1,18 +1,19 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.17';
-import { store } from './store.js?v=2.17';
-import { aller } from './app.js?v=2.17';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.17';
+import { h, remplacer } from './dom.js?v=2.18';
+import { store } from './store.js?v=2.18';
+import { aller } from './app.js?v=2.18';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.18';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
   configDepuis, placement, requisCarte, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.17';
-import { MOTS } from '../core/themes.js?v=2.17';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.17';
+} from '../core/config.js?v=2.18';
+import { MOTS } from '../core/themes.js?v=2.18';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.18';
 
-const ETATS = { endormi: 'Face endormie', eveille: 'Face réveillée', tous: 'Les deux faces' };
+// Les faces de la Carte Rôle, dans les mots du thème.
+const ETATS = () => ({ endormi: `Face ${MOTS.endormi.toLowerCase()}`, eveille: `Face ${MOTS.eveille.toLowerCase()}`, tous: 'Les deux faces' });
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 export function vueRegles() {
@@ -101,7 +102,7 @@ export function vueRegles() {
             h('div.petit', c.id === 'envol'
               ? 'Passez immédiatement votre lot au joueur suivant, sans relancer. S’il tient un lot, vous le forcez à passer aussi.'
               : c.effet),
-            h('div.mini.muted', ETATS[c.etat]))))),
+            h('div.mini.muted', ETATS()[c.etat]))))),
         h('p.petit.muted', { style: { marginTop: '10px' } },
           'Le dé : ', ...ORDRE_SYMBOLES.filter((s) => nbFaces(s)).flatMap((s, i, tous) => [
             v(nbFaces(s), ref.faces.filter((f) => f === s).length), ` ${SYMBOLES[s].nom}`, i < tous.length - 1 ? ' · ' : '.'])),

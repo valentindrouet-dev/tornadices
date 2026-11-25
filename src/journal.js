@@ -2,6 +2,15 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.18',
+    date: '25/11/2026',
+    notes: [
+      "Visuel 3.0, deuxième passe avec les nouvelles planches : le ciel illustré, avec sa tornade de dés, sert désormais de fond à toutes les pages ; l’Historique, les Règles et le Lore sont sur papier parchemin.",
+      "Les annonces deviennent des bulles de bande dessinée, une par combinaison : éclat orange pour Redresse / Réveil, nuage vert pour Sauvé / Abri, tourbillon violet pour Retourne / Sommeil, éclat bleu pour Pousse / Envol.",
+      "En thème Engins, chaque plaque de joueur porte l’ornement de sa faction : une vis pour les Nadoes, une feuille tropicale pour les Budies, des étincelles violettes pour le Docteur. Le Laboratoire reçoit le manomètre et la bobine du Docteur, les Réglages un engrenage, l’arène quelques pièces de bricolage. Dans les Règles en Engins, les faces de la Carte Rôle suivent le vocabulaire du thème.",
+    ],
+  },
+  {
     version: '2.17',
     date: '25/11/2026',
     notes: [

@@ -37,16 +37,13 @@ body[data-visuel="30"][data-theme="engins"] .equipe-vert { --f: var(--viktor); -
 
 /* ── Le ciel : l'intérieur de la tornade, derrière toutes les pages ───────── */
 body[data-visuel="30"]::before {
-  background:
-    radial-gradient(900px 620px at 85% -8%, rgba(255, 255, 255, .75), transparent 60%),
-    radial-gradient(700px 520px at 4% 30%, rgba(184, 218, 246, .8), transparent 64%),
-    radial-gradient(760px 560px at 96% 92%, rgba(255, 228, 190, .55), transparent 62%),
-    linear-gradient(180deg, #b9d9f3 0%, #dcecf7 38%, #eef5fb 70%, #fff4e3 100%);
+  background: url("assets/decor/fond-ciel.webp") center / cover no-repeat, #dcecf7;
 }
 body[data-visuel="30"] .ciel-30 {
   display: block; position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
 }
 .ciel-el { position: absolute; user-select: none; will-change: transform; }
+.ciel-el--1, .ciel-el--4, .ciel-el--8 { display: none; }
 .ciel-el--1 { width: 300px; top: 9%; left: -4%; opacity: .75; animation: derive 70s linear infinite alternate; }
 .ciel-el--2 { width: 260px; top: 4%; right: 6%; opacity: .7; animation: derive 85s linear infinite alternate-reverse; }
 .ciel-el--3 { width: 200px; top: 46%; left: 2%; opacity: .55; animation: derive 95s linear infinite alternate; }
@@ -147,7 +144,7 @@ body[data-visuel="30"] .tapis {
 body[data-visuel="30"] .arene-30 { display: block; position: absolute; inset: 0; pointer-events: none; }
 .debris-30 { position: absolute; user-select: none; pointer-events: none; }
 .debris-30--1 { width: 16%; left: 42%; top: 6%; opacity: .28; animation: tourne 40s linear infinite; }
-.debris-30--2 { width: 14%; left: 64%; top: 20%; opacity: .35; animation: souffle 18s ease-in-out infinite; }
+.debris-30--2 { width: 5%; left: 66%; top: 22%; opacity: .32; animation: virevolte 19s ease-in-out infinite; }
 .debris-30--3 { width: 6%; left: 22%; top: 30%; opacity: .45; animation: virevolte 14s ease-in-out infinite; }
 .debris-30--4 { width: 7%; left: 70%; top: 66%; opacity: .4; animation: virevolte 17s ease-in-out infinite reverse; }
 .debris-30--5 { width: 8%; left: 18%; top: 64%; opacity: .38; animation: tourne 22s linear infinite reverse; }
@@ -254,9 +251,9 @@ body[data-visuel="30"][data-page="reglages"] .carte {
 /* ── Laboratoire : les instruments du Docteur ─────────────────────────────── */
 body[data-visuel="30"][data-page="labo"]::before {
   background:
-    radial-gradient(700px 520px at 92% 8%, rgba(199, 152, 242, .4), transparent 62%),
-    radial-gradient(640px 500px at 0% 90%, rgba(146, 84, 203, .16), transparent 64%),
-    linear-gradient(180deg, #cfdff3 0%, #e7e7f8 45%, #f4effb 100%);
+    radial-gradient(700px 520px at 92% 8%, rgba(199, 152, 242, .45), transparent 62%),
+    radial-gradient(640px 500px at 0% 90%, rgba(146, 84, 203, .2), transparent 64%),
+    url("assets/decor/fond-ciel.webp") center / cover no-repeat, #e7e7f8;
 }
 body[data-visuel="30"][data-page="labo"] h1 { color: var(--viktor-profond); }
 body[data-visuel="30"][data-page="labo"] .titre-section { color: var(--viktor-profond); }
@@ -271,12 +268,17 @@ body[data-visuel="30"][data-page="labo"] .onglets button.on { color: var(--vikto
 body[data-visuel="30"][data-page="historique"] .carte {
   background:
     linear-gradient(90deg, transparent 38px, rgba(212, 69, 63, .35) 38px 40px, transparent 40px),
-    repeating-linear-gradient(180deg, transparent 0 31px, rgba(35, 134, 209, .12) 31px 32px),
-    #fffdf6;
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(35, 134, 209, .14) 31px 32px),
+    linear-gradient(rgba(255, 251, 240, .55), rgba(255, 251, 240, .55)),
+    url("assets/decor/parchemin.webp") 0 0 / 640px;
+  border-color: #f1dcb4;
 }
 
 /* ── Règles : le manuel de survie ─────────────────────────────────────────── */
-body[data-visuel="30"][data-page="regles"] .carte { position: relative; background: #fffdf6; }
+body[data-visuel="30"][data-page="regles"] .carte {
+  position: relative; border-color: #f1dcb4;
+  background: linear-gradient(rgba(255, 252, 244, .7), rgba(255, 252, 244, .7)), url("assets/decor/parchemin.webp") 0 0 / 640px;
+}
 body[data-visuel="30"][data-page="regles"] .carte::before {
   content: ""; position: absolute; top: -10px; left: 28px; width: 86px; height: 22px; pointer-events: none;
   background: rgba(245, 139, 42, .35); border-radius: 3px; transform: rotate(-4deg);
@@ -284,12 +286,63 @@ body[data-visuel="30"][data-page="regles"] .carte::before {
 body[data-visuel="30"][data-page="regles"] .regles-liste li::marker { color: var(--budies-profond); font-weight: 800; }
 
 /* ── Lore : le carnet d'aventures illustré ────────────────────────────────── */
-body[data-visuel="30"][data-page="lore"] .carte { background: var(--creme-30); border: 2px solid #f6e3c4; }
+body[data-visuel="30"][data-page="lore"] .carte {
+  border: 2px solid #f1dcb4;
+  background: linear-gradient(rgba(255, 248, 234, .35), rgba(255, 248, 234, .35)), url("assets/decor/parchemin.webp") 0 0 / 640px;
+}
 body[data-visuel="30"][data-page="lore"] .lore-perso { background: #fffaf1; border: 2px dashed #ecd2aa; }
 body[data-visuel="30"][data-page="lore"] .lore-portrait { transform: rotate(-1.5deg); box-shadow: 0 8px 18px -10px rgba(25, 46, 66, .5); }
 body[data-visuel="30"][data-page="lore"] .lore-perso:nth-child(even) .lore-portrait { transform: rotate(1.5deg); }
 body[data-visuel="30"][data-page="lore"] .lore-image:nth-child(odd) img { transform: rotate(-2deg); }
 body[data-visuel="30"][data-page="lore"] .lore-image:nth-child(even) img { transform: rotate(2deg); }
+
+/* ── Annonces : une bulle de bande dessinée par combinaison ─────────────────
+   Redresse / Réveil en orange, Sauvé / Abri en nuage vert, Retourne / Sommeil
+   en tourbillon violet, Pousse / Envol en éclat bleu. */
+body[data-visuel="30"] .annonce {
+  background: center / 100% 100% no-repeat; border: 0; border-radius: 0; box-shadow: none;
+  padding: 26px 46px; color: var(--encre-30);
+  filter: drop-shadow(0 8px 10px rgba(25, 46, 66, .25));
+}
+body[data-visuel="30"] .annonce--siege { padding: 16px 30px; font-size: 16px; }
+body[data-visuel="30"] .annonce--or, body[data-visuel="30"] .annonce--jaune { background-image: url("assets/decor/bulle-orange.webp"); color: var(--budies-profond); }
+body[data-visuel="30"] .annonce--vert { background-image: url("assets/decor/bulle-verte.webp"); color: #2f6f12; }
+body[data-visuel="30"] .annonce--nuit { background-image: url("assets/decor/bulle-violette.webp"); color: var(--viktor-profond); }
+body[data-visuel="30"] .annonce--rouge, body[data-visuel="30"] .annonce--bleu { background-image: url("assets/decor/bulle-bleue.webp"); color: var(--nadoes-profond); }
+
+/* ── Plaques des joueurs en Engins : un ornement de faction ────────────────── */
+body[data-visuel="30"][data-theme="engins"] .siege::after {
+  content: ""; position: absolute; top: -16px; right: -12px; width: 34px; height: 34px; pointer-events: none;
+  background: center / contain no-repeat; transform: rotate(12deg);
+}
+body[data-visuel="30"][data-theme="engins"] .siege.equipe-bleu::after { background-image: url("assets/decor/vis.webp"); }
+body[data-visuel="30"][data-theme="engins"] .siege.equipe-jaune::after { background-image: url("assets/decor/feuille.webp"); }
+body[data-visuel="30"][data-theme="engins"] .siege.equipe-vert::after { background-image: url("assets/decor/etincelles.webp"); width: 40px; height: 40px; }
+
+/* Arène : une pièce de bricolage de plus parmi les débris. */
+.debris-30--7 { width: 7%; left: 76%; top: 40%; opacity: .4; animation: tourne 30s linear infinite; }
+
+/* ── Laboratoire : les appareils du Docteur, en bordure ───────────────────── */
+body[data-visuel="30"][data-page="labo"] .page { position: relative; }
+body[data-visuel="30"][data-page="labo"] .page::before,
+body[data-visuel="30"][data-page="labo"] .page::after {
+  content: ""; position: absolute; pointer-events: none; background: center / contain no-repeat; z-index: 0;
+}
+body[data-visuel="30"][data-page="labo"] .page::before {
+  width: 74px; height: 74px; left: 600px; top: -6px; background-image: url("assets/decor/manometre.webp"); transform: rotate(-8deg);
+}
+body[data-visuel="30"][data-page="labo"] .page::after {
+  width: 90px; height: 96px; right: 8px; bottom: 20px; background-image: url("assets/decor/tesla.webp");
+  animation: gresille 3s ease-in-out infinite;
+}
+@keyframes gresille { 0%, 100% { opacity: .85; } 50% { opacity: 1; filter: drop-shadow(0 0 10px rgba(199, 152, 242, .9)); } }
+
+/* ── Réglages : un hangar, avec ses engrenages ────────────────────────────── */
+body[data-visuel="30"][data-page="reglages"] .page { position: relative; }
+body[data-visuel="30"][data-page="reglages"] .page::before {
+  content: ""; position: absolute; width: 84px; height: 84px; left: 230px; top: -10px; pointer-events: none;
+  background: url("assets/decor/engrenage.webp") center / contain no-repeat; animation: tourne 26s linear infinite;
+}
 
 /* ── Téléphone ────────────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
@@ -299,12 +352,15 @@ body[data-visuel="30"][data-page="lore"] .lore-image:nth-child(even) img { trans
   .ciel-el { width: 160px !important; }
   body[data-visuel="30"][data-page="accueil"] .titre-jeu::before,
   body[data-visuel="30"][data-page="accueil"] .titre-jeu::after,
-  body[data-visuel="30"][data-theme="engins"][data-page="accueil"] .carte-joueurs::after { display: none; }
+  body[data-visuel="30"][data-theme="engins"][data-page="accueil"] .carte-joueurs::after,
+  body[data-visuel="30"][data-page="labo"] .page::before, body[data-visuel="30"][data-page="labo"] .page::after,
+  body[data-visuel="30"][data-page="reglages"] .page::before { display: none; }
 }
 
 /* Moins de mouvement : le décor se fige. */
 @media (prefers-reduced-motion: reduce) {
   .ciel-el, .debris-30, body[data-visuel="30"] .siege--porteur,
+  body[data-visuel="30"][data-page="labo"] .page::after, body[data-visuel="30"][data-page="reglages"] .page::before,
   body[data-visuel="30"][data-page="accueil"] .titre-jeu img { animation: none !important; }
 }
 
