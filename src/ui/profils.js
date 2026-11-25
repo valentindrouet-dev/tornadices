@@ -3,9 +3,9 @@
 // de réglages nommés qu'on veut ; les Réglages, la table et le Laboratoire
 // lisent tous le réglage actif, ici.
 
-import { h } from './dom.js?v=2.18';
-import { store } from './store.js?v=2.18';
-import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=2.18';
+import { h } from './dom.js?v=2.19';
+import { store } from './store.js?v=2.19';
+import { REGLES_OFFICIELLES } from '../core/regles-officielles.js?v=2.19';
 
 export const ID_OFFICIELLES = 'officielles';
 const copie = (x) => JSON.parse(JSON.stringify(x && typeof x === 'object' ? x : {}));

@@ -4,18 +4,18 @@
 // image, mais chaque bloc ne se reconstruit que si son contenu a changé : sans
 // cela les boutons seraient remplacés entre l'appui et le relâchement du clic.
 
-import { h, remplacer, duree, vider } from './dom.js?v=2.18';
+import { h, remplacer, duree, vider } from './dom.js?v=2.19';
 import {
   faceDe, suiteSymboles, emblemeEquipe, pastilleSymbole, JETONS_EMBLEME, faceCarteSens,
-} from './icons.js?v=2.18';
-import { Moteur } from '../core/engine.js?v=2.18';
-import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.18';
-import { MOTS, themeActuel, personnageParId } from '../core/themes.js?v=2.18';
-import { ajouterHistorique, store } from './store.js?v=2.18';
-import { enregistrerPartie } from './resultats.js?v=2.18';
-import { aller } from './app.js?v=2.18';
-import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.18';
-import { carteTornadeDessinee } from './carte-tornade.js?v=2.18';
+} from './icons.js?v=2.19';
+import { Moteur } from '../core/engine.js?v=2.19';
+import { EQUIPES, PRIORITE_COMBOS, requisCarte, nomDansPhrase } from '../core/config.js?v=2.19';
+import { MOTS, themeActuel, personnageParId } from '../core/themes.js?v=2.19';
+import { ajouterHistorique, store } from './store.js?v=2.19';
+import { enregistrerPartie } from './resultats.js?v=2.19';
+import { aller } from './app.js?v=2.19';
+import { jouerSon, eveillerSons, sonsActifs, reglerSons } from './sons.js?v=2.19';
+import { carteTornadeDessinee } from './carte-tornade.js?v=2.19';
 
 let moteur = null;
 let vitesse = 1;
@@ -913,6 +913,8 @@ export function vueTable() {
   }
   requestAnimationFrame(boucle);
 
+  const touchesLancer = new Set(humains.map((j) => toucheDe.get(j.id).lancer));
+
   function auClavier(ev) {
     if (!actif || moteur !== maPartie || moteur.termine) return;
     if (ev.target && /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
@@ -940,6 +942,9 @@ export function vueTable() {
       const t = toucheDe.get(j.id);
       if (ev.code === t.lancer) { toutRelancer(j); ev.preventDefault(); return; }
     }
+    // Une touche de lancer pressée sans dés devant soi ne fait rien — et surtout
+    // pas défiler la page, ce que fait la barre Espace par défaut.
+    if (ev.code === 'Space' || touchesLancer.has(ev.code)) ev.preventDefault();
   }
 
   // La première manche est ouverte par le constructeur, avant que le crochet ne

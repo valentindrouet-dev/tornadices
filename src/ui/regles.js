@@ -1,16 +1,16 @@
 // Les règles du jeu (V6), telles que le réglage actif les fait jouer : chaque
 // valeur qui vient des Réglages est en gras. La page s'imprime.
 
-import { h, remplacer } from './dom.js?v=2.18';
-import { store } from './store.js?v=2.18';
-import { aller } from './app.js?v=2.18';
-import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.18';
+import { h, remplacer } from './dom.js?v=2.19';
+import { store } from './store.js?v=2.19';
+import { aller } from './app.js?v=2.19';
+import { emblemeEquipe, suiteSymboles, pastilleSymbole } from './icons.js?v=2.19';
 import {
   EQUIPES, SYMBOLES, ORDRE_SYMBOLES, CARTES_PAR_ID, NOMBRES_JOUEURS, PROFILS_IA,
   configDepuis, placement, requisCarte, noteCarte, bornerJoueurs,
-} from '../core/config.js?v=2.18';
-import { MOTS } from '../core/themes.js?v=2.18';
-import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.18';
+} from '../core/config.js?v=2.19';
+import { MOTS } from '../core/themes.js?v=2.19';
+import { reglagesCourants, reglesOfficielles, nomActif } from './profils.js?v=2.19';
 
 // Les faces de la Carte Rôle, dans les mots du thème.
 const ETATS = () => ({ endormi: `Face ${MOTS.endormi.toLowerCase()}`, eveille: `Face ${MOTS.eveille.toLowerCase()}`, tous: 'Les deux faces' });

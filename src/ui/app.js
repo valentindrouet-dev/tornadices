@@ -1,18 +1,18 @@
 // Coquille de l'application : barre supérieure et routage par ancre.
 
-import { h, remplacer } from './dom.js?v=2.18';
-import { VERSION } from '../version.js?v=2.18';
-import { vueAccueil } from './accueil.js?v=2.18';
-import { vueTable, partieEnCours } from './table.js?v=2.18';
-import { vueLabo } from './labo.js?v=2.18';
-import { vueReglages } from './reglages.js?v=2.18';
-import { vueHistorique } from './historique.js?v=2.18';
-import { vueVersions } from './versions.js?v=2.18';
-import { vueRegles } from './regles.js?v=2.18';
-import { vueLore } from './lore.js?v=2.18';
-import { store } from './store.js?v=2.18';
-import { THEMES, appliquerTheme, themeActuel, renommerConfig } from '../core/themes.js?v=2.18';
-import { vueResultats } from './resultats.js?v=2.18';
+import { h, remplacer } from './dom.js?v=2.19';
+import { VERSION } from '../version.js?v=2.19';
+import { vueAccueil } from './accueil.js?v=2.19';
+import { vueTable, partieEnCours } from './table.js?v=2.19';
+import { vueLabo } from './labo.js?v=2.19';
+import { vueReglages } from './reglages.js?v=2.19';
+import { vueHistorique } from './historique.js?v=2.19';
+import { vueVersions } from './versions.js?v=2.19';
+import { vueRegles } from './regles.js?v=2.19';
+import { vueLore } from './lore.js?v=2.19';
+import { store } from './store.js?v=2.19';
+import { THEMES, appliquerTheme, themeActuel, renommerConfig } from '../core/themes.js?v=2.19';
+import { vueResultats } from './resultats.js?v=2.19';
 
 const ROUTES = {
   '': vueAccueil,

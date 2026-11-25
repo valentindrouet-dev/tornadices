@@ -2,6 +2,13 @@
 // Versions ; `node scripts/version.mjs <version> "note" …` y ajoute une entrée.
 export const CHANGELOG = [
   {
+    version: '2.19',
+    date: '25/11/2026',
+    notes: [
+      "À la table, la barre Espace ne fait plus défiler la page quand on n’a pas encore les dés devant soi : elle ne fait simplement rien tant qu’il n’y a rien à lancer.",
+    ],
+  },
+  {
     version: '2.18',
     date: '25/11/2026',
     notes: [

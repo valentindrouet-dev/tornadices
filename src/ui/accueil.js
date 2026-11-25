@@ -1,18 +1,18 @@
 // Écran d'accueil : qui joue, et de quoi lancer la partie. Les réglages de la
 // partie se font tous dans la page Réglages.
 
-import { h, remplacer } from './dom.js?v=2.18';
-import { store } from './store.js?v=2.18';
-import { aller } from './app.js?v=2.18';
-import { eveillerSons } from './sons.js?v=2.18';
-import { lancerPartie, partieEnCours } from './table.js?v=2.18';
+import { h, remplacer } from './dom.js?v=2.19';
+import { store } from './store.js?v=2.19';
+import { aller } from './app.js?v=2.19';
+import { eveillerSons } from './sons.js?v=2.19';
+import { lancerPartie, partieEnCours } from './table.js?v=2.19';
 import {
   configPartie, nombresJoueursPermis, joueursDansBornes, ecartsAuxOfficielles, nomParDefaut, graineDePartie,
-} from './reglages.js?v=2.18';
-import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.18';
-import { emblemeEquipe } from './icons.js?v=2.18';
-import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.18';
-import { PERSONNAGES, personnage, themeActuel } from '../core/themes.js?v=2.18';
+} from './reglages.js?v=2.19';
+import { placement, PROFILS_IA, profilIA, EQUIPES } from '../core/config.js?v=2.19';
+import { emblemeEquipe } from './icons.js?v=2.19';
+import { ID_OFFICIELLES, selectionnerProfil } from './profils.js?v=2.19';
+import { PERSONNAGES, personnage, themeActuel } from '../core/themes.js?v=2.19';
 
 export function reglagesJoueurs(nb) {
   const enregistres = store.get('joueurs', null);
